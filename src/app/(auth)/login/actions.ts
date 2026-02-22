@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@shared/lib/supabase/server'
 import { logger } from '@shared/lib/logger'
-import { normalizeAuthError } from '@infra/auth/normalize-auth-error'
+import { normalizeAuthError, AUTH_ERROR_GENERIC_FALLBACK } from '@infra/auth/normalize-auth-error'
 
 const loginLogger = logger.child({ domain: 'auth' })
 
@@ -32,7 +32,7 @@ export async function signIn(formData: FormData) {
 
   if (error) {
     const safeMessage = normalizeAuthError(error.message)
-    if (safeMessage === 'Something went wrong. Please try again.') {
+    if (safeMessage === AUTH_ERROR_GENERIC_FALLBACK) {
       // Log unexpected Supabase errors for server-side observability — never returned to the client
       loginLogger.warn('auth.signIn unexpected error', { code: error.code })
     }
