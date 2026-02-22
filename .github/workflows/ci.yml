@@ -89,9 +89,9 @@ jobs:
     name: Deploy preview (main → Vercel preview)
     needs: check
     runs-on: ubuntu-latest
-    # Fires only on direct push to main — not on PRs, not on production
+    # Fires on direct push to main or manual workflow_dispatch — not on PRs, not on production
     # Production deploys via Vercel's native Git integration (tracks production branch)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Vercel preview
