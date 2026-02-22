@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useSyncExternalStore, useCallback } from 'react'
+import { useState, useMemo, useSyncExternalStore, useCallback, useEffect } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Package } from 'lucide-react'
 import { Button } from '@shared/ui/primitives/button'
@@ -19,6 +19,12 @@ import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const PAGE_SIZE = 48
 
 // ---------------------------------------------------------------------------
 // Props
@@ -114,6 +120,9 @@ export function GarmentCatalogClient({
     setSelectedBrandName(brandName)
   }, [])
 
+  // Pagination
+  const [page, setPage] = useState(0)
+
   // Filter garments (N23: getFilteredGarmentsByColors)
   const filteredGarments = useMemo(() => {
     const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
@@ -144,6 +153,16 @@ export function GarmentCatalogClient({
       return true
     })
   }, [catalog, category, searchQuery, brand, selectedColorIds])
+
+  // Reset to first page whenever any filter changes
+
+  const colorFilterKey = selectedColorIds.join(',')
+  useEffect(() => {
+    setPage(0)
+  }, [category, searchQuery, brand, colorFilterKey])
+
+  // Cumulative slice — "Load more" appends to visible set
+  const visibleGarments = filteredGarments.slice(0, (page + 1) * PAGE_SIZE)
 
   // Extract unique brands for filter dropdown
   const brands = useMemo(() => [...new Set(catalog.map((g) => g.brand))].sort(), [catalog])
@@ -196,7 +215,7 @@ export function GarmentCatalogClient({
       {/* Grid View */}
       {view === 'grid' ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {filteredGarments.map((garment) => (
+          {visibleGarments.map((garment) => (
             <GarmentCard
               key={garment.id}
               garment={garment}
@@ -240,7 +259,7 @@ export function GarmentCatalogClient({
               </tr>
             </thead>
             <tbody>
-              {filteredGarments.map((garment) => (
+              {visibleGarments.map((garment) => (
                 <GarmentTableRow
                   key={garment.id}
                   garment={garment}
@@ -252,6 +271,18 @@ export function GarmentCatalogClient({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Load more — shown when visible < filtered */}
+      {visibleGarments.length < filteredGarments.length && (
+        <div className="flex flex-col items-center gap-3 pt-4">
+          <p className="text-xs text-muted-foreground">
+            Showing {visibleGarments.length} of {filteredGarments.length} garments
+          </p>
+          <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
+            Load more
+          </Button>
         </div>
       )}
 
