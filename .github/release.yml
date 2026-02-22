@@ -1,0 +1,30 @@
+changelog:
+  categories:
+    - title: '🚀 Features'
+      labels:
+        - 'type/features'
+    - title: '🐛 Bug Fixes'
+      labels:
+        - 'type:bug'
+    - title: '🏗️ Infrastructure & CI'
+      labels:
+        - 'infrastructure'
+        - 'tool:ci-pipeline'
+    - title: '♻️ Refactoring & Tech Debt'
+      labels:
+        - 'type/refactor'
+        - 'type/tech-debt'
+    - title: '🛠️ Tooling'
+      labels:
+        - 'type/tooling'
+        - 'tool:agent-system'
+        - 'tool:knowledge-base'
+        - 'tool:project-management'
+        - 'tool:skills-framework'
+        - 'tool:work-orchestrator'
+    - title: '🔬 Research'
+      labels:
+        - 'type/research'
+    - title: '📦 Other Changes'
+      labels:
+        - '*'
