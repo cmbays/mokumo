@@ -13,7 +13,7 @@
 | ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
 | I. Codebase            | PASS    | Single repo, multi-environment via Vercel two-branch model                                                               |
 | II. Dependencies       | PASS    | `package-lock.json` committed; clean deps/devDeps split                                                                  |
-| III. Config            | PARTIAL | `DATA_PROVIDER` and `DEMO_ACCESS_CODE` env-gated; one hardcoded URL in mock UI; no `.env.example`                        |
+| III. Config            | PARTIAL | `DATA_PROVIDER` and `DEMO_ACCESS_CODE` env-gated; one hardcoded URL in mock UI; `.env.local.example` now exists          |
 | IV. Backing Services   | PARTIAL | `CacheStore` interface is swappable; `InMemoryCacheStore` is process-local and will break on Vercel multi-instance       |
 | V. Build, Release, Run | PASS    | CI builds artifact; Vercel separates build from deploy; `ignoreCommand` scopes deploys correctly                         |
 | VI. Processes          | PARTIAL | Server components are stateless; `_adapter` singleton in `lib/suppliers/registry.ts` is module-level mutable state       |
@@ -143,7 +143,7 @@ if (!name || !VALID_ADAPTERS.includes(name as SupplierName)) {
 
 **Gaps / Risks**:
 
-1. **No `.env.example` file.** The `.gitignore` correctly excludes `.env` and `.env*.local`, but there is no `.env.example` to document required variables. A new developer (or a new Vercel environment) has no canonical list of env vars to set. This becomes critical in Phase 2 when `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `UPSTASH_REDIS_REST_URL` are added.
+1. **No `.env.local.example` file.** The `.gitignore` correctly excludes `.env` and `.env*.local`, but there is no `.env.local.example` to document required variables. A new developer (or a new Vercel environment) has no canonical list of env vars to set. This becomes critical in Phase 2 when `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `UPSTASH_REDIS_REST_URL` are added.
 
 2. **One hardcoded URL in mock UI.** `src/app/(dashboard)/quotes/_components/EmailPreviewModal.tsx` line 80 contains:
 
@@ -159,7 +159,7 @@ This is in a mock email preview component (no real email is sent in Phase 1), so
 
 **Action**:
 
-- **Before Phase 2**: Create `.env.example` listing all required env vars with descriptions. Update it as Phase 2 vars are added.
+- **Before Phase 2**: Create `.env.local.example` listing all required env vars with descriptions. Update it as Phase 2 vars are added.
 - **Before Phase 2**: Add a startup env validation module (e.g., `src/config/env.ts`) that throws clearly if required Phase 2 vars are absent. Pattern: `process.env.NEXT_PUBLIC_SUPABASE_URL ?? (() => { throw new Error('...') })()`.
 - **After Phase 2**: Replace the hardcoded `app.4ink.com` URL with `process.env.NEXT_PUBLIC_APP_URL`.
 
@@ -410,7 +410,7 @@ The production path (cookie check, redirect) is never exercised locally. A bug i
 **Action**:
 
 - **Before Phase 2**: Install Supabase CLI and create a `supabase/` directory with local development configuration (`supabase start` runs Postgres + Auth + Storage locally via Docker).
-- **Before Phase 2**: Create `.env.example` (see Factor III actions).
+- **Before Phase 2**: Create `.env.local.example` (see Factor III actions).
 - **Phase 2 Day 1**: Initialize Drizzle schema from the existing Zod entity schemas — there is a 1:1 mapping between Phase 1 domain entities and Phase 2 database tables.
 - **During Phase 2**: Add loading and error states to all data-fetching pages; mock data's synchronous nature masks these gaps.
 
@@ -522,8 +522,8 @@ The following factors become critical when Supabase, Drizzle, and Upstash Redis 
 
 ### Critical (blocking Phase 2 go-live)
 
-**Factor III (Config) — `.env.example` and startup validation.**
-Phase 2 adds at minimum 5 new env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`). Without an `.env.example` and startup validation, misconfigured environments fail at runtime with cryptic errors rather than at startup with a clear message.
+**Factor III (Config) — `.env.local.example` and startup validation.**
+Phase 2 adds at minimum 5 new env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`). Without an `.env.local.example` and startup validation, misconfigured environments fail at runtime with cryptic errors rather than at startup with a clear message.
 
 **Factor IV / VI / VIII (Backing Services / Processes / Concurrency) — `InMemoryCacheStore` replacement.**
 The `InMemoryCacheStore` is not safe for Vercel's multi-instance serverless model. This must be replaced with Upstash Redis before the `SSActivewearAdapter` makes any real API calls. The `CacheStore` interface is already the right abstraction — the swap is a one-file change plus env var configuration.
@@ -556,7 +556,7 @@ Configure PgBouncer before Phase 2 load testing, not before initial development.
 
 | Priority | Factor     | Action                                                                              | When                          |
 | -------- | ---------- | ----------------------------------------------------------------------------------- | ----------------------------- |
-| P0       | III        | Create `.env.example` with all env vars (current + Phase 2)                         | Before Phase 2 starts         |
+| P0       | III        | Create `.env.local.example` with all env vars (current + Phase 2)                   | Before Phase 2 starts         |
 | P0       | IV/VI/VIII | Replace `InMemoryCacheStore` with Upstash Redis `CacheStore`                        | Before S&S API activation     |
 | P0       | X          | Install Supabase CLI, create `supabase/config.toml` for local dev                   | Before Phase 2 schema work    |
 | P0       | XII        | Add `npm run db:migrate` with Drizzle Kit; write migration runbook                  | Phase 2 Day 1                 |
