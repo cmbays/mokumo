@@ -92,5 +92,10 @@ jobs:
     # Production deploys via Vercel's native Git integration (tracks production branch)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Trigger Vercel preview deployment
-        run: curl -sf -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_MAIN }}"
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_oZpFBCcctoxyVa4IQDkLMxr5
+          VERCEL_PROJECT_ID: prj_8O8LT5YiKq0hFtPdrI828bQgKqeM
+        run: npx vercel deploy --token "$VERCEL_TOKEN"
