@@ -8,12 +8,12 @@ import {
   buildImageUpsertValue,
   buildSizeUpsertValue,
 } from './catalog-sync-normalized'
+import { fetchAllPages } from '@shared/lib/pagination'
 import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'catalog-sync' })
 
 const CATALOG_PAGE_SIZE = 100
-const MAX_CATALOG_PAGES = 500
 const BATCH_SIZE = 50 // Smaller batch — each style triggers multiple child inserts
 
 /**
@@ -41,28 +41,13 @@ export async function syncCatalogFromSupplier(): Promise<number> {
     } = await import('@db/schema/catalog-normalized')
 
     const adapter = getSupplierAdapter()
-    const allStyles: Awaited<ReturnType<typeof adapter.searchCatalog>>['styles'] = []
-    let offset = 0
-    let page = 0
-
-    // ── Paginate all styles from supplier ──────────────────────────────────
-    while (true) {
-      const result = await adapter.searchCatalog({ limit: CATALOG_PAGE_SIZE, offset })
-      allStyles.push(...result.styles)
-
-      if (result.styles.length === 0 || !result.hasMore) break
-      offset += result.styles.length
-      page++
-
-      if (page >= MAX_CATALOG_PAGES) {
-        syncLogger.error('Exceeded MAX_CATALOG_PAGES — possible supplier pagination bug', {
-          page,
-          offset,
-          totalSoFar: allStyles.length,
-        })
-        break
-      }
-    }
+    const allStyles = await fetchAllPages(
+      async ({ limit, offset }) => {
+        const result = await adapter.searchCatalog({ limit, offset })
+        return { items: result.styles, hasMore: result.hasMore }
+      },
+      { pageSize: CATALOG_PAGE_SIZE }
+    )
 
     if (allStyles.length === 0) {
       syncLogger.warn('No styles from supplier')
