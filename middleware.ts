@@ -13,6 +13,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Supabase credentials are required in production — redirect to login if missing.
+  // This guards against environments where env vars are not yet configured (e.g. CI E2E runner).
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
   // Create Supabase client with cookies from request
   const response = NextResponse.next({
     request: {
@@ -21,8 +29,8 @@ export async function middleware(request: NextRequest) {
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
