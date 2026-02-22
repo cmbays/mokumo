@@ -49,6 +49,8 @@ type GarmentCatalogToolbarProps = {
   garmentCount: number
   favoriteColorIds: string[]
   onBrandClick?: (brandName: string) => void
+  /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
+  categoryHits: Record<string, number>
 }
 
 // ---------------------------------------------------------------------------
@@ -63,6 +65,7 @@ export function GarmentCatalogToolbar({
   garmentCount,
   favoriteColorIds,
   onBrandClick,
+  categoryHits,
 }: GarmentCatalogToolbarProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -137,6 +140,12 @@ export function GarmentCatalogToolbar({
 
   const hasAnyFilter = activeFilters.length > 0 || selectedColorIds.length > 0
 
+  // Hide category tabs with zero inventory given other active filters.
+  // Always keep "all" and the currently-selected tab visible (avoids jarring disappearance).
+  const visibleCategories = CATEGORIES.filter(
+    (cat) => cat.value === 'all' || cat.value === category || (categoryHits[cat.value] ?? 0) > 0
+  )
+
   // Fix #9: Show "Clear colors" only when colors are the sole active filter.
   // Show "Clear all" only when mixed filters are active. Never show both.
   const showClearColors = activeFilters.length === 0 && selectedColorIds.length > 0
@@ -144,11 +153,11 @@ export function GarmentCatalogToolbar({
 
   return (
     <div className="space-y-3">
-      {/* Row 1: Category Tabs */}
-      <div className="-mx-1 overflow-x-auto px-1">
+      {/* Row 1: Category Tabs — overflow-x-auto on mobile, wrap on desktop */}
+      <div className="-mx-1 overflow-x-auto px-1 md:overflow-visible">
         <Tabs value={category} onValueChange={(v) => updateParam('category', v)}>
-          <TabsList variant="line" className="w-full md:w-auto">
-            {CATEGORIES.map((cat) => (
+          <TabsList variant="line" className="w-full flex-wrap md:w-auto">
+            {visibleCategories.map((cat) => (
               <TabsTrigger
                 key={cat.value}
                 value={cat.value}

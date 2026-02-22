@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo, useSyncExternalStore, useCallback } from 'react'
+import { useState, useMemo, useSyncExternalStore, useCallback, useEffect } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Package } from 'lucide-react'
+import { Package, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@shared/ui/primitives/button'
 import { GarmentCatalogToolbar } from './GarmentCatalogToolbar'
 import { GarmentCard } from './GarmentCard'
@@ -19,6 +19,12 @@ import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const PAGE_SIZE = 48
 
 // ---------------------------------------------------------------------------
 // Props
@@ -114,6 +120,9 @@ export function GarmentCatalogClient({
     setSelectedBrandName(brandName)
   }, [])
 
+  // Pagination
+  const [page, setPage] = useState(0)
+
   // Filter garments (N23: getFilteredGarmentsByColors)
   const filteredGarments = useMemo(() => {
     const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
@@ -144,6 +153,38 @@ export function GarmentCatalogClient({
       return true
     })
   }, [catalog, category, searchQuery, brand, selectedColorIds])
+
+  // Per-category hit counts ignoring the category filter (faceted search pattern) —
+  // used to hide empty tabs from the toolbar without affecting the active category filter.
+  const categoryHits = useMemo(() => {
+    const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
+    const counts: Record<string, number> = {}
+    catalog.forEach((g) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        if (
+          !g.name.toLowerCase().includes(q) &&
+          !g.brand.toLowerCase().includes(q) &&
+          !g.sku.toLowerCase().includes(q)
+        )
+          return
+      }
+      if (brand && g.brand !== brand) return
+      if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) return
+      counts[g.baseCategory] = (counts[g.baseCategory] ?? 0) + 1
+    })
+    return counts
+  }, [catalog, searchQuery, brand, selectedColorIds])
+
+  // Reset to first page whenever any filter changes
+  const colorFilterKey = selectedColorIds.join(',')
+  useEffect(() => {
+    setPage(0)
+  }, [category, searchQuery, brand, colorFilterKey])
+
+  // Per-page slice — enables true prev/next navigation
+  const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
+  const visibleGarments = filteredGarments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   // Extract unique brands for filter dropdown
   const brands = useMemo(() => [...new Set(catalog.map((g) => g.brand))].sort(), [catalog])
@@ -191,12 +232,13 @@ export function GarmentCatalogClient({
         garmentCount={filteredGarments.length}
         favoriteColorIds={globalFavoriteColorIds}
         onBrandClick={handleBrandClick}
+        categoryHits={categoryHits}
       />
 
       {/* Grid View */}
       {view === 'grid' ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {filteredGarments.map((garment) => (
+          {visibleGarments.map((garment) => (
             <GarmentCard
               key={garment.id}
               garment={garment}
@@ -240,7 +282,7 @@ export function GarmentCatalogClient({
               </tr>
             </thead>
             <tbody>
-              {filteredGarments.map((garment) => (
+              {visibleGarments.map((garment) => (
                 <GarmentTableRow
                   key={garment.id}
                   garment={garment}
@@ -252,6 +294,33 @@ export function GarmentCatalogClient({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination controls — shown when results span multiple pages */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page === 0}
+          >
+            <ChevronLeft className="size-4" />
+            Previous
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Page {page + 1} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages - 1}
+          >
+            Next
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
       )}
 
