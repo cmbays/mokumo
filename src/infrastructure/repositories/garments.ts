@@ -31,12 +31,13 @@ import {
   getAvailableBrands as getSupplierBrands,
 } from '@infra/repositories/_providers/supplier/garments'
 
-function isSupabaseCatalogMode(): boolean {
-  return process.env.SUPPLIER_ADAPTER === 'supabase-catalog'
-}
+type GarmentProvider = 'supabase-catalog' | 'supplier' | 'mock'
 
-function isSupplierMode(): boolean {
-  return Boolean(process.env.SUPPLIER_ADAPTER)
+function getActiveProvider(): GarmentProvider {
+  const adapter = process.env.SUPPLIER_ADAPTER
+  if (adapter === 'supabase-catalog') return 'supabase-catalog'
+  if (adapter) return 'supplier'
+  return 'mock'
 }
 
 // Dynamic import: supabase provider is server-only and only loaded when SUPPLIER_ADAPTER=supabase-catalog
@@ -77,18 +78,24 @@ async function getSupabaseBrands(): Promise<string[]> {
 }
 
 export async function getGarmentCatalog(): Promise<GarmentCatalog[]> {
-  if (isSupabaseCatalogMode()) return getSupabaseCatalog()
-  return isSupplierMode() ? getSupplierCatalog() : getMockCatalog()
+  const provider = getActiveProvider()
+  if (provider === 'supabase-catalog') return getSupabaseCatalog()
+  if (provider === 'supplier') return getSupplierCatalog()
+  return getMockCatalog()
 }
 
 export async function getGarmentById(id: string): Promise<GarmentCatalog | null> {
-  if (isSupabaseCatalogMode()) return getSupabaseById(id)
-  return isSupplierMode() ? getSupplierById(id) : getMockById(id)
+  const provider = getActiveProvider()
+  if (provider === 'supabase-catalog') return getSupabaseById(id)
+  if (provider === 'supplier') return getSupplierById(id)
+  return getMockById(id)
 }
 
 export async function getAvailableBrands(): Promise<string[]> {
-  if (isSupabaseCatalogMode()) return getSupabaseBrands()
-  return isSupplierMode() ? getSupplierBrands() : getMockBrands()
+  const provider = getActiveProvider()
+  if (provider === 'supabase-catalog') return getSupabaseBrands()
+  if (provider === 'supplier') return getSupplierBrands()
+  return getMockBrands()
 }
 
 /**
@@ -96,7 +103,7 @@ export async function getAvailableBrands(): Promise<string[]> {
  * Only available in supabase-catalog mode. Returns [] in mock/supplier mode.
  */
 export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
-  if (!isSupabaseCatalogMode()) return []
+  if (getActiveProvider() !== 'supabase-catalog') return []
   const mod = await loadSupabaseCatalogModule()
   return mod.getNormalizedCatalog()
 }

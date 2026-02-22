@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { getSupplierAdapter } from '@lib/suppliers/registry'
 import { garmentCategoryEnum, garmentCatalogSchema } from '@domain/entities/garment'
 import { logger } from '@shared/lib/logger'
+import { fetchAllPages } from '@shared/lib/pagination'
 import type { GarmentCatalog, GarmentCategory } from '@domain/entities/garment'
 import type { CanonicalStyle } from '@lib/suppliers/types'
 
@@ -70,9 +71,6 @@ const CATEGORY_MAPPING: Record<string, GarmentCategory> = {
   'woven-shirts': 'wovens',
 }
 
-const CATALOG_PAGE_SIZE = 100
-/** Safety ceiling: prevents unbounded pagination if the supplier misbehaves. */
-const MAX_CATALOG_PAGES = 500
 const FALLBACK_GARMENT_CATEGORY: GarmentCategory = 'other'
 
 /** Zod validator for supplier style IDs (non-UUID, numeric strings like "3001"). */
@@ -180,36 +178,13 @@ export function canonicalStyleToGarmentCatalog(style: CanonicalStyle): GarmentCa
  */
 export async function getGarmentCatalog(): Promise<GarmentCatalog[]> {
   const adapter = getSupplierAdapter()
-  const all: GarmentCatalog[] = []
-  let offset = 0
-  let page = 0
-
-  while (true) {
-    const result = await adapter.searchCatalog({ limit: CATALOG_PAGE_SIZE, offset })
-
-    for (const style of result.styles) {
-      const garment = canonicalStyleToGarmentCatalog(style)
-      if (garment) all.push(garment)
-    }
-
-    // Zero-progress guard: a supplier returning hasMore:true with an empty
-    // page would loop forever without this check.
-    if (result.styles.length === 0 || !result.hasMore) break
-
-    offset += result.styles.length
-    page++
-
-    if (page >= MAX_CATALOG_PAGES) {
-      supplierLogger.error('Exceeded MAX_CATALOG_PAGES — possible supplier pagination bug', {
-        page,
-        offset,
-        totalSoFar: all.length,
-      })
-      break
-    }
-  }
-
-  return all
+  const allStyles = await fetchAllPages(async ({ limit, offset }) => {
+    const result = await adapter.searchCatalog({ limit, offset })
+    return { items: result.styles, hasMore: result.hasMore }
+  })
+  return allStyles
+    .map(canonicalStyleToGarmentCatalog)
+    .filter((g): g is GarmentCatalog => g !== null)
 }
 
 export async function getGarmentById(id: string): Promise<GarmentCatalog | null> {
