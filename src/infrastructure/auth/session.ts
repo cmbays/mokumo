@@ -5,32 +5,11 @@ import { db } from '@shared/lib/supabase/db'
 import { shopMembers } from '@db/schema'
 import { createClient } from '@shared/lib/supabase/server'
 import { logger } from '@shared/lib/logger'
+import { sessionSchema, type Session } from './session.schema'
+
+export type { Session, UserRole } from './session.schema'
 
 const sessionLogger = logger.child({ domain: 'auth' })
-
-// ---------------------------------------------------------------------------
-// Session type
-// ---------------------------------------------------------------------------
-
-export type UserRole = 'owner' | 'operator'
-
-/**
- * Authenticated session for the current request.
- *
- * Phase 2: Populated from Supabase Auth — `supabase.auth.getUser()` provides
- *   the JWT-verified user; `shopId` and `role` come from a `shop_members` join.
- *
- * The shape is intentionally stable so that all callers require no changes
- * as the auth implementation evolves.
- */
-export type Session = {
-  /** Stable user identifier. Supabase Auth UUID. */
-  userId: string
-  /** Role within the shop. Drives UI permissions and DAL row filtering. */
-  role: UserRole
-  /** Identifies the shop. Used for RLS row filtering. */
-  shopId: string
-}
 
 // ---------------------------------------------------------------------------
 // Dev mock session
@@ -100,7 +79,13 @@ export const verifySession = cache(async (): Promise<Session | null> => {
       return null
     }
 
-    return { userId: user.id, role: membership.role, shopId: membership.shopId }
+    // sessionSchema.parse validates UUID format and role enum at the boundary.
+    // ZodError is caught below and degrades to null — preserves fail-closed contract.
+    return sessionSchema.parse({
+      userId: user.id,
+      role: membership.role,
+      shopId: membership.shopId,
+    })
   } catch (err) {
     sessionLogger.error('shop_members lookup failed', {
       err,
