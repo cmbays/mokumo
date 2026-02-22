@@ -64,11 +64,14 @@ CREATE POLICY "catalog_brand_sources_write_postgres" ON catalog_brand_sources
 FOR ALL TO postgres
 USING (true) WITH CHECK (true);
 
--- catalog_style_preferences
+-- catalog_style_preferences (tenant-scoped — stricter than public catalog tables)
+-- Phase 2b will add JWT-based scope_id filtering when shop_members table exists.
+-- For now: restrict reads to authenticated users only (not anon).
 ALTER TABLE catalog_style_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "catalog_style_preferences_read_public" ON catalog_style_preferences
-FOR SELECT USING (true);
+CREATE POLICY "catalog_style_preferences_read_authenticated" ON catalog_style_preferences
+FOR SELECT TO authenticated
+USING (true);
 
 CREATE POLICY "catalog_style_preferences_write_postgres" ON catalog_style_preferences
 FOR ALL TO postgres

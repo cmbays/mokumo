@@ -6,10 +6,10 @@ This directory contains **two types** of SQL migration files:
 
 Tracked in `meta/_journal.json` with corresponding snapshots in `meta/`.
 
-| File                      | Purpose                                                           |
-| ------------------------- | ----------------------------------------------------------------- |
-| `0000_clever_salo.sql`    | Initial catalog table                                             |
-| `0003_oval_gladiator.sql` | Normalized catalog tables (brands, styles, colors, sizes, images) |
+| File                      | Purpose                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| `0000_clever_salo.sql`    | Initial catalog table                                                                               |
+| `0003_oval_gladiator.sql` | Normalized catalog tables (brands, styles, colors, sizes, images, brand_sources, style_preferences) |
 
 Generated via `npm run db:generate` from schema definitions in `src/db/schema/`.
 
@@ -24,7 +24,9 @@ Generated via `npm run db:generate` from schema definitions in `src/db/schema/`.
 | `0004_archive_catalog.sql`               | Rename old denormalized `catalog` → `catalog_archived` |
 | `0005_enable_rls_normalized_catalog.sql` | RLS + read/write policies on all 7 normalized tables   |
 
-Applied by Supabase CLI (`supabase migration up`) which reads all `.sql` files in order.
+Applied by Supabase CLI (`supabase migration up`) which reads **all** `.sql` files in order.
+
+**Important:** `npm run db:migrate` runs Drizzle's migration runner, which only applies files tracked in `_journal.json`. Hand-written migrations (0001, 0002, 0004, 0005) are **not** in the journal and will be silently skipped by Drizzle. Always use `supabase migration up` (or `npx supabase db push` for local dev) to ensure all migrations are applied.
 
 ## Numbering Convention
 
