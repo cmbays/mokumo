@@ -4,6 +4,9 @@ import { eq } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import { shopMembers } from '@db/schema'
 import { createClient } from '@shared/lib/supabase/server'
+import { logger } from '@shared/lib/logger'
+
+const sessionLogger = logger.child({ domain: 'auth' })
 
 // ---------------------------------------------------------------------------
 // Session type
@@ -45,7 +48,8 @@ const MOCK_SESSION: Session = {
 
 /**
  * Returns the authenticated {@link Session} for the current request, or
- * `null` if the request is unauthenticated or the user has no shop membership.
+ * `null` if the request is unauthenticated, the user has no shop membership,
+ * or the database is unavailable.
  *
  * Wrapped in React `cache()` so multiple DAL calls within a single render
  * pass pay the verification cost at most once (one auth check + one DB query).
@@ -57,7 +61,7 @@ const MOCK_SESSION: Session = {
  * - **Development**: always returns `MOCK_SESSION` (no auth/DB check).
  * - **Production**: verifies the JWT via `supabase.auth.getUser()`, then
  *   fetches `role` and `shopId` from `shop_members` for that user.
- *   Returns `null` if auth fails or no membership row exists.
+ *   Returns `null` if auth fails, no membership row exists, or the DB throws.
  *
  * @see {@link docs/strategy/auth-session-design.md} for the full 4-layer
  *   defense model and DAL classification table.
@@ -82,16 +86,23 @@ export const verifySession = cache(async (): Promise<Session | null> => {
   }
 
   // Layer 2: Fetch role + shopId from shop_members
-  const [membership] = await db
-    .select({ shopId: shopMembers.shopId, role: shopMembers.role })
-    .from(shopMembers)
-    .where(eq(shopMembers.userId, user.id))
-    .limit(1)
+  // Wrapped in try/catch so DB errors degrade to null (auth failure/redirect)
+  // rather than propagating as a 500 exception — preserves Promise<Session | null> contract.
+  try {
+    const [membership] = await db
+      .select({ shopId: shopMembers.shopId, role: shopMembers.role })
+      .from(shopMembers)
+      .where(eq(shopMembers.userId, user.id))
+      .limit(1)
 
-  if (!membership) {
-    // Authenticated but no shop membership — treat as unauthorized
+    if (!membership) {
+      // Authenticated but no shop membership — treat as unauthorized
+      return null
+    }
+
+    return { userId: user.id, role: membership.role, shopId: membership.shopId }
+  } catch (err) {
+    sessionLogger.error('shop_members lookup failed', { err, userId: user.id })
     return null
   }
-
-  return { userId: user.id, role: membership.role, shopId: membership.shopId }
 })
