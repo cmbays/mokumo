@@ -71,7 +71,6 @@ const CATEGORY_MAPPING: Record<string, GarmentCategory> = {
   'woven-shirts': 'wovens',
 }
 
-const CATALOG_PAGE_SIZE = 100
 const FALLBACK_GARMENT_CATEGORY: GarmentCategory = 'other'
 
 /** Zod validator for supplier style IDs (non-UUID, numeric strings like "3001"). */
@@ -179,13 +178,10 @@ export function canonicalStyleToGarmentCatalog(style: CanonicalStyle): GarmentCa
  */
 export async function getGarmentCatalog(): Promise<GarmentCatalog[]> {
   const adapter = getSupplierAdapter()
-  const allStyles = await fetchAllPages(
-    async ({ limit, offset }) => {
-      const result = await adapter.searchCatalog({ limit, offset })
-      return { items: result.styles, hasMore: result.hasMore }
-    },
-    { pageSize: CATALOG_PAGE_SIZE }
-  )
+  const allStyles = await fetchAllPages(async ({ limit, offset }) => {
+    const result = await adapter.searchCatalog({ limit, offset })
+    return { items: result.styles, hasMore: result.hasMore }
+  })
   return allStyles
     .map(canonicalStyleToGarmentCatalog)
     .filter((g): g is GarmentCatalog => g !== null)

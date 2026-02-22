@@ -13,7 +13,6 @@ import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'catalog-sync' })
 
-const CATALOG_PAGE_SIZE = 100
 const BATCH_SIZE = 50 // Smaller batch — each style triggers multiple child inserts
 
 /**
@@ -41,13 +40,10 @@ export async function syncCatalogFromSupplier(): Promise<number> {
     } = await import('@db/schema/catalog-normalized')
 
     const adapter = getSupplierAdapter()
-    const allStyles = await fetchAllPages(
-      async ({ limit, offset }) => {
-        const result = await adapter.searchCatalog({ limit, offset })
-        return { items: result.styles, hasMore: result.hasMore }
-      },
-      { pageSize: CATALOG_PAGE_SIZE }
-    )
+    const allStyles = await fetchAllPages(async ({ limit, offset }) => {
+      const result = await adapter.searchCatalog({ limit, offset })
+      return { items: result.styles, hasMore: result.hasMore }
+    })
 
     if (allStyles.length === 0) {
       syncLogger.warn('No styles from supplier')
