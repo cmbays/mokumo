@@ -37,9 +37,9 @@ export type Session = {
 // ---------------------------------------------------------------------------
 
 const MOCK_SESSION: Session = {
-  userId: 'usr_4ink_owner',
+  userId: '00000000-0000-4000-8000-000000000001', // RFC-4122 compliant (v4, variant 1) — no real Supabase Auth user
   role: 'owner',
-  shopId: 'shop_4ink',
+  shopId: '00000000-0000-4000-8000-000000004e6b', // RFC-4122 compliant (v4, variant 1) — updated in migration 0008
 } as const
 
 // ---------------------------------------------------------------------------
