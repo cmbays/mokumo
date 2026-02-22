@@ -84,17 +84,13 @@ jobs:
           npx wait-on http://localhost:3000 --timeout 30000
           npm run test:e2e
 
-  deploy:
-    name: Deploy to Vercel
+  deploy-preview:
+    name: Deploy preview (main → Vercel preview)
     needs: check
     runs-on: ubuntu-latest
-    # Only deploy on direct pushes to main or production — not on PRs
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
+    # Fires only on direct push to main — not on PRs, not on production
+    # Production deploys via Vercel's native Git integration (tracks production branch)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Trigger Vercel preview deployment (main → preview)
-        if: github.ref == 'refs/heads/main'
+      - name: Trigger Vercel preview deployment
         run: curl -sf -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_MAIN }}"
-
-      - name: Trigger Vercel production deployment (production → live)
-        if: github.ref == 'refs/heads/production'
-        run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_PRODUCTION }}"
