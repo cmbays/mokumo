@@ -100,3 +100,30 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel deploy --token "$VERCEL_TOKEN"
+
+  create-release:
+    name: Create GitHub Release (production)
+    needs: check
+    runs-on: ubuntu-latest
+    # Only fires when production branch is pushed (i.e. after a main→production merge)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create CalVer release with auto-generated notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(date -u +%Y.%m.%d)
+          TAG="v${VERSION}"
+          COUNT=1
+          # Increment suffix if a release already exists for today
+          while gh release view "$TAG" &>/dev/null; do
+            COUNT=$((COUNT + 1))
+            TAG="v${VERSION}-${COUNT}"
+          done
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            --target production
