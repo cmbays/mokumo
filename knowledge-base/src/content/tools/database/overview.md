@@ -50,7 +50,7 @@ status: 'current'
 - **Drizzle CI Gate** — `drizzle-kit check` runs on every PR to main (warning), hard-fails on production branch
 - **No breaking migrations** — Always backfill new columns with defaults before schema changes
 - **Environment validation** — Runtime guards in `src/shared/lib/supabase/*` prevent cryptic SDK errors on missing env vars
-- **Prepared statements** — `prepare: false` disabled in dev (flexibility), production uses `prepare: true` for safety
+- **Prepared statements** — `prepare: false` required for both dev and production (Supabase PgBouncer transaction mode does not support prepared statements)
 
 ## Related Decisions
 

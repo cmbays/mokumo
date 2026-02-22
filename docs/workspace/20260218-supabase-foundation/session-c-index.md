@@ -9,7 +9,7 @@
 
 Complete session notes are committed on the feature branch:
 
-```
+```text
 Branch: session/0218-schema-ci-gate
 Path:   docs/workspace/20260219-schema-ci-gate/
 Files:

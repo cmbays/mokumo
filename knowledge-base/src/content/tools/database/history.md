@@ -61,7 +61,7 @@ status: 'current'
 - `/api/catalog/sync` endpoint — Fetches S&S API, transforms, upserts to `catalog` table
 - `SyncLog` repository with `logOperation()` — Tracks every sync attempt
 - `SSActivewearAdapter` updated to read from Supabase `catalog` table (fallback to API if cache miss)
-- Rate limiting check: 1 sync per 5 minutes per endpoint (configurable)
+- Rate-limiting check: 1 sync per 5 minutes per endpoint (configurable)
 - Sync runs on server startup (background task)
 
 **Tests added**: 18 tests for sync endpoint, adapter fallback, rate limiting
