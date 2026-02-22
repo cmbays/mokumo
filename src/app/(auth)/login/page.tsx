@@ -14,13 +14,18 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
-    // signIn() calls redirect('/') on success — Next.js returns undefined
-    // to the client (redirect throws NEXT_REDIRECT internally).
-    // Only returns { error: string } on validation/auth failure.
-    const result = await signIn(new FormData(e.currentTarget))
+    try {
+      // signIn() calls redirect('/') on success — Next.js returns undefined
+      // to the client (redirect throws NEXT_REDIRECT internally).
+      // Only returns { error: string } on validation/auth failure.
+      const result = await signIn(new FormData(e.currentTarget))
 
-    if (result?.error) {
-      setError(result.error)
+      if (result?.error) {
+        setError(result.error)
+        setIsLoading(false)
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.')
       setIsLoading(false)
     }
   }

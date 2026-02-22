@@ -26,7 +26,7 @@ Generated via `npm run db:generate` from schema definitions in `src/db/schema/`.
 
 Applied by Supabase CLI (`supabase migration up`) which reads **all** `.sql` files in order.
 
-**Important:** `npm run db:migrate` runs Drizzle's migration runner, which only applies files tracked in `_journal.json`. Hand-written migrations (0001, 0002, 0004, 0005) are **not** in the journal and will be silently skipped by Drizzle. Always use `supabase migration up` (or `npx supabase db push` for local dev) to ensure all migrations are applied.
+**Important:** `npm run db:migrate` runs Drizzle's migration runner, which only applies files tracked in `_journal.json`. Hand-written migrations (0001, 0002, 0004, 0005) are **not** in the journal and will be silently skipped by Drizzle. Always use `supabase migration up` for local dev (after `supabase start`) or `supabase db reset` to replay all migrations from scratch.
 
 ## Numbering Convention
 
