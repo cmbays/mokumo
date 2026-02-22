@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs, CRUMBS } from '@shared/lib/breadcrumbs'
 import { QuoteForm } from '../_components/QuoteForm'
