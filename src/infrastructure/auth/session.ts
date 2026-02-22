@@ -102,7 +102,10 @@ export const verifySession = cache(async (): Promise<Session | null> => {
 
     return { userId: user.id, role: membership.role, shopId: membership.shopId }
   } catch (err) {
-    sessionLogger.error('shop_members lookup failed', { err, userId: user.id })
+    sessionLogger.error('shop_members lookup failed', {
+      err,
+      userIdPrefix: user.id.slice(0, 8), // first 8 chars for correlation only — never log full UUID
+    })
     return null
   }
 })
