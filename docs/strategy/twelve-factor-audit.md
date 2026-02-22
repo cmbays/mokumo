@@ -556,7 +556,7 @@ Configure PgBouncer before Phase 2 load testing, not before initial development.
 
 | Priority | Factor     | Action                                                                              | When                          |
 | -------- | ---------- | ----------------------------------------------------------------------------------- | ----------------------------- |
-| P0       | III        | Create `.env.local.example` with all env vars (current + Phase 2)                         | Before Phase 2 starts         |
+| P0       | III        | Create `.env.local.example` with all env vars (current + Phase 2)                   | Before Phase 2 starts         |
 | P0       | IV/VI/VIII | Replace `InMemoryCacheStore` with Upstash Redis `CacheStore`                        | Before S&S API activation     |
 | P0       | X          | Install Supabase CLI, create `supabase/config.toml` for local dev                   | Before Phase 2 schema work    |
 | P0       | XII        | Add `npm run db:migrate` with Drizzle Kit; write migration runbook                  | Phase 2 Day 1                 |
