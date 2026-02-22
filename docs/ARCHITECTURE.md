@@ -155,7 +155,7 @@ See `docs/strategy/twelve-factor-audit.md` for full scorecard. Key enforced rule
 
 - Use `process.env.NEXT_PUBLIC_*` for client-accessible config
 - Use `process.env.*` for server-only secrets
-- All required env vars must be documented in `.env.example`
+- All required env vars must be documented in `.env.local.example`
 
 **Factor VI — Processes**: No process-local mutable state in production.
 
