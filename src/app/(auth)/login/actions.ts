@@ -27,7 +27,10 @@ export async function signIn(formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    const safeMessage = error.message.includes('Invalid login credentials')
+      ? 'Invalid email or password'
+      : 'Something went wrong. Please try again.'
+    return { error: safeMessage }
   }
 
   redirect('/')
