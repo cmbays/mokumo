@@ -5,32 +5,11 @@ import { db } from '@shared/lib/supabase/db'
 import { shopMembers } from '@db/schema'
 import { createClient } from '@shared/lib/supabase/server'
 import { logger } from '@shared/lib/logger'
+import { sessionSchema, type Session } from './session.schema'
+
+export type { Session, UserRole } from './session.schema'
 
 const sessionLogger = logger.child({ domain: 'auth' })
-
-// ---------------------------------------------------------------------------
-// Session type
-// ---------------------------------------------------------------------------
-
-export type UserRole = 'owner' | 'operator'
-
-/**
- * Authenticated session for the current request.
- *
- * Phase 2: Populated from Supabase Auth — `supabase.auth.getUser()` provides
- *   the JWT-verified user; `shopId` and `role` come from a `shop_members` join.
- *
- * The shape is intentionally stable so that all callers require no changes
- * as the auth implementation evolves.
- */
-export type Session = {
-  /** Stable user identifier. Supabase Auth UUID. */
-  userId: string
-  /** Role within the shop. Drives UI permissions and DAL row filtering. */
-  role: UserRole
-  /** Identifies the shop. Used for RLS row filtering. */
-  shopId: string
-}
 
 // ---------------------------------------------------------------------------
 // Dev mock session
@@ -40,7 +19,7 @@ const MOCK_SESSION: Session = {
   userId: '00000000-0000-4000-8000-000000000001', // RFC-4122 compliant (v4, variant 1) — no real Supabase Auth user
   role: 'owner',
   shopId: '00000000-0000-4000-8000-000000004e6b', // RFC-4122 compliant (v4, variant 1) — updated in migration 0008
-} as const
+}
 
 // ---------------------------------------------------------------------------
 // verifySession
@@ -71,7 +50,7 @@ export const verifySession = cache(async (): Promise<Session | null> => {
   // Use === 'development' (not !== 'production') so test environments
   // also exercise the real auth path.
   if (process.env.NODE_ENV === 'development') {
-    return { ...MOCK_SESSION }
+    return sessionSchema.parse(MOCK_SESSION)
   }
 
   // Layer 1: JWT verification via Supabase Auth
@@ -100,7 +79,13 @@ export const verifySession = cache(async (): Promise<Session | null> => {
       return null
     }
 
-    return { userId: user.id, role: membership.role, shopId: membership.shopId }
+    // sessionSchema.parse validates UUID format and role enum at the boundary.
+    // ZodError is caught below and degrades to null — preserves fail-closed contract.
+    return sessionSchema.parse({
+      userId: user.id,
+      role: membership.role,
+      shopId: membership.shopId,
+    })
   } catch (err) {
     sessionLogger.error('shop_members lookup failed', {
       err,
