@@ -65,7 +65,7 @@ npm install -D drizzle-kit supabase
 
 **Environment variables (document in `.env.local.example`):**
 
-```
+```text
 DATABASE_URL                         # Supabase connection pooler URL (Transaction mode) — server only
 NEXT_PUBLIC_SUPABASE_URL             # Supabase project URL — browser-safe
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY # Supabase anon/publishable key — browser-safe

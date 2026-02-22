@@ -64,11 +64,11 @@ Explicit naming (vs "anon key") clarifies browser-safe intent for future develop
 
 - `server.ts` uses `cookies()` which is runtime-server-only
 - `db.ts` uses postgres client which should never be browser-bundled
-- Explicit `'use server only'` header catches bundle accidents at build time (in addition to runtime safety)
+- Explicit `import 'server-only'` at the top of each file catches bundle accidents at build time (in addition to runtime safety)
 
 ### 4. **Environment Variables**
 
-```
+```text
 DATABASE_URL                          # Server only — connection pooler
 NEXT_PUBLIC_SUPABASE_URL              # Browser-safe — project URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY  # Browser-safe — anon key

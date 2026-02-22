@@ -1,7 +1,6 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { signIn } from './actions'
 
 export default function LoginPage() {
@@ -9,27 +8,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
-    try {
-      const result = await signIn(new FormData(e.currentTarget))
+    // signIn() calls redirect('/') on success (throws NEXT_REDIRECT).
+    // It only returns a value on validation/auth failure.
+    const result = await signIn(new FormData(e.currentTarget))
 
-      if ('error' in result && result.error) {
-        setError(result.error)
-      } else {
-        router.push('/')
-        router.refresh()
-      }
-    } catch {
-      setError('An error occurred. Please try again.')
-    } finally {
-      setIsLoading(false)
+    if (result.error) {
+      setError(result.error)
     }
+
+    setIsLoading(false)
   }
 
   return (

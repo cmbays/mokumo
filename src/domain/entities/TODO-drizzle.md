@@ -150,6 +150,7 @@ When migrating an entity `Foo`:
    export type Foo = typeof foosTable.$inferSelect
    export const fooSchema = /* validate type */
    ```
-4. Run `npx drizzle-kit generate` to create migration files in `supabase/migrations/`
-5. Update tests and repositories to use the new schema
-6. Update this TODO file to move `Foo` to "Already Migrated"
+4. Run `npm run db:generate` to create migration files in `supabase/migrations/`
+5. Run `npm run db:migrate` to apply the migration
+6. Update tests and repositories to use the new schema
+7. Update this TODO file to move `Foo` to "Already Migrated"
