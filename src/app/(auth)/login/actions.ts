@@ -1,13 +1,21 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@shared/lib/supabase/server'
 import { logger } from '@shared/lib/logger'
 import { normalizeAuthError, AUTH_ERROR_GENERIC_FALLBACK } from '@infra/auth/normalize-auth-error'
+import { checkSignInRateLimit } from '@shared/lib/rate-limit'
 
 const loginLogger = logger.child({ domain: 'auth' })
 
 export async function signIn(formData: FormData) {
+  const ip = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const { limited } = await checkSignInRateLimit(ip)
+  if (limited) {
+    return { error: 'Too many attempts. Please wait a moment.' }
+  }
+
   // Proper type narrowing instead of unsafe 'as string' cast
   const rawEmail = formData.get('email')
   const rawPassword = formData.get('password')
