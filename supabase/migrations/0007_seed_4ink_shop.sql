@@ -25,7 +25,7 @@ VALUES (
 --   INSERT INTO shop_members (user_id, shop_id, role, created_at)
 --   VALUES (
 --     '<owner-supabase-auth-uuid>',
---     '00000000-0000-0000-0000-000000004e6b',
+--     '00000000-0000-4000-8000-000000004e6b',  -- see migration 0008 for UUID correction
 --     'owner',
 --     NOW()
 --   );
