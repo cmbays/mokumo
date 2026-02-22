@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useSyncExternalStore, useCallback, useEffect } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Package } from 'lucide-react'
+import { Package, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@shared/ui/primitives/button'
 import { GarmentCatalogToolbar } from './GarmentCatalogToolbar'
 import { GarmentCard } from './GarmentCard'
@@ -154,15 +154,37 @@ export function GarmentCatalogClient({
     })
   }, [catalog, category, searchQuery, brand, selectedColorIds])
 
-  // Reset to first page whenever any filter changes
+  // Per-category hit counts ignoring the category filter (faceted search pattern) —
+  // used to hide empty tabs from the toolbar without affecting the active category filter.
+  const categoryHits = useMemo(() => {
+    const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
+    const counts: Record<string, number> = {}
+    catalog.forEach((g) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        if (
+          !g.name.toLowerCase().includes(q) &&
+          !g.brand.toLowerCase().includes(q) &&
+          !g.sku.toLowerCase().includes(q)
+        )
+          return
+      }
+      if (brand && g.brand !== brand) return
+      if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) return
+      counts[g.baseCategory] = (counts[g.baseCategory] ?? 0) + 1
+    })
+    return counts
+  }, [catalog, searchQuery, brand, selectedColorIds])
 
+  // Reset to first page whenever any filter changes
   const colorFilterKey = selectedColorIds.join(',')
   useEffect(() => {
     setPage(0)
   }, [category, searchQuery, brand, colorFilterKey])
 
-  // Cumulative slice — "Load more" appends to visible set
-  const visibleGarments = filteredGarments.slice(0, (page + 1) * PAGE_SIZE)
+  // Per-page slice — enables true prev/next navigation
+  const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
+  const visibleGarments = filteredGarments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   // Extract unique brands for filter dropdown
   const brands = useMemo(() => [...new Set(catalog.map((g) => g.brand))].sort(), [catalog])
@@ -210,6 +232,7 @@ export function GarmentCatalogClient({
         garmentCount={filteredGarments.length}
         favoriteColorIds={globalFavoriteColorIds}
         onBrandClick={handleBrandClick}
+        categoryHits={categoryHits}
       />
 
       {/* Grid View */}
@@ -274,14 +297,29 @@ export function GarmentCatalogClient({
         </div>
       )}
 
-      {/* Load more — shown when visible < filtered */}
-      {visibleGarments.length < filteredGarments.length && (
-        <div className="flex flex-col items-center gap-3 pt-4">
-          <p className="text-xs text-muted-foreground">
-            Showing {visibleGarments.length} of {filteredGarments.length} garments
-          </p>
-          <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
-            Load more
+      {/* Pagination controls — shown when results span multiple pages */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page === 0}
+          >
+            <ChevronLeft className="size-4" />
+            Previous
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Page {page + 1} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages - 1}
+          >
+            Next
+            <ChevronRight className="size-4" />
           </Button>
         </div>
       )}
