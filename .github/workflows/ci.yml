@@ -96,6 +96,6 @@ jobs:
       - name: Deploy to Vercel preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: team_oZpFBCcctoxyVa4IQDkLMxr5
-          VERCEL_PROJECT_ID: prj_8O8LT5YiKq0hFtPdrI828bQgKqeM
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel deploy --token "$VERCEL_TOKEN"
