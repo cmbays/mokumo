@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-  // Only apply protection in production (Vercel deployments)
-  if (process.env.NODE_ENV !== 'production') {
+  // Only bypass auth in local development — test environments exercise the real auth path
+  // Use `=== 'development'` (not `!== 'production'`) so staging/preview/CI never bypass.
+  if (process.env.NODE_ENV === 'development') {
     return NextResponse.next()
   }
 

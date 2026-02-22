@@ -37,7 +37,7 @@ export type Session = {
 // ---------------------------------------------------------------------------
 
 const MOCK_SESSION: Session = {
-  userId: 'usr_4ink_owner',
+  userId: '00000000-0000-0000-0000-000000000001', // deterministic dev UUID — no real Supabase Auth user
   role: 'owner',
   shopId: '00000000-0000-0000-0000-000000004e6b', // seeded in migration 0007
 } as const

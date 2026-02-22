@@ -2,6 +2,9 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@shared/lib/supabase/server'
+import { logger } from '@shared/lib/logger'
+
+const loginLogger = logger.child({ domain: 'auth' })
 
 export async function signIn(formData: FormData) {
   // Proper type narrowing instead of unsafe 'as string' cast
@@ -27,7 +30,12 @@ export async function signIn(formData: FormData) {
   })
 
   if (error) {
-    const safeMessage = error.message.includes('Invalid login credentials')
+    const isKnownCredentialError = error.message.includes('Invalid login credentials')
+    if (!isKnownCredentialError) {
+      // Log unexpected Supabase errors for server-side observability — never returned to the client
+      loginLogger.warn('auth.signIn unexpected error', { code: error.code })
+    }
+    const safeMessage = isKnownCredentialError
       ? 'Invalid email or password'
       : 'Something went wrong. Please try again.'
     return { error: safeMessage }
