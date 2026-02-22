@@ -35,7 +35,7 @@ next-env.d.ts
 !.claude/agents/**
 !.claude/hooks/
 !.claude/hooks/**
-.claude/settings.json
+!.claude/settings.json
 .claudeignore
 
 # ephemeral scratch space (delete at will — nothing here is committed)
@@ -70,6 +70,10 @@ quality-gate/
 
 # Generated progress report (compiled artifact, not source of truth)
 PROGRESS.md
+
+# Supabase CLI local dev artifacts
+.supabase/
+supabase/.temp/
 
 # Knowledge base build output
 knowledge-base/dist/

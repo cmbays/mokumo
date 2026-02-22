@@ -5,6 +5,16 @@
     "description": "Zod schema definitions — single source of truth for all types in the application"
   },
   {
+    "pattern": "lib/*/types.ts",
+    "domain": "schemas",
+    "description": "Co-located type/schema files in feature modules (e.g., lib/suppliers/types.ts, lib/dtf/types.ts)"
+  },
+  {
+    "pattern": "lib/*/schemas.ts",
+    "domain": "schemas",
+    "description": "Co-located schema files in feature modules"
+  },
+  {
     "pattern": "lib/helpers/money.ts",
     "domain": "financial",
     "description": "Financial arithmetic helpers using big.js for IEEE 754-safe monetary calculations"
@@ -113,6 +123,16 @@
     "pattern": "lib/mock-data.ts",
     "domain": "data-layer",
     "description": "Realistic sample data for Phase 1 mockup — used across all screens and components"
+  },
+  {
+    "pattern": "src/infrastructure/**",
+    "domain": "data-layer",
+    "description": "DAL repository routers, provider implementations, and infrastructure wiring"
+  },
+  {
+    "pattern": "lib/suppliers/**",
+    "domain": "data-layer",
+    "description": "Supplier adapter implementations, HTTP clients, and canonical type mappings"
   },
   {
     "pattern": "knowledge-base/**",

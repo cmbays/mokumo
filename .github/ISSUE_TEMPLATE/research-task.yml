@@ -51,6 +51,7 @@ body:
         - Tool: Knowledge Base
         - Tool: CI Pipeline
         - Tool: PM System
+        - Tool: Database
       required: true
 
   - type: dropdown

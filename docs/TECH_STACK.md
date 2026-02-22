@@ -4,8 +4,8 @@ description: 'Every dependency mapped to its domain purpose, with decision conte
 category: canonical
 status: active
 phase: all
-last_updated: 2026-02-15
-last_verified: 2026-02-15
+last_updated: 2026-02-18
+last_verified: 2026-02-18
 depends_on: []
 ---
 
@@ -162,30 +162,51 @@ depends_on: []
 
 ---
 
-## Phase 2 Direction (Planned — Not Yet Installed)
+## Database & Auth
+
+> Installed 2026-02-18 (Wave 0 of epic #529). See `knowledge-base/src/content/pipelines/` for session record.
+
+| Tool                      | Version | Purpose                                                 |
+| ------------------------- | ------- | ------------------------------------------------------- |
+| **@supabase/supabase-js** | ^2.97.0 | Supabase client SDK — database, auth, storage, realtime |
+| **@supabase/ssr**         | ^0.8.0  | Server-side auth adapter for Next.js App Router         |
+
+**Why Supabase**: All-in-one platform — database + auth + storage + realtime in one SDK. $0 dev, $25/mo prod. Native RLS for multi-user isolation. Vercel Postgres lacks auth/storage/realtime; Clerk + Vercel Blob = same cost, 3 vendors.
+
+**When to use**: Import `createClient` from `@shared/lib/supabase/client` (browser) or `@shared/lib/supabase/server` (server components/actions). Never import `@supabase/ssr` or `@supabase/supabase-js` directly from feature code.
+
+**When NOT to use**: Don't use Supabase client on browser for direct database queries — use server actions and route handlers exclusively.
+
+---
+
+## ORM
+
+> Installed 2026-02-18 (Wave 0 of epic #529).
+
+| Tool             | Version        | Purpose                                                                        |
+| ---------------- | -------------- | ------------------------------------------------------------------------------ |
+| **drizzle-orm**  | ^0.45.1        | TypeScript-native ORM — schema-as-code, composable SQL, tiny bundle (~50KB)    |
+| **drizzle-zod**  | ^0.8.3         | Generates Zod schemas from Drizzle table definitions                           |
+| **postgres**     | ^3.4.8         | PostgreSQL connection driver — used with `prepare: false` for transaction mode |
+| **drizzle-kit**  | ^0.31.9 (dev)  | Schema migrations: `db:generate`, `db:migrate`, `db:studio`                    |
+| **supabase** CLI | ^2.76.10 (dev) | Local Supabase development (`supabase start`, `supabase stop`)                 |
+
+**Why Drizzle over Prisma**: TypeScript-native (no DSL file), Zod integration via `drizzle-zod`, no binary engine, smaller bundle. Full SQL control with composable queries.
+
+**When to use**: All database access via `db` from `@shared/lib/supabase/db`. Schema files in `src/db/schema/`. Run `npm run db:generate` after schema changes, `npm run db:migrate` to apply.
+
+**When NOT to use**: Don't use raw `postgres` driver directly — always go through `db` (the Drizzle instance). Don't use `drizzle-orm` in client components (`db.ts` imports `server-only`).
+
+---
+
+## Phase 2 Direction (Partially Installed)
 
 > Research completed 2026-02-15. See `docs/research/2026-02-15-ss-integration-research-synthesis.md` for full analysis.
 > Tracking issue: [#166](https://github.com/cmbays/print-4ink/issues/166)
 
-These tools are **recommended for Phase 2** based on research across 4 parallel investigations (security, industry standards, multi-supplier architecture, infrastructure path). They are NOT yet installed.
+**Supabase + Drizzle** — Installed 2026-02-18 (Wave 0, epic #529). See "Database & Auth" and "ORM" sections above.
 
-### Database + Auth + Storage: Supabase
-
-| Tool                      | Purpose                                 | Why This                                                             |
-| ------------------------- | --------------------------------------- | -------------------------------------------------------------------- |
-| **Supabase** (PostgreSQL) | Database, auth, file storage, realtime  | All-in-one platform. $0 dev, $25/mo prod. Native RLS for multi-user. |
-| **@supabase/ssr**         | Server-side auth for Next.js App Router | Cookie-based sessions, middleware token refresh.                     |
-
-**Why Supabase over alternatives**: Vercel Postgres lacks auth/storage/realtime. PlanetScale is MySQL ($39/mo min). Clerk + Vercel Blob = same cost but 3 vendors, 3 dashboards. Supabase gives database + auth + storage + realtime in one SDK at the same price point.
-
-### ORM: Drizzle
-
-| Tool            | Purpose                              | Why This                                                                                                                                             |
-| --------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **drizzle-orm** | TypeScript-native ORM for PostgreSQL | Schema defined in TS (matches Zod-first approach), tiny bundle (~50KB vs Prisma's ~2MB), `drizzle-zod` generates Zod schemas from table definitions. |
-| **drizzle-kit** | Schema migrations                    | `drizzle-kit generate` + `drizzle-kit migrate`. Code-first schema management.                                                                        |
-
-**Why Drizzle over Prisma**: TypeScript-native (no DSL file), Zod integration via `drizzle-zod`, no binary engine, smaller bundle. Full SQL control with composable queries.
+**Still planned / not yet integrated** (S&S API, PromoStandards, DAL migration):
 
 ### Rate Limiting + Cache: Upstash Redis
 

@@ -87,6 +87,9 @@ describe('garmentCatalogSchema', () => {
       { name: 'S', order: 0, priceAdjustment: 0 },
       { name: 'M', order: 1, priceAdjustment: 0 },
     ],
+    isEnabled: true,
+    isFavorite: false,
+    updatedAt: new Date('2026-02-18T00:00:00Z'),
   }
 
   it('accepts a valid catalog entry', () => {

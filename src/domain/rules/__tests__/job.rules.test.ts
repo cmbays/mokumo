@@ -265,6 +265,122 @@ describe('computeFilteredCards', () => {
     })
     expect(result).toHaveLength(1)
   })
+
+  describe('today filter', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('excludes job cards that start after today', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [
+        makeJobCard({ startDate: '2026-02-15', lane: 'ready', quantity: 10 }),
+        makeJobCard({ startDate: '2026-02-20', lane: 'ready', quantity: 10 }),
+      ]
+
+      const result = computeFilteredCards(cards, { today: true })
+      expect(result).toHaveLength(1)
+    })
+
+    it('excludes job cards in done lane', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [
+        makeJobCard({ startDate: '2026-02-15', lane: 'ready', quantity: 10 }),
+        makeJobCard({ startDate: '2026-02-15', lane: 'done', quantity: 10 }),
+      ]
+
+      const result = computeFilteredCards(cards, { today: true })
+      expect(result).toHaveLength(1)
+    })
+
+    it('excludes quote cards in done lane', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [makeQuoteCard({ lane: 'ready' }), makeQuoteCard({ lane: 'done' })]
+
+      const result = computeFilteredCards(cards, { today: true })
+      expect(result).toHaveLength(1)
+    })
+
+    it('always passes scratch notes through', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [makeScratchNoteCard(), makeScratchNoteCard()]
+
+      const result = computeFilteredCards(cards, { today: true })
+      expect(result).toHaveLength(2)
+    })
+  })
+
+  describe('horizon filter', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('past_due: keeps cards with dueDate before today', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [
+        makeJobCard({ dueDate: '2026-02-10', lane: 'ready', quantity: 10 }),
+        makeJobCard({ dueDate: '2026-02-25', lane: 'ready', quantity: 10 }),
+      ]
+
+      const result = computeFilteredCards(cards, { horizon: 'past_due' })
+      expect(result).toHaveLength(1)
+    })
+
+    it('this_week: keeps cards due within 0–7 days', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [
+        makeJobCard({ dueDate: '2026-02-10', lane: 'ready', quantity: 10 }),
+        makeJobCard({ dueDate: '2026-02-20', lane: 'ready', quantity: 10 }),
+        makeJobCard({ dueDate: '2026-02-28', lane: 'ready', quantity: 10 }),
+      ]
+
+      const result = computeFilteredCards(cards, { horizon: 'this_week' })
+      expect(result).toHaveLength(1)
+    })
+
+    it('next_week: keeps cards due within 7–14 days', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const cards: BoardCard[] = [
+        makeJobCard({ dueDate: '2026-02-20', lane: 'ready', quantity: 10 }),
+        makeJobCard({ dueDate: '2026-02-25', lane: 'ready', quantity: 10 }),
+        makeJobCard({ dueDate: '2026-03-10', lane: 'ready', quantity: 10 }),
+      ]
+
+      const result = computeFilteredCards(cards, { horizon: 'next_week' })
+      expect(result).toHaveLength(1)
+    })
+
+    it('excludes scratch notes from horizon filter', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const result = computeFilteredCards([makeScratchNoteCard()], { horizon: 'this_week' })
+      expect(result).toHaveLength(0)
+    })
+
+    it('excludes cards with no dueDate from horizon filter', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-02-18'))
+
+      const card = makeQuoteCard({ lane: 'ready' }) // quote with no dueDate
+      const result = computeFilteredCards([card], { horizon: 'this_week' })
+      expect(result).toHaveLength(0)
+    })
+  })
 })
 
 // ---------------------------------------------------------------------------

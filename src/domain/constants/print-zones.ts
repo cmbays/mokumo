@@ -124,6 +124,43 @@ export const PRINT_ZONES: Record<GarmentCategory, Partial<Record<MockupView, Pri
     front: [{ position: 'front-panel', x: 20, y: 25, width: 60, height: 40 }],
     back: [{ position: 'back-panel', x: 20, y: 25, width: 60, height: 40 }],
   },
+  polos: {
+    front: [
+      { position: 'front-chest', x: 28, y: 30, width: 44, height: 28 },
+      { position: 'left-chest', x: 54, y: 30, width: 16, height: 15 },
+    ],
+    back: [{ position: 'full-back', x: 25, y: 28, width: 50, height: 45 }],
+  },
+  'knits-layering': {
+    front: [{ position: 'front-chest', x: 26, y: 22, width: 48, height: 32 }],
+    back: [{ position: 'full-back', x: 20, y: 22, width: 60, height: 45 }],
+  },
+  shorts: {
+    front: [{ position: 'left-leg', x: 30, y: 35, width: 20, height: 20 }],
+    back: [],
+  },
+  activewear: {
+    front: [
+      { position: 'front-chest', x: 28, y: 22, width: 44, height: 30 },
+      { position: 'left-chest', x: 52, y: 22, width: 16, height: 16 },
+    ],
+    back: [{ position: 'full-back', x: 20, y: 20, width: 60, height: 48 }],
+  },
+  accessories: {
+    front: [],
+    back: [],
+  },
+  wovens: {
+    front: [
+      { position: 'left-chest', x: 52, y: 28, width: 16, height: 15 },
+      { position: 'front-chest', x: 28, y: 28, width: 44, height: 28 },
+    ],
+    back: [{ position: 'full-back', x: 25, y: 28, width: 50, height: 45 }],
+  },
+  other: {
+    front: [],
+    back: [],
+  },
 }
 
 /** Get all print zones for a garment category and view. */

@@ -55,6 +55,10 @@ const SIZE_CLASSES = {
 
 type GarmentMockupProps = {
   garmentCategory: GarmentCategory
+  /**
+   * The hex color used for SVG color tinting (e.g. '#ffffff').
+   * Only used when `imageUrl` is absent — pass any value when providing `imageUrl`.
+   */
   colorHex: string
   artworkPlacements?: ArtworkPlacement[]
   view?: MockupView
@@ -68,6 +72,8 @@ type GarmentMockupProps = {
   viewBoxHeight?: number
   /** Dev-only: renders dashed amber overlay showing print zone boundaries. */
   debug?: boolean
+  /** Real S&S product photo URL. When provided, renders as the base layer instead of SVG tinting. */
+  imageUrl?: string
 }
 
 /**
@@ -90,6 +96,7 @@ export function GarmentMockup({
   viewBoxWidth = 400,
   viewBoxHeight = 480,
   debug = false,
+  imageUrl,
 }: GarmentMockupProps) {
   const instanceId = useId()
   const svgPath = templatePath ?? resolveTemplatePath(garmentCategory, colorHex, view)
@@ -124,15 +131,32 @@ export function GarmentMockup({
       >
         {/* Inline color tint filter — self-contained fallback.
             MockupFilterProvider may also define this filter ID at page level
-            for deduplication, but this ensures the component works standalone. */}
-        <defs>
-          <filter id={filterId}>
-            <feColorMatrix type="matrix" values={hexToColorMatrix(colorHex)} />
-          </filter>
-        </defs>
+            for deduplication, but this ensures the component works standalone.
+            Omitted when a real photo is provided — no tinting needed. */}
+        {!imageUrl && (
+          <defs>
+            <filter id={filterId}>
+              <feColorMatrix type="matrix" values={hexToColorMatrix(colorHex)} />
+            </filter>
+          </defs>
+        )}
 
-        {/* Garment template with color tint filter */}
-        <image href={svgPath} width={viewBoxWidth} height={viewBoxHeight} />
+        {/* Garment base layer: real photo when available, SVG tinting fallback otherwise */}
+        {imageUrl ? (
+          <image
+            href={imageUrl}
+            width={viewBoxWidth}
+            height={viewBoxHeight}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : (
+          <image
+            href={svgPath}
+            width={viewBoxWidth}
+            height={viewBoxHeight}
+            filter={`url(#${filterId})`}
+          />
+        )}
 
         {/* Artwork overlays */}
         {resolvedPlacements.map((placement, i) => {

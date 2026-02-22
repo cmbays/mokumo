@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import Image from 'next/image'
 import { cn } from '@shared/lib/cn'
 import { GarmentMockup } from '@features/quotes/components/mockup'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
@@ -10,15 +11,20 @@ import { formatCurrency } from '@domain/lib/money'
 import { getColorById } from '@domain/rules/garment.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
 import type { GarmentCatalog } from '@domain/entities/garment'
+import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Color } from '@domain/entities/color'
 
 type GarmentCardProps = {
-  garment: GarmentCatalog
+  garment: GarmentCatalog | NormalizedGarmentCatalog
   showPrice: boolean
   favoriteColorIds: string[]
   onToggleFavorite: (garmentId: string) => void
   onBrandClick?: (brandName: string) => void
   onClick: (garmentId: string) => void
+}
+
+function isNormalized(g: GarmentCatalog | NormalizedGarmentCatalog): g is NormalizedGarmentCatalog {
+  return 'source' in g
 }
 
 export function GarmentCard({
@@ -30,12 +36,16 @@ export function GarmentCard({
   onClick,
 }: GarmentCardProps) {
   // All Color objects for this garment's palette
+  // GarmentCatalog has availableColors (array of color IDs); NormalizedGarmentCatalog has colors (rich objects)
+  // Normalized garments return [] here — favorite swatches depend on Color entity IDs not available in the
+  // normalized schema. This is intentionally deferred until the favorites system is migrated to catalog_colors.
   const garmentColors = useMemo(() => {
+    if (isNormalized(garment)) return []
     const allColors = getColorsMutable()
     return garment.availableColors
       .map((id) => getColorById(id, allColors))
       .filter((c): c is Color => c != null)
-  }, [garment.availableColors])
+  }, [garment])
 
   // Only favorite colors that this garment actually has
   const favoriteSwatchColors = useMemo(() => {
@@ -43,7 +53,12 @@ export function GarmentCard({
     return garmentColors.filter((c) => favSet.has(c.id))
   }, [garmentColors, favoriteColorIds])
 
-  const totalColorCount = garmentColors.length
+  const totalColorCount = isNormalized(garment) ? garment.colors.length : garmentColors.length
+
+  // Card always shows the first color's front image — intentional; the detail drawer handles color switching.
+  const frontImage = isNormalized(garment)
+    ? garment.colors[0]?.images.find((i) => i.imageType === 'front')
+    : undefined
 
   return (
     <div
@@ -64,16 +79,32 @@ export function GarmentCard({
         !garment.isEnabled && 'opacity-50'
       )}
     >
-      {/* Image */}
+      {/* Image — real photo if available, SVG tinting fallback */}
       <div className="flex justify-center py-2">
-        <GarmentMockup
-          garmentCategory={garment.baseCategory}
-          colorHex={garmentColors[0]?.hex ?? '#ffffff'}
-          size="sm"
-        />
+        {frontImage ? (
+          <div className="relative w-16 h-20 rounded overflow-hidden bg-surface">
+            <Image
+              src={frontImage.url}
+              alt={`${garment.name} front view`}
+              fill
+              sizes="64px"
+              className="object-contain"
+            />
+          </div>
+        ) : (
+          <GarmentMockup
+            garmentCategory={isNormalized(garment) ? garment.category : garment.baseCategory}
+            colorHex={
+              isNormalized(garment)
+                ? (garment.colors[0]?.hex1 ?? '#ffffff')
+                : (garmentColors[0]?.hex ?? '#ffffff')
+            }
+            size="sm"
+          />
+        )}
       </div>
 
-      {/* Brand + SKU */}
+      {/* Brand + SKU / style number */}
       <p className="text-xs text-muted-foreground">
         {onBrandClick ? (
           <button
@@ -89,7 +120,7 @@ export function GarmentCard({
         ) : (
           garment.brand
         )}{' '}
-        · {garment.sku}
+        · {isNormalized(garment) ? garment.styleNumber : garment.sku}
       </p>
 
       {/* Name */}
@@ -115,9 +146,9 @@ export function GarmentCard({
       {/* Bottom row: price + badges + favorite */}
       <div className="flex items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-1.5">
-          {showPrice && (
+          {showPrice && !(isNormalized(garment) && garment.piecePrice == null) && (
             <span className="text-sm font-medium text-foreground">
-              {formatCurrency(garment.basePrice)}
+              {formatCurrency(isNormalized(garment) ? garment.piecePrice! : garment.basePrice)}
             </span>
           )}
           {!garment.isEnabled && (

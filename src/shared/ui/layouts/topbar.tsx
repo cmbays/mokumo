@@ -1,3 +1,4 @@
+import { LogOut } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -6,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from '@shared/ui/primitives/breadcrumb'
 import type { BreadcrumbSegment } from '@shared/lib/breadcrumbs'
+import { signOut } from '@shared/actions/auth'
 
 type TopbarProps = {
   breadcrumbs?: BreadcrumbSegment[]
@@ -33,6 +35,17 @@ export function Topbar({ breadcrumbs }: TopbarProps) {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
+
+      <form action={signOut} className="ml-auto">
+        <button
+          type="submit"
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          title="Sign out"
+        >
+          <LogOut size={16} />
+          <span>Sign out</span>
+        </button>
+      </form>
     </header>
   )
 }

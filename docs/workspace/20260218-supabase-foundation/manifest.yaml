@@ -1,0 +1,347 @@
+vertical: horizontal
+pipeline: 20260218-supabase-foundation
+epic: '#529'
+
+waves:
+  - name: 'Wave 0: Foundation'
+    serial: true
+    sessions:
+      - topic: supabase-infra-setup
+        stage: build
+        prompt: |
+          You are implementing Wave 0 of the Supabase Foundation epic (#529) for Screen Print Pro.
+
+          ## Your goal
+          Install packages and create infrastructure files with ZERO behavior changes.
+          The app must build and pass TypeScript after this session.
+
+          ## Required reading (read these FIRST)
+          1. CLAUDE.md — project standards, coding rules, worktree workflow
+          2. docs/workspace/20260218-supabase-foundation/research.md — exact integration code patterns
+          3. docs/workspace/20260218-supabase-foundation/plan.md — Task 0.1 in detail
+
+          ## What to build
+
+          ### 1. Install packages
+          ```bash
+          npm install @supabase/supabase-js @supabase/ssr drizzle-orm postgres drizzle-zod
+          npm install -D drizzle-kit supabase
+          ```
+
+          ### 2. Create supabase/ directory
+          - `supabase/config.toml` — minimal local CLI config:
+            ```toml
+            [project]
+            project_id = "screen-print-pro"
+            ```
+          - `supabase/migrations/.gitkeep` — empty placeholder
+
+          ### 3. Create src/shared/lib/supabase/ files
+          Three files with exact patterns from research.md:
+          - `src/shared/lib/supabase/client.ts` — createBrowserClient() factory
+          - `src/shared/lib/supabase/server.ts` — createServerClient() + cookie adapter
+          - `src/shared/lib/supabase/db.ts` — Drizzle postgres client (Transaction mode, prepare: false)
+
+          ### 4. Create drizzle.config.ts (project root)
+          ```ts
+          import type { Config } from 'drizzle-kit'
+          export default {
+            schema: './src/db/schema/*',
+            out: './supabase/migrations',
+            dialect: 'postgresql',
+            dbCredentials: { url: process.env.DATABASE_URL! },
+          } satisfies Config
+          ```
+
+          ### 5. Add npm scripts to package.json
+          Add to the "scripts" block:
+          - "db:generate": "drizzle-kit generate"
+          - "db:migrate": "drizzle-kit migrate"
+          - "db:studio": "drizzle-kit studio"
+
+          ### 6. Create .env.local.example (project root)
+          Document all 5 required variables:
+          ```
+          # Supabase connection pooler URL (Transaction mode) — server only
+          DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
+
+          # Supabase project URL — browser-safe
+          NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+
+          # Supabase anon/publishable key — browser-safe
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_anon_key_here
+
+          # Service role key (bypasses RLS) — server only, NEVER expose to browser
+          SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+
+          # Protects POST /api/catalog/sync — server only
+          ADMIN_SECRET=your_admin_secret_here
+          ```
+
+          ## Acceptance criteria
+          - `npx tsc --noEmit` passes (no TypeScript errors from new files)
+          - `npm run build` passes
+          - No behavior change — existing routes work identically
+
+          ## Completion
+          After passing acceptance criteria, use the build-session-protocol skill to:
+          1. Commit all changes with a descriptive message
+          2. Push the branch
+          3. Create a PR targeting main
+
+  - name: 'Wave 1: Feature work'
+    serial: false
+    sessions:
+      - topic: auth-flow
+        stage: build
+        dependsOn: supabase-infra-setup
+        prompt: |
+          You are implementing Wave 1 / Session A of the Supabase Foundation epic (#529).
+          This is the V1 auth slice: replace the demo access code with real Supabase email/password auth.
+
+          ## Required reading (read these FIRST)
+          1. CLAUDE.md — project standards, coding rules (especially: 'use client' only when needed, server actions pattern)
+          2. docs/workspace/20260218-supabase-foundation/plan.md — Task 1.1 in detail (middleware pattern, verifySession update, topbar)
+          3. docs/workspace/20260218-supabase-foundation/research.md — middleware code pattern, getUser() gotcha
+          4. middleware.ts — current implementation (read before rewriting)
+          5. src/infrastructure/auth/session.ts — current verifySession() (read before modifying)
+          6. src/app/demo-login/page.tsx — visual style to mirror for login page
+          7. src/shared/ui/layouts/topbar.tsx — current topbar (read before modifying)
+
+          ## Context
+          Wave 0 has merged. These packages are now installed:
+          @supabase/supabase-js, @supabase/ssr, drizzle-orm, postgres, drizzle-zod
+          These files exist: src/shared/lib/supabase/client.ts, server.ts, db.ts
+
+          ## What to build
+
+          ### 1. Rewrite middleware.ts
+          See plan.md Task 1.1 for the exact pattern.
+          CRITICAL requirements:
+          - Keep `if (process.env.NODE_ENV !== 'production') return NextResponse.next()` at the top
+          - Use `supabase.auth.getUser()` — NEVER getSession()
+          - Redirect to `/login` (not `/demo-login`) if no user
+          - Update matcher to exclude `login` instead of `demo-login`
+
+          ### 2. Create login page
+          Route: `src/app/(auth)/login/page.tsx`
+          - '(auth)' route group puts this OUTSIDE the (dashboard) layout — no sidebar/topbar chrome
+          - This is a 'use client' component (uses React state for loading/error)
+          - React Hook Form + Zod for validation
+          - Schema: { email: z.string().email(), password: z.string().min(1) }
+          - On submit: calls the signIn server action
+          - On error: shows returned error message ("Invalid login credentials", etc.)
+          - Design: centered card, use bg-elevated/bg-background/text-foreground/text-muted-foreground tokens
+          - Mirror the layout of the existing demo-login page (but cleaner — no access code copy)
+
+          ### 3. Create login server action
+          File: `src/app/(auth)/login/actions.ts`
+          - 'use server' directive
+          - `signIn(formData: FormData)` function
+          - Creates server Supabase client via createClient() from src/shared/lib/supabase/server.ts
+          - Calls supabase.auth.signInWithPassword({ email, password })
+          - On success: redirect('/') via next/navigation
+          - On error: return { error: error.message }
+
+          ### 4. Create signOut server action
+          File: `src/features/auth/actions.ts`
+          - 'use server' directive
+          - `signOut()` function
+          - Creates server Supabase client
+          - Calls supabase.auth.signOut()
+          - redirect('/login')
+
+          ### 5. Update topbar
+          File: src/shared/ui/layouts/topbar.tsx
+          - Add a Sign Out button on the right side (ml-auto)
+          - Use HTML form with action={signOut} and button type="submit"
+          - This avoids needing 'use client' in the topbar
+          - Icon: LogOut from lucide-react, size 16
+          - Add a text label or tooltip: "Sign out"
+
+          ### 6. Update verifySession() — Phase 2a interim
+          File: src/infrastructure/auth/session.ts
+          - Keep the `if (process.env.NODE_ENV === 'development') return MOCK_SESSION` shortcut
+          - In the production path: REPLACE the demo-access cookie check with Supabase Auth
+          - Pattern (from plan.md Task 1.1):
+            ```ts
+            const cookieStore = await cookies()
+            const supabase = createServerClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+              { cookies: { getAll: () => cookieStore.getAll() } }
+            )
+            const { data: { user }, error } = await supabase.auth.getUser()
+            if (error || !user) return null
+            // Hardcoded until shop_members table added in a future pipeline
+            return { userId: user.id, role: 'owner' as const, shopId: 'shop_4ink' }
+            ```
+          - The Session type shape is IDENTICAL — no consumer changes required
+
+          ### 7. Delete demo-login routes
+          - Delete src/app/demo-login/ (entire directory)
+          - Delete src/app/api/demo-login/ (entire directory)
+
+          ## Acceptance criteria
+          - Unauthenticated request to any route in production → redirected to /login
+          - Correct credentials → dashboard, session persists on refresh
+          - Sign Out → /login, session cleared
+          - /demo-login → 404
+          - npx tsc --noEmit passes
+          - npm run lint passes
+          - npm test passes (no regressions)
+
+          ## Completion
+          Use the build-session-protocol skill to commit, push, and create a PR targeting main.
+
+      - topic: catalog-sync
+        stage: build
+        dependsOn: supabase-infra-setup
+        prompt: |
+          You are implementing Wave 1 / Session B of the Supabase Foundation epic (#529).
+          This is the V2 catalog sync slice: wire the S&S Activewear catalog to Supabase PostgreSQL.
+
+          ## Required reading (read these FIRST)
+          1. CLAUDE.md — project standards, import rules (no direct _providers imports outside infrastructure)
+          2. docs/workspace/20260218-supabase-foundation/plan.md — Task 1.2 in detail (exact table schema, drizzle-zod pattern)
+          3. docs/workspace/20260218-supabase-foundation/research.md — drizzle-zod patterns
+          4. src/domain/entities/garment.ts — current schema (read before modifying)
+          5. src/infrastructure/repositories/garments.ts — current routing logic (read before modifying)
+          6. src/infrastructure/repositories/_providers/supplier/garments.ts — SSActivewearAdapter usage pattern
+          7. src/shared/lib/supabase/db.ts — Drizzle client (already created in Wave 0)
+
+          ## Context
+          Wave 0 has merged. These packages are now installed:
+          drizzle-orm, postgres, drizzle-zod, drizzle-kit
+          drizzle.config.ts exists pointing schema at src/db/schema/
+
+          ## What to build
+
+          ### 1. Create Drizzle catalog table
+          File: src/db/schema/catalog.ts
+          See plan.md Task 1.2 for the exact column definitions.
+          Key design notes:
+          - `id` is varchar(50) primary key — S&S styleIds are numeric strings like "3001", NOT UUIDs
+          - `basePrice` should use { mode: 'number' } on the numeric column so drizzle-zod derives number type
+          - `availableColors` and `availableSizes` are jsonb with .$type<>() for TypeScript
+          - `updatedAt` auto-defaults to now()
+
+          ### 2. Generate migration (NO running DB needed)
+          After creating catalog.ts, run:
+          ```bash
+          npm run db:generate
+          ```
+          This reads the TypeScript schema and outputs SQL to supabase/migrations/.
+          Commit the generated .sql file — it's part of the PR.
+
+          ### 3. Update src/domain/entities/garment.ts
+          Derive garmentCatalogSchema from the Drizzle table using drizzle-zod:
+          ```ts
+          import { createSelectSchema, createInsertSchema } from 'drizzle-zod'
+          import { catalog } from '@db/schema/catalog'
+
+          export const garmentCatalogSchema = createSelectSchema(catalog)
+          export const newGarmentCatalogSchema = createInsertSchema(catalog)
+          export type GarmentCatalog = z.infer<typeof garmentCatalogSchema>
+          ```
+          IMPORTANT: Keep garmentSchema (for job instance garments) UNCHANGED.
+          Verify that GarmentCatalog.basePrice type is number (not string).
+          If drizzle returns basePrice as string from numeric column, add .extend({ basePrice: z.coerce.number() })
+
+          You'll need to add a path alias for @db/schema — check tsconfig.json paths and add if missing.
+
+          ### 4. Create supabase garments provider
+          File: src/infrastructure/repositories/_providers/supabase/garments.ts
+          See plan.md Task 1.2 for the exact pattern.
+          - Imports db from @shared/lib/supabase/db
+          - Imports catalog table from @db/schema/catalog
+          - Implements getGarmentCatalog(), getGarmentById(), getAvailableBrands()
+          - Filters by isEnabled: true in getGarmentCatalog
+
+          ### 5. Update garment repository router
+          File: src/infrastructure/repositories/garments.ts
+          Add isSupabaseCatalogMode() function (checks SUPPLIER_ADAPTER === 'supabase-catalog')
+          Add third routing path in each exported function:
+          ```ts
+          if (isSupabaseCatalogMode()) return getSupabaseCatalog()
+          ```
+          Import the new supabase provider functions.
+
+          ### 6. Create catalog sync endpoint
+          File: src/app/api/catalog/sync/route.ts
+          - POST handler only
+          - Validate x-admin-secret header against process.env.ADMIN_SECRET
+          - Return 401 if missing or wrong
+          - Call SSActivewearAdapter.getStyles() via the supplier registry (see how existing supplier provider works)
+          - Map each CanonicalStyle to catalog insert format using canonicalStyleToGarmentCatalog from the supplier provider
+          - Upsert using db.insert(catalog).values(styles).onConflictDoUpdate({ target: catalog.id, set: { ...all fields except id } })
+          - Return { synced: count, timestamp: new Date().toISOString() }
+          - Log errors with logger (from @shared/lib/logger)
+
+          ## Acceptance criteria
+          - supabase/migrations/*.sql exists and is committed (from db:generate)
+          - npx tsc --noEmit passes
+          - npm run lint passes
+          - npm test passes (existing tests not broken)
+          - SUPPLIER_ADAPTER=supabase-catalog env var correctly routes garment calls to DB
+          - curl POST /api/catalog/sync without ADMIN_SECRET → 401
+          - garmentCatalogSchema type matches GarmentCatalog interface (no type errors)
+
+          ## Completion
+          Use the build-session-protocol skill to commit, push, and create a PR targeting main.
+
+      - topic: schema-ci-gate
+        stage: build
+        dependsOn: supabase-infra-setup
+        prompt: |
+          You are implementing Wave 1 / Session C of the Supabase Foundation epic (#529).
+          This is the V3 slice: add the Drizzle migration CI gate and the entity migration TODO file.
+
+          ## Required reading (read these FIRST)
+          1. CLAUDE.md — project standards
+          2. docs/workspace/20260218-supabase-foundation/plan.md — Task 1.3 in detail
+          3. .github/workflows/ci.yml — current CI workflow (read before modifying)
+
+          ## Context
+          Wave 0 has merged. drizzle-kit is now a devDependency. drizzle.config.ts exists.
+          This is a lightweight session: CI yaml addition + one new doc file.
+
+          ## What to build
+
+          ### 1. Update .github/workflows/ci.yml
+          Add two new steps after the existing 'Build' step:
+
+          Step A — warn on PRs to main (continue-on-error: true):
+          ```yaml
+          - name: Schema migration drift check (warn on main PRs)
+            if: github.event_name == 'pull_request' && github.base_ref == 'main'
+            continue-on-error: true
+            run: npx drizzle-kit check
+          ```
+
+          Step B — hard fail on production branch:
+          ```yaml
+          - name: Schema migration drift check (hard fail on production)
+            if: github.ref == 'refs/heads/production'
+            run: npx drizzle-kit check
+          ```
+
+          Notes:
+          - drizzle-kit check reads the TypeScript schema files and validates migration consistency
+          - It does NOT require a running database (schema-only analysis)
+          - The step ID/name matters for the PR annotation to be readable
+
+          ### 2. Create src/domain/entities/TODO-drizzle.md
+          See plan.md Task 1.3 for the exact content.
+          List all existing entity schemas in src/domain/entities/ that are hand-written
+          and will need future migration to drizzle-zod as their verticals get Supabase repos.
+          Mark GarmentCatalog as already migrated (by Session B of this pipeline).
+
+          ## Acceptance criteria
+          - .github/workflows/ci.yml is valid YAML (check syntax)
+          - npx tsc --noEmit passes (no type errors)
+          - TODO-drizzle.md exists and lists all entity files
+          - CI workflow logic is correct: warn on PR, hard fail on production
+
+          ## Completion
+          Use the build-session-protocol skill to commit, push, and create a PR targeting main.

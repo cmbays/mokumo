@@ -33,6 +33,19 @@ import {
   scratchNotes,
   quoteCards,
   mockupTemplates,
+  getCustomerQuotes,
+  getCustomerJobs,
+  getCustomerContacts,
+  getCustomerNotes,
+  getCustomerArtworks,
+  getCustomerInvoices,
+  getInvoicePayments,
+  getInvoiceCreditMemos,
+  getQuoteInvoice,
+  getJobsByLane,
+  getJobsByServiceType,
+  getJobTasks,
+  getJobNotes,
 } from '../data'
 
 describe('mock data validates against schemas', () => {
@@ -563,5 +576,147 @@ describe('data coverage', () => {
     for (const template of mockupTemplates) {
       expect(() => mockupTemplateSchema.parse(template)).not.toThrow()
     }
+  })
+})
+
+describe('data lookup helpers', () => {
+  const firstCustomer = customers[0]
+  const firstCustomerId = firstCustomer.id
+
+  it('getCustomerQuotes returns quotes for the customer', () => {
+    const result = getCustomerQuotes(firstCustomerId)
+    expect(Array.isArray(result)).toBe(true)
+    for (const q of result) {
+      expect(q.customerId).toBe(firstCustomerId)
+    }
+  })
+
+  it('getCustomerQuotes returns empty array for unknown customer', () => {
+    expect(getCustomerQuotes('unknown-id')).toEqual([])
+  })
+
+  it('getCustomerJobs returns jobs for the customer', () => {
+    const result = getCustomerJobs(firstCustomerId)
+    expect(Array.isArray(result)).toBe(true)
+    for (const j of result) {
+      expect(j.customerId).toBe(firstCustomerId)
+    }
+  })
+
+  it('getCustomerJobs returns empty array for unknown customer', () => {
+    expect(getCustomerJobs('unknown-id')).toEqual([])
+  })
+
+  it('getCustomerContacts returns contacts for the customer', () => {
+    const result = getCustomerContacts(firstCustomerId)
+    expect(result.length).toBeGreaterThan(0)
+    for (const c of result) {
+      expect(typeof c.id).toBe('string')
+    }
+  })
+
+  it('getCustomerContacts returns empty array for unknown customer', () => {
+    expect(getCustomerContacts('unknown-id')).toEqual([])
+  })
+
+  it('getCustomerNotes returns customer-scoped notes', () => {
+    const result = getCustomerNotes(firstCustomerId)
+    expect(Array.isArray(result)).toBe(true)
+    for (const n of result) {
+      expect(n.entityType).toBe('customer')
+      expect(n.entityId).toBe(firstCustomerId)
+    }
+  })
+
+  it('getCustomerNotes returns empty array for unknown customer', () => {
+    expect(getCustomerNotes('unknown-id')).toEqual([])
+  })
+
+  it('getCustomerArtworks returns artworks for the customer', () => {
+    const result = getCustomerArtworks(firstCustomerId)
+    expect(Array.isArray(result)).toBe(true)
+    for (const a of result) {
+      expect(a.customerId).toBe(firstCustomerId)
+    }
+  })
+
+  it('getCustomerArtworks returns empty array for unknown customer', () => {
+    expect(getCustomerArtworks('unknown-id')).toEqual([])
+  })
+
+  it('getCustomerInvoices returns invoices for the customer', () => {
+    const result = getCustomerInvoices(firstCustomerId)
+    expect(Array.isArray(result)).toBe(true)
+    for (const inv of result) {
+      expect(inv.customerId).toBe(firstCustomerId)
+    }
+  })
+
+  it('getCustomerInvoices returns empty array for unknown customer', () => {
+    expect(getCustomerInvoices('unknown-id')).toEqual([])
+  })
+
+  it('getInvoicePayments returns payments for an invoice', () => {
+    const invoice = invoices[0]
+    const result = getInvoicePayments(invoice.id)
+    expect(Array.isArray(result)).toBe(true)
+    for (const p of result) {
+      expect(p.invoiceId).toBe(invoice.id)
+    }
+  })
+
+  it('getInvoicePayments returns empty array for unknown invoice', () => {
+    expect(getInvoicePayments('unknown-id')).toEqual([])
+  })
+
+  it('getInvoiceCreditMemos returns credit memos for an invoice', () => {
+    const invoice = invoices.find((inv) => creditMemos.some((cm) => cm.invoiceId === inv.id))
+    expect(invoice).toBeDefined()
+    const result = getInvoiceCreditMemos(invoice!.id)
+    expect(result.length).toBeGreaterThan(0)
+    for (const cm of result) {
+      expect(cm.invoiceId).toBe(invoice!.id)
+    }
+    expect(getInvoiceCreditMemos('unknown-id')).toEqual([])
+  })
+
+  it('getQuoteInvoice returns the invoice for a quote', () => {
+    const invoiceWithQuote = invoices.find((inv) => inv.quoteId)
+    expect(invoiceWithQuote).toBeDefined()
+    const result = getQuoteInvoice(invoiceWithQuote!.quoteId!)
+    expect(result).toBeDefined()
+    expect(result!.id).toBe(invoiceWithQuote!.id)
+    expect(getQuoteInvoice('unknown-quote-id')).toBeUndefined()
+  })
+
+  it('getJobsByLane returns only jobs in the specified lane', () => {
+    const readyJobs = getJobsByLane('ready')
+    expect(Array.isArray(readyJobs)).toBe(true)
+    for (const j of readyJobs) {
+      expect(j.lane).toBe('ready')
+    }
+  })
+
+  it('getJobsByServiceType returns only jobs of the specified type', () => {
+    const screenPrintJobs = getJobsByServiceType('screen-print')
+    expect(Array.isArray(screenPrintJobs)).toBe(true)
+    for (const j of screenPrintJobs) {
+      expect(j.serviceType).toBe('screen-print')
+    }
+  })
+
+  it('getJobTasks returns tasks for a known job', () => {
+    const job = jobs.find((j) => j.tasks.length > 0)
+    expect(job).toBeDefined()
+    const result = getJobTasks(job!.id)
+    expect(result).toEqual(job!.tasks)
+    expect(getJobTasks('unknown-id')).toEqual([])
+  })
+
+  it('getJobNotes returns notes for a known job', () => {
+    const job = jobs[0]
+    const result = getJobNotes(job.id)
+    expect(Array.isArray(result)).toBe(true)
+    expect(getJobNotes('unknown-id')).toEqual([])
   })
 })

@@ -54,6 +54,7 @@ body:
         - Tool: Knowledge Base
         - Tool: CI Pipeline
         - Tool: PM System
+        - Tool: Database
     validations:
       required: true
 

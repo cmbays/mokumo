@@ -50,7 +50,7 @@ import type { Lane, Job } from '@domain/entities/job'
 import type { ScratchNote } from '@domain/entities/scratch-note'
 import { getCustomersMutable } from '@infra/repositories/customers'
 import { getInvoicesMutable } from '@infra/repositories/invoices'
-import { getGarmentCatalogMutable } from '@infra/repositories/garments'
+import { getGarmentCatalogMutable } from '@infra/repositories/garments-phase1'
 import { getColorsMutable } from '@infra/repositories/colors'
 import { getArtworksMutable } from '@infra/repositories/artworks'
 

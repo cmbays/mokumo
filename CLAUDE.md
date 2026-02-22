@@ -1,21 +1,8 @@
----
-title: 'CLAUDE.md'
-description: 'AI operating rules, design system, coding standards, and canonical doc registry. Loaded every session.'
-category: canonical
-status: active
-phase: all
-last_updated: 2026-02-17
-last_verified: 2026-02-17
-depends_on: []
----
-
 # Screen Print Pro — CLAUDE.md
 
 ## Project Overview
 
-Screen Print Pro is production management software for 4Ink, a screen-printing shop. It manages the full garment lifecycle: Quote → Artwork Approval → Screen Room → Production → Shipping. The primary user is the shop owner/operator who needs instant clarity on job status, blocked items, and next actions.
-
-**Current Phase**: Phase 1 — Mockup with mock data for user acceptance testing. No backend yet.
+Screen Print Pro is production management software for 4Ink, a screen-printing shop. Full garment lifecycle: Quote → Artwork Approval → Screen Room → Production → Shipping. Primary user is the shop owner/operator. See `PROGRESS.md` for current phase status.
 
 ## Commands
 
@@ -29,28 +16,21 @@ npm run test:watch   # Vitest in watch mode
 npx tsc --noEmit     # Type check
 npx shadcn@latest add <component>  # Add shadcn/ui component
 
-# Version Control (git worktrees)
-git worktree list                    # List all active worktrees
-git worktree add <path> -b <branch>  # Create worktree + branch from main
-git worktree add <path> -b <branch> <base>  # Stacked: branch from another branch
-git worktree remove <path>           # Remove worktree after PR merges
-git push -u origin <branch>          # Push branch to remote
-gh pr create --title "..." --body "..."  # Create PR
-npm run kb:dev                       # Knowledge base dev server (Astro)
-npm run kb:build                     # Knowledge base production build
-npm run kb:preview                   # Knowledge base preview
+# Database (Drizzle + Supabase)
+npm run db:generate  # Generate SQL migration from schema changes
+npm run db:migrate   # Apply pending migrations to local Supabase
+npm run db:studio    # Open Drizzle Studio (DB browser)
+npx supabase start   # Start local Supabase (requires Docker)
 
-# Session Orchestration (requires: source scripts/work.sh in .zshrc)
-work <topic>                          # New workstream: detached tmux session + worktree
-work <topic> <base-branch>           # Related work: window in parent's tmux session
-work <topic> --prompt "task desc"     # Seed new Claude with initial prompt
-work --stack <topic>                  # Stack from current branch (auto-detects $PWD)
-work list                             # Show sessions, windows, ports
-work focus                            # Read-only tiled monitor of windows
-work unfocus                          # Close monitor, back to original
-work clean <topic>                    # Remove worktree + tmux + branch
-# New workstream: user splits Ghostty pane, runs "tmux attach -t <topic>"
-# Related work: Claude runs work automatically, new window appears as tab
+# Version Control (git worktrees)
+git worktree add <path> -b <branch>         # Create worktree + branch from main
+git worktree add <path> -b <branch> <base>  # Stacked: branch from another branch
+git worktree remove <path>                  # Remove worktree after PR merges
+gh pr create --title "..." --body "..."     # Create PR
+
+# Knowledge Base
+npm run kb:dev     # Astro dev server
+npm run kb:build   # Build + validate schema
 ```
 
 ## Session Startup (Required)
@@ -58,12 +38,9 @@ work clean <topic>                    # Remove worktree + tmux + branch
 Every Claude session that will modify code MUST create its own worktree. Full workflow in `memory/worktree-workflow.md`.
 
 ```bash
-# Standard session
 git -C ~/Github/print-4ink pull origin main
 git -C ~/Github/print-4ink worktree add ~/Github/print-4ink-worktrees/session-MMDD-topic -b session/MMDD-topic
 cd ~/Github/print-4ink-worktrees/session-MMDD-topic && npm install
-# Stacked PR: branch from parent, set PR base to parent branch (not main)
-# Cleanup: pull main → worktree remove → branch -d
 ```
 
 **Rules:**
@@ -73,62 +50,27 @@ cd ~/Github/print-4ink-worktrees/session-MMDD-topic && npm install
 - **NEVER push to main directly** — always branch + PR
 - **Commit+push after every logical chunk** — never leave work local-only
 - **NEVER remove worktrees you didn't create** — other worktrees belong to concurrent sessions
+- **CRITICAL — worktree removal order**: `cd` out of the worktree directory BEFORE running `git worktree remove`. Orphaned CWD breaks all subsequent shell commands.
 - Dev server: each worktree needs a unique port (`PORT=3001`, `3002`, etc.)
 - Read-only sessions (research, questions) do not need a worktree
+- Per-worktree scratchpad: `.session-context.md` in worktree root (gitignored)
 
 ## Hot File Protocol
 
-These files cause merge conflicts in concurrent sessions. They are NEVER committed on feature branches.
+These files cause merge conflicts in concurrent sessions — NEVER commit on feature branches.
 
-| Hot File               | Update Rule                             |
-| ---------------------- | --------------------------------------- |
-| `knowledge-base/dist/` | Build output — gitignored, never commit |
-
-**What sessions CAN commit on their feature branch:**
-
-- All source code changes
-- New `knowledge-base/src/content/pipelines/YYYY-MM-DD-*.md` pipeline doc (unique filename, no conflicts)
-- New `docs/workspace/{pipeline-id}/` files (scoped to this session's pipeline)
-- Schema and test changes
-
-**Per-worktree scratchpad**: Each session creates `.session-context.md` in its worktree root (gitignored). Task context, decisions, blockers, modified files.
+| Hot File               | Update Rule                                   |
+| ---------------------- | --------------------------------------------- |
+| `knowledge-base/dist/` | Build output — gitignored, never commit       |
+| `PROGRESS.md`          | Generated artifact — gitignored, never commit |
 
 ## Process Artifact Zones
 
-Three zones govern where process artifacts live:
+- **Zone 1 — `tmp/`**: Ephemeral scratch space. Never committed.
+- **Zone 2 — `docs/workspace/{YYYYMMDD-pipeline-id}/`**: Per-pipeline artifacts committed during work. One directory per pipeline; unique filenames per session. Deleted after KB absorption.
+- **Zone 3 — `knowledge-base/`**: Permanent record. KB pipeline docs absorb all key findings.
 
-**Zone 1 — `tmp/`** (gitignored, ephemeral)
-Scratch space — delete at will. Nothing here is committed.
-
-- `tmp/inbox/` — drop zone for incoming files
-- `tmp/outbox/` — agent output for human review
-- `tmp/screenshots/` — Playwright screenshots, discovery captures
-
-**Zone 2 — `docs/workspace/`** (committed during work, deleted on wrap-up)
-All process artifacts scoped by pipeline. Committed so parallel Claude sessions can see in-progress work. Deleted after the KB pipeline doc absorbs key content.
-
-```
-docs/workspace/
-  {YYYYMMDD-pipeline-id}/    ← one dir per pipeline (e.g. 20260217-ia-refactor)
-    research.md
-    competitive-analysis.md
-    interview.md
-    frame.md
-    shaping.md
-    breadboard.md
-    spike-*.md
-    plan.md                  ← impl plan lives here during work
-    manifest.yaml
-  adhoc-{MMDD-topic}/        ← for work without a pipeline ID
-  legacy-phase1/             ← migration home for existing scattered docs/
-```
-
-**Lifecycle**: Created at pipeline start → committed throughout → deleted on wrap-up after KB doc is written.
-
-**Zone 3 — `knowledge-base/`** (committed, permanent)
-The single durable record. KB pipeline docs absorb key findings from the workspace — not just links — so workspace deletion loses nothing important.
-
-> **Deprecated locations** (do not use for new work): `docs/research/`, `docs/spikes/`, `docs/shaping/`, `docs/breadboards/`, `docs/competitive-analysis/`, `docs/strategy/` (process artifacts only). Existing content migrating to `docs/workspace/legacy-phase1/` in Phase 2 of epic #478.
+> **Deprecated** (do not use): `docs/research/`, `docs/spikes/`, `docs/shaping/`, `docs/breadboards/`, `docs/strategy/`
 
 ## Tech Stack
 
@@ -157,13 +99,9 @@ Phase 4 Clean Architecture migration complete (2026-02-17). Layer structure: `do
 
 **Philosophy**: "Linear Calm + Raycast Polish + Neobrutalist Delight"
 
-- **Base layer** (Linear): Monochrome, opacity-based text hierarchy, extreme restraint
-- **Polish layer** (Raycast): Glass effects, responsive transitions, OS-native feel
-- **Attention layer** (Neobrutalist): Bold borders, vibrant status colors, springy animations
-
 ### Color Tokens (Ghostty Niji theme)
 
-Colors are defined as CSS custom properties in `app/globals.css` and exposed via `@theme inline` for Tailwind. Use the **Tailwind class** column, not raw CSS variables.
+Colors defined as CSS custom properties in `app/globals.css`, exposed via `@theme inline`. Use Tailwind classes — not raw CSS variables.
 
 | Tailwind Class                    | CSS Variable                | Value                    | Use                         |
 | --------------------------------- | --------------------------- | ------------------------ | --------------------------- |
@@ -178,7 +116,7 @@ Colors are defined as CSS custom properties in `app/globals.css` and exposed via
 | `text-warning`                    | `--warning`                 | `#ffc663` (Niji gold)    | Cautions                    |
 | `border-border`                   | `--border`                  | `rgba(255,255,255,0.12)` | Subtle borders              |
 
-> **Note:** There is no separate "text-secondary" or "text-muted" token. `text-foreground` (87% opacity) is high emphasis, `text-muted-foreground` (60% opacity) covers both medium emphasis and hint text. Do NOT use `text-text-muted` or `text-text-secondary` — these classes do not exist.
+> No `text-secondary` or `text-muted` tokens. Do NOT use `text-text-muted` or `text-text-secondary` — these classes do not exist.
 
 ### Typography & Spacing
 
@@ -189,42 +127,45 @@ Colors are defined as CSS custom properties in `app/globals.css` and exposed via
 
 ### z-index Scale
 
-| z-index | Usage                               | Notes                                     |
-| ------- | ----------------------------------- | ----------------------------------------- |
-| `z-10`  | Sticky headers, inline overlays     | Within content flow                       |
-| `z-40`  | BottomActionBar, FAB                | Above content, below navigation           |
-| `z-50`  | BottomTabBar, Sheet/Dialog overlays | Navigation + modal layer (shadcn default) |
+| z-index | Usage                               |
+| ------- | ----------------------------------- |
+| `z-10`  | Sticky headers, inline overlays     |
+| `z-40`  | BottomActionBar, FAB                |
+| `z-50`  | BottomTabBar, Sheet/Dialog overlays |
 
-Sheet and Dialog components from shadcn/ui use z-50 with a backdrop overlay that covers the full viewport. Do not create new z-index values without checking this scale.
+Do not create new z-index values without checking this scale.
 
 ### Mobile Responsive Patterns
 
-- **Breakpoint**: `md:` (768px) is the single responsive breakpoint. Below = mobile, above = desktop.
-- **CSS-first responsive**: Use `md:hidden` / `hidden md:block` for show/hide. Avoid `useIsMobile()` unless JS logic requires it (e.g., FullScreenModal). CSS breakpoints have zero hydration risk.
-- **Mobile tokens**: Defined in `globals.css @theme inline` — `--mobile-nav-height`, `--mobile-touch-target`, `--mobile-card-gap`, etc. Use via Tailwind: `h-(--mobile-nav-height)`.
-- **Touch targets**: All mobile interactive elements must be ≥ 44px (`min-h-(--mobile-touch-target)`). Enforce per-component, NOT via global CSS.
-- **Safe area**: Use `pb-safe` utility for bottom safe area on notched devices. Requires `viewport-fit=cover` in viewport meta.
-- **Navigation constants**: Import from `lib/constants/navigation.ts` — shared between Sidebar, BottomTabBar, MobileDrawer.
-- **Conditional rendering for state reset**: Bottom sheets and modals that have form state should be rendered conditionally: `{open && <Sheet />}`. This ensures React unmounts/remounts on close, resetting all `useState` hooks automatically.
+- **Breakpoint**: `md:` (768px) — below = mobile, above = desktop.
+- **CSS-first responsive**: Use `md:hidden` / `hidden md:block`. Avoid `useIsMobile()` unless JS logic requires it.
+- **Mobile tokens**: In `globals.css @theme inline` — `--mobile-nav-height`, `--mobile-touch-target`, etc. Use via Tailwind: `h-(--mobile-nav-height)`.
+- **Touch targets**: All mobile interactive elements ≥ 44px (`min-h-(--mobile-touch-target)`). Per-component enforcement only.
+- **Safe area**: Use `pb-safe` for bottom safe area on notched devices. Requires `viewport-fit=cover`.
+- **Navigation constants**: Import from `lib/constants/navigation.ts`.
+- **State reset**: Render sheets/modals conditionally (`{open && <Sheet />}`) to unmount on close.
 
 ## Coding Standards
 
 1. **Zod-first types**: Define Zod schema, derive type via `z.infer<typeof schema>`. No separate interfaces.
-2. **Server components default**: Only add `"use client"` when using hooks, event handlers, or browser APIs. When a server component (e.g., `layout.tsx`) needs client interactivity, extract a `"use client"` wrapper component that receives `children` as a prop — keep the parent as a server component.
+2. **Server components default**: Only add `"use client"` when using hooks, event handlers, or browser APIs.
 3. **DRY components**: Wrap repeated UI into reusable components in `@shared/ui/`.
 4. **Separation of concerns**: Keep logic (hooks) separate from presentation (Tailwind classes).
 5. **URL state**: Filters, search, pagination live in URL query params.
-6. **Breadcrumb navigation**: Deep views use breadcrumbs (Home > Jobs > #1024 > Mockups).
-7. **Repository imports**: Import from `@infra/repositories/{domain}` only. Never import from `@infra/repositories/_providers/mock` or `_providers/*` outside of `src/infrastructure/`. The `no-restricted-imports` ESLint rule enforces this at lint time. Domain-specific UI lives in `@features/{domain}/components/`; cross-domain UI lives in `@shared/ui/organisms/`.
+6. **Breadcrumb navigation**: Deep views use breadcrumbs. Use `buildBreadcrumbs()` — never include `"Dashboard"` label (Topbar hard-codes it as root).
+7. **Repository imports**: Import from `@infra/repositories/{domain}` only. Never from `_providers/*` outside `src/infrastructure/`.
 8. **No raw SQL injection**: Never use `sql.raw()` with user input.
 9. **DAL ID validation**: Repository functions validate ID inputs with Zod.
-10. **No hardcoded URLs or env-specific values**: Use `process.env.NEXT_PUBLIC_*` for client-accessible config, `process.env.*` for server-only. Never hardcode domains, API endpoints, or environment-specific strings.
-11. **Port interfaces**: Code against the port interface (e.g., `ICustomerRepository`), not the concrete implementation. The composition root (`src/infrastructure/bootstrap.ts`) is the only place that wires ports to implementations.
-12. **Logging**: Never use `console.log`/`console.warn`/`console.error` in production code. Use `logger` from `@shared/lib/logger` with bound domain context: `logger.child({ domain: 'quotes' })`.
+10. **No hardcoded URLs**: Use `process.env.NEXT_PUBLIC_*` (client) or `process.env.*` (server). Never hardcode domains or endpoints.
+11. **Port interfaces**: Code against the port interface (e.g., `ICustomerRepository`). Composition root (`src/infrastructure/bootstrap.ts`) is the only place wiring happens.
+12. **Logging**: Never use `console.log/warn/error` in production code. Use `logger` from `@shared/lib/logger` with `logger.child({ domain: 'quotes' })`.
+13. **CRITICAL — Financial arithmetic**: NEVER use JavaScript floating-point (`+`, `-`, `*`, `/`) for money. Use `big.js` via `lib/helpers/money.ts` (`money()`, `round2()`, `toNumber()`).
+14. **CRITICAL — Supabase Auth**: ALWAYS use `getUser()`, NEVER `getSession()`. `getSession()` can return stale/spoofed sessions. Security requirement, not preference.
+15. **App-wide TooltipProvider**: Tooltip is the ONLY Radix primitive requiring a Provider. One `<TooltipProvider>` in `app/(dashboard)/layout.tsx`. Never add per-component `<TooltipProvider>`.
 
 ## Testing Standards
 
-**Skill:** `.claude/skills/tdd/skill.md` — invoke at start of every Build stage (wraps `superpowers:test-driven-development`)
+**Skill:** `.claude/skills/tdd/skill.md` — invoke at start of every Build stage.
 
 ### Layer Thresholds
 
@@ -240,27 +181,23 @@ Sheet and Dialog components from shadcn/ui use z-50 with a backdrop overlay that
 | Server Actions  | `src/features/*/actions/`                | 80%                   |
 | UI components   | `src/features/*/components/`             | 70% (pure logic only) |
 
-### Commands
-
 ```bash
 npm run test:coverage   # Unit/integration with thresholds (hard fail in CI)
-npm run test:e2e        # Playwright E2E (non-blocking in Phase 1)
-npm run test:e2e:ui     # E2E with Playwright UI (local debugging)
+npm run test:e2e        # Playwright E2E
 ```
 
-### Rules
+**Rules:**
 
-- **No PR without passing `npm run test:coverage`** — thresholds block merge
-- **100% on `money.ts` and `pricing.service.ts`** — zero tolerance, CI hard-fails
-- **E2E for critical flows** — quote creation, job board, invoice generation require journey tests in `tests/e2e/journeys/`
-- **Plan stage outputs function signatures** — "wished-for APIs" before RED phase begins
-- **Test behavior, not implementation** — repository tests assert results, not internal state
+- No PR without passing `npm run test:coverage` — thresholds block merge
+- 100% on `money.ts` and `pricing.service.ts` — zero tolerance, CI hard-fails
+- E2E for critical flows: quote creation, job board, invoice generation (`tests/e2e/journeys/`)
+- Test behavior, not implementation
 
 ## Quality Checklist
 
-Before considering any screen done:
+Before any screen is done:
 
-- [ ] Visual hierarchy clear — primary action is most prominent
+- [ ] Visual hierarchy clear — primary action most prominent
 - [ ] Spacing uses Tailwind tokens — no hardcoded px values
 - [ ] Typography: max 3-4 sizes per screen, Inter for UI, JetBrains Mono for code only
 - [ ] Color: monochrome base, status colors only for meaning (not decoration)
@@ -269,7 +206,7 @@ Before considering any screen done:
 - [ ] Motion uses design tokens, respects `prefers-reduced-motion`
 - [ ] Empty, loading, and error states designed
 - [ ] Keyboard navigable, proper ARIA labels, 4.5:1 contrast minimum
-- [ ] Tooltips: use `<Tooltip>` directly — app-wide `<TooltipProvider>` in dashboard layout handles provider. Never add per-component `<TooltipProvider>`.
+- [ ] Tooltips: use `<Tooltip>` directly — never add per-component `<TooltipProvider>`
 - [ ] Apply Jobs Filter: "Can this be removed without losing meaning?" If yes, remove it.
 
 ## UX Principles
@@ -279,46 +216,17 @@ Before considering any screen done:
 - **Progressive disclosure**: Start simple, expand details on demand
 - **Jobs Filter**: Every element must earn its place — remove until it breaks
 - **Priority order on dashboard**: (1) What's blocked, (2) Recent activity, (3) In progress
-- **Love Factor**: Always correct data, saves time, guided workflow, zero friction
 
 ## Pre-Build Ritual
 
-### Every Vertical (Required)
+Before building any vertical, run these skills in sequence:
 
-Before building any vertical, the Shaping phase produces these artifacts:
+1. `shaping` → `docs/workspace/{pipeline-id}/frame.md` + `shaping.md`
+2. `breadboarding` → `docs/workspace/{pipeline-id}/breadboard.md` (with parallelization windows marked)
+3. `breadboard-reflection` → audits breadboard for design smells
+4. `implementation-planning` → execution manifest + waves
 
-1. **Run shaping skill** → produces `docs/workspace/{pipeline-id}/frame.md` + `docs/workspace/{pipeline-id}/shaping.md`
-   - Defines requirements (R) and explores competing shapes (A, B, C...)
-   - Selects shape via fit check (R x S binary matrix)
-   - Spikes flagged unknowns before committing
-2. **Run breadboarding skill** → produces `docs/workspace/{pipeline-id}/breadboard.md`
-   - Maps selected shape's parts into concrete affordances (U, N, S)
-   - Wires control flow (Wires Out) and data flow (Returns To)
-   - Slices into vertical demo-able increments (V1, V2...)
-3. **Run breadboard-reflection skill** → audits breadboard for design smells
-   - Traces user stories through wiring
-   - Applies naming test to all affordances
-   - Fixes wiring inconsistencies
-4. **Run implementation-planning skill** → produces execution manifest
-   - Takes sliced breadboard as input
-   - Designs waves for parallel agent execution
-
-### Complex Screens (Additional)
-
-For screens with high interaction complexity (e.g., New Quote Form, Kanban Board):
-
-1. **Spike unknowns**: Write a spike file in `docs/workspace/{pipeline-id}/` investigating technical questions
-   - Structure: Context → Goal → Questions → Findings → Recommendation
-   - Name: `spike-{topic}.md` (e.g., `spike-kanban-dnd.md`)
-   - Questions should ask about mechanics ("How does X work?"), not effort ("How long?")
-2. **Ask 3-5 clarifying questions** before building (use AskUserQuestion)
-3. **Document answers** in `.session-context.md` scratchpad
-
-## Development Workflow
-
-1. **Phase 1 (current)**: Build high-fidelity UI with mock data. No backend, no API calls.
-2. **Phase 2**: Iterate with user (4Ink owner) based on feedback.
-3. **Phase 3**: Lock Zod schemas → build backend, database, real API integration.
+For complex screens: add a `spike-{topic}.md` in the workspace dir before breadboarding.
 
 ## Deployment — Two-Branch Model
 
@@ -329,40 +237,33 @@ feature/session branches ──PR──→ main ──merge──→ production
                            (Gary demo URL)      (4ink live domain)
 ```
 
-- **`main`** — Integration branch. All PRs merge here. Vercel builds as **preview** deployment.
-- **`production`** — Stable release branch. Manual merge from `main`. Vercel builds as **production** deployment.
+- **`main`** — Integration branch. All PRs merge here. Vercel preview deployment.
+- **`production`** — Stable release branch. Manual merge from `main`. Vercel production deployment.
 - **Feature/session branches** — NOT built by Vercel (skipped by `ignoreCommand` in `vercel.json`).
 
-### Promotion Workflow
-
 ```bash
-# Option A: PR-based promotion (auditable, recommended)
+# Promote to production (Option A — recommended)
 gh pr create --base production --head main --title "Release: <description>"
 
-# Option B: Fast-forward directly (no branch checkout needed)
+# Promote to production (Option B — fast-forward)
 git -C ~/Github/print-4ink fetch origin && git -C ~/Github/print-4ink push origin origin/main:production
 ```
 
-### Rules
+**Rules:**
 
-- **Never push directly to `production`** — always merge from `main`
-- **Never merge feature branches to `production`** — only `main` flows into `production`
-- **`DEMO_ACCESS_CODE` env var** must be set in Vercel for both Preview and Production environments
-- **Vercel dashboard**: Production Branch setting must be `production` (manual config)
-- **GitHub branch protection**: `production` branch should require PRs (or at minimum prevent force pushes)
+- Never push directly to `production` — always merge from `main`
+- Never merge feature branches to `production` — only `main` flows in
 
 ## What NOT to Do
 
 - No separate CSS files — Tailwind utilities only
 - No emoji icons — Lucide React only
 - No global state (Redux, Zustand) — URL params + React state
-- No backend/API calls in Phase 1 — mock data only
 - No `any` types — use Zod inference or explicit types
 - No colors outside the design token palette
 - No decorative gradients — color communicates meaning
 - No `className` string concatenation — use `cn()` from `@shared/lib/cn`
-- No pushing directly to main — always branch + PR
-- No pushing directly to `production` — only merge from `main` via PR or fast-forward
+- No pushing directly to `main` or `production` — always branch + PR
 - No `interface` declarations — use `type` or `z.infer<>` only
 - No `console.log` in production code — use `logger` from `@shared/lib/logger`
 - No hardcoded URLs or environment-specific strings — env vars only
@@ -370,62 +271,42 @@ git -C ~/Github/print-4ink fetch origin && git -C ~/Github/print-4ink push origi
 
 ## Documentation Model
 
-Two systems. One principle: **rules vs. rationale. Never duplicate across both.**
+| System                                                  | Contains                                   | When to use        |
+| ------------------------------------------------------- | ------------------------------------------ | ------------------ |
+| **Root docs** (`CLAUDE.md`, `docs/TECH_STACK.md`, etc.) | **Rules** — operational constraints        | Constrain behavior |
+| **Knowledge Base** (`knowledge-base/src/content/`)      | **Rationale** — decision history, strategy | Explain decisions  |
 
-| System                                                                          | Contains                                                                                               | When to use                                                    |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **Root docs** (`CLAUDE.md`, `docs/TECH_STACK.md`, `docs/ARCHITECTURE.md`, etc.) | **Rules** — operational constraints loaded every session. What to do, where things go, what not to do. | Constrain behavior. Agents check these before acting.          |
-| **Knowledge Base** (`knowledge-base/src/content/`)                              | **Rationale** — decision history, strategy, session narrative. Why things are the way they are.        | Explain decisions. Humans browse; agents research when needed. |
-
-**Rules:**
-
-- **Decision test**: "Is this a constraint on behavior?" → root doc. "Is this context that explains a decision?" → KB strategy entry.
-- **Never duplicate**: if a rule exists in a root doc, link to it from the KB — don't restate it. If reasoning lives in the KB, reference it from the root doc — don't inline it.
-- **Root docs stay terse**: they load into every session. Rule-dense, not narrative.
-- **KB strategy entries** explain architectural decisions, technology rationale, and process philosophy. They live in `knowledge-base/src/content/strategy/`.
-- **KB pipeline entries** record what happened in a build session (the what + outcome). They live in `knowledge-base/src/content/pipelines/`.
+- "Is this a constraint on behavior?" → root doc. "Does this explain a decision?" → KB strategy entry.
+- Never duplicate: link from KB to root doc rules, not restate them.
 
 ## Canonical Documents
 
-These documents define the project. Reference them, keep them current, and never contradict them.
+| Document                      | Purpose                                            | Update When                          |
+| ----------------------------- | -------------------------------------------------- | ------------------------------------ |
+| `CLAUDE.md`                   | AI operating rules, loaded every session           | Any pattern/rule changes             |
+| `docs/ROADMAP.md`             | Vision, phases, bets, forward planning             | Cycle transitions, betting decisions |
+| `.claude/agents/AGENTS.md`    | Agent registry, orchestration, calling conventions | Adding/retiring agents               |
+| `docs/TECH_STACK.md`          | Tool choices, versions, decision context           | Adding/removing/upgrading deps       |
+| `docs/PRD.md`                 | Features, scope, acceptance criteria               | Scope changes or new features        |
+| `docs/APP_FLOW.md`            | Screens, routes, navigation paths                  | Adding/changing pages or flows       |
+| `docs/IMPLEMENTATION_PLAN.md` | Sequenced build steps                              | Completing steps or re-prioritizing  |
+| `docs/PM.md`                  | PM workflows, labels, templates                    | PM infrastructure changes            |
+| `docs/HOW_WE_WORK.md`         | Methodology, Shape Up philosophy                   | Process or tooling changes           |
 
-| Document                      | Purpose                                                           | Update When                          |
-| ----------------------------- | ----------------------------------------------------------------- | ------------------------------------ |
-| `CLAUDE.md`                   | AI operating rules, loaded every session                          | Any pattern/rule changes             |
-| `docs/ROADMAP.md`             | Vision, phases, bets, forward planning                            | Cycle transitions, betting decisions |
-| `.claude/agents/AGENTS.md`    | Agent registry, orchestration, calling conventions                | Adding/retiring agents               |
-| `docs/TECH_STACK.md`          | Tool choices, versions, decision context                          | Adding/removing/upgrading deps       |
-| `docs/PRD.md`                 | Features, scope, acceptance criteria                              | Scope changes or new features        |
-| `docs/APP_FLOW.md`            | Screens, routes, navigation paths                                 | Adding/changing pages or flows       |
-| `docs/IMPLEMENTATION_PLAN.md` | Sequenced build steps                                             | Completing steps or re-prioritizing  |
-| `PROGRESS.md`                 | Generated progress report — live GitHub data                      | Regenerated: `work progress`         |
-| `docs/HISTORY.md`             | Archived session logs and feature details                         | When archiving completed work        |
-| `docs/PM.md`                  | PM workflows, labels, templates, dependencies, agent conventions  | PM infrastructure changes            |
-| `docs/HOW_WE_WORK.md`         | Methodology, Shape Up philosophy, PM tools, automation trajectory | Process or tooling changes           |
-
-**Rules:**
-
-- Before starting any work, read `ROADMAP.md` for strategic context and current bets.
-- Before adding a dependency, check `TECH_STACK.md`. If it's not listed, ask first.
-- Before building a screen, check `APP_FLOW.md` for its route, purpose, and connections.
-- Before starting work, check `IMPLEMENTATION_PLAN.md` for the current step.
-- After PR merges, regenerate PROGRESS.md: `work progress`
-- After completing work, create or update a pipeline doc in `knowledge-base/src/content/pipelines/` (see Knowledge Base section below).
-- When a doc becomes stale, update it — don't ignore it.
-- Every canonical doc has a `Last Verified` date. Update it when you confirm the doc still matches reality.
+**Before starting work**: read `ROADMAP.md` (strategy) + `APP_FLOW.md` (routes) + `IMPLEMENTATION_PLAN.md` (current step). Before adding a dependency, check `TECH_STACK.md`.
 
 ## Reference Documents
 
-Extended context lives in `docs/reference/` — consult only when needed:
+Extended context in `docs/reference/` — consult only when needed:
 
 - `FRONTEND_GUIDELINES.md` — Design tokens, component patterns, Tailwind + shadcn/ui usage
 - `SCREEN_AUDIT_PROTOCOL.md` — 15-point visual quality audit checklist
-- `UX_HEURISTICS.md` — 10-point UX quality checklist with Screen Print Pro examples
+- `UX_HEURISTICS.md` — 10-point UX quality checklist
 - `APP_FLOW_STANDARD.md` — Template for writing APP_FLOW documentation
 
 ## Agent & Skill Infrastructure
 
-See `.claude/agents/AGENTS.md` for agent registry, orchestration patterns, and calling conventions.
+See `.claude/agents/AGENTS.md` for full orchestration patterns and calling conventions.
 
 ### Agents
 
@@ -440,51 +321,36 @@ See `.claude/agents/AGENTS.md` for agent registry, orchestration patterns, and c
 | `finance-sme`               | Self-review of financial calculations          | —                                           |
 | `build-reviewer`            | Self-review of code quality                    | —                                           |
 
-**Calling convention**: "Use the [agent-name] agent to [task]" — e.g., "Use the frontend-builder agent to build PageHeader"
+**Calling convention**: "Use the [agent-name] agent to [task]"
 
 ### Skills
 
-| Skill                    | Trigger                                   | Purpose                                                                                            |
-| ------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `vertical-discovery`     | Start of each new vertical                | 7-step competitor research + user interview + journey design methodology                           |
-| `shaping`                | After interview, before breadboarding     | R x S methodology — requirements, shapes, fit checks, spikes                                       |
-| `breadboarding`          | After shaping, before impl-planning       | Map shaped parts or existing systems into affordances, wiring, and vertical slices                 |
-| `breadboard-reflection`  | After breadboarding, before impl-planning | QA audit of breadboards — smell detection, naming test, wiring verification                        |
-| `screen-builder`         | Starting Steps 1-10                       | Build screens with design system + quality checklist + templates                                   |
-| `quality-gate`           | After completing a screen                 | Audit against 10-category quality checklist with pass/fail report                                  |
-| `pre-build-interrogator` | Before complex features                   | Exhaustive questioning to eliminate assumptions                                                    |
-| `design-audit`           | Design review checkpoints                 | 15-dimension audit against design system                                                           |
-| `feature-strategy`       | Feature planning                          | Product strategy frameworks and feature plan templates                                             |
-| `doc-sync`               | After completing steps                    | Drift detection and doc synchronization                                                            |
-| `cool-down`              | Between build cycles, after demos         | Retrospective synthesis and forward planning (Shape Up)                                            |
-| `build-session-protocol` | Build sessions                            | Completion protocol — Phase 2 auto-invokes review orchestration                                    |
-| `review-orchestration`   | Phase 2 of build sessions (auto-invoked)  | Automated quality gate — classifies PR, dispatches review agents, aggregates findings, gates merge |
-
-### Orchestration Patterns
-
-> Simplified references. See `.claude/agents/AGENTS.md` for full pattern details.
-
-- **Vertical Build Chain** (standard per-vertical): `research → interview → shaping → breadboarding → bb-reflection → implementation-planning → build → quality-gate → demo`
-- **Linear Chain** (simple screens): `frontend-builder → quality-gate → progress update`
-- **Pre-Build Chain** (complex screens): `breadboarding → requirements-interrogator → spike doc → frontend-builder → quality-gate → progress update`
-- **Checkpoint Chain** (milestones): `design-auditor → audit report → user approval → frontend-builder (fixes) → quality-gate`
-- **Competitive Analysis**: `feature-strategist → feature plan → user approval → update IMPLEMENTATION_PLAN`
-- **Build Session completion** (every build PR): `build-session-protocol` Phase 2 auto-invokes `review-orchestration` → gate decision → Phase 3 (PR creation)
+| Skill                    | Trigger                                   | Purpose                                                         |
+| ------------------------ | ----------------------------------------- | --------------------------------------------------------------- |
+| `vertical-discovery`     | Start of each new vertical                | Competitor research + user interview + journey design           |
+| `shaping`                | After interview, before breadboarding     | R × S methodology — requirements, shapes, fit checks, spikes    |
+| `breadboarding`          | After shaping, before impl-planning       | Affordances, wiring, vertical slices                            |
+| `breadboard-reflection`  | After breadboarding, before impl-planning | Smell detection, naming test, wiring verification               |
+| `screen-builder`         | Starting Steps 1–10                       | Build screens with design system + quality checklist            |
+| `quality-gate`           | After completing a screen                 | 10-category quality checklist with pass/fail report             |
+| `pre-build-interrogator` | Before complex features                   | Exhaustive questioning to eliminate assumptions                 |
+| `design-audit`           | Design review checkpoints                 | 15-dimension audit against design system                        |
+| `feature-strategy`       | Feature planning                          | Product strategy frameworks and feature plan templates          |
+| `doc-sync`               | After completing steps                    | Drift detection and doc synchronization                         |
+| `cool-down`              | Between build cycles, after demos         | Retrospective synthesis and forward planning (Shape Up)         |
+| `build-session-protocol` | Build sessions                            | Completion protocol — Phase 2 auto-invokes review orchestration |
+| `review-orchestration`   | Phase 2 of build sessions (auto-invoked)  | PR classification, agent dispatch, findings aggregation         |
 
 ## Knowledge Base (Astro)
 
-After every feature build, plan, or decision, create or update a Markdown file in `knowledge-base/src/content/pipelines/`.
-
-### File Format
-
-Create `knowledge-base/src/content/pipelines/YYYY-MM-DD-kebab-topic.md` with YAML frontmatter:
+After every feature build, plan, or decision, create `knowledge-base/src/content/pipelines/YYYY-MM-DD-kebab-topic.md`:
 
 ```yaml
 ---
 title: 'Document Title'
 subtitle: 'Short description'
 date: YYYY-MM-DD
-phase: 1
+phase: 2
 pipelineName: 'Human Readable Pipeline Name'
 pipelineType: vertical
 products: []
@@ -495,46 +361,12 @@ sessionId: 'UUID'
 branch: 'session/MMDD-topic'
 status: complete
 ---
-## Body Content
-
-Write Markdown content here. Standard Markdown: headers, lists, tables, code blocks.
 ```
 
-### Schema
+Schema validated by Zod at build time. Config in `tools/orchestration/config/` (`pipeline-types.json`, `stages.json`, `tools.json`, `tags.json`) and `src/config/` (`products.json`, `domains.json`).
 
-All frontmatter validated by Zod at build time (`knowledge-base/src/content.config.ts`). Pipeline types, stages, products, tools, and tags defined in `config/pipeline-types.json`, `config/stages.json`, `config/products.json`, `config/tools.json`, `config/tags.json`. **Status:** `complete`, `in-progress`, `superseded`.
+**Rules:**
 
-### Rules
-
-- **One file per session**: `YYYY-MM-DD-kebab-topic.md` in `knowledge-base/src/content/pipelines/`
-- **Build validates**: `npm run kb:build` catches schema errors at build time
-- **Session ID**: Find via `ls -t ~/.claude/projects/-Users-cmbays-Github-print-4ink/*.jsonl | head -1` — filename (without `.jsonl`) is the ID
-- **Include**: session resume command, artifact links, PR links, decision rationale
-- **Related sessions**: Workflow chains are auto-computed — no manual linking needed
-
-## Lessons Learned
-
-Capture mistakes and patterns here so they aren't repeated. Update as you go.
-
-- **Tailwind v4**: Uses `@theme inline` in CSS, not `tailwind.config.ts`. Design tokens go in `globals.css`.
-- **shadcn/ui init**: Works after scaffold files are in place and `npm install` has run.
-- **create-next-app**: Refuses non-empty directories — scaffold in temp dir and copy files.
-- **Zod v4 UUID validation**: Validates full RFC-4122 format — version byte (3rd group must start with 1-8) AND variant byte (4th group must start with 8, 9, a, or b). Hand-crafted UUIDs often fail the variant check.
-- **Radix Tooltip hover bugs**: Adjacent tooltips need a single shared `<TooltipProvider>` with `skipDelayDuration={300}`, base `sideOffset >= 6`, `data-[state=closed]:pointer-events-none` on content, and `pointer-events-none` on arrow. Do NOT use `disableHoverableContent` — it causes flickering on small targets.
-- **shadcn/ui Tooltip dark mode**: Default `bg-foreground text-background` is invisible in dark mode. Override to `bg-elevated text-foreground border border-border shadow-lg`. Arrow: `bg-elevated fill-elevated`.
-- **Git worktrees**: Main repo (`~/Github/print-4ink/`) always stays on `main`. Worktrees go in `~/Github/print-4ink-worktrees/`. Each worktree needs its own `npm install`. No limit on concurrent worktrees — user handles batch cleanup. Agents must NEVER remove worktrees they didn't create.
-- **Hot files**: PROGRESS.md is a generated artifact (`work progress`), not hand-edited — it is gitignored. `knowledge-base/dist/` is also gitignored. Neither should be committed.
-- **CRITICAL — Financial arithmetic**: NEVER use JavaScript floating-point (`+`, `-`, `*`, `/`) for monetary calculations. IEEE 754 causes silent errors (e.g., `0.1 + 0.2 = 0.30000000000000004`). Use `big.js` via the `lib/helpers/money.ts` wrapper (`money()`, `round2()`, `toNumber()`). Schema invariants use `Big.eq()` for exact comparison — no tolerance hacks. Integer-cents workarounds still fail on multiplication/division (tax rates, percentage deposits).
-- **React 19 ESLint — no setState in effects**: Don't use `useEffect` to reset form state when a dialog opens. Instead, have the parent conditionally render the dialog (`{showDialog && <Dialog />}`) so React unmounts/remounts the component, naturally resetting all `useState` hooks.
-- **KB sessionId is per-session, not per-document**: Multiple KB docs can share the same `sessionId` when created in the same Claude Code session. Don't "fix" duplicates without checking context.
-- **astro-pagefind works without `build.format: 'file'`**: The astro-pagefind docs recommend adding `build: { format: 'file' }` but this breaks clean URLs (outputs `page.html` instead of `page/index.html`). Skip it.
-- **KB links must be absolute**: Relative markdown links (`../docs/...`) won't resolve in the deployed KB. Use absolute GitHub URLs (`https://github.com/.../blob/main/...`) for repo file references. Prefer `main` or commit permalinks over branch URLs (branches get deleted after merge).
-- **Astro CI needs `astro sync`**: The `knowledge-base/.astro/` directory is gitignored. CI must run `npx astro sync` in `knowledge-base/` before `tsc --noEmit`, or exclude KB from the root type check.
-- **CRITICAL — Worktree removal order**: ALWAYS `cd` out of a worktree directory BEFORE removing it. The Bash tool's working directory persists between calls — if you `git worktree remove` while CWD is inside the worktree, every subsequent shell command fails because the directory no longer exists (orphaned CWD). Correct sequence: `cd ~/Github/print-4ink && git worktree remove <path>`.
-- **Breadboard parallelization windows**: When writing breadboard build orders, explicitly mark which tasks can run concurrently. This enables `superpowers:subagent-driven-development` to parallelize correctly without re-analyzing the dependency graph. Every breadboard since Price Matrix has used this pattern — it's now required.
-- **Mobile tokens before mobile screens**: Define CSS custom properties (`--mobile-nav-height`, `--mobile-touch-target`, etc.) in a foundation sprint before building responsive adaptations. Sprint 1's token layer made Sprint 2 trivially fast. Always establish the token vocabulary first.
-- **Subagent-driven development for large plans**: For implementation plans with 10+ tasks, use `superpowers:subagent-driven-development` with spec-then-quality two-stage reviews. The Garment Catalog build (18 tasks, PR #109) was the cleanest execution pattern — validated across multiple verticals.
-- **App-wide TooltipProvider**: Tooltip is the ONLY Radix primitive requiring a Provider. A single `<TooltipProvider skipDelayDuration={300}>` lives in `app/(dashboard)/layout.tsx` via `TooltipProviderWrapper`. Never add per-component `<TooltipProvider>` — all tooltips inherit from the app-wide provider. Per-tooltip `delayDuration` can be overridden on `<Tooltip delayDuration={X}>` if needed.
-- **Breadcrumbs — never include "Dashboard"**: The `Topbar` component hard-codes "Dashboard" as the root breadcrumb. Pages must NOT include `label: "Dashboard"` in their breadcrumbs prop — this causes a duplicate. Use `buildBreadcrumbs()` from `lib/helpers/breadcrumbs.ts` to construct breadcrumb arrays; it validates this contract at dev time. CI also runs a grep check that fails on any `label:.*"Dashboard"` in `app/`.
-- **NEVER use `interface` — use `type` or `z.infer<>`**: TypeScript `interface` declarations silently drift from Zod schemas and are flagged by the linter. Use `type Foo = { ... }` for component props. For domain entities (Customer, Job, Quote, etc.) always derive the type from the schema: `type Customer = z.infer<typeof CustomerSchema>`. The `@typescript-eslint/consistent-type-definitions` rule warns on any new `interface` declaration. See issue #404 for the full migration.
-- **NEVER import from `@/lib/mock-data` or `@/lib/mock-data-pricing` outside `lib/dal/`**: Direct imports bypass the DAL and create data coupling in the UI layer. The linter warns on any violation. All data access goes through `@/lib/dal/{domain}`. See issue #403 for the full migration.
+- Session ID: `ls -t ~/.claude/projects/-Users-cmbays-Github-print-4ink/*.jsonl | head -1` (filename without `.jsonl`)
+- `npm run kb:build` validates schema — check before committing
+- Include session resume command, artifact links, PR links, decision rationale

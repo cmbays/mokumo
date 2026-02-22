@@ -290,6 +290,20 @@ export class SSActivewearAdapter implements SupplierAdapter {
     }
 
     const products = z.array(ssProductSchema).parse(raw)
+    // Log pricing field presence for diagnostics (debug level to avoid prod noise)
+    if (products.length > 0) {
+      const firstProduct = products[0]
+      const hasPricing = firstProduct.piecePrice != null
+      adapterLogger.debug('S&S API response pricing data', {
+        styleId,
+        productCount: products.length,
+        firstSKU: firstProduct.sku,
+        hasPricing,
+        piecePriceValue: firstProduct.piecePrice,
+        dozenPriceValue: firstProduct.dozenPrice,
+        casePriceValue: firstProduct.casePrice,
+      })
+    }
     const style = productsToCanonicalStyle(styleId, products)
     if (style) {
       await this.cache.set(cacheKey, style, SS_CACHE_TTL.products)

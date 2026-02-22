@@ -57,8 +57,32 @@ Each session in the manifest gets a prompt that tells Claude:
 3. What skills/agents to use
 4. What to produce (code + KB doc)
 5. Dependencies on other sessions
+6. **Workspace documentation requirements** — see below
 
 Prompts should be self-contained — a fresh Claude session with no prior context should be able to execute the task from the prompt alone.
+
+**Workspace documentation requirement (add to EVERY session prompt):**
+
+Include this section in each session prompt:
+
+```
+## Workspace Documentation
+
+Before finalizing your work, commit implementation notes to:
+  docs/workspace/{YYYYMMDD-pipeline-id}/{your-session-topic}-notes.md
+
+Include:
+- Architecture decisions made
+- Key implementation tradeoffs
+- Any blockers or deferred work
+- Links to related code sections
+
+Example: docs/workspace/20260218-supabase-foundation/auth-flow-notes.md
+
+This gets consolidated into the knowledge-base during wrap-up.
+```
+
+This ensures all sessions contribute artifacts for wrap-up consolidation into the KB.
 
 ### Step 4: Write the Plan
 
@@ -138,3 +162,5 @@ Before committing:
 - Include "Read the breadboard doc" in every prompt — it's the shared context
 - Reference the build-session-protocol skill in prompts so sessions know the completion flow
 - Think about merge order — will parallel PRs conflict on the same files?
+- **Workspace consolidation:** All sessions must write to the same pipeline directory (`docs/workspace/{YYYYMMDD-pipeline-id}/`) with unique filenames. This enables centralized wrap-up consolidation into a single KB pipeline doc.
+- Include workspace doc section in EVERY session prompt — it's not optional, even for simple tasks

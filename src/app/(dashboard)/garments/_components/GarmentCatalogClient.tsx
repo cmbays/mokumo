@@ -16,6 +16,7 @@ import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
 import type { GarmentCatalog } from '@domain/entities/garment'
+import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 
@@ -27,6 +28,8 @@ type GarmentCatalogClientProps = {
   initialCatalog: GarmentCatalog[]
   initialJobs: Job[]
   initialCustomers: Customer[]
+  /** Normalized catalog data with color images — used to power ImageTypeCarousel in the detail drawer. Optional: drawer falls back to GarmentImage when absent. */
+  normalizedCatalog?: NormalizedGarmentCatalog[]
 }
 
 // ---------------------------------------------------------------------------
@@ -37,6 +40,7 @@ export function GarmentCatalogClient({
   initialCatalog,
   initialJobs,
   initialCustomers,
+  normalizedCatalog,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -93,6 +97,13 @@ export function GarmentCatalogClient({
   // Selected garment for drawer
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
+
+  // Normalized colors for selected garment — matched by externalId (= S&S style number = GarmentCatalog.sku)
+  const selectedNormalizedColors = useMemo(() => {
+    if (!normalizedCatalog || !selectedGarment) return undefined
+    const match = normalizedCatalog.find((n) => n.externalId === selectedGarment.sku)
+    return match?.colors
+  }, [normalizedCatalog, selectedGarment])
 
   // N25: Brand detail drawer state
   const [selectedBrandName, setSelectedBrandName] = useState<string | null>(null)
@@ -273,6 +284,7 @@ export function GarmentCatalogClient({
           onToggleEnabled={handleToggleEnabled}
           onToggleFavorite={handleToggleFavorite}
           onBrandClick={handleBrandClick}
+          normalizedColors={selectedNormalizedColors}
         />
       )}
 

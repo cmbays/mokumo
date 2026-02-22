@@ -18,16 +18,16 @@ No manual agent selection. No guessing which reviewers are needed. Consistent co
 
 ## Config References
 
-All config is in the `config/` directory at the project root. Load via `lib/review/load-config.ts` — never import raw JSON directly.
+All config is in the `tools/orchestration/config/` directory. Load via `tools/orchestration/review/load-config.ts` — never import raw JSON directly.
 
-| File                             | Contents                                                                |
-| -------------------------------- | ----------------------------------------------------------------------- |
-| `config/review-domains.json`     | Glob→domain mappings for Stage 2                                        |
-| `config/review-composition.json` | Dispatch policies for Stage 3                                           |
-| `config/review-agents.json`      | Agent registry (IDs: `build-reviewer`, `finance-sme`, `design-auditor`) |
-| `config/review-rules.json`       | Rule definitions consumed by Stage 6 aggregator                         |
+| File                                                 | Contents                                                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `tools/orchestration/config/review-domains.json`     | Glob→domain mappings for Stage 2                                        |
+| `tools/orchestration/config/review-composition.json` | Dispatch policies for Stage 3                                           |
+| `tools/orchestration/config/review-agents.json`      | Agent registry (IDs: `build-reviewer`, `finance-sme`, `design-auditor`) |
+| `tools/orchestration/config/review-rules.json`       | Rule definitions consumed by Stage 6 aggregator                         |
 
-All schemas are in `lib/schemas/review-config.ts` (config schemas) and `lib/schemas/review-pipeline.ts` (pipeline data schemas).
+All schemas are in `src/domain/entities/review-config.ts` (config schemas) and `tools/orchestration/review/schemas.ts` (pipeline data schemas).
 
 ## Pipeline Execution
 
@@ -65,7 +65,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
 
 **Instructions**:
 
-1. Load `config/review-domains.json` (via `lib/review/load-config.ts`)
+1. Load `tools/orchestration/config/review-domains.json` (via `tools/orchestration/review/load-config.ts` — call `loadDomainMappings()`)
 2. For each file in `PRFacts.files`, match against glob patterns in the domain config
 3. Collect the unique set of matched domains
 4. Compute risk score: base 10 + 5 per additional domain + 1 per 50 lines changed
@@ -90,7 +90,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
 
 **Instructions**:
 
-1. Load `config/review-composition.json` (via `lib/review/load-config.ts`)
+1. Load `tools/orchestration/config/review-composition.json` (via `tools/orchestration/review/load-config.ts` — call `loadCompositionPolicies()`)
 2. For each composition policy:
    - If `trigger.type === "always"` → include the agent
    - If `trigger.type === "domain"` → include the agent if any `trigger.domains` intersect `PRClassification.domains`
@@ -104,7 +104,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
    - `reason`: why this agent was dispatched
    - `scope`: files relevant to this agent's capabilities
    - `priority`: numeric priority from composition policy
-   - `rules`: array of rule IDs from `config/review-rules.json` this agent should check
+   - `rules`: array of rule IDs from `tools/orchestration/config/review-rules.json` this agent should check
    - `triggeredBy`: ID of the composition policy that triggered this entry
 
 **Output**: `AgentManifest[]`
@@ -133,7 +133,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
      - `concern`: what was found
      - `recommendation`: which new rule or agent would catch this in future
      - `confidence`: 0.0–1.0 float indicating how certain you are this is a real gap
-     - `suggestedRule`: (optional) rule ID that should be added to `config/review-rules.json`
+     - `suggestedRule`: (optional) rule ID that should be added to `tools/orchestration/config/review-rules.json`
      - `suggestedAgent`: (optional) agent ID that should cover this concern
 
 **Output**: Amended `AgentManifest[]` + `GapLog[]`
@@ -152,7 +152,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
      - List of files to review (`scope` from manifest)
      - The diff output for those files
      - Instruction to output structured JSON conforming to `ReviewFinding[]`
-     - Reference to `config/review-rules.json` for the rule IDs to check against
+     - Reference to `tools/orchestration/config/review-rules.json` for the rule IDs to check against
 2. Agents run in parallel (use a single message with multiple Task tool calls)
 3. Each agent returns `ReviewFinding[]` JSON. Parse and validate against `reviewFindingSchema` from `lib/schemas/review-pipeline.ts`.
 4. If an agent returns invalid JSON or times out: log as a `GapLogEntry` with `concern: "agent-dispatch-failure"` and continue
@@ -170,7 +170,7 @@ Git diff:
 
 Output ONLY a JSON array of findings conforming to reviewFindingSchema:
 {
-  "ruleId": "<rule-id from config/review-rules.json>",
+  "ruleId": "<rule-id from tools/orchestration/config/review-rules.json>",
   "agent": "<your agent ID>",
   "severity": "critical" | "major" | "warning" | "info",
   "category": "<category string>",
@@ -283,7 +283,7 @@ After the PR is merged (or during wrap-up), for each `GapLogEntry`:
    - Title: `review: add rule for [concern]`
    - Labels: `type/tooling`, `vertical/devx`, `priority/low`
    - Body: gap entry's `concern`, `recommendation`, and `confidence` fields (plus `suggestedRule`/`suggestedAgent` if present)
-2. These issues feed back into `config/review-rules.json` and `config/review-domains.json` updates
+2. These issues feed back into `tools/orchestration/config/review-rules.json` and `tools/orchestration/config/review-domains.json` updates
 
 This closes the feedback loop — the system self-improves as gaps are found and codified.
 
@@ -292,7 +292,7 @@ This closes the feedback loop — the system self-improves as gaps are found and
 ## Rules
 
 - **Never skip stages** — run all 6, even if Stage 2 returns no domains
-- **Never dispatch agents not in `config/review-agents.json`** — log gaps instead
+- **Never dispatch agents not in `tools/orchestration/config/review-agents.json`** — log gaps instead
 - **Stage 4 is synchronous** — it runs in the current agent's context, not a sub-agent
 - **Stage 5 is parallel** — dispatch all manifest agents in a single message
 - **Gate conditions are priority-ordered** — first match wins, do not OR conditions

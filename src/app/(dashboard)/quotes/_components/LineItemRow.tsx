@@ -83,6 +83,15 @@ const ALL_GARMENT_CATEGORIES: GarmentCategory[] = [
 // Phase 1: Only T-Shirts is selectable
 const ENABLED_CATEGORIES: Set<GarmentCategory> = new Set(['t-shirts'])
 
+// Fallback size set used when a garment has no size data (e.g. catalog_archived not yet populated)
+const DEFAULT_SIZES: Array<{ name: string; order: number; priceAdjustment: number }> = [
+  { name: 'S', order: 1, priceAdjustment: 0 },
+  { name: 'M', order: 2, priceAdjustment: 0 },
+  { name: 'L', order: 3, priceAdjustment: 0 },
+  { name: 'XL', order: 4, priceAdjustment: 0 },
+  { name: '2XL', order: 5, priceAdjustment: 0 },
+]
+
 // Setup fees: screen-print = flat $40/quote, embroidery = $20/line item, DTF = none
 const SCREEN_PRINT_QUOTE_SETUP = 40
 const EMBROIDERY_LINE_ITEM_SETUP = 20
@@ -160,11 +169,13 @@ export function LineItemRow({
 
   const availableSizes = useMemo(() => {
     if (!selectedGarment) return []
-    return [...selectedGarment.availableSizes].sort((a, b) => a.order - b.order)
+    const sizes =
+      selectedGarment.availableSizes.length > 0 ? selectedGarment.availableSizes : DEFAULT_SIZES
+    return [...sizes].sort((a, b) => a.order - b.order)
   }, [selectedGarment])
 
   const availableColors = useMemo(() => {
-    if (!selectedGarment) return colors
+    if (!selectedGarment || selectedGarment.availableColors.length === 0) return colors
     return colors.filter((c) => selectedGarment.availableColors.includes(c.id))
   }, [selectedGarment, colors])
 
@@ -195,7 +206,8 @@ export function LineItemRow({
     const garment = garmentCatalog.find((g) => g.id === garmentId)
     const resetSizes: Record<string, number> = {}
     if (garment) {
-      garment.availableSizes.forEach((s) => {
+      const sizes = garment.availableSizes.length > 0 ? garment.availableSizes : DEFAULT_SIZES
+      sizes.forEach((s) => {
         resetSizes[s.name] = 0
       })
     }

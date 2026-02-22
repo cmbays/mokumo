@@ -5,6 +5,7 @@ on:
     branches: [main, production]
   pull_request:
     branches: [main, production]
+  workflow_dispatch:
 
 jobs:
   check:
@@ -58,6 +59,17 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Schema migration drift check (warn on main PRs and pushes)
+        if: |
+          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        continue-on-error: true
+        run: npx drizzle-kit check
+
+      - name: Schema migration drift check (hard fail on production)
+        if: github.ref == 'refs/heads/production'
+        run: npx drizzle-kit check
+
       - name: Coverage
         run: npm run test:coverage
 
@@ -72,3 +84,46 @@ jobs:
           npx next start &
           npx wait-on http://localhost:3000 --timeout 30000
           npm run test:e2e
+
+  deploy-preview:
+    name: Deploy preview (main → Vercel preview)
+    needs: check
+    runs-on: ubuntu-latest
+    # Fires on direct push to main or manual workflow_dispatch — not on PRs, not on production
+    # Production deploys via Vercel's native Git integration (tracks production branch)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel deploy --token "$VERCEL_TOKEN"
+
+  create-release:
+    name: Create GitHub Release (production)
+    needs: check
+    runs-on: ubuntu-latest
+    # Only fires when production branch is pushed (i.e. after a main→production merge)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create CalVer release with auto-generated notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(date -u +%Y.%m.%d)
+          TAG="v${VERSION}"
+          COUNT=1
+          # Increment suffix if a release already exists for today
+          while gh release view "$TAG" &>/dev/null; do
+            COUNT=$((COUNT + 1))
+            TAG="v${VERSION}-${COUNT}"
+          done
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            --target production

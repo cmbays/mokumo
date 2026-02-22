@@ -14,6 +14,7 @@ import { Switch } from '@shared/ui/primitives/switch'
 import { Badge } from '@shared/ui/primitives/badge'
 import { ScrollArea } from '@shared/ui/primitives/scroll-area'
 import { GarmentImage } from '@shared/ui/organisms/GarmentImage'
+import { ImageTypeCarousel } from '@shared/ui/organisms/ImageTypeCarousel'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { FavoritesColorSection } from '@features/garments/components/FavoritesColorSection'
 import { cn } from '@shared/lib/cn'
@@ -24,6 +25,7 @@ import { getColorsMutable } from '@infra/repositories/colors'
 import { getCustomersMutable } from '@infra/repositories/customers'
 import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import type { GarmentCatalog } from '@domain/entities/garment'
+import type { CatalogColor } from '@domain/entities/catalog-style'
 import type { Color } from '@domain/entities/color'
 
 type GarmentDetailDrawerProps = {
@@ -38,6 +40,8 @@ type GarmentDetailDrawerProps = {
   onBrandClick?: (brandName: string) => void
   /** Phase 1: always 'global'. V4 adds 'brand'/'customer' for context-aware writes */
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
+  /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
+  normalizedColors?: CatalogColor[]
 }
 
 export function GarmentDetailDrawer({
@@ -50,6 +54,7 @@ export function GarmentDetailDrawer({
   onToggleFavorite,
   onBrandClick,
   favoriteContext = { context: 'global' },
+  normalizedColors,
 }: GarmentDetailDrawerProps) {
   const [selectedColorId, setSelectedColorId] = useState<string | null>(
     garment.availableColors[0] ?? null
@@ -111,6 +116,17 @@ export function GarmentDetailDrawer({
   // Resolve selected color object
   const selectedColor = selectedColorId ? getColorById(selectedColorId, getColorsMutable()) : null
 
+  // Resolve normalized color (with images) for the selected color slot
+  // Match by name because selectedColorId holds a mock Color entity ID (e.g., "color-white")
+  // while CatalogColor.id is a Supabase UUID — they can never be equal.
+  // Both old Color entities and CatalogColor share human-readable names (e.g., "Black", "White").
+  const selectedNormalizedColor =
+    normalizedColors && selectedColor
+      ? (normalizedColors.find((c) => c.name === selectedColor.name) ?? normalizedColors[0] ?? null)
+      : normalizedColors
+        ? (normalizedColors[0] ?? null)
+        : null
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full md:max-w-md p-0 flex flex-col">
@@ -134,9 +150,22 @@ export function GarmentDetailDrawer({
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-6 p-4">
-            {/* Garment image */}
+            {/* Garment image — carousel when normalized color images are available, placeholder fallback otherwise */}
             <div className="flex justify-center py-2">
-              <GarmentImage brand={garment.brand} sku={garment.sku} name={garment.name} size="lg" />
+              {selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
+                <ImageTypeCarousel
+                  images={selectedNormalizedColor.images}
+                  alt={`${garment.name} — ${selectedNormalizedColor.name}`}
+                  className="w-full max-w-xs mx-auto"
+                />
+              ) : (
+                <GarmentImage
+                  brand={garment.brand}
+                  sku={garment.sku}
+                  name={garment.name}
+                  size="lg"
+                />
+              )}
             </div>
 
             {/* Name + Category + Enabled toggle */}

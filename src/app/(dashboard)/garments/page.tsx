@@ -1,16 +1,19 @@
+export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
-import { getGarmentCatalog } from '@infra/repositories/garments'
+import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/garments'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
 
 export default async function GarmentCatalogPage() {
-  const [garmentCatalog, jobs, customers] = await Promise.all([
+  const [garmentCatalog, jobs, customers, normalizedCatalog] = await Promise.all([
     getGarmentCatalog(),
     getJobs(),
     getCustomers(),
+    getNormalizedCatalog(),
   ])
 
   return (
@@ -28,6 +31,7 @@ export default async function GarmentCatalogPage() {
             initialCatalog={garmentCatalog}
             initialJobs={jobs}
             initialCustomers={customers}
+            normalizedCatalog={normalizedCatalog.length > 0 ? normalizedCatalog : undefined}
           />
         </Suspense>
       </div>

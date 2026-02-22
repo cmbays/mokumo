@@ -28,7 +28,7 @@ import {
 } from '@domain/rules/customer.rules'
 import type { ImpactPreview } from '@domain/rules/customer.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
-import { getGarmentCatalogMutable } from '@infra/repositories/garments'
+import { getGarmentCatalogMutable } from '@infra/repositories/garments-phase1'
 import {
   getBrandPreferencesMutable,
   getAutoPropagationConfigMutable,

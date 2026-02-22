@@ -104,10 +104,17 @@ export const CUSTOMER_TAG_COLORS: Record<CustomerTag, string> = {
 
 export const GARMENT_CATEGORY_LABELS: Record<GarmentCategory, string> = {
   't-shirts': 'T-Shirts',
-  fleece: 'Hoodies & Fleece',
-  outerwear: 'Jackets',
+  polos: 'Polos',
+  fleece: 'Fleece',
+  'knits-layering': 'Knits & Layering',
+  outerwear: 'Outerwear',
   pants: 'Pants',
+  shorts: 'Shorts',
   headwear: 'Headwear',
+  activewear: 'Activewear',
+  accessories: 'Accessories',
+  wovens: 'Wovens',
+  other: 'Other',
 }
 
 export const ARTWORK_TAG_LABELS: Record<ArtworkTag, string> = {

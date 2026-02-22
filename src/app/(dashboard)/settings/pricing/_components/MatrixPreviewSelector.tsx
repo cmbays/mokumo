@@ -32,10 +32,17 @@ type MatrixPreviewSelectorProps = {
 
 const garmentLabels: Record<GarmentCategory, string> = {
   't-shirts': 'T-Shirts',
+  polos: 'Polos',
   fleece: 'Fleece',
+  'knits-layering': 'Knits & Layering',
   outerwear: 'Outerwear',
   pants: 'Pants',
+  shorts: 'Shorts',
   headwear: 'Headwear',
+  activewear: 'Activewear',
+  accessories: 'Accessories',
+  wovens: 'Wovens',
+  other: 'Other',
 }
 
 const locationLabels: Record<string, string> = {

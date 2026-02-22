@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { optimizeCost } from '../dtf.rules'
+import { optimizeCost, getDtfTaskTemplate, isValidDtfLineItem } from '../dtf.rules'
 import type { DTFSheetTier } from '@domain/entities/dtf-pricing'
 import type { PackedSheet } from '@domain/services/dtf.service'
+import type { DtfLineItem } from '@domain/entities/dtf-line-item'
 
 const MOCK_TIERS: DTFSheetTier[] = [
   { width: 22, length: 12, retailPrice: 8.99 },
@@ -158,5 +159,89 @@ describe('optimizeCost', () => {
 
     expect(result.totalCost).toBe(89.9)
     expect(result.totalSheets).toBe(10)
+  })
+
+  it('throws when no tiers are provided', () => {
+    const sheet = makePackedSheet(
+      [{ id: 'd1-0', x: 1, y: 1, width: 4, height: 4, label: 'Logo', shape: 'box' }],
+      10
+    )
+
+    expect(() => optimizeCost([sheet], [])).toThrow('No sheet tiers configured')
+  })
+})
+
+describe('getDtfTaskTemplate', () => {
+  it('returns 4 canonical production tasks', () => {
+    const tasks = getDtfTaskTemplate()
+
+    expect(tasks).toHaveLength(4)
+    expect(tasks.every((t) => t.isCanonical)).toBe(true)
+    expect(tasks.every((t) => !t.isCompleted)).toBe(true)
+  })
+
+  it('tasks have correct labels in order', () => {
+    const tasks = getDtfTaskTemplate()
+
+    expect(tasks[0].label).toBe('Gang sheet prepared')
+    expect(tasks[1].label).toBe('DTF printed')
+    expect(tasks[2].label).toBe('QC passed')
+    expect(tasks[3].label).toBe('Shipped')
+  })
+
+  it('tasks have ascending sortOrder', () => {
+    const tasks = getDtfTaskTemplate()
+
+    for (let i = 1; i < tasks.length; i++) {
+      expect(tasks[i].sortOrder).toBeGreaterThan(tasks[i - 1].sortOrder)
+    }
+  })
+
+  it('each call returns a fresh set of tasks with unique IDs', () => {
+    const a = getDtfTaskTemplate()
+    const b = getDtfTaskTemplate()
+
+    const idsA = a.map((t) => t.id)
+    const idsB = b.map((t) => t.id)
+    expect(idsA).not.toEqual(idsB)
+  })
+})
+
+describe('isValidDtfLineItem', () => {
+  function makeItem(overrides: Partial<DtfLineItem> = {}): DtfLineItem {
+    return {
+      id: 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
+      artworkName: 'Logo',
+      shape: 'box',
+      sizePreset: 'large',
+      width: 4,
+      height: 4,
+      quantity: 10,
+      ...overrides,
+    }
+  }
+
+  it('returns true for a valid item', () => {
+    expect(isValidDtfLineItem(makeItem())).toBe(true)
+  })
+
+  it('returns false when artworkName is blank', () => {
+    expect(isValidDtfLineItem(makeItem({ artworkName: '   ' }))).toBe(false)
+  })
+
+  it('returns false when artworkName is empty string', () => {
+    expect(isValidDtfLineItem(makeItem({ artworkName: '' }))).toBe(false)
+  })
+
+  it('returns false when width is 0', () => {
+    expect(isValidDtfLineItem(makeItem({ width: 0 }))).toBe(false)
+  })
+
+  it('returns false when height is 0', () => {
+    expect(isValidDtfLineItem(makeItem({ height: 0 }))).toBe(false)
+  })
+
+  it('returns false when quantity is 0', () => {
+    expect(isValidDtfLineItem(makeItem({ quantity: 0 }))).toBe(false)
   })
 })

@@ -2434,6 +2434,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     availableSizes: standardSizes,
     isEnabled: true,
     isFavorite: true,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-002',
@@ -2446,6 +2447,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     availableSizes: standardSizes,
     isEnabled: true,
     isFavorite: true,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-003',
@@ -2467,6 +2469,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-004',
@@ -2498,6 +2501,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-005',
@@ -2532,6 +2536,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-006',
@@ -2549,6 +2554,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-007',
@@ -2561,6 +2567,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     availableSizes: standardSizes,
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-008',
@@ -2580,6 +2587,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-009',
@@ -2608,6 +2616,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-010',
@@ -2628,6 +2637,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: false,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-011',
@@ -2647,6 +2657,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: false,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-012',
@@ -2665,6 +2676,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-013',
@@ -2683,6 +2695,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-014',
@@ -2703,6 +2716,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     availableSizes: [{ name: 'One Size', order: 0, priceAdjustment: 0 }],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-015',
@@ -2715,6 +2729,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     availableSizes: [{ name: 'One Size', order: 0, priceAdjustment: 0 }],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-016',
@@ -2727,6 +2742,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     availableSizes: standardSizes,
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
   {
     id: 'gc-017',
@@ -2747,6 +2763,7 @@ export const garmentCatalog: GarmentCatalog[] = [
     ],
     isEnabled: true,
     isFavorite: false,
+    updatedAt: new Date(),
   },
 ]
 

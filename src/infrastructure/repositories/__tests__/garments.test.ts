@@ -4,6 +4,9 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
+// Mock server-only module so tests can run
+vi.mock('server-only', () => ({}))
+
 // Mock both providers so no real I/O occurs
 vi.mock('@infra/repositories/_providers/mock/garments', () => ({
   getGarmentCatalog: vi.fn().mockResolvedValue([{ id: 'mock-garment', source: 'mock' }]),
@@ -16,6 +19,12 @@ vi.mock('@infra/repositories/_providers/supplier/garments', () => ({
   getGarmentCatalog: vi.fn().mockResolvedValue([{ id: 'supplier-garment', source: 'supplier' }]),
   getGarmentById: vi.fn().mockResolvedValue({ id: 'supplier-garment', source: 'supplier' }),
   getAvailableBrands: vi.fn().mockResolvedValue(['SupplierBrand']),
+}))
+
+vi.mock('@infra/repositories/_providers/supabase/garments', () => ({
+  getGarmentCatalog: vi.fn().mockResolvedValue([{ id: 'supabase-garment', source: 'supabase' }]),
+  getGarmentById: vi.fn().mockResolvedValue({ id: 'supabase-garment', source: 'supabase' }),
+  getAvailableBrands: vi.fn().mockResolvedValue(['SupabaseBrand']),
 }))
 
 afterEach(() => {
@@ -71,5 +80,26 @@ describe('garments repository router', () => {
     const { getAvailableBrands } = await import('@infra/repositories/garments')
     const result = await getAvailableBrands()
     expect(result).toEqual(['SupplierBrand'])
+  })
+
+  it('uses Supabase catalog when SUPPLIER_ADAPTER=supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getGarmentCatalog } = await import('@infra/repositories/garments')
+    const result = await getGarmentCatalog()
+    expect(result[0]).toMatchObject({ source: 'supabase' })
+  })
+
+  it('getGarmentById routes to Supabase when SUPPLIER_ADAPTER=supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getGarmentById } = await import('@infra/repositories/garments')
+    const result = await getGarmentById('3001')
+    expect(result).toMatchObject({ source: 'supabase' })
+  })
+
+  it('getAvailableBrands routes to Supabase when SUPPLIER_ADAPTER=supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getAvailableBrands } = await import('@infra/repositories/garments')
+    const result = await getAvailableBrands()
+    expect(result).toEqual(['SupabaseBrand'])
   })
 })

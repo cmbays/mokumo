@@ -34,5 +34,11 @@
     "label": "PM System",
     "description": "GitHub Projects integration, issue templates, and workflow automation",
     "icon": "KanbanSquare"
+  },
+  {
+    "slug": "database",
+    "label": "Database",
+    "description": "Database management and query tools",
+    "icon": "Database"
   }
 ]
