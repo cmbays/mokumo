@@ -1,5 +1,8 @@
 import 'server-only'
 import { cache } from 'react'
+import { eq } from 'drizzle-orm'
+import { db } from '@shared/lib/supabase/db'
+import { shopMembers } from '@db/schema'
 import { createClient } from '@shared/lib/supabase/server'
 
 // ---------------------------------------------------------------------------
@@ -11,24 +14,23 @@ export type UserRole = 'owner' | 'operator'
 /**
  * Authenticated session for the current request.
  *
- * Phase 1: Populated from the demo-access cookie (single mock user).
  * Phase 2: Populated from Supabase Auth — `supabase.auth.getUser()` provides
  *   the JWT-verified user; `shopId` and `role` come from a `shop_members` join.
  *
- * The shape is intentionally stable across phases so that all callers of
- * `verifySession()` require no changes when Phase 2 is wired in.
+ * The shape is intentionally stable so that all callers require no changes
+ * as the auth implementation evolves.
  */
 export type Session = {
-  /** Stable user identifier. Phase 2: Supabase Auth UUID. */
+  /** Stable user identifier. Supabase Auth UUID. */
   userId: string
   /** Role within the shop. Drives UI permissions and DAL row filtering. */
   role: UserRole
-  /** Identifies the shop. Used for RLS row filtering in Phase 2. */
+  /** Identifies the shop. Used for RLS row filtering. */
   shopId: string
 }
 
 // ---------------------------------------------------------------------------
-// Phase 1 mock session (remove in Phase 2)
+// Dev mock session
 // ---------------------------------------------------------------------------
 
 const MOCK_SESSION: Session = {
@@ -43,67 +45,33 @@ const MOCK_SESSION: Session = {
 
 /**
  * Returns the authenticated {@link Session} for the current request, or
- * `null` if the request is unauthenticated.
+ * `null` if the request is unauthenticated or the user has no shop membership.
  *
  * Wrapped in React `cache()` so multiple DAL calls within a single render
- * pass pay the verification cost at most once — critical for Phase 2 where
- * this becomes a real database round-trip.
+ * pass pay the verification cost at most once (one auth check + one DB query).
  *
  * ---
  *
- * ## Phase 1 behaviour
+ * ## Behaviour
  *
- * - **Development**: always returns `MOCK_SESSION` (no cookie check needed).
- * - **Production**: checks the `demo-access` cookie — returns `MOCK_SESSION`
- *   if present, `null` if absent (mirrors `middleware.ts` logic).
- *
- * ## Phase 2 migration
- *
- * Replace the cookie block with Supabase Auth verification:
- *
- * ```ts
- * import { createServerClient } from '@supabase/ssr';
- * import { cookies } from 'next/headers';
- *
- * const cookieStore = await cookies();
- * const supabase = createServerClient(
- *   process.env.NEXT_PUBLIC_SUPABASE_URL ?? (() => { throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set'); })(),
- *   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? (() => { throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not set'); })(),
- *   { cookies: { getAll: () => cookieStore.getAll() } },
- * );
- *
- * const { data: { user }, error } = await supabase.auth.getUser();
- * if (error || !user) return null;
- *
- * // Fetch role + shopId from your shop_members table
- * const { data: member } = await supabase
- *   .from('shop_members')
- *   .select('role, shop_id')
- *   .eq('user_id', user.id)
- *   .single();
- *
- * if (!member) return null;
- *
- * return { userId: user.id, role: member.role, shopId: member.shop_id };
- * ```
- *
- * No consumer changes required — the `Session` shape is identical.
+ * - **Development**: always returns `MOCK_SESSION` (no auth/DB check).
+ * - **Production**: verifies the JWT via `supabase.auth.getUser()`, then
+ *   fetches `role` and `shopId` from `shop_members` for that user.
+ *   Returns `null` if auth fails or no membership row exists.
  *
  * @see {@link docs/strategy/auth-session-design.md} for the full 4-layer
  *   defense model and DAL classification table.
  */
 export const verifySession = cache(async (): Promise<Session | null> => {
-  // Development: skip auth check to keep DX frictionless
+  // Development: skip auth check to keep DX frictionless.
   // Use === 'development' (not !== 'production') so test environments
   // also exercise the real auth path.
   if (process.env.NODE_ENV === 'development') {
     return { ...MOCK_SESSION }
   }
 
-  // Production — Phase 2a: Supabase Auth verification
-  // Phase 2b (future): fetch role + shopId from shop_members table join
+  // Layer 1: JWT verification via Supabase Auth
   const supabase = await createClient()
-
   const {
     data: { user },
     error,
@@ -113,6 +81,17 @@ export const verifySession = cache(async (): Promise<Session | null> => {
     return null
   }
 
-  // Hardcoded until shop_members table added in Phase 2b
-  return { userId: user.id, role: 'owner' as const, shopId: 'shop_4ink' }
+  // Layer 2: Fetch role + shopId from shop_members
+  const [membership] = await db
+    .select({ shopId: shopMembers.shopId, role: shopMembers.role })
+    .from(shopMembers)
+    .where(eq(shopMembers.userId, user.id))
+    .limit(1)
+
+  if (!membership) {
+    // Authenticated but no shop membership — treat as unauthorized
+    return null
+  }
+
+  return { userId: user.id, role: membership.role, shopId: membership.shopId }
 })

@@ -15,6 +15,13 @@
       "when": 1771549997117,
       "tag": "0003_oval_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771785547387,
+      "tag": "0006_remarkable_shriek",
+      "breakpoints": true
     }
   ]
 }

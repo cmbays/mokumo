@@ -8,6 +8,7 @@ import {
   integer,
   timestamp,
   uniqueIndex,
+  index,
   numeric,
 } from 'drizzle-orm/pg-core'
 
@@ -64,7 +65,10 @@ export const catalogBrandSources = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('catalog_brand_sources_source_external_id_key').on(t.source, t.externalId)]
+  (t) => [
+    uniqueIndex('catalog_brand_sources_source_external_id_key').on(t.source, t.externalId),
+    index('idx_catalog_brand_sources_brand_id').on(t.brandId),
+  ]
 )
 
 // ─── catalog_styles ───────────────────────────────────────────────────────────
@@ -91,7 +95,10 @@ export const catalogStyles = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('catalog_styles_source_external_id_key').on(t.source, t.externalId)]
+  (t) => [
+    uniqueIndex('catalog_styles_source_external_id_key').on(t.source, t.externalId),
+    index('idx_catalog_styles_brand_id').on(t.brandId),
+  ]
 )
 
 // ─── catalog_colors ───────────────────────────────────────────────────────────
@@ -109,7 +116,10 @@ export const catalogColors = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('catalog_colors_style_id_name_key').on(t.styleId, t.name)]
+  (t) => [
+    uniqueIndex('catalog_colors_style_id_name_key').on(t.styleId, t.name),
+    index('idx_catalog_colors_style_id').on(t.styleId),
+  ]
 )
 
 // ─── catalog_images ───────────────────────────────────────────────────────────
@@ -126,7 +136,10 @@ export const catalogImages = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('catalog_images_color_id_image_type_key').on(t.colorId, t.imageType)]
+  (t) => [
+    uniqueIndex('catalog_images_color_id_image_type_key').on(t.colorId, t.imageType),
+    index('idx_catalog_images_color_id').on(t.colorId),
+  ]
 )
 
 // ─── catalog_sizes ────────────────────────────────────────────────────────────
@@ -150,7 +163,10 @@ export const catalogSizes = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('catalog_sizes_style_id_name_key').on(t.styleId, t.name)]
+  (t) => [
+    uniqueIndex('catalog_sizes_style_id_name_key').on(t.styleId, t.name),
+    index('idx_catalog_sizes_style_id').on(t.styleId),
+  ]
 )
 
 // ─── catalog_style_preferences ────────────────────────────────────────────────
@@ -176,5 +192,6 @@ export const catalogStylePreferences = pgTable(
       t.scopeId,
       t.styleId
     ),
+    index('idx_catalog_style_preferences_style_id').on(t.styleId),
   ]
 )
