@@ -1,0 +1,203 @@
+version: 2
+
+models:
+  - name: dim_product
+    description: >
+      Product dimension — one row per (source, style_id). Deduplicates from
+      staging to style-level attributes. GTIN is the first non-null value
+      across all SKUs for the style.
+    columns:
+      - name: product_key
+        description: >
+          Surrogate key generated from (source, style_id). Deterministic MD5 hash.
+        data_tests:
+          - unique
+          - not_null
+      - name: source
+        description: Supplier identifier (e.g. 'ss_activewear').
+        data_tests:
+          - not_null
+      - name: style_id
+        description: Supplier-specific style identifier.
+        data_tests:
+          - not_null
+      - name: product_name
+        description: Human-readable product name (from style_name).
+      - name: brand_name
+        description: Brand name from the supplier (e.g. 'Bella+Canvas', 'Gildan').
+      - name: gtin
+        description: >
+          Global Trade Item Number (UPC barcode). First non-null across SKUs
+          for this style. May be null if no SKU has a GTIN.
+
+  - name: dim_supplier
+    description: >
+      Supplier dimension — one row per supplier. Sourced from the
+      dim_supplier_seed CSV. Extensible as new suppliers are added.
+    columns:
+      - name: supplier_key
+        description: >
+          Surrogate key generated from (supplier_code). Deterministic MD5 hash.
+        data_tests:
+          - unique
+          - not_null
+      - name: supplier_code
+        description: Short code identifier for the supplier (e.g. 'ss_activewear').
+        data_tests:
+          - unique
+          - not_null
+      - name: supplier_name
+        description: Human-readable supplier name.
+        data_tests:
+          - not_null
+      - name: website
+        description: Supplier website URL.
+      - name: is_active
+        description: Whether this supplier is currently active.
+        data_tests:
+          - not_null
+
+  - name: dim_price_group
+    description: >
+      Price group dimension — one row per (source, color_price_group, size_price_group).
+      Colors/sizes in the same group share identical pricing tiers.
+    columns:
+      - name: price_group_key
+        description: >
+          Surrogate key generated from (source, color_price_group, size_price_group).
+          Deterministic MD5 hash.
+        data_tests:
+          - unique
+          - not_null
+      - name: source
+        description: Supplier identifier.
+        data_tests:
+          - not_null
+      - name: color_price_group
+        description: >
+          Supplier color price grouping. Colors in the same group share pricing.
+        data_tests:
+          - not_null
+      - name: size_price_group
+        description: >
+          Supplier size price grouping. Sizes in the same group share pricing.
+        data_tests:
+          - not_null
+
+  - name: dim_date
+    description: >
+      Date dimension — calendar day spine from 2024-01-01 to 2028-12-31.
+      ~1,826 rows. Natural key (date_key = the date itself).
+    columns:
+      - name: date_key
+        description: Calendar date (natural key).
+        data_tests:
+          - unique
+          - not_null
+      - name: year
+        description: Four-digit year.
+        data_tests:
+          - not_null
+      - name: quarter
+        description: Quarter number (1-4).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+      - name: month_number
+        description: Month number (1-12).
+        data_tests:
+          - not_null
+      - name: month_name
+        description: Full month name (e.g. 'January').
+      - name: day_of_month
+        description: Day of month (1-31).
+        data_tests:
+          - not_null
+      - name: day_of_week_number
+        description: ISO day of week (1=Monday, 7=Sunday).
+        data_tests:
+          - not_null
+      - name: day_of_week_name
+        description: Full day name (e.g. 'Monday').
+      - name: week_of_year
+        description: ISO week of year (1-53).
+      - name: is_weekend
+        description: Whether this date falls on Saturday or Sunday.
+        data_tests:
+          - not_null
+
+  - name: fct_supplier_pricing
+    description: >
+      Supplier pricing fact table. Grain: one row per product x supplier x
+      price_group x tier x effective_date. Joins conformed intermediate
+      pricing to all three business dimensions.
+    columns:
+      - name: pricing_fact_key
+        description: >
+          Surrogate key generated from (source, style_id, color_price_group,
+          size_price_group, tier_name). Deterministic MD5 hash.
+        data_tests:
+          - unique
+          - not_null
+      - name: product_key
+        description: Foreign key to dim_product.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_key
+      - name: supplier_key
+        description: Foreign key to dim_supplier.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_supplier')
+                field: supplier_key
+      - name: price_group_key
+        description: Foreign key to dim_price_group.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_price_group')
+                field: price_group_key
+      - name: tier_name
+        description: Pricing tier identifier (piece, dozen, case).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['piece', 'dozen', 'case']
+      - name: effective_date
+        description: >
+          Date this pricing became effective. Degenerate dimension — stored on
+          the fact, not FK to dim_date.
+        data_tests:
+          - not_null
+      - name: is_current
+        description: Whether this is the current effective price.
+        data_tests:
+          - not_null
+      - name: min_qty
+        description: Minimum quantity for this price tier (inclusive).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                strictly: false
+      - name: max_qty
+        description: >
+          Maximum quantity for this price tier (inclusive). Null means unbounded.
+      - name: unit_price
+        description: Unit price for this quantity range. numeric(10,4).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                strictly: true
