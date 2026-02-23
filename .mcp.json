@@ -5,7 +5,8 @@
       "args": ["dbt-mcp"],
       "env": {
         "DBT_PROJECT_DIR": "./dbt",
-        "DBT_PROFILES_DIR": "./dbt/profiles"
+        "DBT_PROFILES_DIR": "./dbt/profiles",
+        "DBT_MCP_ENABLE_DBT_CODEGEN": "true"
       }
     }
   }

@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: stg_ss_activewear__pricing
+    description: >
+      Deduplicated per-SKU pricing data from S&S Activewear. Keeps only the
+      most recent sync snapshot per SKU (via row_number partition by sku order
+      by loaded_at desc). Renames columns to project conventions and casts
+      prices to numeric(10,4).
+    columns:
+      - name: sku
+        description: S&S SKU identifier — unique per color+size combination. Post-dedup primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: style_id
+        description: S&S style ID (numeric string).
+        data_tests:
+          - not_null
+      - name: style_name
+        description: Human-readable style name (e.g. "Unisex Jersey Short Sleeve Tee").
+      - name: brand_name
+        description: Brand name (e.g. "Bella+Canvas", "Gildan").
+      - name: color_name
+        description: Color variant name.
+      - name: color_code
+        description: S&S internal color code.
+      - name: color_price_group
+        description: >
+          S&S color price code name — groups colors that share the same pricing
+          tier. Used by intermediate models to group pricing.
+      - name: size_name
+        description: Size label (e.g. "S", "M", "L", "XL").
+      - name: size_code
+        description: S&S internal size code.
+      - name: size_price_group
+        description: >
+          S&S size price code name — groups sizes that share the same pricing
+          tier. Used by intermediate models to group pricing.
+      - name: piece_price
+        description: Unit price for single-piece orders. numeric(10,4).
+      - name: dozen_price
+        description: Unit price for dozen-quantity orders. numeric(10,4).
+      - name: case_price
+        description: Unit price for case-quantity orders. numeric(10,4).
+      - name: case_qty
+        description: Number of units in a case for this SKU.
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                strictly: false
+              config:
+                where: case_qty is not null
+      - name: customer_price
+        description: Account-specific negotiated price (commercially sensitive).
+      - name: map_price
+        description: Minimum advertised price (commercially sensitive).
+      - name: sale_price
+        description: Promotional sale price (commercially sensitive).
+      - name: sale_expiration
+        description: Promotional sale end date/time string.
+      - name: gtin
+        description: Global Trade Item Number (UPC barcode).
+      - name: loaded_at
+        description: Timestamp when the row was loaded into the raw table.
+      - name: source
+        description: Supplier identifier (always 'ss_activewear').

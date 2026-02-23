@@ -26,14 +26,23 @@ const redMedium = {
   baseCategory: 'T-Shirts',
   description: 'Classic fit tee',
   colorName: 'Red',
+  colorCode: 'RED',
   color1: 'FF0000',
   color2: '',
   sizeName: 'M',
+  sizeCode: 'M',
   sizeIndex: 2,
   gtin: '123456789012',
   piecePrice: 2.99,
   dozenPrice: null,
   casePrice: null,
+  caseQty: null,
+  customerPrice: null,
+  mapPrice: null,
+  salePrice: null,
+  saleExpiration: null,
+  colorPriceCodeName: 'STD',
+  sizePriceCodeName: 'REG',
   colorFrontImage: '/images/style/1234/1234_fm.jpg',
   colorBackImage: '/images/style/1234/1234_bm.jpg',
   colorSideImage: '',
@@ -57,9 +66,11 @@ const blueSmall = {
   ...redMedium,
   sku: '5000-BLU-S',
   colorName: 'Navy',
+  colorCode: 'NVY',
   color1: '000080',
   color2: '',
   sizeName: 'S',
+  sizeCode: 'S',
   sizeIndex: 1,
   gtin: undefined,
   colorFrontImage: '/images/style/1234/navy_fm.jpg',
@@ -183,18 +194,28 @@ describe('productsToCanonicalStyle()', () => {
   })
 
   describe('pricing', () => {
-    it('maps piecePrice, dozenPrice, casePrice', () => {
+    it('maps piecePrice, dozenPrice, casePrice, caseQty', () => {
       const style = productsToCanonicalStyle('1234', [
-        { ...redMedium, piecePrice: 2.99, dozenPrice: 2.49, casePrice: 1.99 },
+        { ...redMedium, piecePrice: 2.99, dozenPrice: 2.49, casePrice: 1.99, caseQty: 72 },
       ])!
-      expect(style.pricing).toEqual({ piecePrice: 2.99, dozenPrice: 2.49, casePrice: 1.99 })
+      expect(style.pricing).toEqual({
+        piecePrice: 2.99,
+        dozenPrice: 2.49,
+        casePrice: 1.99,
+        caseQty: 72,
+      })
     })
 
     it('falls back to null when all pricing fields are absent', () => {
       const style = productsToCanonicalStyle('1234', [
         { ...redMedium, piecePrice: undefined, dozenPrice: undefined, casePrice: undefined },
       ])!
-      expect(style.pricing).toEqual({ piecePrice: null, dozenPrice: null, casePrice: null })
+      expect(style.pricing).toEqual({
+        piecePrice: null,
+        dozenPrice: null,
+        casePrice: null,
+        caseQty: null,
+      })
     })
   })
 
@@ -254,6 +275,47 @@ describe('getStyle()', () => {
   it('propagates SSClientError(500) without falling back', async () => {
     mockSsGet.mockRejectedValueOnce(new SSClientError(500, 'credentials not configured'))
     await expect(adapter.getStyle('1234')).rejects.toBeInstanceOf(SSClientError)
+  })
+})
+
+// ─── getRawProducts() ────────────────────────────────────────────────────────
+
+describe('getRawProducts()', () => {
+  it('calls ssGet with preserveRawFields: true', async () => {
+    mockSsGet.mockResolvedValueOnce([redMedium])
+    await adapter.getRawProducts('1234')
+    expect(mockSsGet).toHaveBeenCalledWith('products', { styleId: '1234' }, expect.any(Number), {
+      preserveRawFields: true,
+    })
+  })
+
+  it('returns parsed SSProduct array with pricing fields preserved', async () => {
+    const rawProduct = {
+      ...redMedium,
+      customerPrice: 2.49,
+      mapPrice: 3.0,
+      salePrice: 2.29,
+      saleExpiration: '2026-03-01',
+      caseQty: 72,
+      colorPriceCodeName: 'STD',
+      sizePriceCodeName: 'REG',
+    }
+    mockSsGet.mockResolvedValueOnce([rawProduct])
+    const products = await adapter.getRawProducts('1234')
+    expect(products).toHaveLength(1)
+    expect(products[0].customerPrice).toBe(2.49)
+    expect(products[0].mapPrice).toBe(3.0)
+    expect(products[0].salePrice).toBe(2.29)
+    expect(products[0].saleExpiration).toBe('2026-03-01')
+    expect(products[0].caseQty).toBe(72)
+    expect(products[0].colorPriceCodeName).toBe('STD')
+    expect(products[0].sizePriceCodeName).toBe('REG')
+  })
+
+  it('returns empty array when S&S returns no products', async () => {
+    mockSsGet.mockResolvedValueOnce([])
+    const products = await adapter.getRawProducts('unknown')
+    expect(products).toEqual([])
   })
 })
 

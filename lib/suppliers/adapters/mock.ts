@@ -44,6 +44,7 @@ export class MockAdapter implements SupplierAdapter {
         piecePrice: garment.basePrice,
         dozenPrice: null,
         casePrice: null,
+        caseQty: null,
       },
       gtin: null,
       supplier: this.supplierName,

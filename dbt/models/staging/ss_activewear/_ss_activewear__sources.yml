@@ -1,0 +1,67 @@
+version: 2
+
+sources:
+  - name: ss_activewear
+    description: >
+      Raw per-SKU product and pricing data from the S&S Activewear REST API V2.
+      Populated by the pricing sync service (POST /api/catalog/sync-pricing).
+      Append-only — each sync run inserts new rows. Staging models dedup via
+      row_number() partitioned by sku ordered by _loaded_at desc.
+      Note: sku is intentionally NOT unique at the source level (append-only).
+    schema: raw
+    tables:
+      - name: ss_activewear_products
+        description: >
+          One row per SKU per sync run. Contains style metadata, color/size
+          groupings, and all pricing tiers (piece, dozen, case) plus commercially
+          sensitive fields (customerPrice, mapPrice, salePrice).
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after:
+            count: 48
+            period: hour
+          error_after:
+            count: 168
+            period: hour
+        columns:
+          - name: id
+            description: Auto-incrementing surrogate key (bigint identity).
+          - name: sku
+            description: S&S SKU identifier — unique per color+size combination.
+            data_tests:
+              - not_null
+          - name: style_id_external
+            description: S&S style ID (numeric string like "3001").
+            data_tests:
+              - not_null
+          - name: _source
+            description: Supplier identifier, always 'ss_activewear' for this table.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['ss_activewear']
+          - name: piece_price
+            data_tests:
+              - dbt_expectations.expect_column_values_to_be_between:
+                  arguments:
+                    min_value: 0
+                    strictly: false
+                  config:
+                    where: piece_price is not null
+          - name: dozen_price
+            data_tests:
+              - dbt_expectations.expect_column_values_to_be_between:
+                  arguments:
+                    min_value: 0
+                    strictly: false
+                  config:
+                    where: dozen_price is not null
+          - name: case_price
+            data_tests:
+              - dbt_expectations.expect_column_values_to_be_between:
+                  arguments:
+                    min_value: 0
+                    strictly: false
+                  config:
+                    where: case_price is not null

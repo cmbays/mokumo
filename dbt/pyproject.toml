@@ -8,7 +8,12 @@ dependencies = [
     "dbt-postgres",
 ]
 
+[project.optional-dependencies]
+dev = ["sqlfluff", "sqlfluff-templater-dbt"]
+
 [dependency-groups]
 dev = [
     "dbt-mcp",
+    "sqlfluff",
+    "sqlfluff-templater-dbt",
 ]

@@ -29,20 +29,29 @@ const SS_BASE_URL = 'https://api.ssactivewear.com/v2'
 const RATE_LIMIT_BUFFER = 5
 
 /**
- * Pricing fields that are commercially sensitive and must never
- * leave the server. customerPrice is account-specific negotiated pricing;
- * mapPrice is minimum advertised price data S&S expects to stay internal.
- * salePrice and saleExpiration are promotional pricing data.
+ * Security fields that MUST always be stripped from all responses.
  * Prototype pollution keys are blocked as a defense-in-depth measure.
  */
-const STRIP_FIELDS = new Set([
+const SECURITY_STRIP_FIELDS = new Set([
+  '__proto__', // prototype pollution defense
+  'constructor', // prototype pollution defense
+  'prototype', // prototype pollution defense
+])
+
+/**
+ * Pricing fields that are commercially sensitive and must never
+ * leave the server in app-layer responses. customerPrice is account-specific
+ * negotiated pricing; mapPrice is minimum advertised price data S&S expects
+ * to stay internal. salePrice and saleExpiration are promotional pricing data.
+ *
+ * These are preserved when `preserveRawFields: true` (for the raw analytics
+ * pipeline) but stripped for all normal app-layer requests.
+ */
+const PRICING_STRIP_FIELDS = new Set([
   'customerPrice',
   'mapPrice',
   'salePrice', // promotional pricing — commercially sensitive
   'saleExpiration', // reveals when promotional terms end
-  '__proto__', // prototype pollution defense
-  'constructor', // prototype pollution defense
-  'prototype', // prototype pollution defense
 ])
 
 // ─── Allowed segments ─────────────────────────────────────────────────────────
@@ -132,19 +141,28 @@ function getAuthHeader(): string {
 }
 
 /**
- * Recursively strip sensitive pricing fields from any depth of nested
- * objects and arrays. S&S product data nests pricing inside color/size
- * objects, so a shallow strip on the top-level response is insufficient.
+ * Recursively strip fields from any depth of nested objects and arrays.
+ * S&S product data nests pricing inside color/size objects, so a shallow
+ * strip on the top-level response is insufficient.
+ *
+ * @param data - The data to strip fields from.
+ * @param preserveRawFields - When true, only strip security fields (prototype
+ *   pollution). When false (default), also strip commercially sensitive pricing
+ *   fields (customerPrice, mapPrice, salePrice, saleExpiration).
  */
-export function stripSensitiveFields(data: unknown): unknown {
+export function stripSensitiveFields(data: unknown, preserveRawFields = false): unknown {
   if (Array.isArray(data)) {
-    return data.map(stripSensitiveFields)
+    return data.map((item) => stripSensitiveFields(item, preserveRawFields))
   }
   if (data !== null && typeof data === 'object') {
     return Object.fromEntries(
       Object.entries(data as Record<string, unknown>)
-        .filter(([key]) => !STRIP_FIELDS.has(key))
-        .map(([key, value]) => [key, stripSensitiveFields(value)])
+        .filter(([key]) => {
+          if (SECURITY_STRIP_FIELDS.has(key)) return false
+          if (!preserveRawFields && PRICING_STRIP_FIELDS.has(key)) return false
+          return true
+        })
+        .map(([key, value]) => [key, stripSensitiveFields(value, preserveRawFields)])
     )
   }
   return data
@@ -152,12 +170,20 @@ export function stripSensitiveFields(data: unknown): unknown {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+export type SSGetOptions = {
+  /** When true, only strip security fields (prototype pollution). Pricing
+   *  fields (customerPrice, mapPrice, etc.) are preserved for the raw
+   *  analytics pipeline. Default: false. */
+  preserveRawFields?: boolean
+}
+
 /**
  * Perform a GET request against a whitelisted S&S API segment.
  *
  * @param segment  - One of the five allowed S&S path segments.
  * @param params   - Query parameters to forward (pre-validated by caller).
  * @param ttl      - next.revalidate TTL in seconds; use SS_CACHE_TTL constants.
+ * @param options  - Optional configuration (e.g. preserveRawFields for analytics).
  *
  * @throws {SSClientError}     On auth misconfiguration (500), unreachable API (502),
  *                             or S&S error responses.
@@ -166,7 +192,8 @@ export function stripSensitiveFields(data: unknown): unknown {
 export async function ssGet(
   segment: SSSegment,
   params: Record<string, string>,
-  ttl: number
+  ttl: number,
+  options?: SSGetOptions
 ): Promise<unknown> {
   // Build auth header BEFORE the try block. getAuthHeader() throws SSClientError(500)
   // on missing credentials. If it were inside the try, that error would be caught and
@@ -247,5 +274,5 @@ export async function ssGet(
     })
     throw new SSClientError(502, 'Supplier API returned non-JSON response')
   }
-  return stripSensitiveFields(data)
+  return stripSensitiveFields(data, options?.preserveRawFields ?? false)
 }

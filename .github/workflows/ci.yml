@@ -148,6 +148,13 @@ jobs:
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
         run: uv run dbt parse
 
+      - name: sqlfluff lint
+        if: steps.changes.outputs.dbt == 'true'
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
+        run: uv run sqlfluff lint models/ --format github-annotation-native
+
       # ── dbt build --empty state:modified+ (dry run — validates SQL, zero rows) ──
       - name: Restore production manifest
         if: steps.changes.outputs.dbt_models == 'true'
