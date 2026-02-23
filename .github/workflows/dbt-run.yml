@@ -100,7 +100,8 @@ jobs:
 
       - name: Run dbt tests
         working-directory: dbt
-        run: uv run dbt test --target "$DBT_TARGET"
+        # Mirror the --exclude from dbt run — don't test models that weren't built.
+        run: uv run dbt test --exclude source:ss_activewear+ --target "$DBT_TARGET"
 
       - name: Run dbt snapshots
         working-directory: dbt
