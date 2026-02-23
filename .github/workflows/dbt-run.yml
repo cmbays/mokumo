@@ -105,7 +105,9 @@ jobs:
 
       - name: Run dbt snapshots
         working-directory: dbt
-        run: uv run dbt snapshot --target "$DBT_TARGET"
+        # snp_supplier_pricing depends on int_supplier_pricing__conformed which
+        # is excluded until the S&S sync pipeline (issue #165) is live.
+        run: uv run dbt snapshot --exclude snp_supplier_pricing --target "$DBT_TARGET"
 
       - name: Cache manifest for Slim CI
         if: success()
