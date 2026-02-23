@@ -152,6 +152,11 @@ jobs:
         if: steps.changes.outputs.dbt == 'true'
         working-directory: dbt
         env:
+          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          DBT_PG_PORT: '5432'
+          DBT_PG_USER: ${{ secrets.SUPABASE_DB_USER }}
+          DBT_PG_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DBT_PG_DATABASE: postgres
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
         run: uv run sqlfluff lint models/ --format github-annotation-native
 
