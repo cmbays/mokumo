@@ -123,61 +123,42 @@ export function GarmentCatalogClient({
   // Pagination
   const [page, setPage] = useState(0)
 
-  // Filter garments (N23: getFilteredGarmentsByColors)
-  const filteredGarments = useMemo(() => {
+  // Single pass over the catalog — builds filteredGarments and categoryHits together.
+  // categoryHits applies all filters except category (faceted search pattern) so the
+  // toolbar can hide tabs with zero inventory without collapsing the active tab.
+  const { filteredGarments, categoryHits } = useMemo(() => {
     const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
+    const q = searchQuery ? searchQuery.toLowerCase() : null
+    const hits: Record<string, number> = {}
+    const filtered: GarmentCatalog[] = []
 
-    return catalog.filter((g) => {
-      // Category filter
-      if (category !== 'all' && g.baseCategory !== category) return false
-
+    for (const g of catalog) {
       // Search filter
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
+      if (q) {
         const matches =
           g.name.toLowerCase().includes(q) ||
           g.brand.toLowerCase().includes(q) ||
           g.sku.toLowerCase().includes(q)
-        if (!matches) return false
+        if (!matches) continue
       }
-
       // Brand filter
-      if (brand && g.brand !== brand) return false
+      if (brand && g.brand !== brand) continue
+      // Color filter
+      if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) continue
 
-      // Color filter — garment has ANY matching colorId in its palette
-      if (colorFilterSet) {
-        const hasMatchingColor = g.availableColors.some((colorId) => colorFilterSet.has(colorId))
-        if (!hasMatchingColor) return false
-      }
+      // Passes all non-category filters → count toward categoryHits
+      hits[g.baseCategory] = (hits[g.baseCategory] ?? 0) + 1
 
-      return true
-    })
+      // Category filter (only affects filteredGarments, not hits)
+      if (category === 'all' || g.baseCategory === category) filtered.push(g)
+    }
+
+    return { filteredGarments: filtered, categoryHits: hits }
   }, [catalog, category, searchQuery, brand, selectedColorIds])
 
-  // Per-category hit counts ignoring the category filter (faceted search pattern) —
-  // used to hide empty tabs from the toolbar without affecting the active category filter.
-  const categoryHits = useMemo(() => {
-    const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
-    const counts: Record<string, number> = {}
-    catalog.forEach((g) => {
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
-        if (
-          !g.name.toLowerCase().includes(q) &&
-          !g.brand.toLowerCase().includes(q) &&
-          !g.sku.toLowerCase().includes(q)
-        )
-          return
-      }
-      if (brand && g.brand !== brand) return
-      if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) return
-      counts[g.baseCategory] = (counts[g.baseCategory] ?? 0) + 1
-    })
-    return counts
-  }, [catalog, searchQuery, brand, selectedColorIds])
-
-  // Reset to first page whenever any filter changes
-  const colorFilterKey = selectedColorIds.join(',')
+  // Reset to first page whenever any filter changes.
+  // Sort before joining to produce a canonical key regardless of color selection order.
+  const colorFilterKey = selectedColorIds.slice().sort().join(',')
   useEffect(() => {
     setPage(0)
   }, [category, searchQuery, brand, colorFilterKey])

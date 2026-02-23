@@ -22,6 +22,7 @@ import { ColorFilterGrid } from './ColorFilterGrid'
 import { getColorById } from '@domain/rules/garment.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
 import { garmentCategoryEnum } from '@domain/entities/garment'
+import type { GarmentCategory } from '@domain/entities/garment'
 import { GARMENT_CATEGORY_LABELS } from '@domain/constants'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
 
@@ -50,7 +51,7 @@ type GarmentCatalogToolbarProps = {
   favoriteColorIds: string[]
   onBrandClick?: (brandName: string) => void
   /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
-  categoryHits: Record<string, number>
+  categoryHits: Partial<Record<GarmentCategory, number>>
 }
 
 // ---------------------------------------------------------------------------
