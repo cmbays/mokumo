@@ -80,3 +80,16 @@ jobs:
       - name: Run dbt snapshots
         working-directory: dbt
         run: uv run dbt snapshot --target "$DBT_TARGET"
+
+      - name: Cache manifest for Slim CI
+        if: success()
+        run: |
+          mkdir -p dbt/prod-manifest
+          cp dbt/target/manifest.json dbt/prod-manifest/manifest.json
+
+      - name: Save production manifest
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: dbt/prod-manifest
+          key: dbt-prod-manifest-${{ github.sha }}
