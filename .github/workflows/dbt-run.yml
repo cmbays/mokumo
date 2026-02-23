@@ -71,8 +71,15 @@ jobs:
 
       - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
         run: |
+          echo "All addresses for host:"
+          getent ahosts "$DBT_PG_HOST" 2>&1 | head -5 || echo "(getent ahosts returned nothing)"
           IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
+          if [ -z "$IPV4" ]; then
+            echo "::error::Could not resolve host to an IPv4 address. Ensure SUPABASE_DB_HOST is a hostname like db.xxxxx.supabase.co — not an IP address."
+            exit 1
+          fi
           echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null
+          echo "Pinned host to IPv4: $IPV4"
 
       - name: Verify dbt connection
         working-directory: dbt
