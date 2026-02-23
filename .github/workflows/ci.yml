@@ -148,9 +148,9 @@ jobs:
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
         run: uv run dbt parse
 
-      - name: Prefer IPv4 (GitHub Actions runners lack IPv6 routing)
+      - name: Disable IPv6 (GitHub Actions Azure runners have no IPv6 routing)
         if: steps.changes.outputs.dbt == 'true'
-        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
+        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
 
       - name: sqlfluff lint
         if: steps.changes.outputs.dbt == 'true'
@@ -266,9 +266,9 @@ jobs:
           key: dbt-prod-manifest-never-exact-match
           restore-keys: dbt-prod-manifest-
 
-      - name: Prefer IPv4 (GitHub Actions runners lack IPv6 routing)
+      - name: Disable IPv6 (GitHub Actions Azure runners have no IPv6 routing)
         if: steps.changes.outputs.dbt_models == 'true'
-        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
+        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
 
       - name: dbt build (full, modified only)
         if: steps.changes.outputs.dbt_models == 'true'

@@ -69,8 +69,8 @@ jobs:
         working-directory: dbt
         run: uv run dbt deps
 
-      - name: Prefer IPv4 (GitHub Actions runners lack IPv6 routing)
-        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
+      - name: Disable IPv6 (GitHub Actions Azure runners have no IPv6 routing)
+        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
 
       - name: Verify dbt connection
         working-directory: dbt
