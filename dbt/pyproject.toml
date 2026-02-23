@@ -1,0 +1,14 @@
+[project]
+name = "print-4ink-analytics"
+version = "0.1.0"
+description = "dbt analytics layer for Screen Print Pro (4Ink)"
+requires-python = ">=3.12"
+dependencies = [
+    "dbt-core",
+    "dbt-postgres",
+]
+
+[dependency-groups]
+dev = [
+    "dbt-mcp",
+]

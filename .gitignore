@@ -80,3 +80,11 @@ knowledge-base/dist/
 knowledge-base/node_modules/
 knowledge-base/.astro/
 .firecrawl/
+
+# dbt analytics (Python project in dbt/ directory)
+dbt/.venv/
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/profiles/profiles.yml
+dbt/profiles/.user.yml
