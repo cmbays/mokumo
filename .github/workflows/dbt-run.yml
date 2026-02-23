@@ -1,6 +1,10 @@
 name: dbt Run
 
 on:
+  # Daily refresh — keeps marts tables current
+  schedule:
+    - cron: '0 6 * * *'
+
   # Manual trigger from GitHub UI
   workflow_dispatch:
     inputs:
