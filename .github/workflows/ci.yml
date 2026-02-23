@@ -148,9 +148,13 @@ jobs:
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
         run: uv run dbt parse
 
-      - name: Disable IPv6 (GitHub Actions Azure runners have no IPv6 routing)
+      - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
         if: steps.changes.outputs.dbt == 'true'
-        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
+        env:
+          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+        run: |
+          IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
+          echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null
 
       - name: sqlfluff lint
         if: steps.changes.outputs.dbt == 'true'
@@ -266,9 +270,13 @@ jobs:
           key: dbt-prod-manifest-never-exact-match
           restore-keys: dbt-prod-manifest-
 
-      - name: Disable IPv6 (GitHub Actions Azure runners have no IPv6 routing)
+      - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
         if: steps.changes.outputs.dbt_models == 'true'
-        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
+        env:
+          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+        run: |
+          IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
+          echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null
 
       - name: dbt build (full, modified only)
         if: steps.changes.outputs.dbt_models == 'true'

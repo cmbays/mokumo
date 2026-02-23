@@ -69,8 +69,10 @@ jobs:
         working-directory: dbt
         run: uv run dbt deps
 
-      - name: Disable IPv6 (GitHub Actions Azure runners have no IPv6 routing)
-        run: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
+      - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
+        run: |
+          IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
+          echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null
 
       - name: Verify dbt connection
         working-directory: dbt
