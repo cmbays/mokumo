@@ -36,7 +36,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Direct connection (port 5432), NOT PgBouncer transaction mode (6543)
+      # Session-mode pooler (port 5432) — direct connection is IPv6-only on this project,
+      # which GitHub Actions Azure runners cannot reach. Session mode is dbt-compatible
+      # (full session state preserved). NOT transaction mode (port 6543) — breaks dbt.
       DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
       DBT_PG_PORT: '5432'
       DBT_PG_USER: ${{ secrets.SUPABASE_DB_USER }}
