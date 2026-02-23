@@ -148,6 +148,10 @@ jobs:
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
         run: uv run dbt parse
 
+      - name: Prefer IPv4 (GitHub Actions runners lack IPv6 routing)
+        if: steps.changes.outputs.dbt == 'true'
+        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
+
       - name: sqlfluff lint
         if: steps.changes.outputs.dbt == 'true'
         working-directory: dbt
@@ -261,6 +265,10 @@ jobs:
           path: dbt/prod-manifest
           key: dbt-prod-manifest-never-exact-match
           restore-keys: dbt-prod-manifest-
+
+      - name: Prefer IPv4 (GitHub Actions runners lack IPv6 routing)
+        if: steps.changes.outputs.dbt_models == 'true'
+        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
 
       - name: dbt build (full, modified only)
         if: steps.changes.outputs.dbt_models == 'true'
