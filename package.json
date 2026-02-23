@@ -23,7 +23,12 @@
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "dbt:run": "cd dbt && uv run dbt run",
+    "dbt:test": "cd dbt && uv run dbt test",
+    "dbt:deps": "cd dbt && uv run dbt deps",
+    "dbt:debug": "cd dbt && uv run dbt debug",
+    "dbt:build": "cd dbt && uv run dbt build"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

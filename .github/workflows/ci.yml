@@ -85,6 +85,96 @@ jobs:
           npx wait-on http://localhost:3000 --timeout 30000
           npm run test:e2e
 
+  dbt-check:
+    name: dbt CI (parse + modified build)
+    runs-on: ubuntu-latest
+
+    env:
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PUSH_BEFORE_SHA: ${{ github.event.before }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect dbt changes
+        id: changes
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE_SHA"
+          else
+            BASE="$PUSH_BEFORE_SHA"
+          fi
+
+          # Any file in dbt/ changed?
+          if git diff --name-only "$BASE" HEAD -- 'dbt/' | grep -q .; then
+            echo "dbt=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dbt=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Model/macro/snapshot files changed? (triggers state:modified build)
+          if git diff --name-only "$BASE" HEAD -- 'dbt/models/' 'dbt/macros/' 'dbt/snapshots/' | grep -q .; then
+            echo "dbt_models=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dbt_models=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── dbt parse (lightweight, no DB) ────────────────────────────────
+      - name: Install uv
+        if: steps.changes.outputs.dbt == 'true'
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: 'dbt/uv.lock'
+
+      - name: Set up Python
+        if: steps.changes.outputs.dbt == 'true'
+        run: uv python install
+
+      - name: Install dbt dependencies
+        if: steps.changes.outputs.dbt == 'true'
+        working-directory: dbt
+        run: |
+          uv sync --frozen
+          cp profiles/profiles.yml.example profiles/profiles.yml
+          uv run dbt deps
+
+      - name: dbt parse
+        if: steps.changes.outputs.dbt == 'true'
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
+        run: uv run dbt parse
+
+      # ── dbt build --empty state:modified+ (dry run — validates SQL, zero rows) ──
+      - name: Restore production manifest
+        if: steps.changes.outputs.dbt_models == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: dbt/prod-manifest
+          key: dbt-prod-manifest-never-exact-match
+          restore-keys: dbt-prod-manifest-
+
+      - name: dbt build --empty (dry run, modified only)
+        if: steps.changes.outputs.dbt_models == 'true'
+        working-directory: dbt
+        env:
+          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          DBT_PG_PORT: '5432'
+          DBT_PG_USER: ${{ secrets.SUPABASE_DB_USER }}
+          DBT_PG_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DBT_PG_DATABASE: postgres
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
+        run: |
+          if [ -f prod-manifest/manifest.json ]; then
+            echo "Production manifest found — running state:modified+ dry run (--empty)"
+            uv run dbt build --select state:modified+ --defer --state ./prod-manifest/ --empty --target prod
+          else
+            echo "::notice::No production manifest cached yet — skipping state:modified build. Run dbt-run.yml to seed the cache."
+          fi
+
   deploy-preview:
     name: Deploy preview (main → Vercel preview)
     needs: check
@@ -101,9 +191,87 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel deploy --token "$VERCEL_TOKEN"
 
+  dbt-production-gate:
+    name: dbt production gate (full build)
+    runs-on: ubuntu-latest
+    # Only runs on production merges — the heavy check before release
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/production') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'production')
+
+    env:
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PUSH_BEFORE_SHA: ${{ github.event.before }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect dbt changes
+        id: changes
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE_SHA"
+          else
+            BASE="$PUSH_BEFORE_SHA"
+          fi
+
+          if git diff --name-only "$BASE" HEAD -- 'dbt/models/' 'dbt/macros/' 'dbt/snapshots/' | grep -q .; then
+            echo "dbt_models=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dbt_models=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install uv
+        if: steps.changes.outputs.dbt_models == 'true'
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: 'dbt/uv.lock'
+
+      - name: Set up Python
+        if: steps.changes.outputs.dbt_models == 'true'
+        run: uv python install
+
+      - name: Install dbt dependencies
+        if: steps.changes.outputs.dbt_models == 'true'
+        working-directory: dbt
+        run: |
+          uv sync --frozen
+          cp profiles/profiles.yml.example profiles/profiles.yml
+          uv run dbt deps
+
+      - name: Restore production manifest
+        if: steps.changes.outputs.dbt_models == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: dbt/prod-manifest
+          key: dbt-prod-manifest-never-exact-match
+          restore-keys: dbt-prod-manifest-
+
+      - name: dbt build (full, modified only)
+        if: steps.changes.outputs.dbt_models == 'true'
+        working-directory: dbt
+        env:
+          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          DBT_PG_PORT: '5432'
+          DBT_PG_USER: ${{ secrets.SUPABASE_DB_USER }}
+          DBT_PG_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DBT_PG_DATABASE: postgres
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
+        run: |
+          if [ -f prod-manifest/manifest.json ]; then
+            echo "Production manifest found — running full state:modified+ build (no --empty)"
+            uv run dbt build --select state:modified+ --defer --state ./prod-manifest/ --target prod
+          else
+            echo "::notice::No production manifest cached — running full dbt build"
+            uv run dbt build --target prod
+          fi
+
   create-release:
     name: Create GitHub Release (production)
-    needs: check
+    needs: [check, dbt-production-gate]
     runs-on: ubuntu-latest
     # Only fires when production branch is pushed (i.e. after a main→production merge)
     if: github.event_name == 'push' && github.ref == 'refs/heads/production'

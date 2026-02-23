@@ -199,6 +199,36 @@ depends_on: []
 
 ---
 
+## Analytics (dbt-core)
+
+> Installed 2026-02-22 (Issue #589, Epic #553). Self-contained Python project in `dbt/` directory.
+
+| Tool                 | Version  | Purpose                                                      |
+| -------------------- | -------- | ------------------------------------------------------------ |
+| **dbt-core**         | latest   | Data transformation framework — SQL-based medallion pipeline |
+| **dbt-postgres**     | latest   | PostgreSQL adapter for dbt                                   |
+| **dbt-utils**        | >=1.3.0  | Surrogate keys, date spines, pivot/unpivot, schema tests     |
+| **dbt-expectations** | >=0.10.0 | Great Expectations-style data quality tests                  |
+| **uv**               | system   | Python package manager (manages `dbt/pyproject.toml`)        |
+
+**Why dbt-core**: Supplier pricing data requires a transformation pipeline — raw API responses need casting, conforming, and dimensional modeling before the app can read them. dbt provides SQL-based transformations with testing, documentation, and lineage built in. Runs as a separate process (not in the Node.js runtime).
+
+### Layer Architecture
+
+| Layer        | PostgreSQL Schema | dbt Materialization       | Purpose                                 |
+| ------------ | ----------------- | ------------------------- | --------------------------------------- |
+| Raw          | `raw`             | N/A (sync jobs write)     | Verbatim supplier API responses         |
+| Staging      | `staging`         | `ephemeral` (dev: `view`) | Cast, rename, test — light touch        |
+| Intermediate | `intermediate`    | `table`                   | Business logic, conforming, cleanup     |
+| Marts        | `marts`           | `table`                   | Kimball snowflake schema — dims + facts |
+| Snapshots    | `snapshots`       | `snapshot`                | SCD Type 2 history (future)             |
+
+**When to use**: `cd dbt && uv run dbt run` after sync jobs write to `raw` schema. The Next.js app reads from `marts` via Drizzle `.existing()` declarations — dbt owns the DDL, the app is read-only.
+
+**When NOT to use**: Don't run dbt transformations from within the Next.js runtime. Don't modify `marts` tables from application code. Don't use the `raw` schema from application code — always go through the dbt pipeline.
+
+---
+
 ## Phase 2 Direction (Partially Installed)
 
 > Research completed 2026-02-15. See `docs/research/2026-02-15-ss-integration-research-synthesis.md` for full analysis.

@@ -1,0 +1,44 @@
+# Copy to profiles.yml and fill in values, or rely on environment variables.
+# profiles.yml is gitignored — never commit credentials.
+#
+# dbt resolves {{ env_var('VAR') }} at runtime from your shell environment.
+# Use direnv (.envrc) or a .env file to set these variables.
+#
+# Environment mapping:
+#   dev     → Local Supabase Docker (feature branch work)
+#   preview → Pre-prod / main branch (Vercel preview reads this)
+#   prod    → Production / production branch (Vercel production reads this)
+
+print_4ink:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_PG_HOST', '127.0.0.1') }}"
+      port: "{{ env_var('DBT_PG_PORT', '54322') | int }}"
+      user: "{{ env_var('DBT_PG_USER', 'postgres') }}"
+      pass: "{{ env_var('DBT_PG_PASSWORD', 'postgres') }}"
+      dbname: "{{ env_var('DBT_PG_DATABASE', 'postgres') }}"
+      schema: public
+      threads: 4
+    preview:
+      # TODO: Points to same DB as prod today. Needs isolation — see GitHub issue
+      # for environment parity work (Supabase branching, schema-per-env, or
+      # separate project). Until then, preview and prod share the same database.
+      type: postgres
+      host: "{{ env_var('DBT_PG_HOST') }}"
+      port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+      user: "{{ env_var('DBT_PG_USER') }}"
+      pass: "{{ env_var('DBT_PG_PASSWORD') }}"
+      dbname: "{{ env_var('DBT_PG_DATABASE', 'postgres') }}"
+      schema: public
+      threads: 4
+    prod:
+      type: postgres
+      host: "{{ env_var('DBT_PG_HOST') }}"
+      port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+      user: "{{ env_var('DBT_PG_USER') }}"
+      pass: "{{ env_var('DBT_PG_PASSWORD') }}"
+      dbname: "{{ env_var('DBT_PG_DATABASE', 'postgres') }}"
+      schema: public
+      threads: 4

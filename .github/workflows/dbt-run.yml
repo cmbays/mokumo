@@ -1,0 +1,95 @@
+name: dbt Run
+
+on:
+  # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'dbt target (dev or prod)'
+        required: false
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - dev
+
+  # Callable from other workflows (e.g., post-sync trigger)
+  workflow_call:
+    inputs:
+      target:
+        description: 'dbt target (dev or prod)'
+        required: false
+        default: 'prod'
+        type: string
+    secrets:
+      SUPABASE_DB_HOST:
+        required: true
+      SUPABASE_DB_PASSWORD:
+        required: true
+
+jobs:
+  dbt:
+    runs-on: ubuntu-latest
+
+    env:
+      # Direct connection (port 5432), NOT PgBouncer transaction mode (6543)
+      DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+      DBT_PG_PORT: '5432'
+      DBT_PG_USER: ${{ secrets.SUPABASE_DB_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DBT_PG_DATABASE: postgres
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
+      DBT_TARGET: ${{ inputs.target || 'prod' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: 'dbt/uv.lock'
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install Python dependencies
+        working-directory: dbt
+        run: uv sync --frozen
+
+      - name: Create profiles.yml from example
+        working-directory: dbt
+        run: cp profiles/profiles.yml.example profiles/profiles.yml
+
+      - name: Install dbt packages
+        working-directory: dbt
+        run: uv run dbt deps
+
+      - name: Verify dbt connection
+        working-directory: dbt
+        run: uv run dbt debug --target "$DBT_TARGET"
+
+      - name: Run dbt models
+        working-directory: dbt
+        run: uv run dbt run --target "$DBT_TARGET"
+
+      - name: Run dbt tests
+        working-directory: dbt
+        run: uv run dbt test --target "$DBT_TARGET"
+
+      - name: Run dbt snapshots
+        working-directory: dbt
+        run: uv run dbt snapshot --target "$DBT_TARGET"
+
+      - name: Cache manifest for Slim CI
+        if: success()
+        run: |
+          mkdir -p dbt/prod-manifest
+          cp dbt/target/manifest.json dbt/prod-manifest/manifest.json
+
+      - name: Save production manifest
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: dbt/prod-manifest
+          key: dbt-prod-manifest-${{ github.sha }}

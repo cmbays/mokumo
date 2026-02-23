@@ -28,6 +28,14 @@ git worktree add <path> -b <branch> <base>  # Stacked: branch from another branc
 git worktree remove <path>                  # Remove worktree after PR merges
 gh pr create --title "..." --body "..."     # Create PR
 
+# Analytics (dbt-core — run from dbt/ directory)
+npm run dbt:run      # Run dbt models (cd dbt && uv run dbt run)
+npm run dbt:test     # Run dbt tests
+npm run dbt:deps     # Install dbt packages (dbt-utils, dbt-expectations)
+npm run dbt:debug    # Verify dbt connection to Supabase
+npm run dbt:build    # Run + test + snapshot in one command
+cd dbt && uv sync    # Install Python deps (first time setup)
+
 # Knowledge Base
 npm run kb:dev     # Astro dev server
 npm run kb:build   # Build + validate schema
