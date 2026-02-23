@@ -150,11 +150,9 @@ jobs:
 
       - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
         if: steps.changes.outputs.dbt == 'true'
-        env:
-          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-        run: |
-          IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
-          echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null
+        uses: ./.github/actions/pin-supabase-ipv4
+        with:
+          supabase-host: ${{ secrets.SUPABASE_DB_HOST }}
 
       - name: sqlfluff lint
         if: steps.changes.outputs.dbt == 'true'
@@ -272,11 +270,9 @@ jobs:
 
       - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
         if: steps.changes.outputs.dbt_models == 'true'
-        env:
-          DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-        run: |
-          IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
-          echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null
+        uses: ./.github/actions/pin-supabase-ipv4
+        with:
+          supabase-host: ${{ secrets.SUPABASE_DB_HOST }}
 
       - name: dbt build (full, modified only)
         if: steps.changes.outputs.dbt_models == 'true'

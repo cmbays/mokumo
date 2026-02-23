@@ -1,0 +1,26 @@
+name: Pin Supabase host to IPv4
+description: >
+  Resolves a Supabase database hostname to its IPv4 address and pins it in
+  /etc/hosts. GitHub Actions Azure runners have outbound IPv4 only — Supabase
+  direct connections are IPv6-only, so use the session-mode pooler as the host.
+  Hard-fails with an actionable error if no IPv4 address is found.
+
+inputs:
+  supabase-host:
+    description: Supabase database hostname to pin (must resolve to an IPv4 address)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve IPv4 and pin in /etc/hosts
+      shell: bash
+      env:
+        DBT_PG_HOST: ${{ inputs.supabase-host }}
+      run: |
+        IPV4=$(getent ahostsv4 "$DBT_PG_HOST" | awk 'NR==1{print $1}')
+        if [ -z "$IPV4" ]; then
+          echo "::error::Host $DBT_PG_HOST has no IPv4 address. GitHub Actions Azure runners have no IPv6 routing. Use the Supabase session-mode pooler (aws-0-*.pooler.supabase.com) or enable the Supabase IPv4 add-on."
+          exit 1
+        fi
+        echo "$IPV4 $DBT_PG_HOST" | sudo tee -a /etc/hosts > /dev/null

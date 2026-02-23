@@ -28,6 +28,8 @@ on:
     secrets:
       SUPABASE_DB_HOST:
         required: true
+      SUPABASE_DB_USER:
+        required: true
       SUPABASE_DB_PASSWORD:
         required: true
 
