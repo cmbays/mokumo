@@ -72,22 +72,13 @@ jobs:
       - name: Resolve host to IPv4 and set PGHOSTADDR (Azure runners lack IPv6 routing)
         run: |
           echo "All DNS addresses for host:"
-          python3 -c "
-import socket, os
-host = os.environ['DBT_PG_HOST']
-for r in socket.getaddrinfo(host, 5432):
-    print(f'  {r[0].name}: {r[4][0]}')
-          " 2>&1 || echo "  (getaddrinfo failed)"
-          IPV4=$(python3 -c "
-import socket, os
-results = socket.getaddrinfo(os.environ['DBT_PG_HOST'], 5432, socket.AF_INET)
-print(results[0][4][0])
-          " 2>/dev/null || true)
+          python3 -c "import socket,os; [print('  '+r[0].name+': '+r[4][0]) for r in socket.getaddrinfo(os.environ['DBT_PG_HOST'],5432)]" 2>&1 || echo "  (getaddrinfo failed)"
+          IPV4=$(python3 -c "import socket,os; print(socket.getaddrinfo(os.environ['DBT_PG_HOST'],5432,socket.AF_INET)[0][4][0])" 2>/dev/null || true)
           if [ -z "$IPV4" ]; then
             echo "::error::Host has no IPv4 address. GitHub Actions Azure runners have no IPv6 routing. Use the Supabase session-mode pooler or enable the Supabase IPv4 add-on."
             exit 1
           fi
-          echo "Setting PGHOSTADDR=$IPV4 (libpq will connect to this IP directly, bypassing DNS)"
+          echo "Setting PGHOSTADDR=$IPV4"
           echo "PGHOSTADDR=$IPV4" >> "$GITHUB_ENV"
 
       - name: Verify dbt connection
