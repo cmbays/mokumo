@@ -60,7 +60,8 @@ unpivoted as (
 
     union all
 
-    -- Dozen tier
+    -- Dozen tier (excluded when case_qty <= 12: the dozen range [12, case_qty-1]
+    -- would be empty or nonsensical, so only piece and case tiers apply)
     select
         source,
         style_id,
@@ -71,13 +72,13 @@ unpivoted as (
         'dozen' as tier_name,
         12 as min_qty,
         case
-            when case_qty is not null and case_qty > 12
-            then case_qty - 1
+            when case_qty is not null then case_qty - 1
             else null
         end as max_qty,
         dozen_price as unit_price,
     from price_groups
     where dozen_price is not null
+        and (case_qty is null or case_qty > 12)
 
     union all
 
@@ -90,11 +91,12 @@ unpivoted as (
         color_price_group,
         size_price_group,
         'case' as tier_name,
-        coalesce(case_qty, 1) as min_qty,
+        case_qty as min_qty,
         cast(null as integer) as max_qty,
         case_price as unit_price,
     from price_groups
     where case_price is not null
+        and case_qty is not null
 ),
 
 final as (

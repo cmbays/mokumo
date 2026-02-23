@@ -29,3 +29,9 @@ line_position = trailing
 [sqlfluff:indentation]
 indent_unit = space
 tab_space_size = 4
+
+[sqlfluff:rules:convention.not_equal]
+preferred_not_equal_style = c_style
+
+[sqlfluff:rules:convention.coalesce]
+preferred_coalesce_style = coalesce

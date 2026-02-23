@@ -27,7 +27,7 @@ renamed as (
         cast(piece_price as numeric(10, 4)) as piece_price,
         cast(dozen_price as numeric(10, 4)) as dozen_price,
         cast(case_price as numeric(10, 4)) as case_price,
-        cast(case_qty as integer) as case_qty,
+        cast(nullif(case_qty, '') as integer) as case_qty,
         cast(customer_price as numeric(10, 4)) as customer_price,
         cast(map_price as numeric(10, 4)) as map_price,
         cast(sale_price as numeric(10, 4)) as sale_price,

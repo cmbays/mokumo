@@ -67,13 +67,75 @@ All SQL follows the dbt-labs convention:
 - **`!=`** not `<>` for inequality
 - **`coalesce`** over `ifnull`/`nvl`
 - **One model, one source** — staging models read from exactly one source table
-- **No `select *`** in staging/intermediate — explicitly list all columns (final CTE can `select * from renamed`)
+- **No `select *`** except as `select * from final_cte` — explicitly list columns in transform CTEs
+- **`{{ config() }}` on line 1** — model config block must be the first line of every model file
 
-### Example: Correct Style
+### CTE Naming Convention
+
+| Layer            | Standard CTE Names                       | Purpose                                         |
+| ---------------- | ---------------------------------------- | ----------------------------------------------- |
+| **Staging**      | `source` → `deduplicated` → `renamed`    | Raw read → dedup → rename/cast to conventions   |
+| **Intermediate** | `pricing` → `transformed` → `final`      | Descriptive verb-based names for each transform |
+| **Marts**        | `dim_*` / `fct_*` refs → joins → `final` | Join dimensions + facts → business logic        |
+
+### Dedup Pattern (Staging)
+
+All staging models that read from append-only raw tables must dedup:
+
+```sql
+deduplicated as (
+    select
+        *,
+        row_number() over (
+            partition by sku
+            order by _loaded_at desc
+        ) as _rn,
+    from source
+),
+
+renamed as (
+    select
+        -- explicit column list with renames and casts
+    from deduplicated
+    where _rn = 1
+)
+```
+
+### NULL Handling
+
+- **`nullif(col, '')` before type casts** — guard varchar-to-numeric/integer casts against empty strings
+- **`null` means "unbounded"** for range columns (e.g. `max_qty = null` means no upper limit)
+- **Never `coalesce` to a magic number** for range boundaries — filter out the row instead if the value is required for the range to be meaningful
+
+### Union / Unpivot Style
+
+When manually unpivoting with `union all`, comment each branch:
+
+```sql
+-- Piece tier
+select ... from price_groups where piece_price is not null
+
+union all
+
+-- Dozen tier
+select ... from price_groups where dozen_price is not null
+```
+
+### Example: Staging Model
 
 ```sql
 with source as (
     select * from {{ source('ss_activewear', 'ss_activewear_products') }}
+),
+
+deduplicated as (
+    select
+        *,
+        row_number() over (
+            partition by sku
+            order by _loaded_at desc
+        ) as _rn,
+    from source
 ),
 
 renamed as (
@@ -82,12 +144,11 @@ renamed as (
         style_id_external as style_id,
         color_price_code_name as color_price_group,
         size_price_code_name as size_price_group,
-        piece_price,
-        dozen_price,
-        case_price,
-        case_qty,
+        cast(piece_price as numeric(10, 4)) as piece_price,
+        cast(nullif(case_qty, '') as integer) as case_qty,
         _loaded_at as loaded_at,
-    from source
+    from deduplicated
+    where _rn = 1
 )
 
 select * from renamed

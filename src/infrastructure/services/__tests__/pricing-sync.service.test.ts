@@ -77,7 +77,12 @@ beforeEach(() => {
 
 function setupSSAdapter() {
   // Create an instance that passes `instanceof SSActivewearAdapter`
-  const adapter = Object.assign(new SSActivewearAdapter(), {
+  // Cast through unknown: the vi.mock factory replaces the class with a no-arg constructor,
+  // but TypeScript still sees the original 2-arg signature.
+  const MockedSSAdapter = SSActivewearAdapter as unknown as new () => InstanceType<
+    typeof SSActivewearAdapter
+  >
+  const adapter = Object.assign(new MockedSSAdapter(), {
     getRawProducts: mockGetRawProducts,
   })
   vi.mocked(getSupplierAdapter).mockReturnValue(adapter as ReturnType<typeof getSupplierAdapter>)

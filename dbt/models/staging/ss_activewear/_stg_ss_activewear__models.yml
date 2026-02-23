@@ -45,6 +45,13 @@ models:
         description: Unit price for case-quantity orders. numeric(10,4).
       - name: case_qty
         description: Number of units in a case for this SKU.
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                strictly: false
+              config:
+                where: case_qty is not null
       - name: customer_price
         description: Account-specific negotiated price (commercially sensitive).
       - name: map_price

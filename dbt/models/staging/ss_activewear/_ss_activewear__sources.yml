@@ -7,6 +7,7 @@ sources:
       Populated by the pricing sync service (POST /api/catalog/sync-pricing).
       Append-only — each sync run inserts new rows. Staging models dedup via
       row_number() partitioned by sku ordered by _loaded_at desc.
+      Note: sku is intentionally NOT unique at the source level (append-only).
     schema: raw
     tables:
       - name: ss_activewear_products
@@ -38,25 +39,29 @@ sources:
             data_tests:
               - not_null
               - accepted_values:
-                  values: ['ss_activewear']
+                  arguments:
+                    values: ['ss_activewear']
           - name: piece_price
             data_tests:
               - dbt_expectations.expect_column_values_to_be_between:
-                  min_value: 0
-                  strictly: false
+                  arguments:
+                    min_value: 0
+                    strictly: false
                   config:
                     where: piece_price is not null
           - name: dozen_price
             data_tests:
               - dbt_expectations.expect_column_values_to_be_between:
-                  min_value: 0
-                  strictly: false
+                  arguments:
+                    min_value: 0
+                    strictly: false
                   config:
                     where: dozen_price is not null
           - name: case_price
             data_tests:
               - dbt_expectations.expect_column_values_to_be_between:
-                  min_value: 0
-                  strictly: false
+                  arguments:
+                    min_value: 0
+                    strictly: false
                   config:
                     where: case_price is not null

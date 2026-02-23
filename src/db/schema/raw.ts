@@ -43,6 +43,7 @@ export const ssActivewearProducts = rawSchema.table(
     source: varchar('_source', { length: 50 }).notNull().default('ss_activewear'),
   },
   (t) => [
+    index('idx_raw_ss_products_sku').on(t.sku),
     index('idx_raw_ss_products_style_id').on(t.styleIdExternal),
     index('idx_raw_ss_products_loaded_at').on(t.loadedAt),
   ]
