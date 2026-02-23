@@ -33,6 +33,29 @@ type PricingRow = {
   unitPrice: number
 }
 
+/** Column selection shared by single-style and batch queries */
+const pricingSelectColumns = {
+  styleId: dimProduct.styleId,
+  source: dimProduct.source,
+  productName: dimProduct.productName,
+  brandName: dimProduct.brandName,
+  colorPriceGroup: dimPriceGroup.colorPriceGroup,
+  sizePriceGroup: dimPriceGroup.sizePriceGroup,
+  tierName: fctSupplierPricing.tierName,
+  minQty: fctSupplierPricing.minQty,
+  maxQty: fctSupplierPricing.maxQty,
+  unitPrice: fctSupplierPricing.unitPrice,
+} as const
+
+/** Base query: fact table joined to product + price group dims */
+function pricingBaseQuery() {
+  return db
+    .select(pricingSelectColumns)
+    .from(fctSupplierPricing)
+    .innerJoin(dimProduct, eq(fctSupplierPricing.productKey, dimProduct.productKey))
+    .innerJoin(dimPriceGroup, eq(fctSupplierPricing.priceGroupKey, dimPriceGroup.priceGroupKey))
+}
+
 /**
  * Parse flat pricing rows into structured supplier pricing.
  * Exported for testing without a database connection.
@@ -126,29 +149,13 @@ export async function getStylePricing(
   }
 
   try {
-    const rows = await db
-      .select({
-        styleId: dimProduct.styleId,
-        source: dimProduct.source,
-        productName: dimProduct.productName,
-        brandName: dimProduct.brandName,
-        colorPriceGroup: dimPriceGroup.colorPriceGroup,
-        sizePriceGroup: dimPriceGroup.sizePriceGroup,
-        tierName: fctSupplierPricing.tierName,
-        minQty: fctSupplierPricing.minQty,
-        maxQty: fctSupplierPricing.maxQty,
-        unitPrice: fctSupplierPricing.unitPrice,
-      })
-      .from(fctSupplierPricing)
-      .innerJoin(dimProduct, eq(fctSupplierPricing.productKey, dimProduct.productKey))
-      .innerJoin(dimPriceGroup, eq(fctSupplierPricing.priceGroupKey, dimPriceGroup.priceGroupKey))
-      .where(
-        and(
-          eq(dimProduct.styleId, styleId),
-          eq(dimProduct.source, source),
-          eq(fctSupplierPricing.isCurrent, true)
-        )
+    const rows = await pricingBaseQuery().where(
+      and(
+        eq(dimProduct.styleId, styleId),
+        eq(dimProduct.source, source),
+        eq(fctSupplierPricing.isCurrent, true)
       )
+    )
 
     const result = parseSupplierPricingRows(rows, styleId, source)
 
@@ -220,29 +227,13 @@ export async function getStylesPricing(
   if (uncachedIds.length === 0) return result
 
   try {
-    const rows = await db
-      .select({
-        styleId: dimProduct.styleId,
-        source: dimProduct.source,
-        productName: dimProduct.productName,
-        brandName: dimProduct.brandName,
-        colorPriceGroup: dimPriceGroup.colorPriceGroup,
-        sizePriceGroup: dimPriceGroup.sizePriceGroup,
-        tierName: fctSupplierPricing.tierName,
-        minQty: fctSupplierPricing.minQty,
-        maxQty: fctSupplierPricing.maxQty,
-        unitPrice: fctSupplierPricing.unitPrice,
-      })
-      .from(fctSupplierPricing)
-      .innerJoin(dimProduct, eq(fctSupplierPricing.productKey, dimProduct.productKey))
-      .innerJoin(dimPriceGroup, eq(fctSupplierPricing.priceGroupKey, dimPriceGroup.priceGroupKey))
-      .where(
-        and(
-          inArray(dimProduct.styleId, uncachedIds),
-          eq(dimProduct.source, source),
-          eq(fctSupplierPricing.isCurrent, true)
-        )
+    const rows = await pricingBaseQuery().where(
+      and(
+        inArray(dimProduct.styleId, uncachedIds),
+        eq(dimProduct.source, source),
+        eq(fctSupplierPricing.isCurrent, true)
       )
+    )
 
     // Group rows by styleId
     const rowsByStyle = new Map<string, PricingRow[]>()
