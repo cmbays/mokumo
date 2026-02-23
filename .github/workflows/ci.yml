@@ -149,7 +149,7 @@ jobs:
         run: uv run dbt parse
 
       - name: sqlfluff lint
-        if: steps.changes.outputs.dbt == 'true' && secrets.SUPABASE_DB_HOST != ''
+        if: steps.changes.outputs.dbt == 'true'
         continue-on-error: true
         working-directory: dbt
         env:
