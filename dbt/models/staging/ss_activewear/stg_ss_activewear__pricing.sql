@@ -8,7 +8,7 @@ deduplicated as (
         row_number() over (
             partition by sku
             order by _loaded_at desc
-        ) as _rn,
+        ) as _rn
     from source
 ),
 
@@ -34,7 +34,7 @@ renamed as (
         sale_expiration,
         gtin,
         _loaded_at as loaded_at,
-        _source as source,
+        _source as source
     from deduplicated
     where _rn = 1
 )

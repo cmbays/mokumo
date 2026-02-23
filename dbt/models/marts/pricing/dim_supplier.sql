@@ -16,7 +16,7 @@ final as (
         supplier_code,
         supplier_name,
         website,
-        is_active,
+        is_active
     from seed
 )
 
