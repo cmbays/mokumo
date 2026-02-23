@@ -52,7 +52,7 @@ function makeStyle(overrides: Partial<CanonicalStyle> = {}): CanonicalStyle {
       { name: 'M', sortOrder: 1, priceAdjustment: 0 },
       { name: 'XL', sortOrder: 3, priceAdjustment: 2 },
     ],
-    pricing: { piecePrice: 4.5, dozenPrice: 3.8, casePrice: null },
+    pricing: { piecePrice: 4.5, dozenPrice: 3.8, casePrice: null, caseQty: null },
     gtin: null,
     supplier: 'ss-activewear',
     lastSynced: new Date('2026-02-19'),
@@ -139,7 +139,9 @@ describe('canonicalStyleToGarmentCatalog', () => {
   })
 
   it('returns a garment with basePrice 0 when piecePrice is null (browse-mode placeholder)', () => {
-    const style = makeStyle({ pricing: { piecePrice: null, dozenPrice: null, casePrice: null } })
+    const style = makeStyle({
+      pricing: { piecePrice: null, dozenPrice: null, casePrice: null, caseQty: null },
+    })
     const result = canonicalStyleToGarmentCatalog(style)
     expect(result).not.toBeNull()
     expect(result!.basePrice).toBe(0)
@@ -245,7 +247,7 @@ describe('getGarmentCatalog', () => {
     const priced = makeStyle({ supplierId: 'has-price' })
     const unpriced = makeStyle({
       supplierId: 'no-price',
-      pricing: { piecePrice: null, dozenPrice: null, casePrice: null },
+      pricing: { piecePrice: null, dozenPrice: null, casePrice: null, caseQty: null },
     })
     const mockAdapter = {
       searchCatalog: vi
@@ -323,7 +325,9 @@ describe('getGarmentById', () => {
   })
 
   it('returns a garment with basePrice 0 for style with no pricing data (browse-mode)', async () => {
-    const style = makeStyle({ pricing: { piecePrice: null, dozenPrice: null, casePrice: null } })
+    const style = makeStyle({
+      pricing: { piecePrice: null, dozenPrice: null, casePrice: null, caseQty: null },
+    })
     const mockAdapter = {
       getStyle: vi.fn().mockResolvedValue(style),
     }

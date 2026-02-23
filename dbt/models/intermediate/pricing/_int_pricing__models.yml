@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: int_supplier_pricing__conformed
+    description: >
+      Conformed supplier pricing with universal quantity ranges. Unpivots S&S
+      fixed tiers (piece, dozen, case) into { min_qty, max_qty, unit_price }
+      ranges that are interchangeable with PromoStandards-style quantity breaks.
+      Grain: one row per (source, style_id, color_price_group, size_price_group, tier_name).
+    columns:
+      - name: price_range_key
+        description: >
+          Surrogate key generated from (source, style_id, color_price_group,
+          size_price_group, tier_name). Deterministic MD5 hash.
+        data_tests:
+          - unique
+          - not_null
+      - name: source
+        description: Supplier identifier (e.g. 'ss_activewear').
+        data_tests:
+          - not_null
+      - name: style_id
+        description: Supplier-specific style identifier.
+        data_tests:
+          - not_null
+      - name: brand_name
+        description: Brand name from the supplier.
+      - name: style_name
+        description: Human-readable style name.
+      - name: color_price_group
+        description: >
+          Supplier color price grouping. Colors in the same group share pricing.
+      - name: size_price_group
+        description: >
+          Supplier size price grouping. Sizes in the same group share pricing.
+      - name: tier_name
+        description: Pricing tier identifier.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['piece', 'dozen', 'case']
+      - name: min_qty
+        description: Minimum quantity for this price tier (inclusive).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              strictly: false
+      - name: max_qty
+        description: >
+          Maximum quantity for this price tier (inclusive). Null means unbounded
+          (e.g. case tier has no upper limit).
+      - name: unit_price
+        description: Unit price for this quantity range. numeric(10,4).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              strictly: true

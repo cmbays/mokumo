@@ -114,6 +114,46 @@ describe('stripSensitiveFields', () => {
     expect(result).not.toHaveProperty('prototype')
     expect(result.legitimateField).toBe('keep me')
   })
+
+  describe('preserveRawFields mode', () => {
+    it('preserves pricing fields when preserveRawFields is true', () => {
+      const input = {
+        styleId: '3001',
+        piecePrice: 5.99,
+        customerPrice: 4.99,
+        mapPrice: 5.0,
+        salePrice: 3.99,
+        saleExpiration: '2026-03-01',
+      }
+      const result = stripSensitiveFields(input, true) as typeof input
+      expect(result.customerPrice).toBe(4.99)
+      expect(result.mapPrice).toBe(5.0)
+      expect(result.salePrice).toBe(3.99)
+      expect(result.saleExpiration).toBe('2026-03-01')
+      expect(result.piecePrice).toBe(5.99)
+    })
+
+    it('still strips prototype pollution keys even with preserveRawFields', () => {
+      const input = {
+        styleId: '3001',
+        __proto__: { polluted: true },
+        constructor: { evil: true },
+        customerPrice: 4.99,
+      }
+      const result = stripSensitiveFields(input, true) as Record<string, unknown>
+      expect(result).not.toHaveProperty('__proto__')
+      expect(result).not.toHaveProperty('constructor')
+      expect(result.customerPrice).toBe(4.99)
+    })
+
+    it('strips pricing fields by default (preserveRawFields = false)', () => {
+      const input = { customerPrice: 4.99, mapPrice: 5.0, piecePrice: 5.99 }
+      const result = stripSensitiveFields(input) as typeof input
+      expect(result).not.toHaveProperty('customerPrice')
+      expect(result).not.toHaveProperty('mapPrice')
+      expect(result.piecePrice).toBe(5.99)
+    })
+  })
 })
 
 // ─── ssGet — auth ─────────────────────────────────────────────────────────────

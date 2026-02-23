@@ -68,15 +68,26 @@ const ssProductSchema = z
     baseCategory: z.string().optional().default(''),
     description: z.string().optional().default(''),
     colorName: z.string(),
+    colorCode: z.string().optional().default(''),
     // S&S hex codes omit the # prefix (e.g. "FF0000"). Empty string = no hex.
     color1: z.string().optional().default(''),
     color2: z.string().optional().default(''),
     sizeName: z.string(),
+    sizeCode: z.string().optional().default(''),
     sizeIndex: z.number().optional().default(0),
     gtin: z.string().optional(),
     piecePrice: z.number().nullable().optional(),
     dozenPrice: z.number().nullable().optional(),
     casePrice: z.number().nullable().optional(),
+    caseQty: z.number().int().positive().nullable().optional(),
+    // Pricing fields preserved by preserveRawFields — stripped in normal app requests
+    customerPrice: z.number().nullable().optional(),
+    mapPrice: z.number().nullable().optional(),
+    salePrice: z.number().nullable().optional(),
+    saleExpiration: z.string().nullable().optional(),
+    // Price code groupings for quantity-break pricing
+    colorPriceCodeName: z.string().optional().default(''),
+    sizePriceCodeName: z.string().optional().default(''),
     // Eight image fields per color — may be empty string or relative URL path
     colorFrontImage: z.string().optional().default(''),
     colorBackImage: z.string().optional().default(''),
@@ -89,7 +100,7 @@ const ssProductSchema = z
   })
   .passthrough()
 
-type SSProduct = z.infer<typeof ssProductSchema>
+export type SSProduct = z.infer<typeof ssProductSchema>
 
 const ssInventoryItemSchema = z
   .object({
@@ -213,6 +224,7 @@ export function productsToCanonicalStyle(
 
   const pricingSource = products.find((p) => p.piecePrice != null) ?? first
   const gtin = products.find((p) => p.gtin)?.gtin ?? null
+  const caseQty = products.find((p) => p.caseQty != null)?.caseQty ?? null
 
   return {
     supplierId: styleId,
@@ -227,6 +239,7 @@ export function productsToCanonicalStyle(
       piecePrice: pricingSource.piecePrice ?? null,
       dozenPrice: pricingSource.dozenPrice ?? null,
       casePrice: pricingSource.casePrice ?? null,
+      caseQty,
     },
     gtin,
     supplier: 'ss-activewear' as const,
@@ -249,7 +262,7 @@ function styleToCanonicalStyle(style: SSStyle): CanonicalStyle {
     categories: style.baseCategory ? [style.baseCategory] : [],
     colors: [],
     sizes: [],
-    pricing: { piecePrice: null, dozenPrice: null, casePrice: null },
+    pricing: { piecePrice: null, dozenPrice: null, casePrice: null, caseQty: null },
     gtin: null,
     supplier: 'ss-activewear' as const,
     lastSynced: new Date(),
@@ -309,6 +322,21 @@ export class SSActivewearAdapter implements SupplierAdapter {
       await this.cache.set(cacheKey, style, SS_CACHE_TTL.products)
     }
     return style
+  }
+
+  /**
+   * Fetch raw per-SKU product data with all pricing fields preserved.
+   * Used by the pricing sync service to populate the raw analytics table.
+   *
+   * Unlike getStyle() which strips commercially sensitive fields, this
+   * method uses preserveRawFields: true to keep customerPrice, mapPrice,
+   * salePrice, and saleExpiration for the analytics pipeline.
+   */
+  async getRawProducts(styleId: string): Promise<SSProduct[]> {
+    const raw = await ssGet('products', { styleId }, SS_CACHE_TTL.products, {
+      preserveRawFields: true,
+    })
+    return z.array(ssProductSchema).parse(raw)
   }
 
   async getStylesBatch(styleIds: string[]): Promise<CanonicalStyle[]> {

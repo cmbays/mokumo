@@ -17,14 +17,18 @@ clean-targets:
 models:
   print_4ink_analytics:
     staging:
-      +materialized: ephemeral
+      +materialized: view
       +schema: staging
     intermediate:
-      +materialized: table
+      +materialized: ephemeral
       +schema: intermediate
     marts:
       +materialized: table
       +schema: marts
+
+dispatch:
+  - macro_namespace: dbt_project_evaluator
+    search_order: ['print_4ink_analytics', 'dbt_project_evaluator']
 
 snapshots:
   +target_schema: snapshots

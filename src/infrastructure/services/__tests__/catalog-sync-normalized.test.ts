@@ -69,7 +69,7 @@ describe('buildStyleUpsertValue', () => {
       categories: ['T-Shirts - Premium'],
       colors: [],
       sizes: [],
-      pricing: { piecePrice: 4.25, dozenPrice: null, casePrice: null },
+      pricing: { piecePrice: 4.25, dozenPrice: null, casePrice: null, caseQty: null },
       gtin: null,
       supplier: 'ss-activewear' as const,
     }

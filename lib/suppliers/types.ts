@@ -55,6 +55,7 @@ export const canonicalPricingSchema = z.object({
   piecePrice: z.number().nonnegative().nullable(),
   dozenPrice: z.number().nonnegative().nullable(),
   casePrice: z.number().nonnegative().nullable(),
+  caseQty: z.number().int().positive().nullable().default(null),
 })
 
 // ─── Supplier Name ────────────────────────────────────────────────────────────

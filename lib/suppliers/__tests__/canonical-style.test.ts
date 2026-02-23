@@ -39,7 +39,7 @@ describe('canonicalStyleSchema', () => {
     expect(() =>
       canonicalStyleSchema.parse({
         ...validStyle,
-        pricing: { piecePrice: -1, dozenPrice: null, casePrice: null },
+        pricing: { piecePrice: -1, dozenPrice: null, casePrice: null, caseQty: null },
       })
     ).toThrow()
   })
