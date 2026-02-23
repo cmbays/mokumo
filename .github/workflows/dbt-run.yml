@@ -87,9 +87,16 @@ jobs:
         working-directory: dbt
         run: uv run dbt debug --target "$DBT_TARGET"
 
+      - name: Seed reference data
+        working-directory: dbt
+        run: uv run dbt seed --target "$DBT_TARGET"
+
       - name: Run dbt models
         working-directory: dbt
-        run: uv run dbt run --target "$DBT_TARGET"
+        # Excludes stg_ss_activewear__pricing and 4 downstream models until the
+        # S&S sync pipeline (issue #165) populates raw.ss_activewear_products.
+        # Remove the --exclude flag once the sync is live.
+        run: uv run dbt run --exclude source:ss_activewear+ --target "$DBT_TARGET"
 
       - name: Run dbt tests
         working-directory: dbt
