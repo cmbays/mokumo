@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     exclude: ['node_modules/**', 'knowledge-base/**', 'tests/**'], // keep KB deps and Playwright E2E out of Vitest
+    // Per-file environment overrides are handled via // @vitest-environment docblock comments in test files
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

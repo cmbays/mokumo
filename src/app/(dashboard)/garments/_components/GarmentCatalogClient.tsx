@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo, useSyncExternalStore, useCallback, useEffect } from 'react'
+import { useState, useMemo, useSyncExternalStore, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Package, ChevronLeft, ChevronRight } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@shared/ui/primitives/button'
 import { GarmentCatalogToolbar } from './GarmentCatalogToolbar'
 import { GarmentCard } from './GarmentCard'
@@ -15,6 +16,8 @@ import { getCustomersMutable } from '@infra/repositories/customers'
 import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
+import { toggleStyleEnabled, toggleStyleFavorite } from '../actions'
+import { buildSkuToStyleIdMap, hydrateCatalogPreferences } from '../_lib/catalog-helpers'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
@@ -57,6 +60,7 @@ export function GarmentCatalogClient({
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
   const view = searchParams.get('view') ?? 'grid'
+  const showDisabled = searchParams.get('showDisabled') === '1'
 
   // Color filter from extracted hook (fix #7)
   const { selectedColorIds, toggleColor, clearColors } = useColorFilter()
@@ -79,8 +83,18 @@ export function GarmentCatalogClient({
     [favoriteVersion]
   )
 
-  // Local state for mock data mutations
-  const [catalog, setCatalog] = useState<GarmentCatalog[]>(initialCatalog)
+  // SKU → catalog_styles UUID lookup — used by toggle server actions
+  const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
+
+  // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
+  const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
+    hydrateCatalogPreferences(initialCatalog, normalizedCatalog)
+  )
+
+  // Ref always pointing to latest catalog — lets async handlers snapshot/rollback
+  // without closing over stale state or adding catalog to useCallback deps
+  const catalogRef = useRef(catalog)
+  catalogRef.current = catalog
 
   // Price visibility from localStorage (useSyncExternalStore avoids setState-in-effect)
   const subscribeToPriceStore = useCallback((onStoreChange: () => void) => {
@@ -133,6 +147,9 @@ export function GarmentCatalogClient({
     const filtered: GarmentCatalog[] = []
 
     for (const g of catalog) {
+      // Enabled filter — skips disabled garments unless "Show disabled" is active
+      if (!showDisabled && !g.isEnabled) continue
+
       // Search filter
       if (q) {
         const matches =
@@ -154,14 +171,14 @@ export function GarmentCatalogClient({
     }
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [catalog, category, searchQuery, brand, selectedColorIds])
+  }, [catalog, category, searchQuery, brand, selectedColorIds, showDisabled])
 
   // Reset to first page whenever any filter changes.
   // Sort before joining to produce a canonical key regardless of color selection order.
   const colorFilterKey = selectedColorIds.slice().sort().join(',')
   useEffect(() => {
     setPage(0)
-  }, [category, searchQuery, brand, colorFilterKey])
+  }, [category, searchQuery, brand, colorFilterKey, showDisabled])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
@@ -185,18 +202,52 @@ export function GarmentCatalogClient({
       })
   }, [selectedGarmentId, initialJobs, initialCustomers])
 
-  // Handlers
-  function handleToggleEnabled(garmentId: string) {
-    setCatalog((prev) =>
-      prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
-    )
-  }
+  // Handlers — optimistic update then server action; rollback + toast on failure.
+  // catalogRef snapshot avoids stale-closure issues across async boundaries.
 
-  function handleToggleFavorite(garmentId: string) {
-    setCatalog((prev) =>
-      prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
-    )
-  }
+  const handleToggleEnabled = useCallback(
+    async (garmentId: string) => {
+      const garment = catalogRef.current.find((g) => g.id === garmentId)
+      if (!garment) return
+      const styleId = skuToStyleId.get(garment.sku)
+      const snapshot = catalogRef.current
+
+      setCatalog((prev) =>
+        prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
+      )
+
+      if (!styleId) return // graceful degrade: no normalized catalog match, local-only
+
+      const result = await toggleStyleEnabled(styleId)
+      if (!result.success) {
+        setCatalog(snapshot)
+        toast.error("Couldn't update style — try again")
+      }
+    },
+    [skuToStyleId]
+  )
+
+  const handleToggleFavorite = useCallback(
+    async (garmentId: string) => {
+      const garment = catalogRef.current.find((g) => g.id === garmentId)
+      if (!garment) return
+      const styleId = skuToStyleId.get(garment.sku)
+      const snapshot = catalogRef.current
+
+      setCatalog((prev) =>
+        prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
+      )
+
+      if (!styleId) return // graceful degrade
+
+      const result = await toggleStyleFavorite(styleId)
+      if (!result.success) {
+        setCatalog(snapshot)
+        toast.error("Couldn't update favorite — try again")
+      }
+    },
+    [skuToStyleId]
+  )
 
   // Fix #11: handleClearAll for empty state CTA
   const handleClearAll = useCallback(() => {
