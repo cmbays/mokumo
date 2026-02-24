@@ -28,7 +28,7 @@ final as (
         case
             when extract(isodow from date_day) in (6, 7) then true
             else false
-        end as is_weekend,
+        end as is_weekend
     from date_spine
 )
 

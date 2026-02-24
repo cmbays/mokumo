@@ -148,9 +148,14 @@ jobs:
           DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/profiles
         run: uv run dbt parse
 
+      - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
+        if: steps.changes.outputs.dbt == 'true'
+        uses: ./.github/actions/pin-supabase-ipv4
+        with:
+          supabase-host: ${{ secrets.SUPABASE_DB_HOST }}
+
       - name: sqlfluff lint
         if: steps.changes.outputs.dbt == 'true'
-        continue-on-error: true
         working-directory: dbt
         env:
           DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
@@ -262,6 +267,12 @@ jobs:
           path: dbt/prod-manifest
           key: dbt-prod-manifest-never-exact-match
           restore-keys: dbt-prod-manifest-
+
+      - name: Pin Supabase host to IPv4 in /etc/hosts (Azure runners lack IPv6 routing)
+        if: steps.changes.outputs.dbt_models == 'true'
+        uses: ./.github/actions/pin-supabase-ipv4
+        with:
+          supabase-host: ${{ secrets.SUPABASE_DB_HOST }}
 
       - name: dbt build (full, modified only)
         if: steps.changes.outputs.dbt_models == 'true'

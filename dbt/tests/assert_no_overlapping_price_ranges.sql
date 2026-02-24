@@ -11,7 +11,7 @@ with pricing as (
     select * from {{ ref('int_supplier_pricing__conformed') }}
 ),
 
-overlaps as (
+price_range_overlaps as (
     select
         a.price_range_key as key_a,
         b.price_range_key as key_b,
@@ -24,7 +24,7 @@ overlaps as (
         a.min_qty as min_qty_a,
         a.max_qty as max_qty_a,
         b.min_qty as min_qty_b,
-        b.max_qty as max_qty_b,
+        b.max_qty as max_qty_b
     from pricing as a
     inner join pricing as b
         on a.source = b.source
@@ -39,4 +39,4 @@ overlaps as (
         and b.min_qty <= coalesce(a.max_qty, b.min_qty)
 )
 
-select * from overlaps
+select * from price_range_overlaps

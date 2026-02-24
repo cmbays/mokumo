@@ -20,7 +20,7 @@ non_uniform as (
         size_price_group,
         count(distinct piece_price) as distinct_piece_prices,
         count(distinct dozen_price) as distinct_dozen_prices,
-        count(distinct case_price) as distinct_case_prices,
+        count(distinct case_price) as distinct_case_prices
     from pricing
     where piece_price is not null
     group by 1, 2, 3, 4
