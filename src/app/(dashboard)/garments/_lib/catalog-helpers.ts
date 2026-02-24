@@ -37,7 +37,10 @@ export function hydrateCatalogPreferences<
 >(catalog: T[], normalizedCatalog: NormalizedGarmentCatalog[] | undefined): T[] {
   if (!normalizedCatalog) return catalog
   const prefsBySku = new Map(
-    normalizedCatalog.map((n) => [n.externalId, { isEnabled: n.isEnabled, isFavorite: n.isFavorite }])
+    normalizedCatalog.map((n) => [
+      n.externalId,
+      { isEnabled: n.isEnabled, isFavorite: n.isFavorite },
+    ])
   )
   return catalog.map((g) => {
     const prefs = prefsBySku.get(g.sku)

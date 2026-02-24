@@ -11,17 +11,14 @@ import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 // Module mocks — use vi.hoisted so refs are available when vi.mock factories run
 // ---------------------------------------------------------------------------
 
-const {
-  mockToggleStyleEnabled,
-  mockToggleStyleFavorite,
-  mockToastError,
-  mockGet,
-} = vi.hoisted(() => ({
-  mockToggleStyleEnabled: vi.fn(),
-  mockToggleStyleFavorite: vi.fn(),
-  mockToastError: vi.fn(),
-  mockGet: vi.fn(),
-}))
+const { mockToggleStyleEnabled, mockToggleStyleFavorite, mockToastError, mockGet } = vi.hoisted(
+  () => ({
+    mockToggleStyleEnabled: vi.fn(),
+    mockToggleStyleFavorite: vi.fn(),
+    mockToastError: vi.fn(),
+    mockGet: vi.fn(),
+  })
+)
 
 // Server actions
 vi.mock('../actions', () => ({
@@ -120,7 +117,9 @@ function makeGarment(overrides: Partial<GarmentCatalog> = {}): GarmentCatalog {
   } as GarmentCatalog
 }
 
-function makeNormalized(overrides: Partial<NormalizedGarmentCatalog> = {}): NormalizedGarmentCatalog {
+function makeNormalized(
+  overrides: Partial<NormalizedGarmentCatalog> = {}
+): NormalizedGarmentCatalog {
   return {
     id: STYLE_UUID_A,
     source: 'ss',
@@ -265,7 +264,12 @@ describe('GarmentCatalogClient — toggle persistence', () => {
   describe('handleToggleFavorite', () => {
     it('calls toggleStyleFavorite with the correct catalog_styles UUID', async () => {
       const user = userEvent.setup()
-      const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isFavorite: false })
+      const garment = makeGarment({
+        id: 'g1',
+        sku: 'BC3001',
+        name: 'Unisex Tee',
+        isFavorite: false,
+      })
       const normalized = [makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' })]
 
       render(
@@ -277,7 +281,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
         />
       )
 
-      const favStar = screen.getByRole('button', { name: /add.*favorite|toggle.*favorite|favorite/i })
+      const favStar = screen.getByRole('button', {
+        name: /add.*favorite|toggle.*favorite|favorite/i,
+      })
       await user.click(favStar)
 
       await waitFor(() => {
@@ -290,7 +296,12 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       const user = userEvent.setup()
       mockToggleStyleFavorite.mockResolvedValueOnce({ success: false, error: 'DB error' })
 
-      const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isFavorite: false })
+      const garment = makeGarment({
+        id: 'g1',
+        sku: 'BC3001',
+        name: 'Unisex Tee',
+        isFavorite: false,
+      })
       const normalized = [makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' })]
 
       render(
@@ -312,14 +323,15 @@ describe('GarmentCatalogClient — toggle persistence', () => {
 
     it('does not call toggleStyleFavorite when normalizedCatalog is absent', async () => {
       const user = userEvent.setup()
-      const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isFavorite: false })
+      const garment = makeGarment({
+        id: 'g1',
+        sku: 'BC3001',
+        name: 'Unisex Tee',
+        isFavorite: false,
+      })
 
       render(
-        <GarmentCatalogClient
-          initialCatalog={[garment]}
-          initialJobs={[]}
-          initialCustomers={[]}
-        />
+        <GarmentCatalogClient initialCatalog={[garment]} initialJobs={[]} initialCustomers={[]} />
       )
 
       const favStar = screen.getByRole('button', { name: /favorite/i })
@@ -335,9 +347,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     it('seeds catalog isEnabled from normalizedCatalog, not legacy initialCatalog', () => {
       // Legacy catalog says isEnabled=true, but normalizedCatalog says false
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [
-        makeNormalized({ externalId: 'BC3001', isEnabled: false }),
-      ]
+      const normalized = [makeNormalized({ externalId: 'BC3001', isEnabled: false })]
 
       render(
         <GarmentCatalogClient
