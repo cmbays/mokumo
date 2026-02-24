@@ -1,4 +1,4 @@
-CREATE SCHEMA "marts";
+CREATE SCHEMA IF NOT EXISTS "marts";
 --> statement-breakpoint
 CREATE TABLE "marts"."dim_price_group" (
 	"price_group_key" varchar(32) PRIMARY KEY NOT NULL,

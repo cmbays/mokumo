@@ -14,7 +14,7 @@ distinct_groups as (
     select distinct
         source,
         color_price_group,
-        size_price_group,
+        size_price_group
     from conformed
 ),
 
@@ -23,7 +23,7 @@ final as (
         {{ dbt_utils.generate_surrogate_key(['source', 'color_price_group', 'size_price_group']) }} as price_group_key,
         source,
         color_price_group,
-        size_price_group,
+        size_price_group
     from distinct_groups
 )
 
