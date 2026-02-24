@@ -21,7 +21,6 @@ export function parseNormalizedCatalogRow(row: {
   description: string | null
   category: string
   subcategory: string | null
-  piece_price: number | null
   colors: Array<{
     id: string
     name: string
@@ -43,7 +42,6 @@ export function parseNormalizedCatalogRow(row: {
     description: row.description,
     category: garmentCategoryEnum.parse(row.category),
     subcategory: row.subcategory,
-    piecePrice: row.piece_price,
     colors: row.colors.map((c) => ({
       id: c.id,
       styleId: row.id,
@@ -78,7 +76,6 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
       cs.description,
       cs.category,
       cs.subcategory,
-      cs.piece_price,
       COALESCE(
         JSON_AGG(
           DISTINCT JSONB_BUILD_OBJECT(

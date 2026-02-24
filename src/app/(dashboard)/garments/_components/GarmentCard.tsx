@@ -146,9 +146,9 @@ export function GarmentCard({
       {/* Bottom row: price + badges + favorite */}
       <div className="flex items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-1.5">
-          {showPrice && !(isNormalized(garment) && garment.piecePrice == null) && (
+          {showPrice && !isNormalized(garment) && (
             <span className="text-sm font-medium text-foreground">
-              {formatCurrency(isNormalized(garment) ? garment.piecePrice! : garment.basePrice)}
+              {formatCurrency(garment.basePrice)}
             </span>
           )}
           {!garment.isEnabled && (

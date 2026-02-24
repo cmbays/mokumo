@@ -36,6 +36,13 @@
       "when": 1771819049990,
       "tag": "0011_raw_sku_index_and_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771893512868,
+      "tag": "0012_curved_wolf_cub",
+      "breakpoints": true
     }
   ]
 }
