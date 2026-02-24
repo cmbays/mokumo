@@ -15,6 +15,7 @@ import { SERVICE_TYPE_ICONS } from '@shared/ui/organisms/ServiceTypeBadge'
 import { SERVICE_TYPE_COLORS } from '@domain/constants'
 import { SetupWizard } from './_components/SetupWizard'
 import { TagTemplateMapper } from './_components/TagTemplateMapper'
+import { CatalogPricingOverrides } from './_components/CatalogPricingOverrides'
 import {
   allScreenPrintTemplates,
   allDTFTemplates,
@@ -35,7 +36,7 @@ import type { MarginIndicator } from '@domain/entities/price-matrix'
 // Helpers
 // ---------------------------------------------------------------------------
 
-type ServiceTypeTab = 'screen-print' | 'dtf'
+type ServiceTypeTab = 'screen-print' | 'dtf' | 'catalog'
 
 function countCustomersUsingTemplate(
   templateId: string,
@@ -200,25 +201,27 @@ export default function PricingHubPage() {
               Configure pricing matrices for screen print and DTF services
             </p>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 md:flex-initial"
-              onClick={() => setTagMapperOpen(true)}
-            >
-              <Tag className="size-4" />
-              <span className="hidden md:inline">Manage Mappings</span>
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setWizardOpen(true)}
-              className="flex-1 md:flex-initial bg-action text-black font-semibold border-2 border-current shadow-brutal shadow-action hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-lg active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm transition-all"
-            >
-              <Plus className="size-4" />
-              New Template
-            </Button>
-          </div>
+          {activeTab !== 'catalog' && (
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 md:flex-initial"
+                onClick={() => setTagMapperOpen(true)}
+              >
+                <Tag className="size-4" />
+                <span className="hidden md:inline">Manage Mappings</span>
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setWizardOpen(true)}
+                className="flex-1 md:flex-initial bg-action text-black font-semibold border-2 border-current shadow-brutal shadow-action hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-lg active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm transition-all"
+              >
+                <Plus className="size-4" />
+                New Template
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Tabs + Search row */}
@@ -246,18 +249,21 @@ export default function PricingHubPage() {
                   {dtfCount}
                 </Badge>
               </TabsTrigger>
+              <TabsTrigger value="catalog">Catalog</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9"
-            />
-          </div>
+          {activeTab !== 'catalog' && (
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+          )}
         </div>
 
         {/* Template grid */}
@@ -326,6 +332,8 @@ export default function PricingHubPage() {
           </div>
         )}
       </div>
+
+      {activeTab === 'catalog' && <CatalogPricingOverrides />}
 
       <SetupWizard open={wizardOpen} onOpenChange={setWizardOpen} onSave={handleWizardSave} />
 
