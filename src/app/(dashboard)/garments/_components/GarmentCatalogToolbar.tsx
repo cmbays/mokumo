@@ -77,6 +77,7 @@ export function GarmentCatalogToolbar({
   const query = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
   const view = searchParams.get('view') ?? 'grid'
+  const showDisabled = searchParams.get('showDisabled') === '1'
 
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
@@ -107,6 +108,14 @@ export function GarmentCatalogToolbar({
       router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     },
     [searchParams, router, pathname]
+  )
+
+  // --- Show disabled toggle (URL param) ---
+  const handleShowDisabledToggle = useCallback(
+    (checked: boolean) => {
+      updateParam('showDisabled', checked ? '1' : null)
+    },
+    [updateParam]
   )
 
   // Fix #5: clearAll uses a single router.replace that strips all params (including colors).
@@ -272,6 +281,25 @@ export function GarmentCatalogToolbar({
             />
             <Label htmlFor="price-toggle" className="cursor-pointer text-xs text-muted-foreground">
               Prices
+            </Label>
+          </div>
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-border/50" />
+
+          {/* Show Disabled Toggle */}
+          <div className="flex items-center gap-1.5">
+            <Switch
+              id="show-disabled-toggle"
+              size="sm"
+              checked={showDisabled}
+              onCheckedChange={handleShowDisabledToggle}
+            />
+            <Label
+              htmlFor="show-disabled-toggle"
+              className="cursor-pointer text-xs text-muted-foreground"
+            >
+              Disabled
             </Label>
           </div>
         </div>
