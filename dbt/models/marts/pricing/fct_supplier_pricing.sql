@@ -1,4 +1,13 @@
-{{ config(materialized='table') }}
+{{
+    config(
+        materialized='table',
+        indexes=[
+            {'columns': ['product_key', 'is_current', 'effective_date'], 'type': 'btree'},
+            {'columns': ['supplier_key'], 'type': 'btree'},
+            {'columns': ['price_group_key'], 'type': 'btree'},
+        ]
+    )
+}}
 
 {#
   Supplier pricing fact table.
