@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Pencil, Trash2, ShoppingBag } from 'lucide-react'
@@ -148,7 +148,7 @@ export function CatalogPricingOverrides() {
   const [deleting, setDeleting] = useState(false)
 
   const form = useForm<OverrideFormValues>({
-    resolver: zodResolver(overrideFormSchema),
+    resolver: zodResolver(overrideFormSchema) as Resolver<OverrideFormValues>,
     defaultValues: {
       entityType: 'category',
       entityId: '',
