@@ -1,13 +1,13 @@
 CREATE SCHEMA IF NOT EXISTS "marts";
 --> statement-breakpoint
-CREATE TABLE "marts"."dim_price_group" (
+CREATE TABLE IF NOT EXISTS "marts"."dim_price_group" (
 	"price_group_key" varchar(32) PRIMARY KEY NOT NULL,
 	"source" varchar(50) NOT NULL,
 	"color_price_group" varchar(255) NOT NULL,
 	"size_price_group" varchar(255) NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "marts"."dim_product" (
+CREATE TABLE IF NOT EXISTS "marts"."dim_product" (
 	"product_key" varchar(32) PRIMARY KEY NOT NULL,
 	"source" varchar(50) NOT NULL,
 	"style_id" varchar(100) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE "marts"."dim_product" (
 	"gtin" varchar(20)
 );
 --> statement-breakpoint
-CREATE TABLE "marts"."dim_supplier" (
+CREATE TABLE IF NOT EXISTS "marts"."dim_supplier" (
 	"supplier_key" varchar(32) PRIMARY KEY NOT NULL,
 	"supplier_code" varchar(50) NOT NULL,
 	"supplier_name" varchar(255) NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE "marts"."dim_supplier" (
 	"is_active" boolean NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "marts"."fct_supplier_pricing" (
+CREATE TABLE IF NOT EXISTS "marts"."fct_supplier_pricing" (
 	"pricing_fact_key" varchar(32) PRIMARY KEY NOT NULL,
 	"product_key" varchar(32) NOT NULL,
 	"supplier_key" varchar(32) NOT NULL,
