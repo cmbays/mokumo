@@ -16,7 +16,10 @@ export async function POST(request: Request): Promise<Response> {
     const ip = getClientIp(request)
     const { limited } = await checkAdminSyncRateLimit(ip)
     if (limited) {
-      return Response.json({ error: 'Too many requests' }, { status: 429, headers: { 'Retry-After': '60' } })
+      return Response.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
     }
 
     const auth = validateAdminSecret(request)
