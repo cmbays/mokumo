@@ -1,9 +1,11 @@
 import 'server-only'
-import { sql } from 'drizzle-orm'
+import { sql, eq, and } from 'drizzle-orm'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import { catalogImageSchema, catalogSizeSchema } from '@domain/entities/catalog-style'
 import { garmentCategoryEnum } from '@domain/entities/garment'
 import { logger } from '@shared/lib/logger'
+import { verifySession } from '@infra/auth/session'
+import { catalogStylePreferences } from '@db/schema/catalog-normalized'
 
 const repoLogger = logger.child({ domain: 'supabase-catalog' })
 
@@ -58,13 +60,25 @@ export function parseNormalizedCatalogRow(row: {
 
 /**
  * Fetch all normalized catalog styles with their colors, images, and sizes.
- * Left-joins catalog_style_preferences to resolve isEnabled/isFavorite with defaults.
+ *
+ * Left-joins catalog_style_preferences scoped to the authenticated shop
+ * (scope_type='shop', scope_id=$shopId) to resolve isEnabled/isFavorite with defaults.
+ *
+ * Security: requires an authenticated session. Returns [] if unauthenticated.
  */
 export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
+  const session = await verifySession()
+  if (!session) {
+    repoLogger.warn('getNormalizedCatalog called without authenticated session')
+    return []
+  }
+
   const { db } = await import('@shared/lib/supabase/db')
 
   // Use a raw SQL query for the joined result with JSON aggregation.
   // Drizzle doesn't natively support JSON_AGG aggregation sugar, so we use sql template.
+  // Preferences are scoped to the authenticated shop — both scope_type AND scope_id are filtered
+  // to prevent cross-shop data leakage.
   const rows = await db.execute(sql`
     SELECT
       cs.id,
@@ -116,7 +130,9 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
     LEFT JOIN catalog_colors cc ON cc.style_id = cs.id
     LEFT JOIN catalog_sizes csi ON csi.style_id = cs.id
     LEFT JOIN catalog_style_preferences csp
-      ON csp.style_id = cs.id AND csp.scope_type = 'shop'
+      ON csp.style_id = cs.id
+      AND csp.scope_type = 'shop'
+      AND csp.scope_id = ${session.shopId}
     GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite
     ORDER BY cs.name ASC
   `)
@@ -126,4 +142,38 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
   return (rows as unknown[]).map((row) =>
     parseNormalizedCatalogRow(row as Parameters<typeof parseNormalizedCatalogRow>[0])
   )
+}
+
+/**
+ * Resolve the effective style preferences for a single style within a shop scope.
+ *
+ * Returns the stored preference if a row exists, or defaults (isEnabled=true, isFavorite=false)
+ * if no row has been written yet (lazy creation — rows are only written on explicit toggle).
+ */
+export async function getEffectiveStylePreferences(
+  styleId: string,
+  shopId: string
+): Promise<{ isEnabled: boolean; isFavorite: boolean }> {
+  const { db } = await import('@shared/lib/supabase/db')
+
+  const rows = await db
+    .select({
+      isEnabled: catalogStylePreferences.isEnabled,
+      isFavorite: catalogStylePreferences.isFavorite,
+    })
+    .from(catalogStylePreferences)
+    .where(
+      and(
+        eq(catalogStylePreferences.scopeType, 'shop'),
+        eq(catalogStylePreferences.scopeId, shopId),
+        eq(catalogStylePreferences.styleId, styleId)
+      )
+    )
+    .limit(1)
+
+  const row = rows[0]
+  return {
+    isEnabled: row?.isEnabled ?? true,
+    isFavorite: row?.isFavorite ?? false,
+  }
 }

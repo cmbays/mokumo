@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   index,
   numeric,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -190,5 +191,58 @@ export const catalogStylePreferences = pgTable(
       t.styleId
     ),
     index('idx_catalog_style_preferences_style_id').on(t.styleId),
+  ]
+)
+
+// ─── shop_pricing_overrides ───────────────────────────────────────────────────
+//
+// Cascade model (lowest → highest precedence, higher priority wins):
+//   fct_supplier_pricing (dbt marts, read-only base price)
+//     → scope_type='shop'     (global shop markup)
+//         → scope_type='brand'    (brand-level override)
+//             → scope_type='customer' (customer-specific pricing)
+//
+// rules JSONB keys (one or more may be present):
+//   markup_percent   — add N% on top of base price
+//   discount_percent — subtract N% from base price
+//   fixed_price      — ignore base; use this absolute price (numeric, 2dp)
+//   Resolution order when multiple keys are present: fixed_price > markup_percent > discount_percent
+
+export const shopPricingOverrides = pgTable(
+  'shop_pricing_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Who owns this override — 'shop' | 'brand' | 'customer' */
+    scopeType: varchar('scope_type', { length: 20 }).notNull(),
+    /** UUID of the owning entity (shop UUID, brand UUID, or customer UUID) */
+    scopeId: uuid('scope_id').notNull(),
+
+    /** What kind of entity this applies to — 'style' | 'brand' | 'category' */
+    entityType: varchar('entity_type', { length: 20 }).notNull(),
+    /**
+     * UUID of the target entity.
+     * NULL when entity_type = 'category' (applies to entire category).
+     * References catalog_styles.id for 'style', catalog_brands.id for 'brand'.
+     */
+    entityId: uuid('entity_id'),
+
+    /**
+     * JSON override rules. Valid keys:
+     *   - markup_percent: number     (e.g. 40 means +40%)
+     *   - discount_percent: number   (e.g. 10 means -10%)
+     *   - fixed_price: string        (e.g. "12.50" — stored as string for precision)
+     */
+    rules: jsonb('rules').notNull().default({}),
+
+    /** Higher value wins when multiple overrides match the same entity */
+    priority: integer('priority').notNull().default(0),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_spo_scope').on(t.scopeType, t.scopeId),
+    index('idx_spo_entity').on(t.entityType, t.entityId),
   ]
 )
