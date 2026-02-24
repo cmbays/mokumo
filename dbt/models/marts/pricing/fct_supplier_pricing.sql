@@ -61,20 +61,22 @@ final as (
         -- Measures
         c.min_qty,
         c.max_qty,
-        c.unit_price,
+        c.unit_price
     from conformed as c
 
     inner join dim_product as dp
-        on c.source = dp.source
-        and c.style_id = dp.style_id
+        on
+            c.source = dp.source
+            and c.style_id = dp.style_id
 
     inner join dim_supplier as ds
         on c.source = ds.supplier_code
 
     inner join dim_price_group as dpg
-        on c.source = dpg.source
-        and c.color_price_group = dpg.color_price_group
-        and c.size_price_group = dpg.size_price_group
+        on
+            c.source = dpg.source
+            and c.color_price_group = dpg.color_price_group
+            and c.size_price_group = dpg.size_price_group
 )
 
 select * from final

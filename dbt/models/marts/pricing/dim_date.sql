@@ -17,18 +17,15 @@ with date_spine as (
 final as (
     select
         cast(date_day as date) as date_key,
-        extract(year from date_day) as year,
-        extract(quarter from date_day) as quarter,
+        extract(year from date_day) as year_number,
+        extract(quarter from date_day) as quarter_number,
         extract(month from date_day) as month_number,
         to_char(date_day, 'Month') as month_name,
         extract(day from date_day) as day_of_month,
         extract(isodow from date_day) as day_of_week_number,
         to_char(date_day, 'Day') as day_of_week_name,
         extract(week from date_day) as week_of_year,
-        case
-            when extract(isodow from date_day) in (6, 7) then true
-            else false
-        end as is_weekend
+        extract(isodow from date_day) in (6, 7) as is_weekend
     from date_spine
 )
 
