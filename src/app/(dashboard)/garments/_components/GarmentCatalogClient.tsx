@@ -203,14 +203,14 @@ export function GarmentCatalogClient({
   }, [selectedGarmentId, initialJobs, initialCustomers])
 
   // Handlers — optimistic update then server action; rollback + toast on failure.
-  // catalogRef snapshot avoids stale-closure issues across async boundaries.
+  // prevGarment captures only the affected item so concurrent in-flight updates aren't clobbered.
 
   const handleToggleEnabled = useCallback(
     async (garmentId: string) => {
       const garment = catalogRef.current.find((g) => g.id === garmentId)
       if (!garment) return
       const styleId = skuToStyleId.get(garment.sku)
-      const snapshot = catalogRef.current
+      const prevGarment = garment
 
       setCatalog((prev) =>
         prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
@@ -220,7 +220,7 @@ export function GarmentCatalogClient({
 
       const result = await toggleStyleEnabled(styleId)
       if (!result.success) {
-        setCatalog(snapshot)
+        setCatalog((prev) => prev.map((g) => (g.id === garmentId ? prevGarment : g)))
         toast.error("Couldn't update style — try again")
       }
     },
@@ -232,7 +232,7 @@ export function GarmentCatalogClient({
       const garment = catalogRef.current.find((g) => g.id === garmentId)
       if (!garment) return
       const styleId = skuToStyleId.get(garment.sku)
-      const snapshot = catalogRef.current
+      const prevGarment = garment
 
       setCatalog((prev) =>
         prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
@@ -242,7 +242,7 @@ export function GarmentCatalogClient({
 
       const result = await toggleStyleFavorite(styleId)
       if (!result.success) {
-        setCatalog(snapshot)
+        setCatalog((prev) => prev.map((g) => (g.id === garmentId ? prevGarment : g)))
         toast.error("Couldn't update favorite — try again")
       }
     },

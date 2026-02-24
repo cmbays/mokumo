@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildSkuToStyleIdMap, hydrateCatalogPreferences } from '../_lib/catalog-helpers'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { GarmentCatalog } from '@domain/entities/garment'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -65,7 +66,7 @@ describe('buildSkuToStyleIdMap', () => {
 // ---------------------------------------------------------------------------
 
 describe('hydrateCatalogPreferences', () => {
-  type MinimalGarment = { sku: string; isEnabled: boolean; isFavorite: boolean; name: string }
+  type MinimalGarment = Pick<GarmentCatalog, 'sku' | 'isEnabled' | 'isFavorite' | 'name'>
 
   const legacyCatalog: MinimalGarment[] = [
     { sku: 'BC3001', isEnabled: true, isFavorite: false, name: 'Unisex Tee' },

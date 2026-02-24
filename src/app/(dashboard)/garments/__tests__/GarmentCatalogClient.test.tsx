@@ -88,7 +88,9 @@ beforeAll(() => {
         delete storage[key]
       },
       clear: () => {
-        Object.keys(storage).forEach((k) => delete storage[k])
+        for (const k of Object.keys(storage)) {
+          delete storage[k]
+        }
       },
     },
     writable: true,
