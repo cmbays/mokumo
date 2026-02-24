@@ -6,9 +6,9 @@ phase: 2
 pipelineName: 'Data Freshness Architecture'
 pipelineType: horizontal
 products: []
-tools: [dbt, supabase, drizzle, redis]
+tools: [database, ci-pipeline]
 stage: shape
-tags: [architecture, analytics]
+tags: [plan, research]
 sessionId: '0a1b62cb-84e6-46ff-b178-9021bb5a09ae'
 branch: 'session/0223-dbt-gold'
 status: complete
