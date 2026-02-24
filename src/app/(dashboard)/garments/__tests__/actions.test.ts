@@ -90,6 +90,13 @@ describe('toggleStyleEnabled', () => {
     mockVerifySession.mockResolvedValue(SESSION)
   })
 
+  it('returns error for invalid styleId', async () => {
+    const result = await toggleStyleEnabled('not-a-uuid')
+
+    expect(result).toEqual({ success: false, error: 'Invalid styleId' })
+    expect(mockVerifySession).not.toHaveBeenCalled()
+  })
+
   it('returns Unauthorized when session is null', async () => {
     mockVerifySession.mockResolvedValueOnce(null)
 
@@ -158,6 +165,13 @@ describe('toggleStyleFavorite', () => {
     vi.clearAllMocks()
     mockInsertOnConflict.mockResolvedValue(undefined)
     mockVerifySession.mockResolvedValue(SESSION)
+  })
+
+  it('returns error for invalid styleId', async () => {
+    const result = await toggleStyleFavorite('not-a-uuid')
+
+    expect(result).toEqual({ success: false, error: 'Invalid styleId' })
+    expect(mockVerifySession).not.toHaveBeenCalled()
   })
 
   it('returns Unauthorized when session is null', async () => {

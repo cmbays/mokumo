@@ -6,7 +6,7 @@ import {
   upsertPricingOverride,
   deletePricingOverride,
 } from '@infra/repositories/pricing-overrides'
-import { pricingOverrideRulesSchema } from '@domain/entities/pricing-override'
+import { pricingOverrideRulesInputSchema } from '@domain/entities/pricing-override'
 import type { PricingOverride } from '@domain/entities/pricing-override'
 import { logger } from '@shared/lib/logger'
 
@@ -61,8 +61,8 @@ export async function savePricingOverride(
   const session = await verifySession()
   if (!session) return { success: false, error: 'Unauthorized' }
 
-  // Validate the rules payload at the boundary
-  const rulesResult = pricingOverrideRulesSchema.safeParse(input.rules)
+  // Validate the rules payload at the boundary (requires at least one key)
+  const rulesResult = pricingOverrideRulesInputSchema.safeParse(input.rules)
   if (!rulesResult.success) {
     return {
       success: false,

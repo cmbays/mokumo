@@ -1,10 +1,13 @@
 'use server'
 
+import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import { catalogStylePreferences } from '@db/schema/catalog-normalized'
 import { verifySession } from '@infra/auth/session'
 import { logger } from '@shared/lib/logger'
+
+const uuidSchema = z.string().uuid()
 
 const actionsLogger = logger.child({ domain: 'catalog-preferences' })
 
@@ -21,6 +24,10 @@ const actionsLogger = logger.child({ domain: 'catalog-preferences' })
 export async function toggleStyleEnabled(
   styleId: string
 ): Promise<{ success: true; isEnabled: boolean } | { success: false; error: string }> {
+  if (!uuidSchema.safeParse(styleId).success) {
+    return { success: false, error: 'Invalid styleId' }
+  }
+
   const session = await verifySession()
   if (!session) {
     return { success: false, error: 'Unauthorized' }
@@ -89,6 +96,10 @@ export async function toggleStyleEnabled(
 export async function toggleStyleFavorite(
   styleId: string
 ): Promise<{ success: true; isFavorite: boolean } | { success: false; error: string }> {
+  if (!uuidSchema.safeParse(styleId).success) {
+    return { success: false, error: 'Invalid styleId' }
+  }
+
   const session = await verifySession()
   if (!session) {
     return { success: false, error: 'Unauthorized' }

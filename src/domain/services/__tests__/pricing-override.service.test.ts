@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { applyRule, resolveEffectivePrice, matchOverrides } from '../pricing-override.service'
+import {
+  applyRule,
+  resolveEffectivePrice,
+  matchOverrides,
+  pickWinnersPerTier,
+} from '../pricing-override.service'
 import type { PricingOverride } from '@domain/entities/pricing-override'
 
 // ---------------------------------------------------------------------------
@@ -9,13 +14,14 @@ import type { PricingOverride } from '@domain/entities/pricing-override'
 const STYLE_ID = '00000000-0000-4000-8000-aaaaaaaaaaaa'
 const BRAND_ID = '00000000-0000-4000-8000-bbbbbbbbbbbb'
 const SHOP_ID = '00000000-0000-4000-8000-cccccccccccc'
-const CUSTOMER_ID = '00000000-0000-4000-8000-dddddddddddd'
 
+let _seq = 0
 function makeOverride(
   partial: Partial<PricingOverride> & Pick<PricingOverride, 'rules'>
 ): PricingOverride {
+  _seq++
   return {
-    id: `00000000-0000-4000-8000-${Math.random().toString(16).slice(2).padStart(12, '0')}`,
+    id: `00000000-0000-4000-8000-${String(_seq).padStart(12, '0')}`,
     scopeType: 'shop',
     scopeId: SHOP_ID,
     entityType: 'style',
@@ -56,7 +62,6 @@ describe('applyRule', () => {
   })
 
   it('markup_percent takes precedence over discount_percent when both present (no fixed_price)', () => {
-    // Only markup is applied when both markup and discount are present and no fixed_price
     const result = applyRule('10.00', { markup_percent: 40, discount_percent: 10 })
     expect(result).toBe('14.00') // markup wins over discount
   })
@@ -68,10 +73,14 @@ describe('applyRule', () => {
   it('handles 100% discount (zero price)', () => {
     expect(applyRule('10.00', { discount_percent: 100 })).toBe('0.00')
   })
+
+  it('returns base unchanged for empty rules object', () => {
+    expect(applyRule('10.00', {})).toBe('10.00')
+  })
 })
 
 // ---------------------------------------------------------------------------
-// matchOverrides — filtering and sorting
+// matchOverrides — filtering and ordering
 // ---------------------------------------------------------------------------
 
 describe('matchOverrides', () => {
@@ -80,65 +89,62 @@ describe('matchOverrides', () => {
   })
 
   it('matches style-level overrides by styleId', () => {
-    const override = makeOverride({
+    const o = makeOverride({
       entityType: 'style',
       entityId: STYLE_ID,
       rules: { markup_percent: 10 },
     })
-    const result = matchOverrides([override], CTX)
-    expect(result).toHaveLength(1)
+    expect(matchOverrides([o], CTX)).toHaveLength(1)
   })
 
   it('does not match style override with wrong styleId', () => {
-    const override = makeOverride({
+    const o = makeOverride({
       entityType: 'style',
-      entityId: '00000000-0000-4000-8000-eeeeeeeeeeee', // different style
+      entityId: '00000000-0000-4000-8000-eeeeeeeeeeee',
       rules: { markup_percent: 10 },
     })
-    expect(matchOverrides([override], CTX)).toHaveLength(0)
+    expect(matchOverrides([o], CTX)).toHaveLength(0)
   })
 
   it('matches brand-level overrides by brandId', () => {
-    const override = makeOverride({
+    const o = makeOverride({
       entityType: 'brand',
       entityId: BRAND_ID,
       rules: { markup_percent: 35 },
     })
-    const result = matchOverrides([override], CTX)
-    expect(result).toHaveLength(1)
+    expect(matchOverrides([o], CTX)).toHaveLength(1)
   })
 
   it('matches category-level overrides (entityId is null, applies to all)', () => {
-    const override = makeOverride({
+    const o = makeOverride({
       entityType: 'category',
       entityId: null,
       rules: { markup_percent: 20 },
     })
-    const result = matchOverrides([override], CTX)
-    expect(result).toHaveLength(1)
+    expect(matchOverrides([o], CTX)).toHaveLength(1)
   })
 
   it('sorts by cascade tier: shop < brand < customer', () => {
-    const shopOverride = makeOverride({
+    const shopO = makeOverride({
       scopeType: 'shop',
       entityType: 'style',
       entityId: STYLE_ID,
       rules: { markup_percent: 40 },
     })
-    const brandOverride = makeOverride({
+    const brandO = makeOverride({
       scopeType: 'brand',
       entityType: 'style',
       entityId: STYLE_ID,
       rules: { markup_percent: 20 },
     })
-    const customerOverride = makeOverride({
+    const customerO = makeOverride({
       scopeType: 'customer',
       entityType: 'style',
       entityId: STYLE_ID,
       rules: { discount_percent: 5 },
     })
 
-    const result = matchOverrides([customerOverride, shopOverride, brandOverride], CTX)
+    const result = matchOverrides([customerO, shopO, brandO], CTX)
 
     expect(result[0].scopeType).toBe('shop')
     expect(result[1].scopeType).toBe('brand')
@@ -146,14 +152,14 @@ describe('matchOverrides', () => {
   })
 
   it('sorts by priority DESC within the same tier', () => {
-    const lowPriority = makeOverride({
+    const low = makeOverride({
       scopeType: 'shop',
       entityType: 'style',
       entityId: STYLE_ID,
       priority: 0,
       rules: { markup_percent: 10 },
     })
-    const highPriority = makeOverride({
+    const high = makeOverride({
       scopeType: 'shop',
       entityType: 'style',
       entityId: STYLE_ID,
@@ -161,12 +167,66 @@ describe('matchOverrides', () => {
       rules: { markup_percent: 50 },
     })
 
-    const result = matchOverrides([lowPriority, highPriority], CTX)
+    const result = matchOverrides([low, high], CTX)
 
-    // Both shop-scoped; high priority sorts first within tier (but in this service
-    // both apply — last-write wins in the cascade walk)
+    // Both shop-scoped; high priority sorts first
     expect(result[0].priority).toBe(100)
     expect(result[1].priority).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// pickWinnersPerTier — one winner per scope tier
+// ---------------------------------------------------------------------------
+
+describe('pickWinnersPerTier', () => {
+  it('returns empty array when no overrides match', () => {
+    expect(pickWinnersPerTier([], CTX)).toEqual([])
+  })
+
+  it('selects the single highest-priority override within a tier', () => {
+    const low = makeOverride({ scopeType: 'shop', priority: 0, rules: { markup_percent: 10 } })
+    const high = makeOverride({ scopeType: 'shop', priority: 100, rules: { markup_percent: 50 } })
+
+    const result = pickWinnersPerTier([low, high], CTX)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].priority).toBe(100) // high-priority wins
+  })
+
+  it('breaks priority ties by entity specificity (style > brand > category)', () => {
+    const category = makeOverride({
+      scopeType: 'shop',
+      entityType: 'category',
+      entityId: null,
+      priority: 0,
+      rules: { markup_percent: 10 },
+    })
+    const style = makeOverride({
+      scopeType: 'shop',
+      entityType: 'style',
+      entityId: STYLE_ID,
+      priority: 0,
+      rules: { markup_percent: 50 },
+    })
+
+    const result = pickWinnersPerTier([category, style], CTX)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].entityType).toBe('style') // style is more specific → wins
+  })
+
+  it('returns one winner per tier in cascade order', () => {
+    const shopO = makeOverride({ scopeType: 'shop', rules: { markup_percent: 40 } })
+    const brandO = makeOverride({ scopeType: 'brand', rules: { markup_percent: 20 } })
+    const customerO = makeOverride({ scopeType: 'customer', rules: { discount_percent: 5 } })
+
+    const result = pickWinnersPerTier([customerO, shopO, brandO], CTX)
+
+    expect(result).toHaveLength(3)
+    expect(result[0].scopeType).toBe('shop')
+    expect(result[1].scopeType).toBe('brand')
+    expect(result[2].scopeType).toBe('customer')
   })
 })
 
@@ -184,69 +244,116 @@ describe('resolveEffectivePrice', () => {
   })
 
   it('applies a single shop-level markup', () => {
-    const override = makeOverride({
+    const o = makeOverride({
       scopeType: 'shop',
       entityType: 'style',
       entityId: STYLE_ID,
       rules: { markup_percent: 40 },
     })
 
-    const result = resolveEffectivePrice('10.00', [override], CTX)
+    const result = resolveEffectivePrice('10.00', [o], CTX)
 
     expect(result.effectivePrice).toBe('14.00')
     expect(result.isBasePrice).toBe(false)
     expect(result.appliedOverrides).toHaveLength(1)
   })
 
-  it('cascades shop markup then brand override (brand overrides shop result)', () => {
-    const shopOverride = makeOverride({
+  it('cascades shop markup then brand override (each tier contributes one winner)', () => {
+    const shopO = makeOverride({
       scopeType: 'shop',
       entityType: 'style',
       entityId: STYLE_ID,
-      rules: { markup_percent: 40 }, // $10 → $14
-    })
-    const brandOverride = makeOverride({
+      rules: { markup_percent: 40 },
+    }) // $10 → $14
+    const brandO = makeOverride({
       scopeType: 'brand',
       entityType: 'style',
       entityId: STYLE_ID,
-      rules: { markup_percent: 35 }, // $14 → $18.90
-    })
+      rules: { markup_percent: 35 },
+    }) // $14 → $18.90
 
-    const result = resolveEffectivePrice('10.00', [shopOverride, brandOverride], CTX)
+    const result = resolveEffectivePrice('10.00', [shopO, brandO], CTX)
 
     expect(result.effectivePrice).toBe('18.90')
     expect(result.appliedOverrides).toHaveLength(2)
   })
 
-  it('applies fixed_price override (ignores base + upstream cascade)', () => {
-    const shopOverride = makeOverride({
+  it('selects only one winner per tier when multiple match in the same tier', () => {
+    // Shop has both a category-level (priority 0) and style-level (priority 0) override.
+    // Style is more specific → wins (markup 50%, not 10%).
+    const categoryO = makeOverride({
+      scopeType: 'shop',
+      entityType: 'category',
+      entityId: null,
+      priority: 0,
+      rules: { markup_percent: 10 },
+    })
+    const styleO = makeOverride({
       scopeType: 'shop',
       entityType: 'style',
       entityId: STYLE_ID,
-      rules: { markup_percent: 100 }, // would double the price
+      priority: 0,
+      rules: { markup_percent: 50 },
     })
-    const customerOverride = makeOverride({
+
+    const result = resolveEffectivePrice('10.00', [categoryO, styleO], CTX)
+
+    // Only one override applied (style wins over category in shop tier)
+    expect(result.appliedOverrides).toHaveLength(1)
+    expect(result.effectivePrice).toBe('15.00') // 10.00 * 1.5 = 15.00 (style markup)
+  })
+
+  it('higher priority override within a tier beats lower priority', () => {
+    const lowPriority = makeOverride({
+      scopeType: 'shop',
+      entityType: 'style',
+      entityId: STYLE_ID,
+      priority: 0,
+      rules: { markup_percent: 10 },
+    })
+    const highPriority = makeOverride({
+      scopeType: 'shop',
+      entityType: 'style',
+      entityId: STYLE_ID,
+      priority: 100,
+      rules: { markup_percent: 50 },
+    })
+
+    const result = resolveEffectivePrice('10.00', [lowPriority, highPriority], CTX)
+
+    expect(result.appliedOverrides).toHaveLength(1)
+    expect(result.effectivePrice).toBe('15.00') // high-priority wins: 10.00 * 1.5
+  })
+
+  it('applies fixed_price override (ignores upstream cascade result)', () => {
+    const shopO = makeOverride({
+      scopeType: 'shop',
+      entityType: 'style',
+      entityId: STYLE_ID,
+      rules: { markup_percent: 100 },
+    })
+    const customerO = makeOverride({
       scopeType: 'customer',
       entityType: 'style',
       entityId: STYLE_ID,
-      rules: { fixed_price: '8.99' }, // customer gets flat $8.99
+      rules: { fixed_price: '8.99' },
     })
 
-    const result = resolveEffectivePrice('5.00', [shopOverride, customerOverride], CTX)
+    const result = resolveEffectivePrice('5.00', [shopO, customerO], CTX)
 
-    // Shop markup: 5.00 → 10.00; then customer fixed_price: → 8.99
+    // Shop markup: 5.00 → 10.00; then customer fixed_price → 8.99
     expect(result.effectivePrice).toBe('8.99')
   })
 
-  it('category override applies to any style', () => {
-    const categoryOverride = makeOverride({
+  it('category override applies to any style (entity_id is null)', () => {
+    const categoryO = makeOverride({
       scopeType: 'shop',
       entityType: 'category',
       entityId: null,
       rules: { markup_percent: 20 },
     })
 
-    const result = resolveEffectivePrice('10.00', [categoryOverride], CTX)
+    const result = resolveEffectivePrice('10.00', [categoryO], CTX)
 
     expect(result.effectivePrice).toBe('12.00')
     expect(result.isBasePrice).toBe(false)
@@ -259,25 +366,22 @@ describe('resolveEffectivePrice', () => {
     expect(result.isBasePrice).toBe(true)
   })
 
-  it('three-tier full cascade: category → brand → customer', () => {
-    // Category applies a base shop markup for all garments
-    const categoryOverride = makeOverride({
+  it('three-tier full cascade: shop category → brand brand → customer discount', () => {
+    const shopCategory = makeOverride({
       id: '00000000-0000-4000-8000-aaa000000001',
       scopeType: 'shop',
       entityType: 'category',
       entityId: null,
       rules: { markup_percent: 40 }, // $10 → $14
     })
-    // Brand gets an additional markup
-    const brandOverride = makeOverride({
+    const brandBrand = makeOverride({
       id: '00000000-0000-4000-8000-bbb000000001',
       scopeType: 'brand',
       entityType: 'brand',
       entityId: BRAND_ID,
       rules: { markup_percent: 35 }, // $14 → $18.90
     })
-    // VIP customer gets 10% off
-    const customerOverride = makeOverride({
+    const customerStyle = makeOverride({
       id: '00000000-0000-4000-8000-ccc000000001',
       scopeType: 'customer',
       entityType: 'style',
@@ -285,11 +389,7 @@ describe('resolveEffectivePrice', () => {
       rules: { discount_percent: 10 }, // $18.90 → $17.01
     })
 
-    const result = resolveEffectivePrice(
-      '10.00',
-      [categoryOverride, brandOverride, customerOverride],
-      CTX
-    )
+    const result = resolveEffectivePrice('10.00', [shopCategory, brandBrand, customerStyle], CTX)
 
     expect(result.effectivePrice).toBe('17.01')
     expect(result.appliedOverrides).toHaveLength(3)

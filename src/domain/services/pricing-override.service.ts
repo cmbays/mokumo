@@ -9,6 +9,10 @@
  *         → scope_type='brand'    (brand-level override)
  *             → scope_type='customer' (customer-specific pricing)
  *
+ * Within each scope tier, the SINGLE highest-priority matching override is selected.
+ * If two overrides in the same tier have equal priority, entity specificity is the tiebreaker:
+ *   style (most specific) > brand > category (least specific)
+ *
  * All monetary arithmetic uses big.js via money(), round2(), toNumber().
  * No floating-point operations are used anywhere in this module.
  */
@@ -48,7 +52,7 @@ export function applyRule(basePriceStr: string, rules: PricingOverrideRules): st
     return toNumber(round2(base.times(factor))).toFixed(2)
   }
 
-  // No matching rule (shouldn't happen given schema validation, but be safe)
+  // No matching rule (empty rules object) — return base unchanged
   return toNumber(round2(base)).toFixed(2)
 }
 
@@ -70,28 +74,20 @@ export type OverrideResolutionContext = {
 /**
  * Resolve the effective unit price for a style by walking the override cascade.
  *
- * The `overrides` list should contain **all** overrides relevant to the shop:
- *   - scope_type='shop'  (already filtered to the authenticated shop)
- *   - scope_type='brand' (already filtered to the authenticated shop)
- *   - scope_type='customer' (already filtered to the authenticated shop + optional customerId)
+ * The `overrides` list should contain all overrides relevant to the shop.
+ * For each scope tier (shop → brand → customer), the single highest-priority
+ * matching override is selected and applied to the running price.
  *
- * Overrides are matched by entity type:
- *   - entity_type='style'    → matches if override.entityId === ctx.styleId
- *   - entity_type='brand'    → matches if override.entityId === ctx.brandId
- *   - entity_type='category' → matches all styles (entity_id is null)
- *
- * Within each scope tier, overrides are sorted by priority DESC so the highest
- * priority override within a tier wins. Tiers are applied in cascade order
- * (shop → brand → customer), meaning later tiers override earlier ones.
+ * Returns the base price unchanged if no overrides match.
  */
 export function resolveEffectivePrice(
   basePriceStr: string,
   overrides: PricingOverride[],
   ctx: OverrideResolutionContext
 ): ResolvedEffectivePrice {
-  const matched = matchOverrides(overrides, ctx)
+  const winners = pickWinnersPerTier(overrides, ctx)
 
-  if (matched.length === 0) {
+  if (winners.length === 0) {
     return {
       effectivePrice: toNumber(round2(money(basePriceStr))).toFixed(2),
       appliedOverrides: [],
@@ -99,16 +95,15 @@ export function resolveEffectivePrice(
     }
   }
 
-  // Walk the cascade: apply overrides in order (shop first, then brand, then customer)
-  // Each tier replaces the running price from the previous tier.
+  // Apply each tier's winner in cascade order (shop → brand → customer)
   let running = basePriceStr
-  for (const override of matched) {
+  for (const override of winners) {
     running = applyRule(running, override.rules)
   }
 
   return {
     effectivePrice: running,
-    appliedOverrides: matched.map((o) => ({
+    appliedOverrides: winners.map((o) => ({
       id: o.id,
       scopeType: o.scopeType,
       rules: o.rules,
@@ -118,12 +113,14 @@ export function resolveEffectivePrice(
 }
 
 // ---------------------------------------------------------------------------
-// matchOverrides — filter and sort overrides for a given context
+// matchOverrides — filter all matching overrides (exported for testing)
 // ---------------------------------------------------------------------------
 
 /**
- * Filter overrides to those matching the resolution context, then sort
- * them into cascade order: shop → brand → customer, priority DESC within tier.
+ * Filter overrides to those matching the resolution context, sorted by
+ * cascade tier (shop → brand → customer) then priority DESC within tier.
+ *
+ * Returns ALL matching overrides — use pickWinnersPerTier to select one per tier.
  */
 export function matchOverrides(
   overrides: PricingOverride[],
@@ -139,10 +136,49 @@ export function matchOverrides(
       const tierB = SCOPE_ORDER[b.scopeType] ?? 0
       if (tierA !== tierB) return tierA - tierB
 
-      // Secondary: priority DESC (higher priority wins within tier)
+      // Secondary: priority DESC (higher priority sorts first within tier)
       return b.priority - a.priority
     })
 }
+
+// ---------------------------------------------------------------------------
+// pickWinnersPerTier — select the single best override per scope tier
+// ---------------------------------------------------------------------------
+
+/**
+ * For each scope tier, select the single override with the highest priority.
+ * When priorities are tied, entity specificity is the tiebreaker: style > brand > category.
+ *
+ * Returns at most 3 entries (one per tier), in cascade order.
+ */
+export function pickWinnersPerTier(
+  overrides: PricingOverride[],
+  ctx: OverrideResolutionContext
+): PricingOverride[] {
+  const TIERS = ['shop', 'brand', 'customer'] as const
+  const result: PricingOverride[] = []
+
+  for (const tier of TIERS) {
+    const candidates = overrides
+      .filter((o) => o.scopeType === tier && isMatchingOverride(o, ctx))
+      .sort((a, b) => {
+        // Priority DESC — higher priority wins
+        if (b.priority !== a.priority) return b.priority - a.priority
+        // Tiebreak: entity specificity (style > brand > category)
+        return entitySpecificity(b.entityType) - entitySpecificity(a.entityType)
+      })
+
+    if (candidates.length > 0) {
+      result.push(candidates[0])
+    }
+  }
+
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function isMatchingOverride(override: PricingOverride, ctx: OverrideResolutionContext): boolean {
   switch (override.entityType) {
@@ -155,5 +191,16 @@ function isMatchingOverride(override: PricingOverride, ctx: OverrideResolutionCo
       return override.entityId === null
     default:
       return false
+  }
+}
+
+function entitySpecificity(type: string): number {
+  switch (type) {
+    case 'style':
+      return 2
+    case 'brand':
+      return 1
+    default: // category
+      return 0
   }
 }

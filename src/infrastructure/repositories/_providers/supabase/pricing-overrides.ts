@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import { shopPricingOverrides } from '@db/schema/catalog-normalized'
 import type { PricingOverride, PricingOverrideRules } from '@domain/entities/pricing-override'
@@ -64,35 +64,60 @@ export type UpsertPricingOverrideInput = {
 /**
  * Upsert a pricing override.
  *
- * The UNIQUE constraint is (scope_type, scope_id, entity_type, COALESCE(entity_id, zero_uuid)).
+ * Two partial UNIQUE indexes cover the two cases:
+ *   idx_spo_unique_with_entity — (scope_type, scope_id, entity_type, entity_id) WHERE entity_id IS NOT NULL
+ *   idx_spo_unique_category    — (scope_type, scope_id, entity_type)             WHERE entity_id IS NULL
+ *
+ * We branch on entityId to reference the correct index via targetWhere.
  * On conflict, only rules, priority, and updated_at are updated.
  */
 export async function upsertPricingOverride(
   input: UpsertPricingOverrideInput
 ): Promise<PricingOverride> {
-  const rows = await db
-    .insert(shopPricingOverrides)
-    .values({
-      scopeType: input.scopeType,
-      scopeId: input.scopeId,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      rules: input.rules,
-      priority: input.priority ?? 0,
-    })
-    .onConflictDoUpdate({
-      target: [
-        shopPricingOverrides.scopeType,
-        shopPricingOverrides.scopeId,
-        shopPricingOverrides.entityType,
-      ],
-      set: {
-        rules: input.rules,
-        priority: input.priority ?? 0,
-        updatedAt: new Date(),
-      },
-    })
-    .returning()
+  const values = {
+    scopeType: input.scopeType,
+    scopeId: input.scopeId,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    rules: input.rules,
+    priority: input.priority ?? 0,
+  }
+  const update = {
+    rules: input.rules,
+    priority: input.priority ?? 0,
+    updatedAt: new Date(),
+  }
+
+  // Use the correct partial UNIQUE index based on whether entityId is present
+  const rows =
+    input.entityId !== null
+      ? await db
+          .insert(shopPricingOverrides)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [
+              shopPricingOverrides.scopeType,
+              shopPricingOverrides.scopeId,
+              shopPricingOverrides.entityType,
+              shopPricingOverrides.entityId,
+            ],
+            targetWhere: sql`${shopPricingOverrides.entityId} IS NOT NULL`,
+            set: update,
+          })
+          .returning()
+      : await db
+          .insert(shopPricingOverrides)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [
+              shopPricingOverrides.scopeType,
+              shopPricingOverrides.scopeId,
+              shopPricingOverrides.entityType,
+            ],
+            targetWhere: sql`${shopPricingOverrides.entityId} IS NULL`,
+            set: update,
+          })
+          .returning()
 
   const row = rows[0]
   if (!row) throw new Error('upsertPricingOverride: no row returned')
