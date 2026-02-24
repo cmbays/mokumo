@@ -17,7 +17,6 @@ describe('parseNormalizedCatalogRow', () => {
       description: null,
       category: 't-shirts',
       subcategory: null,
-      piece_price: 4.25,
       colors: [],
       sizes: [],
       is_enabled: null,
@@ -41,7 +40,6 @@ describe('parseNormalizedCatalogRow', () => {
       description: 'A heavy cotton tee',
       category: 'fleece',
       subcategory: null,
-      piece_price: 3.5,
       colors: [
         {
           id: '00000000-0000-4000-a000-000000000010',

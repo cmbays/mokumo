@@ -54,7 +54,6 @@ export const normalizedGarmentCatalogSchema = z.object({
   description: z.string().nullable(),
   category: garmentCategoryEnum,
   subcategory: z.string().nullable(),
-  piecePrice: z.number().nonnegative().nullable(),
   colors: z.array(catalogColorSchema),
   sizes: z.array(catalogSizeSchema),
   /** Resolved from catalog_style_preferences — defaults: enabled=true, favorite=false */

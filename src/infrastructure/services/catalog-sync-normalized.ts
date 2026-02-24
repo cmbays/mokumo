@@ -42,9 +42,6 @@ export function buildStyleUpsertValue(
   category: GarmentCategory
   subcategory: string | null
   gtin: string | null
-  piecePrice: number | null
-  dozenPrice: number | null
-  casePrice: number | null
   lastSyncedAt: Date
   updatedAt: Date
 } {
@@ -63,9 +60,6 @@ export function buildStyleUpsertValue(
     category: canonicalCategoryToGarmentCategory([baseCategory]),
     subcategory,
     gtin: style.gtin,
-    piecePrice: style.pricing.piecePrice ?? null,
-    dozenPrice: style.pricing.dozenPrice ?? null,
-    casePrice: style.pricing.casePrice ?? null,
     lastSyncedAt: new Date(),
     updatedAt: new Date(),
   }
