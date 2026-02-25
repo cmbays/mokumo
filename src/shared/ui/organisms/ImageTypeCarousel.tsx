@@ -42,7 +42,7 @@ export function ImageTypeCarousel({ images, alt, className }: ImageTypeCarouselP
           src={activeUrl}
           alt={`${alt} — ${activeType}`}
           fill
-          sizes="(max-width: 768px) 50vw, 200px"
+          sizes="(max-width: 768px) 100vw, 448px"
           className="object-contain transition-opacity duration-150 motion-reduce:transition-none"
         />
       </div>

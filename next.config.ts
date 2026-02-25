@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: 'www.ssactivewear.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.ssactivewear.com',
+        pathname: '/**',
+      },
     ],
   },
   async headers() {

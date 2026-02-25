@@ -33,6 +33,7 @@ export async function toggleStyleEnabled(
     return { success: false, error: 'Unauthorized' }
   }
 
+  let current: boolean
   try {
     // Read current value first to compute the negated toggle
     const existing = await db
@@ -48,9 +49,15 @@ export async function toggleStyleEnabled(
       .limit(1)
 
     // NULL (no row or explicit null) resolves to default true — toggle to false
-    const current = existing[0]?.isEnabled ?? true
-    const next = !current
+    current = existing[0]?.isEnabled ?? true
+  } catch (err) {
+    actionsLogger.error('toggleStyleEnabled read failed', { styleId, err })
+    return { success: false, error: 'Failed to read style preference' }
+  }
 
+  const next = !current
+
+  try {
     await db
       .insert(catalogStylePreferences)
       .values({
@@ -79,7 +86,7 @@ export async function toggleStyleEnabled(
 
     return { success: true, isEnabled: next }
   } catch (err) {
-    actionsLogger.error('toggleStyleEnabled failed', { styleId, err })
+    actionsLogger.error('toggleStyleEnabled write failed', { styleId, err })
     return { success: false, error: 'Failed to update style preference' }
   }
 }
@@ -105,6 +112,7 @@ export async function toggleStyleFavorite(
     return { success: false, error: 'Unauthorized' }
   }
 
+  let current: boolean
   try {
     // Read current value first to compute the negated toggle
     const existing = await db
@@ -120,9 +128,15 @@ export async function toggleStyleFavorite(
       .limit(1)
 
     // NULL (no row or explicit null) resolves to default false — toggle to true
-    const current = existing[0]?.isFavorite ?? false
-    const next = !current
+    current = existing[0]?.isFavorite ?? false
+  } catch (err) {
+    actionsLogger.error('toggleStyleFavorite read failed', { styleId, err })
+    return { success: false, error: 'Failed to read style preference' }
+  }
 
+  const next = !current
+
+  try {
     await db
       .insert(catalogStylePreferences)
       .values({
@@ -151,7 +165,7 @@ export async function toggleStyleFavorite(
 
     return { success: true, isFavorite: next }
   } catch (err) {
-    actionsLogger.error('toggleStyleFavorite failed', { styleId, err })
+    actionsLogger.error('toggleStyleFavorite write failed', { styleId, err })
     return { success: false, error: 'Failed to update style preference' }
   }
 }

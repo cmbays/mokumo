@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { buildSkuToStyleIdMap, hydrateCatalogPreferences } from '../_lib/catalog-helpers'
+import {
+  buildSkuToStyleIdMap,
+  buildSkuToFrontImageUrl,
+  hydrateCatalogPreferences,
+} from '../_lib/catalog-helpers'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { GarmentCatalog } from '@domain/entities/garment'
 
@@ -28,6 +32,78 @@ function makeNormalized(
     ...overrides,
   }
 }
+
+// ---------------------------------------------------------------------------
+// buildSkuToFrontImageUrl
+// ---------------------------------------------------------------------------
+
+describe('buildSkuToFrontImageUrl', () => {
+  it('returns empty map for undefined input', () => {
+    expect(buildSkuToFrontImageUrl(undefined).size).toBe(0)
+  })
+
+  it('returns empty map for empty array', () => {
+    expect(buildSkuToFrontImageUrl([]).size).toBe(0)
+  })
+
+  it('uses stored front image URL when catalog_images is populated', () => {
+    const normalized = [
+      makeNormalized({
+        styleNumber: 'BC3001',
+        externalId: '3901',
+        colors: [
+          {
+            id: 'c1',
+            styleId: 'uuid-001',
+            name: 'White',
+            hex1: '#FFFFFF',
+            hex2: null,
+            images: [
+              {
+                imageType: 'back',
+                url: 'https://www.ssactivewear.com/images/style/3901/3901_bm.jpg',
+              },
+              {
+                imageType: 'front',
+                url: 'https://www.ssactivewear.com/images/style/3901/3901_fm.jpg',
+              },
+            ],
+          },
+        ],
+      }),
+    ]
+    const map = buildSkuToFrontImageUrl(normalized)
+    expect(map.get('BC3001')).toBe('https://www.ssactivewear.com/images/style/3901/3901_fm.jpg')
+  })
+
+  it('returns no entry when colors array is empty', () => {
+    const normalized = [makeNormalized({ styleNumber: 'BC3001', colors: [] })]
+    const map = buildSkuToFrontImageUrl(normalized)
+    expect(map.has('BC3001')).toBe(false)
+  })
+
+  it('returns no entry when color has no front image', () => {
+    const normalized = [
+      makeNormalized({
+        styleNumber: 'BC3001',
+        colors: [
+          {
+            id: 'c1',
+            styleId: 'uuid-001',
+            name: 'Black',
+            hex1: '#000000',
+            hex2: null,
+            images: [
+              { imageType: 'back', url: 'https://cdn.ssactivewear.com/Images/Color/1_b.jpg' },
+            ],
+          },
+        ],
+      }),
+    ]
+    const map = buildSkuToFrontImageUrl(normalized)
+    expect(map.has('BC3001')).toBe(false)
+  })
+})
 
 // ---------------------------------------------------------------------------
 // buildSkuToStyleIdMap

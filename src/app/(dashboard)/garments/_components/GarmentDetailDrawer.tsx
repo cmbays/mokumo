@@ -42,6 +42,8 @@ type GarmentDetailDrawerProps = {
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
   /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
   normalizedColors?: CatalogColor[]
+  /** Real front image URL from catalog_images — shown in GarmentImage when no normalized colors available. */
+  frontImageUrl?: string
 }
 
 export function GarmentDetailDrawer({
@@ -55,6 +57,7 @@ export function GarmentDetailDrawer({
   onBrandClick,
   favoriteContext = { context: 'global' },
   normalizedColors,
+  frontImageUrl,
 }: GarmentDetailDrawerProps) {
   const [selectedColorId, setSelectedColorId] = useState<string | null>(
     garment.availableColors[0] ?? null
@@ -108,7 +111,7 @@ export function GarmentDetailDrawer({
       setSelectedColorId(colorId)
     } else {
       console.warn(
-        `[GarmentDetailDrawer] Color ${colorId} not found in catalog — stale garment palette reference`
+        `[GarmentDetailDrawer] Color ${colorId} not found in catalog for garment ${garment.sku} — stale palette reference`
       )
     }
   }
@@ -151,22 +154,24 @@ export function GarmentDetailDrawer({
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-6 p-4">
             {/* Garment image — carousel when normalized color images are available, placeholder fallback otherwise */}
-            <div className="flex justify-center py-2">
-              {selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
-                <ImageTypeCarousel
-                  images={selectedNormalizedColor.images}
-                  alt={`${garment.name} — ${selectedNormalizedColor.name}`}
-                  className="w-full max-w-xs mx-auto"
-                />
-              ) : (
+            {selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
+              <ImageTypeCarousel
+                images={selectedNormalizedColor.images}
+                alt={`${garment.name} — ${selectedNormalizedColor.name}`}
+                className="w-full"
+              />
+            ) : (
+              <div className="relative aspect-square w-full overflow-hidden rounded-md bg-surface">
                 <GarmentImage
                   brand={garment.brand}
                   sku={garment.sku}
                   name={garment.name}
                   size="lg"
+                  imageUrl={frontImageUrl}
+                  className="w-full h-full"
                 />
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Name + Category + Enabled toggle */}
             <div className="flex items-start justify-between gap-3">

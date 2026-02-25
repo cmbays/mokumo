@@ -17,7 +17,11 @@ import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
 import { toggleStyleEnabled, toggleStyleFavorite } from '../actions'
-import { buildSkuToStyleIdMap, hydrateCatalogPreferences } from '../_lib/catalog-helpers'
+import {
+  buildSkuToStyleIdMap,
+  buildSkuToFrontImageUrl,
+  hydrateCatalogPreferences,
+} from '../_lib/catalog-helpers'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
@@ -60,7 +64,9 @@ export function GarmentCatalogClient({
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
   const view = searchParams.get('view') ?? 'grid'
-  const showDisabled = searchParams.get('showDisabled') === '1'
+
+  // Local UI state — not in URL because toggling should not trigger a server re-render
+  const [showDisabled, setShowDisabled] = useState(false)
 
   // Color filter from extracted hook (fix #7)
   const { selectedColorIds, toggleColor, clearColors } = useColorFilter()
@@ -85,6 +91,12 @@ export function GarmentCatalogClient({
 
   // SKU → catalog_styles UUID lookup — used by toggle server actions
   const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
+
+  // SKU → first front image URL — real S&S CDN URLs from catalog_images
+  const skuToFrontImageUrl = useMemo(
+    () => buildSkuToFrontImageUrl(normalizedCatalog),
+    [normalizedCatalog]
+  )
 
   // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
   const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
@@ -216,7 +228,13 @@ export function GarmentCatalogClient({
         prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
       )
 
-      if (!styleId) return // graceful degrade: no normalized catalog match, local-only
+      if (!styleId) {
+        console.warn(
+          `[GarmentCatalogClient] No catalog_styles entry for sku=${garment.sku} — enabled toggle is local-only and will not persist`
+        )
+        toast.warning("This garment hasn't been synced yet — toggle won't be saved")
+        return
+      }
 
       const result = await toggleStyleEnabled(styleId)
       if (!result.success) {
@@ -238,7 +256,13 @@ export function GarmentCatalogClient({
         prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
       )
 
-      if (!styleId) return // graceful degrade
+      if (!styleId) {
+        console.warn(
+          `[GarmentCatalogClient] No catalog_styles entry for sku=${garment.sku} — favorite toggle is local-only and will not persist`
+        )
+        toast.warning("This garment hasn't been synced yet — toggle won't be saved")
+        return
+      }
 
       const result = await toggleStyleFavorite(styleId)
       if (!result.success) {
@@ -265,11 +289,13 @@ export function GarmentCatalogClient({
         favoriteColorIds={globalFavoriteColorIds}
         onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
+        showDisabled={showDisabled}
+        onShowDisabledChange={setShowDisabled}
       />
 
       {/* Grid View */}
       {view === 'grid' ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {visibleGarments.map((garment) => (
             <GarmentCard
               key={garment.id}
@@ -279,6 +305,7 @@ export function GarmentCatalogClient({
               onToggleFavorite={handleToggleFavorite}
               onBrandClick={handleBrandClick}
               onClick={setSelectedGarmentId}
+              frontImageUrl={skuToFrontImageUrl.get(garment.sku)}
             />
           ))}
         </div>
@@ -386,6 +413,7 @@ export function GarmentCatalogClient({
           onToggleFavorite={handleToggleFavorite}
           onBrandClick={handleBrandClick}
           normalizedColors={selectedNormalizedColors}
+          frontImageUrl={skuToFrontImageUrl.get(selectedGarment.sku)}
         />
       )}
 
