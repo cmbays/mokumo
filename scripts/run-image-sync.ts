@@ -87,8 +87,20 @@ void (async () => {
     process.exit(1)
   }
 
-  const raw = await resp.json()
-  const products = z.array(ssProductSchema).parse(raw)
+  let raw: unknown
+  try {
+    raw = await resp.json()
+  } catch (err) {
+    console.error('S&S API returned non-JSON body:', err)
+    process.exit(1)
+  }
+
+  const parsed = z.array(ssProductSchema).safeParse(raw)
+  if (!parsed.success) {
+    console.error('S&S product schema mismatch. Issues:', parsed.error.issues.slice(0, 5))
+    process.exit(1)
+  }
+  const products = parsed.data
   console.log(`Got ${products.length} product rows from S&S`)
 
   // Group by styleID → dedup by colorName (keep first row per color for images/hex)
@@ -119,6 +131,7 @@ void (async () => {
   let colorCount = 0
   let imageCount = 0
   let skipped = 0
+  let failedStyles = 0
   const BATCH_SIZE = 50
 
   const externalIds = Array.from(styleMap.keys())
@@ -132,61 +145,66 @@ void (async () => {
         continue
       }
 
-      const colorMap = styleMap.get(externalId)!
-      if (colorMap.size === 0) continue
+      try {
+        const colorMap = styleMap.get(externalId)!
+        if (colorMap.size === 0) continue
 
-      const colorValues = Array.from(colorMap.values()).map((p) => ({
-        styleId: styleUuid,
-        name: p.colorName,
-        hex1: normalizeHex(p.color1),
-        hex2: normalizeHex(p.color2),
-        updatedAt: new Date(),
-      }))
-
-      const colorRows = await db
-        .insert(catalogColors)
-        .values(colorValues)
-        .onConflictDoUpdate({
-          target: [catalogColors.styleId, catalogColors.name],
-          set: {
-            hex1: sql`excluded.hex1`,
-            hex2: sql`excluded.hex2`,
-            updatedAt: new Date(),
-          },
-        })
-        .returning({ id: catalogColors.id, name: catalogColors.name })
-
-      colorCount += colorRows.length
-      const colorIdByName = new Map(colorRows.map((r) => [r.name, r.id]))
-
-      const imageValues = Array.from(colorMap.values()).flatMap((p) => {
-        const colorId = colorIdByName.get(p.colorName)
-        if (!colorId) return []
-        return buildImages(p).map((img) => ({
-          colorId,
-          imageType: img.type as
-            | 'front'
-            | 'back'
-            | 'side'
-            | 'direct-side'
-            | 'on-model-front'
-            | 'on-model-back'
-            | 'on-model-side'
-            | 'swatch',
-          url: img.url,
+        const colorValues = Array.from(colorMap.values()).map((p) => ({
+          styleId: styleUuid,
+          name: p.colorName,
+          hex1: normalizeHex(p.color1),
+          hex2: normalizeHex(p.color2),
           updatedAt: new Date(),
         }))
-      })
 
-      if (imageValues.length > 0) {
-        await db
-          .insert(catalogImages)
-          .values(imageValues)
+        const colorRows = await db
+          .insert(catalogColors)
+          .values(colorValues)
           .onConflictDoUpdate({
-            target: [catalogImages.colorId, catalogImages.imageType],
-            set: { url: sql`excluded.url`, updatedAt: new Date() },
+            target: [catalogColors.styleId, catalogColors.name],
+            set: {
+              hex1: sql`excluded.hex1`,
+              hex2: sql`excluded.hex2`,
+              updatedAt: new Date(),
+            },
           })
-        imageCount += imageValues.length
+          .returning({ id: catalogColors.id, name: catalogColors.name })
+
+        colorCount += colorRows.length
+        const colorIdByName = new Map(colorRows.map((r) => [r.name, r.id]))
+
+        const imageValues = Array.from(colorMap.values()).flatMap((p) => {
+          const colorId = colorIdByName.get(p.colorName)
+          if (!colorId) return []
+          return buildImages(p).map((img) => ({
+            colorId,
+            imageType: img.type as
+              | 'front'
+              | 'back'
+              | 'side'
+              | 'direct-side'
+              | 'on-model-front'
+              | 'on-model-back'
+              | 'on-model-side'
+              | 'swatch',
+            url: img.url,
+            updatedAt: new Date(),
+          }))
+        })
+
+        if (imageValues.length > 0) {
+          await db
+            .insert(catalogImages)
+            .values(imageValues)
+            .onConflictDoUpdate({
+              target: [catalogImages.colorId, catalogImages.imageType],
+              set: { url: sql`excluded.url`, updatedAt: new Date() },
+            })
+          imageCount += imageValues.length
+        }
+      } catch (err) {
+        failedStyles++
+        console.error(`Failed to sync externalId=${externalId}:`, err)
       }
     }
 
@@ -197,8 +215,9 @@ void (async () => {
   }
 
   console.log(
-    `Image sync complete — ${colorCount} colors, ${imageCount} images, ${skipped} styles skipped (not in catalog_styles)`
+    `Image sync complete — ${colorCount} colors, ${imageCount} images, ${skipped} styles skipped (not in catalog_styles), ${failedStyles} styles failed`
   )
+  if (failedStyles > 0) process.exit(1)
 })().catch((err) => {
   console.error('Image sync failed:', err)
   process.exit(1)

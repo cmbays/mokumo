@@ -38,6 +38,12 @@ test.describe('Garment catalog images', () => {
     // Wait for page content to load
     await page.waitForLoadState('networkidle', { timeout: 20_000 })
 
+    // Guard: if auth is required but credentials weren't provided, we'd be on the login page
+    if (page.url().includes('/login')) {
+      test.skip(true, 'Redirected to login — set E2E_EMAIL and E2E_PASSWORD env vars')
+      return
+    }
+
     // Screenshot for visual inspection
     await page.screenshot({
       path: 'tests/e2e/screenshots/garment-catalog.png',

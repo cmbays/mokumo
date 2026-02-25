@@ -228,7 +228,13 @@ export function GarmentCatalogClient({
         prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
       )
 
-      if (!styleId) return // graceful degrade: no normalized catalog match, local-only
+      if (!styleId) {
+        console.warn(
+          `[GarmentCatalogClient] No catalog_styles entry for sku=${garment.sku} — enabled toggle is local-only and will not persist`
+        )
+        toast.warning("This garment hasn't been synced yet — toggle won't be saved")
+        return
+      }
 
       const result = await toggleStyleEnabled(styleId)
       if (!result.success) {
@@ -250,7 +256,13 @@ export function GarmentCatalogClient({
         prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
       )
 
-      if (!styleId) return // graceful degrade
+      if (!styleId) {
+        console.warn(
+          `[GarmentCatalogClient] No catalog_styles entry for sku=${garment.sku} — favorite toggle is local-only and will not persist`
+        )
+        toast.warning("This garment hasn't been synced yet — toggle won't be saved")
+        return
+      }
 
       const result = await toggleStyleFavorite(styleId)
       if (!result.success) {

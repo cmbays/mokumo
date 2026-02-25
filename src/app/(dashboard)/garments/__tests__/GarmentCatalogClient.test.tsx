@@ -11,14 +11,19 @@ import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 // Module mocks — use vi.hoisted so refs are available when vi.mock factories run
 // ---------------------------------------------------------------------------
 
-const { mockToggleStyleEnabled, mockToggleStyleFavorite, mockToastError, mockGet } = vi.hoisted(
-  () => ({
-    mockToggleStyleEnabled: vi.fn(),
-    mockToggleStyleFavorite: vi.fn(),
-    mockToastError: vi.fn(),
-    mockGet: vi.fn(),
-  })
-)
+const {
+  mockToggleStyleEnabled,
+  mockToggleStyleFavorite,
+  mockToastError,
+  mockToastWarning,
+  mockGet,
+} = vi.hoisted(() => ({
+  mockToggleStyleEnabled: vi.fn(),
+  mockToggleStyleFavorite: vi.fn(),
+  mockToastError: vi.fn(),
+  mockToastWarning: vi.fn(),
+  mockGet: vi.fn(),
+}))
 
 // Server actions
 vi.mock('../actions', () => ({
@@ -27,7 +32,7 @@ vi.mock('../actions', () => ({
 }))
 
 // sonner toast
-vi.mock('sonner', () => ({ toast: { error: mockToastError } }))
+vi.mock('sonner', () => ({ toast: { error: mockToastError, warning: mockToastWarning } }))
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -56,7 +61,15 @@ vi.mock('@features/garments/hooks/useColorFilter', () => ({
 // Stub out the toolbar and drawers — they have their own complex deps
 // and are not the subject of these tests
 vi.mock('../_components/GarmentCatalogToolbar', () => ({
-  GarmentCatalogToolbar: () => <div data-testid="toolbar" />,
+  GarmentCatalogToolbar: ({
+    onShowDisabledChange,
+  }: {
+    onShowDisabledChange: (v: boolean) => void
+  }) => (
+    <div data-testid="toolbar">
+      <button data-testid="show-disabled-btn" onClick={() => onShowDisabledChange(true)} />
+    </div>
+  ),
 }))
 vi.mock('../_components/GarmentDetailDrawer', () => ({
   GarmentDetailDrawer: () => null,
@@ -360,6 +373,57 @@ describe('GarmentCatalogClient — toggle persistence', () => {
 
       // When isEnabled=false and showDisabled is off, the garment is filtered out
       expect(screen.queryByRole('switch', { name: /unisex tee/i })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('showDisabled filter', () => {
+    it('hides disabled garments by default', () => {
+      setupSearchParams({ view: 'table' })
+      const enabled = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Enabled Tee', isEnabled: true })
+      const disabled = makeGarment({
+        id: 'g2',
+        sku: 'G500',
+        name: 'Disabled Tee',
+        isEnabled: false,
+      })
+
+      render(
+        <GarmentCatalogClient
+          initialCatalog={[enabled, disabled]}
+          initialJobs={[]}
+          initialCustomers={[]}
+        />
+      )
+
+      expect(screen.getByRole('switch', { name: /enabled tee/i })).toBeInTheDocument()
+      expect(screen.queryByRole('switch', { name: /disabled tee/i })).not.toBeInTheDocument()
+    })
+
+    it('shows disabled garments after onShowDisabledChange(true) is called', async () => {
+      const user = userEvent.setup()
+      setupSearchParams({ view: 'table' })
+      const enabled = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Enabled Tee', isEnabled: true })
+      const disabled = makeGarment({
+        id: 'g2',
+        sku: 'G500',
+        name: 'Disabled Tee',
+        isEnabled: false,
+      })
+
+      render(
+        <GarmentCatalogClient
+          initialCatalog={[enabled, disabled]}
+          initialJobs={[]}
+          initialCustomers={[]}
+        />
+      )
+
+      expect(screen.queryByRole('switch', { name: /disabled tee/i })).not.toBeInTheDocument()
+
+      await user.click(screen.getByTestId('show-disabled-btn'))
+
+      expect(screen.getByRole('switch', { name: /enabled tee/i })).toBeInTheDocument()
+      expect(screen.getByRole('switch', { name: /disabled tee/i })).toBeInTheDocument()
     })
   })
 })

@@ -9,12 +9,20 @@ import { getCustomers } from '@infra/repositories/customers'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
 
 export default async function GarmentCatalogPage() {
-  const [garmentCatalog, jobs, customers, normalizedCatalog] = await Promise.all([
+  // getNormalizedCatalog is optional infrastructure — isolate it so a DB failure
+  // doesn't crash the page; the client degrades gracefully to GarmentImage fallback.
+  const [garmentCatalog, jobs, customers] = await Promise.all([
     getGarmentCatalog(),
     getJobs(),
     getCustomers(),
-    getNormalizedCatalog(),
   ])
+  const normalizedCatalog = await getNormalizedCatalog().catch((err: unknown) => {
+    console.error(
+      '[GarmentCatalogPage] getNormalizedCatalog failed — rendering without images:',
+      err
+    )
+    return [] as Awaited<ReturnType<typeof getNormalizedCatalog>>
+  })
 
   return (
     <>

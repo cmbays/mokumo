@@ -111,7 +111,7 @@ export function GarmentDetailDrawer({
       setSelectedColorId(colorId)
     } else {
       console.warn(
-        `[GarmentDetailDrawer] Color ${colorId} not found in catalog — stale garment palette reference`
+        `[GarmentDetailDrawer] Color ${colorId} not found in catalog for garment ${garment.sku} — stale palette reference`
       )
     }
   }
