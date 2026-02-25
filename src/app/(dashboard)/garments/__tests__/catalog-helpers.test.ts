@@ -76,24 +76,16 @@ describe('buildSkuToFrontImageUrl', () => {
     expect(map.get('BC3001')).toBe('https://www.ssactivewear.com/images/style/3901/3901_fm.jpg')
   })
 
-  it('falls back to CDN URL from externalId when no stored images', () => {
-    const normalized = [makeNormalized({ styleNumber: 'BC3001', externalId: '3901', colors: [] })]
-    const map = buildSkuToFrontImageUrl(normalized)
-    expect(map.get('BC3001')).toBe('https://www.ssactivewear.com/images/style/3901/3901_fm.jpg')
-  })
-
-  it('skips fallback when externalId is missing', () => {
-    const normalized = [makeNormalized({ styleNumber: 'BC3001', externalId: '', colors: [] })]
+  it('returns no entry when colors array is empty', () => {
+    const normalized = [makeNormalized({ styleNumber: 'BC3001', colors: [] })]
     const map = buildSkuToFrontImageUrl(normalized)
     expect(map.has('BC3001')).toBe(false)
   })
 
-  it('prefers stored URL over CDN fallback', () => {
-    const storedUrl = 'https://www.ssactivewear.com/images/style/3901/3901_fm.jpg'
+  it('returns no entry when color has no front image', () => {
     const normalized = [
       makeNormalized({
         styleNumber: 'BC3001',
-        externalId: '3901',
         colors: [
           {
             id: 'c1',
@@ -101,13 +93,15 @@ describe('buildSkuToFrontImageUrl', () => {
             name: 'Black',
             hex1: '#000000',
             hex2: null,
-            images: [{ imageType: 'front', url: storedUrl }],
+            images: [
+              { imageType: 'back', url: 'https://cdn.ssactivewear.com/Images/Color/1_b.jpg' },
+            ],
           },
         ],
       }),
     ]
     const map = buildSkuToFrontImageUrl(normalized)
-    expect(map.get('BC3001')).toBe(storedUrl)
+    expect(map.has('BC3001')).toBe(false)
   })
 })
 

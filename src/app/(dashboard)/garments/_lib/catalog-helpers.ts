@@ -4,15 +4,11 @@ import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 // buildSkuToFrontImageUrl
 // ---------------------------------------------------------------------------
 
-const SS_CDN_BASE = 'https://www.ssactivewear.com'
-
 /**
  * Builds a lookup map from S&S style number to a front image URL.
  *
- * Primary: uses stored URL from catalog_images (populated by full sync with getStyle()).
- * Fallback: constructs CDN URL from externalId (S&S numeric styleID) when catalog_images
- * is empty — e.g. when only searchCatalog was run (no per-style getStyle() calls).
- * CDN pattern: https://www.ssactivewear.com/images/style/{externalId}/{externalId}_fm.jpg
+ * Uses stored URLs from catalog_images, populated by run-image-sync.ts.
+ * Returns no entry for styles that have no synced images yet.
  */
 export function buildSkuToFrontImageUrl(
   normalizedCatalog: NormalizedGarmentCatalog[] | undefined
@@ -20,17 +16,12 @@ export function buildSkuToFrontImageUrl(
   if (!normalizedCatalog) return new Map()
   const map = new Map<string, string>()
   for (const n of normalizedCatalog) {
-    // Primary: stored URL from catalog_images
     for (const color of n.colors) {
       const front = color.images.find((i) => i.imageType === 'front')
       if (front) {
         map.set(n.styleNumber, front.url)
         break
       }
-    }
-    // Fallback: construct from S&S numeric externalId
-    if (!map.has(n.styleNumber) && n.externalId) {
-      map.set(n.styleNumber, `${SS_CDN_BASE}/images/style/${n.externalId}/${n.externalId}_fm.jpg`)
     }
   }
   return map
