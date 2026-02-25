@@ -283,7 +283,7 @@ export function GarmentCatalogClient({
 
       {/* Grid View */}
       {view === 'grid' ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {visibleGarments.map((garment) => (
             <GarmentCard
               key={garment.id}
