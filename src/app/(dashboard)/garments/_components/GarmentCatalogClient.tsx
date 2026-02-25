@@ -152,9 +152,7 @@ export function GarmentCatalogClient({
     if (selectedColorIds.length === 0) return null
     const selectedIdSet = new Set(selectedColorIds)
     return new Set(
-      catalogColors
-        .filter((c) => selectedIdSet.has(c.id))
-        .map((c) => c.name.toLowerCase().trim())
+      catalogColors.filter((c) => selectedIdSet.has(c.id)).map((c) => c.name.toLowerCase().trim())
     )
   }, [selectedColorIds, catalogColors])
 
@@ -192,7 +190,15 @@ export function GarmentCatalogClient({
     }
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [catalog, category, searchQuery, brand, selectedColorNames, styleToColorNamesMap, showDisabled])
+  }, [
+    catalog,
+    category,
+    searchQuery,
+    brand,
+    selectedColorNames,
+    styleToColorNamesMap,
+    showDisabled,
+  ])
 
   // Reset to first page whenever any filter changes.
   // Sort before joining to produce a canonical key regardless of color selection order.

@@ -1,8 +1,11 @@
 # Implementation Plan — Issue #618: Full Color System
 
 ## Pipeline ID: 20260225-full-color-system
+
 ## Session ID: 0a1b62cb-84e6-46ff-b178-9021bb5a09ae
+
 ## Branch: worktree-graceful-tinkering-beaver
+
 ## Date: 2026-02-25
 
 ---
@@ -87,6 +90,7 @@ Migration: 0015_catalog_color_preferences.sql
 1. Open `src/app/(dashboard)/garments/_lib/garment-transforms.ts`.
 
 2. Add the `FilterColor` type export at the top of the file (after existing imports):
+
    ```ts
    export type FilterColor = {
      id: string
@@ -95,6 +99,7 @@ Migration: 0015_catalog_color_preferences.sql
      swatchTextColor: string
    }
    ```
+
    Note: This is a structural subtype of `Color` — it omits `family` but satisfies every field that `FilterSwatch` and `FavoritesColorSection` actually render. Update `FavoritesColorSection`'s props to accept `FilterColor[]` instead of `Color[]` in step 1f below.
 
 3. Add the `extractUniqueColors` pure function:
@@ -132,14 +137,17 @@ Migration: 0015_catalog_color_preferences.sql
 #### 1d — Thread `catalogColors` prop through the component chain (Fix #1)
 
 13. Open `src/app/(dashboard)/garments/page.tsx` (GarmentCatalogPage). After the `getNormalizedCatalog()` call, add:
+
     ```ts
     const catalogColors = extractUniqueColors(normalizedCatalog)
     ```
+
     Pass `catalogColors` as a prop to `GarmentCatalogClient`. Also pass `initialFavoriteColorIds={[]}` as a placeholder prop (Wave 3 will fill this in).
 
 14. Open `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx`. Add `catalogColors: FilterColor[]` and `initialFavoriteColorIds: string[]` to the component props type.
 
 15. In `GarmentCatalogClient`, add a `styleToColorNamesMap` derived memo:
+
     ```ts
     const styleToColorNamesMap = useMemo(
       () => buildStyleToColorNamesMap(normalizedCatalog ?? []),
@@ -156,14 +164,13 @@ Migration: 0015_catalog_color_preferences.sql
 **Important**: Implement this step AFTER Wave 2a (`useColorFilter` → `useState`) is complete, so that `selectedColorIds` contains real `CatalogColor.id` UUIDs when the name-bridge logic is written and tested.
 
 18. In `GarmentCatalogClient`, add a `selectedColorNames` derived memo:
+
     ```ts
     const selectedColorNames = useMemo(() => {
       if (selectedColorIds.length === 0) return null
       const selectedIdSet = new Set(selectedColorIds)
       return new Set(
-        catalogColors
-          .filter(c => selectedIdSet.has(c.id))
-          .map(c => c.name.toLowerCase().trim())
+        catalogColors.filter((c) => selectedIdSet.has(c.id)).map((c) => c.name.toLowerCase().trim())
       )
     }, [selectedColorIds, catalogColors])
     ```
@@ -174,7 +181,8 @@ Migration: 0015_catalog_color_preferences.sql
       ```ts
       if (selectedColorNames) {
         const garmentColorNames = styleToColorNamesMap.get(g.sku)
-        if (!garmentColorNames || !garmentColorNames.some(n => selectedColorNames.has(n))) continue
+        if (!garmentColorNames || !garmentColorNames.some((n) => selectedColorNames.has(n)))
+          continue
       }
       ```
 
@@ -219,6 +227,7 @@ feat(garments): thread real catalog colors to ColorFilterGrid + name-based filte
 2. Replace the entire file body. Remove all imports of `useSearchParams`, `useRouter`, `usePathname`. Remove the `updateColorsParam` callback and `router.replace()` call.
 
 3. New implementation:
+
    ```ts
    'use client'
    import { useState, useCallback } from 'react'
@@ -227,8 +236,8 @@ feat(garments): thread real catalog colors to ColorFilterGrid + name-based filte
      const [selectedColorIds, setSelectedColorIds] = useState<string[]>([])
 
      const toggleColor = useCallback((colorId: string) => {
-       setSelectedColorIds(prev =>
-         prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+       setSelectedColorIds((prev) =>
+         prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
        )
      }, [])
 
@@ -280,6 +289,7 @@ feat(garments): color filter useState + grid layout (#618)
 1. Open `src/app/(dashboard)/garments/actions.ts`. Locate the `toggleStyleFavorite` action — use it as the exact structural template.
 
 2. Add the `toggleColorFavorite` server action:
+
    ```ts
    export async function toggleColorFavorite(
      colorId: string,
@@ -301,11 +311,9 @@ feat(garments): color filter useState + grid layout (#618)
 #### 3b — Add `getColorFavorites` server action (shop scope only)
 
 4. Add `getColorFavorites` to `actions.ts`:
+
    ```ts
-   export async function getColorFavorites(
-     scopeType: 'shop',
-     scopeId: string
-   ): Promise<string[]>
+   export async function getColorFavorites(scopeType: 'shop', scopeId: string): Promise<string[]>
    ```
 
 5. Implementation:
@@ -316,10 +324,9 @@ feat(garments): color filter useState + grid layout (#618)
 #### 3c — Add `getBrandColorFavorites` server action (Fix #2)
 
 6. Add `getBrandColorFavorites` to `actions.ts`:
+
    ```ts
-   export async function getBrandColorFavorites(
-     brandName: string
-   ): Promise<string[]>
+   export async function getBrandColorFavorites(brandName: string): Promise<string[]>
    ```
 
 7. Implementation:
@@ -332,13 +339,17 @@ feat(garments): color filter useState + grid layout (#618)
 #### 3d — `GarmentCatalogPage`: fetch shop color favorites on SSR
 
 8. Open `src/app/(dashboard)/garments/page.tsx`. Add `getColorFavorites` to the existing `Promise.all` fetch:
+
    ```ts
-   const [normalizedCatalog, /* existing fetches */, favoriteColorIds] = await Promise.all([
+   const [normalizedCatalog /* existing fetches */, , favoriteColorIds] = await Promise.all([
      getNormalizedCatalog(),
-     /* existing parallel fetches */,
-     getColorFavorites('shop', session.shopId).catch(() => [] as string[]),
+     ,
+     /* existing parallel fetches */ getColorFavorites('shop', session.shopId).catch(
+       () => [] as string[]
+     ),
    ])
    ```
+
    The `.catch(() => [])` ensures the page never hard-fails due to a favorites fetch error.
 
 9. Replace the `initialFavoriteColorIds={[]}` placeholder added in Wave 1d with `initialFavoriteColorIds={favoriteColorIds}`.
@@ -362,17 +373,18 @@ feat(garments): color filter useState + grid layout (#618)
     - `const [favoriteColorIds, setFavoriteColorIds] = useState<string[]>(initialFavoriteColorIds)`
 
 14. ADD the `handleToggleColorFavorite` callback:
+
     ```ts
     const handleToggleColorFavorite = useCallback(async (colorId: string) => {
       // Optimistic update
-      setFavoriteColorIds(prev =>
-        prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+      setFavoriteColorIds((prev) =>
+        prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
       )
       const result = await toggleColorFavorite(colorId, 'shop')
       if (!result.success) {
         // Rollback
-        setFavoriteColorIds(prev =>
-          prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+        setFavoriteColorIds((prev) =>
+          prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
         )
         toast.error("Couldn't update color favorite — try again")
       }
@@ -449,7 +461,9 @@ feat(garments): persistent shop-level color favorites via server actions (#618)
          }
        }
      })
-     return () => { cancelled = true }
+     return () => {
+       cancelled = true
+     }
    }, [open, brandName])
    ```
    Using `startTransition` avoids blocking the drawer open animation.
@@ -458,20 +472,23 @@ feat(garments): persistent shop-level color favorites via server actions (#618)
 
 8. In `BrandDetailDrawer`, locate `handleToggleFavorite`. Replace the in-memory mutation call (which previously called `setVersion((v) => v + 1)`) with:
    ```ts
-   const handleToggleFavorite = useCallback(async (colorId: string) => {
-     // Optimistic update
-     setBrandFavoriteColorIds(prev =>
-       prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
-     )
-     const result = await toggleColorFavorite(colorId, 'brand', brandName)
-     if (!result.success) {
-       // Rollback
-       setBrandFavoriteColorIds(prev =>
-         prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+   const handleToggleFavorite = useCallback(
+     async (colorId: string) => {
+       // Optimistic update
+       setBrandFavoriteColorIds((prev) =>
+         prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
        )
-       toast.error("Could not update brand color — try again")
-     }
-   }, [brandName])
+       const result = await toggleColorFavorite(colorId, 'brand', brandName)
+       if (!result.success) {
+         // Rollback
+         setBrandFavoriteColorIds((prev) =>
+           prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
+         )
+         toast.error('Could not update brand color — try again')
+       }
+     },
+     [brandName]
+   )
    ```
 
 #### 4d — Wire `toggleColorFavorite` brand scope in actions.ts

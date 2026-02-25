@@ -27,16 +27,16 @@ All three workflows are currently broken or transient.
 
 ## Current State
 
-| Area | Current implementation | Status |
-|---|---|---|
-| Color filter grid | 41 mock colors from `getColorsMutable()`, hardcoded at module load | Broken — wrong data |
-| Color filter state | URL search params → `router.replace` in `useColorFilter` | Works but slow |
-| Filter matching | `g.availableColors.some(id => colorFilterSet.has(id))` — compares mock slug IDs | Broken — IDs never match real catalog UUIDs |
-| Color favorites (catalog) | In-memory mutation + `favoriteVersion` counter | Lost on reload |
-| Color favorites (brand drawer) | In-memory mutation + `version` counter | Lost on reload |
-| DB: `catalog_color_preferences` | Does not exist | Missing |
-| DB: `catalog_inventory` | Does not exist | Missing |
-| Real color data | 30,614 rows in `catalog_colors` (UUID PKs, name, hex1, hex2) | Exists but unused by UI |
+| Area                            | Current implementation                                                          | Status                                      |
+| ------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------- |
+| Color filter grid               | 41 mock colors from `getColorsMutable()`, hardcoded at module load              | Broken — wrong data                         |
+| Color filter state              | URL search params → `router.replace` in `useColorFilter`                        | Works but slow                              |
+| Filter matching                 | `g.availableColors.some(id => colorFilterSet.has(id))` — compares mock slug IDs | Broken — IDs never match real catalog UUIDs |
+| Color favorites (catalog)       | In-memory mutation + `favoriteVersion` counter                                  | Lost on reload                              |
+| Color favorites (brand drawer)  | In-memory mutation + `version` counter                                          | Lost on reload                              |
+| DB: `catalog_color_preferences` | Does not exist                                                                  | Missing                                     |
+| DB: `catalog_inventory`         | Does not exist                                                                  | Missing                                     |
+| Real color data                 | 30,614 rows in `catalog_colors` (UUID PKs, name, hex1, hex2)                    | Exists but unused by UI                     |
 
 The normalized catalog query in `catalog.ts` already aggregates colors per style as `{ id, name, hex1, hex2 }`. This data reaches `GarmentCatalogClient` via the `normalizedCatalog` prop but is currently only used for images, not for powering the color filter.
 

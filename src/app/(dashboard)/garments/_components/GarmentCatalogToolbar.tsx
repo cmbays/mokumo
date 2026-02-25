@@ -122,7 +122,8 @@ export function GarmentCatalogToolbar({
 
   // --- Resolved color objects for pills ---
   const selectedColors = useMemo(
-    () => selectedColorIds.map((id) => catalogColors.find((c) => c.id === id)).filter((c) => c != null),
+    () =>
+      selectedColorIds.map((id) => catalogColors.find((c) => c.id === id)).filter((c) => c != null),
     [selectedColorIds, catalogColors]
   )
 

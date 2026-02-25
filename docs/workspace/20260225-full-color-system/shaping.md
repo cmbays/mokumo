@@ -15,6 +15,7 @@ Because `catalog_colors.id` UUIDs do not yet correspond to the mock `clr-*` slug
 
 **R4 — `catalog_color_preferences` table**
 A new Drizzle migration creates `catalog_color_preferences` mirroring `catalog_style_preferences`:
+
 - `id` uuid PK (defaultRandom)
 - `scope_type` varchar(20) NOT NULL DEFAULT 'shop'
 - `scope_id` uuid NOT NULL
@@ -27,6 +28,7 @@ A new Drizzle migration creates `catalog_color_preferences` mirroring `catalog_s
 
 **R5 — `catalog_inventory` schema**
 A new Drizzle migration creates `catalog_inventory` (schema-only, no data logic):
+
 - `id` uuid PK (defaultRandom)
 - `color_id` uuid NOT NULL → FK `catalog_colors.id` ON DELETE CASCADE
 - `size_id` uuid NOT NULL → FK `catalog_sizes.id` ON DELETE CASCADE
@@ -69,6 +71,7 @@ Brand-scoped preferences need the brand UUID (`catalog_brands.id`), not the bran
 File: `supabase/migrations/0015_catalog_color_preferences.sql`
 
 Drizzle schema addition in `src/db/schema/catalog-normalized.ts`:
+
 ```ts
 export const catalogColorPreferences = pgTable(
   'catalog_color_preferences',
@@ -100,6 +103,7 @@ Run `npm run db:generate` then `npm run db:migrate`.
 File: `supabase/migrations/0016_catalog_inventory.sql`
 
 Drizzle schema addition in `src/db/schema/catalog-normalized.ts`:
+
 ```ts
 export const catalogInventory = pgTable(
   'catalog_inventory',
@@ -134,6 +138,7 @@ Export both new tables from `src/db/schema/index.ts`.
 `GarmentCatalogPage` already passes `normalizedCatalog: NormalizedGarmentCatalog[]` to the client. Each item has `colors: CatalogColor[]` with real UUIDs, names, hex1, hex2.
 
 Add a utility function `extractUniqueColors(normalizedCatalog)` in `src/app/(dashboard)/garments/_lib/garment-transforms.ts`:
+
 - Iterates all styles, collects all colors
 - Deduplicates by `name.toLowerCase()` (keeps first occurrence, which carries a real UUID)
 - Returns `CatalogColor[]` sorted alphabetically by name
@@ -143,9 +148,10 @@ This replaces `getColorsMutable()` everywhere in the garments feature.
 **1b. Thread colors as a prop to `ColorFilterGrid`**
 
 Change `ColorFilterGrid` signature:
+
 ```ts
 type ColorFilterGridProps = {
-  colors: CatalogColor[]          // real data, replaces module-level getColorsMutable()
+  colors: CatalogColor[] // real data, replaces module-level getColorsMutable()
   selectedColorIds: string[]
   onToggleColor: (colorId: string) => void
   favoriteColorIds: string[]
@@ -157,9 +163,11 @@ Remove the module-level `const catalogColors = getColorsMutable()` line. Use the
 **1c. Fix filter matching to use color name**
 
 In `GarmentCatalogClient`, the color filter currently does:
+
 ```ts
 if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id)))
 ```
+
 This compares UUID IDs in the filter set against slug IDs in `g.availableColors` — always misses.
 
 Change to name-based matching. The garment's `availableColors` field contains slug IDs from the mock data; `g.availableColorNames` does not exist yet. The bridge approach:
@@ -167,8 +175,9 @@ Change to name-based matching. The garment's `availableColors` field contains sl
 Add a `colorNameToIdMap` derived from `normalizedCatalog` in the client (name → first color UUID). When a user selects a color UUID from the filter, look up the corresponding name, then filter garments by `g.availableColors` names.
 
 Actually simpler: build a `selectedColorNames: Set<string>` from the selected UUIDs (look up name via `uniqueColors.find(c => c.id === id)?.name`). Then filter garments with:
+
 ```ts
-!g.availableColorNames.some(name => selectedColorNames.has(name.toLowerCase()))
+!g.availableColorNames.some((name) => selectedColorNames.has(name.toLowerCase()))
 ```
 
 This requires `availableColorNames: string[]` on `GarmentCatalog`. Check the entity — if it only has `availableColors: string[]` (mock slug IDs), the name lookup for the bridge must come from the garment's own color list in `normalizedCatalog` matched by style number.
@@ -177,13 +186,14 @@ This requires `availableColorNames: string[]` on `GarmentCatalog`. Check the ent
 
 ```ts
 // In GarmentCatalogClient, derived from normalizedCatalog
-const styleToColorNames = useMemo(() =>
-  new Map(
-    (normalizedCatalog ?? []).map(n => [
-      n.styleNumber,
-      n.colors.map(c => c.name.toLowerCase())
-    ])
-  ),
+const styleToColorNames = useMemo(
+  () =>
+    new Map(
+      (normalizedCatalog ?? []).map((n) => [
+        n.styleNumber,
+        n.colors.map((c) => c.name.toLowerCase()),
+      ])
+    ),
   [normalizedCatalog]
 )
 
@@ -192,7 +202,7 @@ const selectedColorNames = useMemo(() => {
   if (selectedColorIds.length === 0) return null
   return new Set(
     selectedColorIds
-      .map(id => uniqueColors.find(c => c.id === id)?.name.toLowerCase())
+      .map((id) => uniqueColors.find((c) => c.id === id)?.name.toLowerCase())
       .filter(Boolean)
   )
 }, [selectedColorIds, uniqueColors])
@@ -200,7 +210,7 @@ const selectedColorNames = useMemo(() => {
 // Filter predicate (replaces availableColors check)
 if (selectedColorNames) {
   const garmentColorNames = styleToColorNames.get(g.sku)
-  if (!garmentColorNames || !garmentColorNames.some(n => selectedColorNames.has(n))) continue
+  if (!garmentColorNames || !garmentColorNames.some((n) => selectedColorNames.has(n))) continue
 }
 ```
 
@@ -220,8 +230,8 @@ export function useColorFilter() {
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([])
 
   const toggleColor = useCallback((colorId: string) => {
-    setSelectedColorIds(prev =>
-      prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+    setSelectedColorIds((prev) =>
+      prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
     )
   }, [])
 
@@ -236,6 +246,7 @@ Imports of `useSearchParams`, `useRouter`, `usePathname` are removed entirely.
 **2b. Switch `ColorFilterGrid` layout to CSS grid**
 
 Change the container `div` from `flex flex-wrap gap-0.5` to:
+
 ```
 grid grid-cols-5 gap-0.5 md:grid-cols-6
 ```
@@ -254,11 +265,12 @@ Add to `src/app/(dashboard)/garments/actions.ts`:
 export async function toggleColorFavorite(
   colorId: string,
   scopeType: 'shop' | 'brand' = 'shop',
-  scopeId?: string  // required if scopeType='brand'
+  scopeId?: string // required if scopeType='brand'
 ): Promise<{ success: true; isFavorite: boolean } | { success: false; error: string }>
 ```
 
 Implementation follows `toggleStyleFavorite` exactly:
+
 1. `uuidSchema.safeParse(colorId)` — return error on invalid
 2. `verifySession()` — return error if unauthorized
 3. Resolve `resolvedScopeId = scopeType === 'shop' ? session.shopId : scopeId`
@@ -275,7 +287,7 @@ Add to `src/app/(dashboard)/garments/actions.ts` (or a new read helper in `catal
 export async function getColorFavorites(
   scopeType: 'shop' | 'brand',
   scopeId: string
-): Promise<string[]>  // returns colorId[]
+): Promise<string[]> // returns colorId[]
 ```
 
 Queries `catalog_color_preferences` where `is_favorite = true`, returns array of `color_id` UUIDs.
@@ -293,15 +305,15 @@ The `onToggle` prop in `FavoritesColorSection` currently receives a function tha
 ```ts
 const handleToggleColorFavorite = useCallback(async (colorId: string) => {
   // Optimistic update
-  setFavoriteColorIds(prev =>
-    prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+  setFavoriteColorIds((prev) =>
+    prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
   )
 
   const result = await toggleColorFavorite(colorId, 'shop')
   if (!result.success) {
     // Rollback
-    setFavoriteColorIds(prev =>
-      prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+    setFavoriteColorIds((prev) =>
+      prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
     )
     toast.error("Couldn't update color favorite — try again")
   }
@@ -328,6 +340,7 @@ Queries `catalog_brands` where `canonical_name = brandName`, returns `id` or `nu
 **4b. Load brand color favorites on drawer open**
 
 When `BrandDetailDrawer` opens (when `open` becomes `true`), fetch color favorites for that brand:
+
 ```ts
 useEffect(() => {
   if (!open) return
@@ -346,6 +359,7 @@ Replace the in-memory mutation handlers in `BrandDetailDrawer` (`handleToggleFav
 The `version` counter and `const catalogColors = getColorsMutable()` module-level call are removed. The component receives `colors: CatalogColor[]` as a prop (same deduplicated list from `extractUniqueColors`).
 
 The `getColorsMutable()` references in `BrandDetailDrawer` are used to:
+
 1. Find the `Color` object for a `colorId` (for display) → replaced by looking up in the `colors` prop
 2. Resolve effective favorites → replaced by server-fetched `favoriteColorIds`
 
@@ -401,6 +415,7 @@ The brand drawer's `resolveEffectiveFavorites`, `propagateAddition`, and related
 ### Spikes needed
 
 None. All patterns exist in the codebase:
+
 - Drizzle upsert with `onConflictDoUpdate` → `toggleStyleEnabled` / `toggleStyleFavorite`
 - Optimistic update + toast rollback → `handleToggleEnabled` / `handleToggleFavorite` in `GarmentCatalogClient`
 - Server data fetch at page level → `getNormalizedCatalog()` in `GarmentCatalogPage`

@@ -102,20 +102,20 @@ All other Code Affordances map to exactly one Wiring entry. No dangling wires fo
 
 Every affordance traces back to an approved R-requirement:
 
-| Affordance | Requirement |
-|---|---|
-| `catalogColorPreferences` table | R4 |
-| `catalogInventory` table | R5 |
-| `extractUniqueColors` | R1 |
-| `buildStyleToColorNamesMap` | R3 |
-| `ColorFilterGrid` prop refactor | R1 |
-| `useColorFilter` useState rewrite | R2 |
-| Grid layout CSS change | R1 (implied — grid spec in shaping) |
-| `toggleColorFavorite` action | R6, R7 |
-| `getColorFavorites` action | R8 |
-| `initialFavoriteColorIds` prop | R8 |
-| `BrandDetailDrawer` colors prop | R7 |
-| `getBrandIdByName` internal lookup | R9 |
+| Affordance                         | Requirement                         |
+| ---------------------------------- | ----------------------------------- |
+| `catalogColorPreferences` table    | R4                                  |
+| `catalogInventory` table           | R5                                  |
+| `extractUniqueColors`              | R1                                  |
+| `buildStyleToColorNamesMap`        | R3                                  |
+| `ColorFilterGrid` prop refactor    | R1                                  |
+| `useColorFilter` useState rewrite  | R2                                  |
+| Grid layout CSS change             | R1 (implied — grid spec in shaping) |
+| `toggleColorFavorite` action       | R6, R7                              |
+| `getColorFavorites` action         | R8                                  |
+| `initialFavoriteColorIds` prop     | R8                                  |
+| `BrandDetailDrawer` colors prop    | R7                                  |
+| `getBrandIdByName` internal lookup | R9                                  |
 
 Nothing in the breadboard goes beyond the shaping doc's must-have and should-have list. The full color preference inheritance system (`resolveEffectiveFavorites`, `propagateAddition`) is correctly left untouched, per the Out of Scope section of the shaping doc.
 
@@ -222,6 +222,7 @@ Recommended resolution: Pass `colors: FilterColor[]` to `GarmentCatalogToolbar` 
 **Fix Required #2 — `getColorFavorites` signature mismatch for brand scope**
 
 The Wave 3b signature is:
+
 ```ts
 getColorFavorites(scopeType: 'shop' | 'brand', scopeId: string): Promise<string[]>
 ```
@@ -238,6 +239,7 @@ Recommended: Separate function `getBrandColorFavorites(brandName: string): Promi
 **Fix Required #3 — `FavoritesColorSection` receives `Color[]`, not `FilterColor[]`**
 
 The existing `FavoritesColorSection` component is typed against `Color` (from `@domain/entities/color`):
+
 ```ts
 type FavoritesColorSectionProps = {
   favorites: Color[]

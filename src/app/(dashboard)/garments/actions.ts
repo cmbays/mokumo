@@ -280,10 +280,7 @@ export async function toggleColorFavorite(
  * Returns the list of favorite color IDs for the shop scope.
  * Safe degradation: returns [] on auth failure (page still renders).
  */
-export async function getColorFavorites(
-  scopeType: 'shop',
-  scopeId: string
-): Promise<string[]> {
+export async function getColorFavorites(scopeType: 'shop', scopeId: string): Promise<string[]> {
   const session = await verifySession()
   if (!session) return []
 
