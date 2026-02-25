@@ -49,6 +49,17 @@ export function getSupplierAdapter(): SupplierAdapter {
   throw new DalError('PROVIDER', `Adapter '${name}' not yet implemented`)
 }
 
+/**
+ * Returns an S&S Activewear adapter unconditionally — for use by the catalog
+ * sync service, which always fetches from S&S regardless of how SUPPLIER_ADAPTER
+ * is configured for the app-level garment routing (e.g. 'supabase-catalog').
+ */
+export function getSsActivewearAdapter(): SupplierAdapter {
+  const cache = buildCacheStore()
+  const fallback = new MockAdapter(cache)
+  return new SSActivewearAdapter(cache, fallback)
+}
+
 /** For testing only — resets the singleton so tests get a fresh adapter. */
 export function _resetSupplierAdapter(): void {
   _adapter = null

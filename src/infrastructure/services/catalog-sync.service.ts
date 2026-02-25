@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
-import { getSupplierAdapter } from '@lib/suppliers/registry'
+import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import {
   buildBrandUpsertValue,
   buildStyleUpsertValue,
@@ -39,7 +39,7 @@ export async function syncCatalogFromSupplier(): Promise<number> {
       catalogSizes,
     } = await import('@db/schema/catalog-normalized')
 
-    const adapter = getSupplierAdapter()
+    const adapter = getSsActivewearAdapter()
     const allStyles = await fetchAllPages(async ({ limit, offset }) => {
       const result = await adapter.searchCatalog({ limit, offset })
       return { items: result.styles, hasMore: result.hasMore }

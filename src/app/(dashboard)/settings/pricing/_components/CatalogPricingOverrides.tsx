@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Pencil, Trash2, ShoppingBag } from 'lucide-react'
@@ -82,10 +82,7 @@ const overrideFormSchema = z
         path: ['ruleValue'],
         message: 'Must be a non-negative number',
       })
-    } else if (
-      data.ruleType === 'fixed_price' &&
-      !/^\d+(\.\d{1,2})?$/.test(data.ruleValue)
-    ) {
+    } else if (data.ruleType === 'fixed_price' && !/^\d+(\.\d{1,2})?$/.test(data.ruleValue)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['ruleValue'],
@@ -118,10 +115,7 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
   category: 'Category',
 }
 
-const ENTITY_TYPE_BADGE_VARIANTS: Record<
-  string,
-  'default' | 'secondary' | 'outline'
-> = {
+const ENTITY_TYPE_BADGE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'> = {
   style: 'default',
   brand: 'secondary',
   category: 'outline',
@@ -154,7 +148,7 @@ export function CatalogPricingOverrides() {
   const [deleting, setDeleting] = useState(false)
 
   const form = useForm<OverrideFormValues>({
-    resolver: zodResolver(overrideFormSchema),
+    resolver: zodResolver(overrideFormSchema) as Resolver<OverrideFormValues>,
     defaultValues: {
       entityType: 'category',
       entityId: '',
@@ -323,10 +317,7 @@ export function CatalogPricingOverrides() {
             </thead>
             <tbody>
               {overrides.map((override, i) => (
-                <tr
-                  key={override.id}
-                  className={i % 2 === 0 ? 'bg-background' : 'bg-elevated/40'}
-                >
+                <tr key={override.id} className={i % 2 === 0 ? 'bg-background' : 'bg-elevated/40'}>
                   <td className="px-3 py-2">
                     <Badge variant={ENTITY_TYPE_BADGE_VARIANTS[override.entityType] ?? 'outline'}>
                       {ENTITY_TYPE_LABELS[override.entityType]}

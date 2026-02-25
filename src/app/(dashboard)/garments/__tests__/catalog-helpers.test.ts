@@ -7,7 +7,9 @@ import type { GarmentCatalog } from '@domain/entities/garment'
 // Fixtures
 // ---------------------------------------------------------------------------
 
-function makeNormalized(overrides: Partial<NormalizedGarmentCatalog> = {}): NormalizedGarmentCatalog {
+function makeNormalized(
+  overrides: Partial<NormalizedGarmentCatalog> = {}
+): NormalizedGarmentCatalog {
   return {
     id: 'uuid-001',
     source: 'ss',
@@ -79,9 +81,7 @@ describe('hydrateCatalogPreferences', () => {
   })
 
   it('overrides isEnabled / isFavorite when sku matches externalId', () => {
-    const normalized = [
-      makeNormalized({ externalId: 'G500', isEnabled: false, isFavorite: true }),
-    ]
+    const normalized = [makeNormalized({ externalId: 'G500', isEnabled: false, isFavorite: true })]
     const result = hydrateCatalogPreferences(legacyCatalog, normalized)
     const g500 = result.find((g) => g.sku === 'G500')!
     expect(g500.isEnabled).toBe(false)
@@ -97,7 +97,9 @@ describe('hydrateCatalogPreferences', () => {
   })
 
   it('preserves all other fields on matched garment', () => {
-    const normalized = [makeNormalized({ externalId: 'BC3001', isEnabled: false, isFavorite: true })]
+    const normalized = [
+      makeNormalized({ externalId: 'BC3001', isEnabled: false, isFavorite: true }),
+    ]
     const result = hydrateCatalogPreferences(legacyCatalog, normalized)
     const bc = result.find((g) => g.sku === 'BC3001')!
     expect(bc.name).toBe('Unisex Tee')
