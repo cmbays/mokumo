@@ -52,6 +52,8 @@ type GarmentCatalogToolbarProps = {
   onBrandClick?: (brandName: string) => void
   /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
   categoryHits: Partial<Record<GarmentCategory, number>>
+  showDisabled: boolean
+  onShowDisabledChange: (checked: boolean) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +69,8 @@ export function GarmentCatalogToolbar({
   favoriteColorIds,
   onBrandClick,
   categoryHits,
+  showDisabled,
+  onShowDisabledChange,
 }: GarmentCatalogToolbarProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -77,7 +81,6 @@ export function GarmentCatalogToolbar({
   const query = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
   const view = searchParams.get('view') ?? 'grid'
-  const showDisabled = searchParams.get('showDisabled') === '1'
 
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
@@ -108,14 +111,6 @@ export function GarmentCatalogToolbar({
       router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     },
     [searchParams, router, pathname]
-  )
-
-  // --- Show disabled toggle (URL param) ---
-  const handleShowDisabledToggle = useCallback(
-    (checked: boolean) => {
-      updateParam('showDisabled', checked ? '1' : null)
-    },
-    [updateParam]
   )
 
   // Fix #5: clearAll uses a single router.replace that strips all params (including colors).
@@ -293,7 +288,7 @@ export function GarmentCatalogToolbar({
               id="show-disabled-toggle"
               size="sm"
               checked={showDisabled}
-              onCheckedChange={handleShowDisabledToggle}
+              onCheckedChange={onShowDisabledChange}
             />
             <Label
               htmlFor="show-disabled-toggle"

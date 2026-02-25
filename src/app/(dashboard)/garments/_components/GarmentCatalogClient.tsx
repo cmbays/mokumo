@@ -64,7 +64,9 @@ export function GarmentCatalogClient({
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
   const view = searchParams.get('view') ?? 'grid'
-  const showDisabled = searchParams.get('showDisabled') === '1'
+
+  // Local UI state — not in URL because toggling should not trigger a server re-render
+  const [showDisabled, setShowDisabled] = useState(false)
 
   // Color filter from extracted hook (fix #7)
   const { selectedColorIds, toggleColor, clearColors } = useColorFilter()
@@ -275,6 +277,8 @@ export function GarmentCatalogClient({
         favoriteColorIds={globalFavoriteColorIds}
         onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
+        showDisabled={showDisabled}
+        onShowDisabledChange={setShowDisabled}
       />
 
       {/* Grid View */}
