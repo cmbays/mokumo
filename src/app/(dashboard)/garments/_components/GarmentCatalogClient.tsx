@@ -21,7 +21,7 @@ import {
   buildSkuToStyleIdMap,
   buildSkuToFrontImageUrl,
   hydrateCatalogPreferences,
-} from '../_lib/catalog-helpers'
+} from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
