@@ -85,19 +85,19 @@ export function GarmentCard({
       )}
     >
       {/* Image — real photo when available, SVG tinting fallback */}
-      <div className="flex justify-center py-2">
-        {displayImageUrl && !imgError ? (
-          <div className="relative w-16 h-20 rounded overflow-hidden bg-surface">
-            <Image
-              src={displayImageUrl}
-              alt={`${garment.name} front view`}
-              fill
-              sizes="64px"
-              className="object-contain"
-              onError={() => setImgError(true)}
-            />
-          </div>
-        ) : (
+      {displayImageUrl && !imgError ? (
+        <div className="relative w-full h-48 rounded-md overflow-hidden bg-surface">
+          <Image
+            src={displayImageUrl}
+            alt={`${garment.name} front view`}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-contain"
+            onError={() => setImgError(true)}
+          />
+        </div>
+      ) : (
+        <div className="flex h-48 w-full items-center justify-center rounded-md bg-surface">
           <GarmentMockup
             garmentCategory={isNormalized(garment) ? garment.category : garment.baseCategory}
             colorHex={
@@ -105,10 +105,10 @@ export function GarmentCard({
                 ? (garment.colors[0]?.hex1 ?? '#ffffff')
                 : (garmentColors[0]?.hex ?? '#ffffff')
             }
-            size="sm"
+            size="md"
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Brand + SKU / style number */}
       <p className="text-xs text-muted-foreground">
