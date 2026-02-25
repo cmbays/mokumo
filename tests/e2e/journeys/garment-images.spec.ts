@@ -67,10 +67,10 @@ test.describe('Garment catalog images', () => {
 
     console.log(`S&S CDN images (direct or via /_next/image): ${count}`)
 
-    expect(count).toBeGreaterThan(
-      0,
+    expect(
+      count,
       `No S&S images found. All srcs:\n${allImgs.map((i) => i.src).join('\n')}`
-    )
+    ).toBeGreaterThan(0)
 
     // Verify at least one image decoded (naturalWidth > 0)
     const loadedCount = allImgs.filter(
