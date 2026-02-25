@@ -54,7 +54,6 @@ import {
 } from './LineItemRow'
 import { cn } from '@shared/lib/cn'
 import { money, round2, toNumber, formatCurrency } from '@domain/lib/money'
-import { ssGarmentFrontImageUrl } from '@shared/lib/ss-image'
 
 type QuoteDetailViewProps = {
   quote: Quote
@@ -189,7 +188,6 @@ export function QuoteDetailView({
               size="lg"
               garmentCategory={firstGarment.baseCategory}
               colorHex={firstColor.hex}
-              imageUrl={ssGarmentFrontImageUrl(firstGarment.id)}
               artworkPlacements={
                 firstArtwork && firstDetail
                   ? [
@@ -299,7 +297,6 @@ export function QuoteDetailView({
                         <GarmentMockupModal
                           garmentCategory={garment?.baseCategory ?? 't-shirts'}
                           colorHex={color.hex}
-                          imageUrl={garment ? ssGarmentFrontImageUrl(garment.id) : undefined}
                           artworkPlacements={
                             artwork
                               ? [
@@ -315,7 +312,6 @@ export function QuoteDetailView({
                           <GarmentMockupThumbnail
                             garmentCategory={garment?.baseCategory ?? 't-shirts'}
                             colorHex={color.hex}
-                            imageUrl={garment ? ssGarmentFrontImageUrl(garment.id) : undefined}
                             view={
                               positionToLockedView(normalizePosition(detail.location)) ?? 'front'
                             }

@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@shared/lib/cn'
-import { ssGarmentFrontImageUrl } from '@shared/lib/ss-image'
 import { GarmentMockup } from '@features/quotes/components/mockup'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { ColorSwatchPicker } from '@shared/ui/organisms/ColorSwatchPicker'
@@ -22,6 +21,8 @@ type GarmentCardProps = {
   onToggleFavorite: (garmentId: string) => void
   onBrandClick?: (brandName: string) => void
   onClick: (garmentId: string) => void
+  /** Real front image URL from catalog_images — passed by parent via buildSkuToFrontImageUrl. */
+  frontImageUrl?: string
 }
 
 function isNormalized(g: GarmentCatalog | NormalizedGarmentCatalog): g is NormalizedGarmentCatalog {
@@ -35,6 +36,7 @@ export function GarmentCard({
   onToggleFavorite,
   onBrandClick,
   onClick,
+  frontImageUrl,
 }: GarmentCardProps) {
   // All Color objects for this garment's palette
   // GarmentCatalog has availableColors (array of color IDs); NormalizedGarmentCatalog has colors (rich objects)
@@ -56,16 +58,12 @@ export function GarmentCard({
 
   const totalColorCount = isNormalized(garment) ? garment.colors.length : garmentColors.length
 
-  // Card always shows the first color's front image — intentional; the detail drawer handles color switching.
-  const frontImage = isNormalized(garment)
-    ? garment.colors[0]?.images.find((i) => i.imageType === 'front')
-    : undefined
+  // Normalized garments have per-color images inline; legacy garments use frontImageUrl from parent.
+  const displayImageUrl = isNormalized(garment)
+    ? (garment.colors[0]?.images.find((i) => i.imageType === 'front')?.url ?? frontImageUrl)
+    : frontImageUrl
 
-  // For legacy (non-normalized) garments, try S&S CDN as the image source.
-  // catalog_archived.id = S&S numeric styleId — the CDN URL key.
-  const [ssImageFailed, setSsImageFailed] = useState(false)
-  const ssImageUrl =
-    !isNormalized(garment) && !ssImageFailed ? ssGarmentFrontImageUrl(garment.id) : undefined
+  const [imgError, setImgError] = useState(false)
 
   return (
     <div
@@ -86,27 +84,17 @@ export function GarmentCard({
         !garment.isEnabled && 'opacity-50'
       )}
     >
-      {/* Image — normalized photo → S&S CDN fallback → SVG tinting */}
+      {/* Image — real photo when available, SVG tinting fallback */}
       <div className="flex justify-center py-2">
-        {frontImage ? (
+        {displayImageUrl && !imgError ? (
           <div className="relative w-16 h-20 rounded overflow-hidden bg-surface">
             <Image
-              src={frontImage.url}
+              src={displayImageUrl}
               alt={`${garment.name} front view`}
               fill
               sizes="64px"
               className="object-contain"
-            />
-          </div>
-        ) : ssImageUrl ? (
-          <div className="relative w-16 h-20 rounded overflow-hidden bg-surface">
-            <Image
-              src={ssImageUrl}
-              alt={`${garment.name} front view`}
-              fill
-              sizes="64px"
-              className="object-contain"
-              onError={() => setSsImageFailed(true)}
+              onError={() => setImgError(true)}
             />
           </div>
         ) : (

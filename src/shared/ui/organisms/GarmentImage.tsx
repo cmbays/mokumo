@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Shirt } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
-import { ssGarmentFrontImageUrl } from '@shared/lib/ss-image'
 
 type GarmentImageProps = {
   brand: string
@@ -12,8 +11,8 @@ type GarmentImageProps = {
   name: string
   size?: 'sm' | 'md' | 'lg'
   className?: string
-  /** S&S numeric styleId (catalog_archived.id). When provided, shows the CDN product photo. */
-  styleId?: string
+  /** Real garment photo URL (from catalog_images). When provided, shown with fallback to Shirt icon on error. */
+  imageUrl?: string
 }
 
 const SIZE_CLASSES = {
@@ -31,10 +30,10 @@ export function GarmentImage({
   name,
   size = 'md',
   className,
-  styleId,
+  imageUrl,
 }: GarmentImageProps) {
   const [imgError, setImgError] = useState(false)
-  const imageUrl = styleId && !imgError ? ssGarmentFrontImageUrl(styleId) : undefined
+  const showImage = imageUrl && !imgError
 
   return (
     <div
@@ -46,7 +45,7 @@ export function GarmentImage({
       role="img"
       aria-label={`${brand} ${sku} — ${name}`}
     >
-      {imageUrl ? (
+      {showImage ? (
         <Image
           src={imageUrl}
           alt={`${brand} ${name}`}

@@ -1,6 +1,32 @@
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 
 // ---------------------------------------------------------------------------
+// buildSkuToFrontImageUrl
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a lookup map from S&S style number to the first 'front' image URL
+ * stored in catalog_images for that style.
+ * Used to display real garment photos in GarmentCard and the detail drawer.
+ */
+export function buildSkuToFrontImageUrl(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): Map<string, string> {
+  if (!normalizedCatalog) return new Map()
+  const map = new Map<string, string>()
+  for (const n of normalizedCatalog) {
+    for (const color of n.colors) {
+      const front = color.images.find((i) => i.imageType === 'front')
+      if (front) {
+        map.set(n.styleNumber, front.url)
+        break
+      }
+    }
+  }
+  return map
+}
+
+// ---------------------------------------------------------------------------
 // buildSkuToStyleIdMap
 // ---------------------------------------------------------------------------
 

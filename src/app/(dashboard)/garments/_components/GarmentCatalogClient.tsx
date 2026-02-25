@@ -17,7 +17,11 @@ import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
 import { toggleStyleEnabled, toggleStyleFavorite } from '../actions'
-import { buildSkuToStyleIdMap, hydrateCatalogPreferences } from '../_lib/catalog-helpers'
+import {
+  buildSkuToStyleIdMap,
+  buildSkuToFrontImageUrl,
+  hydrateCatalogPreferences,
+} from '../_lib/catalog-helpers'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
@@ -85,6 +89,12 @@ export function GarmentCatalogClient({
 
   // SKU → catalog_styles UUID lookup — used by toggle server actions
   const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
+
+  // SKU → first front image URL — real S&S CDN URLs from catalog_images
+  const skuToFrontImageUrl = useMemo(
+    () => buildSkuToFrontImageUrl(normalizedCatalog),
+    [normalizedCatalog]
+  )
 
   // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
   const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
@@ -279,6 +289,7 @@ export function GarmentCatalogClient({
               onToggleFavorite={handleToggleFavorite}
               onBrandClick={handleBrandClick}
               onClick={setSelectedGarmentId}
+              frontImageUrl={skuToFrontImageUrl.get(garment.sku)}
             />
           ))}
         </div>
@@ -386,6 +397,7 @@ export function GarmentCatalogClient({
           onToggleFavorite={handleToggleFavorite}
           onBrandClick={handleBrandClick}
           normalizedColors={selectedNormalizedColors}
+          frontImageUrl={skuToFrontImageUrl.get(selectedGarment.sku)}
         />
       )}
 

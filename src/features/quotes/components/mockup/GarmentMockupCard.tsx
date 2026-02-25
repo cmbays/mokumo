@@ -15,8 +15,6 @@ type GarmentMockupCardProps = {
   className?: string
   /** Which views have artwork (for tab indicators). */
   availableViews?: MockupView[]
-  /** Real S&S product photo URL. When provided, shown as the base layer instead of SVG tinting. */
-  imageUrl?: string
 }
 
 // Static mapping of views to their associated print positions.
@@ -48,7 +46,6 @@ export function GarmentMockupCard({
   size = 'md',
   className,
   availableViews = ['front', 'back'],
-  imageUrl,
 }: GarmentMockupCardProps) {
   const [activeView, setActiveView] = useState<MockupView>('front')
   const tablistRef = useRef<HTMLDivElement>(null)
@@ -149,7 +146,6 @@ export function GarmentMockupCard({
           artworkPlacements={artworkPlacements}
           view={activeView}
           size={size}
-          imageUrl={imageUrl}
         />
       </div>
     </div>

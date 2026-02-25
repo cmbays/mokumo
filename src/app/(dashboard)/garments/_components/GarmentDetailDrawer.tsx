@@ -42,6 +42,8 @@ type GarmentDetailDrawerProps = {
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
   /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
   normalizedColors?: CatalogColor[]
+  /** Real front image URL from catalog_images — shown in GarmentImage when no normalized colors available. */
+  frontImageUrl?: string
 }
 
 export function GarmentDetailDrawer({
@@ -55,6 +57,7 @@ export function GarmentDetailDrawer({
   onBrandClick,
   favoriteContext = { context: 'global' },
   normalizedColors,
+  frontImageUrl,
 }: GarmentDetailDrawerProps) {
   const [selectedColorId, setSelectedColorId] = useState<string | null>(
     garment.availableColors[0] ?? null
@@ -164,7 +167,7 @@ export function GarmentDetailDrawer({
                   sku={garment.sku}
                   name={garment.name}
                   size="lg"
-                  styleId={garment.id}
+                  imageUrl={frontImageUrl}
                 />
               )}
             </div>

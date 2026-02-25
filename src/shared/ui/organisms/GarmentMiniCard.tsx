@@ -61,13 +61,7 @@ export function GarmentMiniCard({
           <Shirt size={20} className="text-muted-foreground" aria-hidden="true" />
         </div>
       ) : (
-        <GarmentImage
-          brand={garment.brand}
-          sku={garment.sku}
-          name={garment.name}
-          size="sm"
-          styleId={garment.id}
-        />
+        <GarmentImage brand={garment.brand} sku={garment.sku} name={garment.name} size="sm" />
       )}
 
       {/* Text */}

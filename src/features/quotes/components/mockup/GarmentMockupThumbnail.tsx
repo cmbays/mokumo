@@ -12,8 +12,6 @@ type GarmentMockupThumbnailProps = {
   artworkPlacements?: ArtworkPlacement[]
   view?: MockupView
   className?: string
-  /** Real S&S product photo URL. When provided, shown as the base layer instead of SVG tinting. */
-  imageUrl?: string
 }
 
 /**
@@ -26,7 +24,6 @@ export const GarmentMockupThumbnail = memo(function GarmentMockupThumbnail({
   artworkPlacements,
   view = 'front',
   className,
-  imageUrl,
 }: GarmentMockupThumbnailProps) {
   return (
     <GarmentMockup
@@ -36,7 +33,6 @@ export const GarmentMockupThumbnail = memo(function GarmentMockupThumbnail({
       view={view}
       size="xs"
       className={className}
-      imageUrl={imageUrl}
     />
   )
 })

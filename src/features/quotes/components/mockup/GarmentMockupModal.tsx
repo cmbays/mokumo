@@ -16,8 +16,6 @@ type GarmentMockupModalProps = {
   /** Pin to a single view and hide the front/back toggle. Use when the placement
    *  position unambiguously belongs to one side (e.g. front-chest → 'front'). */
   lockedView?: MockupView
-  /** Real S&S product photo URL. When provided, shown as the base layer instead of SVG tinting. */
-  imageUrl?: string
 }
 
 const VIEWS: MockupView[] = ['front', 'back']
@@ -39,7 +37,6 @@ export function GarmentMockupModal({
   children,
   defaultView = 'front',
   lockedView,
-  imageUrl,
 }: GarmentMockupModalProps) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<MockupView>(lockedView ?? defaultView)
@@ -95,7 +92,6 @@ export function GarmentMockupModal({
               artworkPlacements={artworkPlacements}
               view={view}
               size="lg"
-              imageUrl={imageUrl}
             />
           </DialogContent>
         </Dialog>
