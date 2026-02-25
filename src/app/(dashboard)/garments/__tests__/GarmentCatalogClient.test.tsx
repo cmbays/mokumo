@@ -123,9 +123,9 @@ function makeNormalized(
   return {
     id: STYLE_UUID_A,
     source: 'ss',
-    externalId: 'BC3001',
+    externalId: '12345',
     brand: 'Bella+Canvas',
-    styleNumber: '3001',
+    styleNumber: 'BC3001',
     name: 'Unisex Jersey Tee',
     description: null,
     category: 't-shirts',
@@ -163,7 +163,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     it('calls toggleStyleEnabled with the correct catalog_styles UUID', async () => {
       const user = userEvent.setup()
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' })]
+      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
@@ -188,8 +188,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       const garmentA = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Tee A', isEnabled: true })
       const garmentB = makeGarment({ id: 'g2', sku: 'G500', name: 'Tee B', isEnabled: true })
       const normalized = [
-        makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' }),
-        makeNormalized({ id: STYLE_UUID_B, externalId: 'G500' }),
+        makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' }),
+        makeNormalized({ id: STYLE_UUID_B, styleNumber: 'G500' }),
       ]
 
       render(
@@ -216,7 +216,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       mockToggleStyleEnabled.mockResolvedValueOnce({ success: false, error: 'DB error' })
 
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' })]
+      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
@@ -270,7 +270,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
         name: 'Unisex Tee',
         isFavorite: false,
       })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' })]
+      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
@@ -302,7 +302,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
         name: 'Unisex Tee',
         isFavorite: false,
       })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, externalId: 'BC3001' })]
+      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
@@ -347,7 +347,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     it('seeds catalog isEnabled from normalizedCatalog, not legacy initialCatalog', () => {
       // Legacy catalog says isEnabled=true, but normalizedCatalog says false
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [makeNormalized({ externalId: 'BC3001', isEnabled: false })]
+      const normalized = [makeNormalized({ styleNumber: 'BC3001', isEnabled: false })]
 
       render(
         <GarmentCatalogClient

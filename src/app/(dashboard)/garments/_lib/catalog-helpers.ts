@@ -5,17 +5,18 @@ import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a lookup map from S&S SKU (= externalId) to the catalog_styles UUID.
+ * Builds a lookup map from S&S style number to the catalog_styles UUID.
  *
  * The server actions toggleStyleEnabled / toggleStyleFavorite require the
  * catalog_styles primary key (UUID), but the legacy GarmentCatalog rows are
- * keyed by the S&S style number string.  This map bridges the two systems.
+ * keyed by the S&S style number string (catalog_archived.sku = catalog_styles.style_number).
  */
 export function buildSkuToStyleIdMap(
   normalizedCatalog: NormalizedGarmentCatalog[] | undefined
 ): Map<string, string> {
   if (!normalizedCatalog) return new Map()
-  return new Map(normalizedCatalog.map((n) => [n.externalId, n.id]))
+  // catalog_archived.sku matches catalog_styles.style_number, not externalId (supplierId)
+  return new Map(normalizedCatalog.map((n) => [n.styleNumber, n.id]))
 }
 
 // ---------------------------------------------------------------------------
@@ -38,7 +39,8 @@ export function hydrateCatalogPreferences<
   if (!normalizedCatalog) return catalog
   const prefsBySku = new Map(
     normalizedCatalog.map((n) => [
-      n.externalId,
+      // catalog_archived.sku matches catalog_styles.style_number, not externalId (supplierId)
+      n.styleNumber,
       { isEnabled: n.isEnabled, isFavorite: n.isFavorite },
     ])
   )

@@ -118,10 +118,10 @@ export function GarmentCatalogClient({
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
-  // Normalized colors for selected garment — matched by externalId (= S&S style number = GarmentCatalog.sku)
+  // Normalized colors for selected garment — matched by styleNumber (= catalog_archived.sku)
   const selectedNormalizedColors = useMemo(() => {
     if (!normalizedCatalog || !selectedGarment) return undefined
-    const match = normalizedCatalog.find((n) => n.externalId === selectedGarment.sku)
+    const match = normalizedCatalog.find((n) => n.styleNumber === selectedGarment.sku)
     return match?.colors
   }, [normalizedCatalog, selectedGarment])
 

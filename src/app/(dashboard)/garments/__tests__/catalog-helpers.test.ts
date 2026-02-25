@@ -13,9 +13,10 @@ function makeNormalized(
   return {
     id: 'uuid-001',
     source: 'ss',
-    externalId: 'BC3001',
+    externalId: '12345',
     brand: 'Bella+Canvas',
-    styleNumber: '3001',
+    // styleNumber matches catalog_archived.sku (the join key between legacy and normalized)
+    styleNumber: 'BC3001',
     name: 'Unisex Jersey Tee',
     description: null,
     category: 't-shirts',
@@ -43,20 +44,20 @@ describe('buildSkuToStyleIdMap', () => {
     expect(map.size).toBe(0)
   })
 
-  it('maps externalId to id', () => {
+  it('maps styleNumber to id', () => {
     const normalized = [
-      makeNormalized({ id: 'uuid-001', externalId: 'BC3001' }),
-      makeNormalized({ id: 'uuid-002', externalId: 'G500' }),
+      makeNormalized({ id: 'uuid-001', styleNumber: 'BC3001' }),
+      makeNormalized({ id: 'uuid-002', styleNumber: 'G500' }),
     ]
     const map = buildSkuToStyleIdMap(normalized)
     expect(map.get('BC3001')).toBe('uuid-001')
     expect(map.get('G500')).toBe('uuid-002')
   })
 
-  it('last entry wins when externalId duplicated', () => {
+  it('last entry wins when styleNumber duplicated', () => {
     const normalized = [
-      makeNormalized({ id: 'uuid-001', externalId: 'BC3001' }),
-      makeNormalized({ id: 'uuid-999', externalId: 'BC3001' }),
+      makeNormalized({ id: 'uuid-001', styleNumber: 'BC3001' }),
+      makeNormalized({ id: 'uuid-999', styleNumber: 'BC3001' }),
     ]
     const map = buildSkuToStyleIdMap(normalized)
     expect(map.get('BC3001')).toBe('uuid-999')
@@ -80,8 +81,8 @@ describe('hydrateCatalogPreferences', () => {
     expect(result).toEqual(legacyCatalog)
   })
 
-  it('overrides isEnabled / isFavorite when sku matches externalId', () => {
-    const normalized = [makeNormalized({ externalId: 'G500', isEnabled: false, isFavorite: true })]
+  it('overrides isEnabled / isFavorite when sku matches styleNumber', () => {
+    const normalized = [makeNormalized({ styleNumber: 'G500', isEnabled: false, isFavorite: true })]
     const result = hydrateCatalogPreferences(legacyCatalog, normalized)
     const g500 = result.find((g) => g.sku === 'G500')!
     expect(g500.isEnabled).toBe(false)
@@ -89,7 +90,9 @@ describe('hydrateCatalogPreferences', () => {
   })
 
   it('preserves unmatched garments unchanged', () => {
-    const normalized = [makeNormalized({ externalId: 'G500', isEnabled: false, isFavorite: false })]
+    const normalized = [
+      makeNormalized({ styleNumber: 'G500', isEnabled: false, isFavorite: false }),
+    ]
     const result = hydrateCatalogPreferences(legacyCatalog, normalized)
     const bc = result.find((g) => g.sku === 'BC3001')!
     expect(bc.isEnabled).toBe(true)
@@ -98,7 +101,7 @@ describe('hydrateCatalogPreferences', () => {
 
   it('preserves all other fields on matched garment', () => {
     const normalized = [
-      makeNormalized({ externalId: 'BC3001', isEnabled: false, isFavorite: true }),
+      makeNormalized({ styleNumber: 'BC3001', isEnabled: false, isFavorite: true }),
     ]
     const result = hydrateCatalogPreferences(legacyCatalog, normalized)
     const bc = result.find((g) => g.sku === 'BC3001')!
