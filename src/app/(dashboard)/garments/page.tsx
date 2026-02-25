@@ -6,6 +6,7 @@ import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/garments'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
+import { extractUniqueColors } from './_lib/garment-transforms'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
 
 export default async function GarmentCatalogPage() {
@@ -24,6 +25,8 @@ export default async function GarmentCatalogPage() {
     return [] as Awaited<ReturnType<typeof getNormalizedCatalog>>
   })
 
+  const catalogColors = extractUniqueColors(normalizedCatalog)
+
   return (
     <>
       <Topbar breadcrumbs={buildBreadcrumbs({ label: 'Garment Catalog' })} />
@@ -40,6 +43,8 @@ export default async function GarmentCatalogPage() {
             initialJobs={jobs}
             initialCustomers={customers}
             normalizedCatalog={normalizedCatalog.length > 0 ? normalizedCatalog : undefined}
+            catalogColors={catalogColors}
+            initialFavoriteColorIds={[]}
           />
         </Suspense>
       </div>

@@ -184,6 +184,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -211,6 +213,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -237,6 +241,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -260,6 +266,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
           // no normalizedCatalog
         />
       )
@@ -291,6 +299,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -323,6 +333,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -344,7 +356,13 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       })
 
       render(
-        <GarmentCatalogClient initialCatalog={[garment]} initialJobs={[]} initialCustomers={[]} />
+        <GarmentCatalogClient
+          initialCatalog={[garment]}
+          initialJobs={[]}
+          initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
+        />
       )
 
       const favStar = screen.getByRole('button', { name: /favorite/i })
@@ -368,6 +386,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -392,6 +412,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -415,6 +437,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 

@@ -19,9 +19,8 @@ import { Button } from '@shared/ui/primitives/button'
 import { Label } from '@shared/ui/primitives/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { ColorFilterGrid } from './ColorFilterGrid'
-import { getColorById } from '@domain/rules/garment.rules'
-import { getColorsMutable } from '@infra/repositories/colors'
 import { garmentCategoryEnum } from '@domain/entities/garment'
+import type { FilterColor } from '@features/garments/types'
 import type { GarmentCategory } from '@domain/entities/garment'
 import { GARMENT_CATEGORY_LABELS } from '@domain/constants'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
@@ -43,6 +42,7 @@ const CATEGORIES = [
 // ---------------------------------------------------------------------------
 
 type GarmentCatalogToolbarProps = {
+  catalogColors: FilterColor[]
   brands: string[]
   selectedColorIds: string[]
   onToggleColor: (colorId: string) => void
@@ -61,6 +61,7 @@ type GarmentCatalogToolbarProps = {
 // ---------------------------------------------------------------------------
 
 export function GarmentCatalogToolbar({
+  catalogColors,
   brands,
   selectedColorIds,
   onToggleColor,
@@ -120,10 +121,10 @@ export function GarmentCatalogToolbar({
   }, [router, pathname])
 
   // --- Resolved color objects for pills ---
-  const selectedColors = useMemo(() => {
-    const allColors = getColorsMutable()
-    return selectedColorIds.map((id) => getColorById(id, allColors)).filter((c) => c != null)
-  }, [selectedColorIds])
+  const selectedColors = useMemo(
+    () => selectedColorIds.map((id) => catalogColors.find((c) => c.id === id)).filter((c) => c != null),
+    [selectedColorIds, catalogColors]
+  )
 
   // --- Active filters (for pills — excludes color swatches which get their own row) ---
   const activeFilters: { key: string; label: string; value: string }[] = []
@@ -302,6 +303,7 @@ export function GarmentCatalogToolbar({
 
       {/* Row 3: Color swatch filter grid */}
       <ColorFilterGrid
+        colors={catalogColors}
         selectedColorIds={selectedColorIds}
         onToggleColor={onToggleColor}
         favoriteColorIds={favoriteColorIds}

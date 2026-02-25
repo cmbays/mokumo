@@ -4,11 +4,11 @@ import { Heart, Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
-import type { Color } from '@domain/entities/color'
+import type { FilterColor } from '@features/garments/types'
 
 type FavoritesColorSectionProps = {
-  favorites: Color[]
-  allColors: Color[]
+  favorites: FilterColor[]
+  allColors: FilterColor[]
   onToggle: (colorId: string) => void
   readOnly?: boolean
   showBadges?: boolean
@@ -22,7 +22,7 @@ export function ColorSwatch({
   readOnly,
   badge,
 }: {
-  color: Color
+  color: FilterColor
   isFavorite: boolean
   onClick: () => void
   readOnly?: boolean

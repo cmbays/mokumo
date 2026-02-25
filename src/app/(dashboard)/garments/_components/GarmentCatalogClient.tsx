@@ -20,12 +20,14 @@ import { toggleStyleEnabled, toggleStyleFavorite } from '../actions'
 import {
   buildSkuToStyleIdMap,
   buildSkuToFrontImageUrl,
+  buildStyleToColorNamesMap,
   hydrateCatalogPreferences,
 } from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
+import type { FilterColor } from '@features/garments/types'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -43,6 +45,10 @@ type GarmentCatalogClientProps = {
   initialCustomers: Customer[]
   /** Normalized catalog data with color images — used to power ImageTypeCarousel in the detail drawer. Optional: drawer falls back to GarmentImage when absent. */
   normalizedCatalog?: NormalizedGarmentCatalog[]
+  /** Deduplicated color list from catalog_colors, computed server-side. */
+  catalogColors: FilterColor[]
+  /** Shop-scoped favorite color IDs from catalog_color_preferences, fetched server-side. */
+  initialFavoriteColorIds: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +60,8 @@ export function GarmentCatalogClient({
   initialJobs,
   initialCustomers,
   normalizedCatalog,
+  catalogColors,
+  initialFavoriteColorIds,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -95,6 +103,12 @@ export function GarmentCatalogClient({
   // SKU → first front image URL — real S&S CDN URLs from catalog_images
   const skuToFrontImageUrl = useMemo(
     () => buildSkuToFrontImageUrl(normalizedCatalog),
+    [normalizedCatalog]
+  )
+
+  // styleNumber → Set<colorName> — bridges catalog_colors UUIDs to name-based filter matching
+  const styleToColorNamesMap = useMemo(
+    () => buildStyleToColorNamesMap(normalizedCatalog),
     [normalizedCatalog]
   )
 
@@ -152,8 +166,18 @@ export function GarmentCatalogClient({
   // Single pass over the catalog — builds filteredGarments and categoryHits together.
   // categoryHits applies all filters except category (faceted search pattern) so the
   // toolbar can hide tabs with zero inventory without collapsing the active tab.
+  // selectedColorIds → Set of lowercased color names for name-based filter matching
+  const selectedColorNames = useMemo(() => {
+    if (selectedColorIds.length === 0) return null
+    const selectedIdSet = new Set(selectedColorIds)
+    return new Set(
+      catalogColors
+        .filter((c) => selectedIdSet.has(c.id))
+        .map((c) => c.name.toLowerCase().trim())
+    )
+  }, [selectedColorIds, catalogColors])
+
   const { filteredGarments, categoryHits } = useMemo(() => {
-    const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
     const q = searchQuery ? searchQuery.toLowerCase() : null
     const hits: Record<string, number> = {}
     const filtered: GarmentCatalog[] = []
@@ -172,8 +196,12 @@ export function GarmentCatalogClient({
       }
       // Brand filter
       if (brand && g.brand !== brand) continue
-      // Color filter
-      if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) continue
+      // Color filter — name-based bridge via styleToColorNamesMap
+      if (selectedColorNames) {
+        const garmentColorNames = styleToColorNamesMap.get(g.sku)
+        if (!garmentColorNames || ![...garmentColorNames].some((n) => selectedColorNames.has(n)))
+          continue
+      }
 
       // Passes all non-category filters → count toward categoryHits
       hits[g.baseCategory] = (hits[g.baseCategory] ?? 0) + 1
@@ -183,7 +211,7 @@ export function GarmentCatalogClient({
     }
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [catalog, category, searchQuery, brand, selectedColorIds, showDisabled])
+  }, [catalog, category, searchQuery, brand, selectedColorNames, styleToColorNamesMap, showDisabled])
 
   // Reset to first page whenever any filter changes.
   // Sort before joining to produce a canonical key regardless of color selection order.
@@ -281,6 +309,7 @@ export function GarmentCatalogClient({
   return (
     <>
       <GarmentCatalogToolbar
+        catalogColors={catalogColors}
         brands={brands}
         selectedColorIds={selectedColorIds}
         onToggleColor={toggleColor}
