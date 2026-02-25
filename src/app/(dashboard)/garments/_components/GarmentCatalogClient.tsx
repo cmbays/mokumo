@@ -454,6 +454,7 @@ export function GarmentCatalogClient({
             setSelectedBrandName(null)
             setSelectedGarmentId(garmentId)
           }}
+          colors={catalogColors}
         />
       )}
     </>
