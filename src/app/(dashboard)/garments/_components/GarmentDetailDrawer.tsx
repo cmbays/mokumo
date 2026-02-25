@@ -226,7 +226,11 @@ export function GarmentDetailDrawer({
               {normalizedColors && normalizedColors.length > 0 ? (
                 // Real S&S colors from catalog_colors — clicking a swatch drives the image carousel
                 <>
-                  <div className="grid grid-cols-6 gap-0.5" role="group" aria-label="Available colors">
+                  <div
+                    className="grid grid-cols-6 gap-0.5"
+                    role="group"
+                    aria-label="Available colors"
+                  >
                     {normalizedColors.map((color) => {
                       const hex = color.hex1 ?? '#888888'
                       const isSelected = selectedCatalogColorId === color.id
@@ -262,7 +266,9 @@ export function GarmentDetailDrawer({
                         style={{ backgroundColor: selectedNormalizedColor.hex1 ?? '#888888' }}
                         aria-hidden="true"
                       />
-                      <span className="text-sm text-foreground">{selectedNormalizedColor.name}</span>
+                      <span className="text-sm text-foreground">
+                        {selectedNormalizedColor.name}
+                      </span>
                       {selectedNormalizedColor.hex1 && (
                         <span className="text-xs text-muted-foreground">
                           {selectedNormalizedColor.hex1}
