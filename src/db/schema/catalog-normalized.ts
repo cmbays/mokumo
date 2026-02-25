@@ -194,6 +194,65 @@ export const catalogStylePreferences = pgTable(
   ]
 )
 
+// ─── catalog_color_preferences ────────────────────────────────────────────────
+//
+// Mirrors catalog_style_preferences but for colors.
+// scope_type: 'shop' | 'brand'  (customer scope deferred)
+// scope_id: UUID of the owning entity (shop UUID or brand UUID)
+// is_favorite: NULL = unset, TRUE = favorited, FALSE = explicitly unfavorited
+
+export const catalogColorPreferences = pgTable(
+  'catalog_color_preferences',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scopeType: varchar('scope_type', { length: 20 }).notNull().default('shop'),
+    /** Scope identifier — must be a UUID. 'shop' → shop UUID, 'brand' → catalog_brands.id */
+    scopeId: uuid('scope_id').notNull(),
+    colorId: uuid('color_id')
+      .notNull()
+      .references(() => catalogColors.id, { onDelete: 'cascade' }),
+    isFavorite: boolean('is_favorite'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('catalog_color_preferences_scope_type_scope_id_color_id_key').on(
+      t.scopeType,
+      t.scopeId,
+      t.colorId
+    ),
+    index('idx_catalog_color_preferences_color_id').on(t.colorId),
+    index('idx_catalog_color_preferences_scope').on(t.scopeType, t.scopeId),
+  ]
+)
+
+// ─── catalog_inventory ────────────────────────────────────────────────────────
+//
+// Schema-only for Issue #618. No application reads this session.
+// Future: populated by S&S inventory sync job.
+
+export const catalogInventory = pgTable(
+  'catalog_inventory',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    colorId: uuid('color_id')
+      .notNull()
+      .references(() => catalogColors.id, { onDelete: 'cascade' }),
+    sizeId: uuid('size_id')
+      .notNull()
+      .references(() => catalogSizes.id, { onDelete: 'cascade' }),
+    quantity: integer('quantity').notNull().default(0),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('catalog_inventory_color_id_size_id_key').on(t.colorId, t.sizeId),
+    index('idx_catalog_inventory_color_id').on(t.colorId),
+    index('idx_catalog_inventory_size_id').on(t.sizeId),
+  ]
+)
+
 // ─── shop_pricing_overrides ───────────────────────────────────────────────────
 //
 // Cascade model (lowest → highest precedence, higher priority wins):
