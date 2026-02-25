@@ -154,23 +154,24 @@ export function GarmentDetailDrawer({
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-6 p-4">
             {/* Garment image — carousel when normalized color images are available, placeholder fallback otherwise */}
-            <div className="flex justify-center py-2">
-              {selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
-                <ImageTypeCarousel
-                  images={selectedNormalizedColor.images}
-                  alt={`${garment.name} — ${selectedNormalizedColor.name}`}
-                  className="w-full max-w-xs mx-auto"
-                />
-              ) : (
+            {selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
+              <ImageTypeCarousel
+                images={selectedNormalizedColor.images}
+                alt={`${garment.name} — ${selectedNormalizedColor.name}`}
+                className="w-full"
+              />
+            ) : (
+              <div className="relative aspect-square w-full overflow-hidden rounded-md bg-surface">
                 <GarmentImage
                   brand={garment.brand}
                   sku={garment.sku}
                   name={garment.name}
                   size="lg"
                   imageUrl={frontImageUrl}
+                  className="w-full h-full"
                 />
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Name + Category + Enabled toggle */}
             <div className="flex items-start justify-between gap-3">
