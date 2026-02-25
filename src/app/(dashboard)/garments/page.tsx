@@ -6,10 +6,14 @@ import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/garments'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
+import { verifySession } from '@infra/auth/session'
 import { extractUniqueColors } from './_lib/garment-transforms'
+import { getColorFavorites } from './actions'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
 
 export default async function GarmentCatalogPage() {
+  const session = await verifySession()
+
   // getNormalizedCatalog is optional infrastructure — isolate it so a DB failure
   // doesn't crash the page; the client degrades gracefully to GarmentImage fallback.
   const [garmentCatalog, jobs, customers] = await Promise.all([
@@ -26,6 +30,9 @@ export default async function GarmentCatalogPage() {
   })
 
   const catalogColors = extractUniqueColors(normalizedCatalog)
+  const initialFavoriteColorIds = session
+    ? await getColorFavorites('shop', session.shopId).catch(() => [] as string[])
+    : []
 
   return (
     <>
@@ -44,7 +51,7 @@ export default async function GarmentCatalogPage() {
             initialCustomers={customers}
             normalizedCatalog={normalizedCatalog.length > 0 ? normalizedCatalog : undefined}
             catalogColors={catalogColors}
-            initialFavoriteColorIds={[]}
+            initialFavoriteColorIds={initialFavoriteColorIds}
           />
         </Suspense>
       </div>

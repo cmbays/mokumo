@@ -41,19 +41,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/garments',
 }))
 
-// Heavy repos / rules that don't matter for toggle tests
-vi.mock('@domain/rules/customer.rules', () => ({
-  resolveEffectiveFavorites: () => [],
-}))
-vi.mock('@infra/repositories/colors', () => ({
-  getColorsMutable: () => [],
-}))
-vi.mock('@infra/repositories/customers', () => ({
-  getCustomersMutable: () => [],
-}))
-vi.mock('@infra/repositories/settings', () => ({
-  getBrandPreferencesMutable: () => ({}),
-}))
 vi.mock('@features/garments/hooks/useColorFilter', () => ({
   useColorFilter: () => ({ selectedColorIds: [], toggleColor: vi.fn(), clearColors: vi.fn() }),
 }))

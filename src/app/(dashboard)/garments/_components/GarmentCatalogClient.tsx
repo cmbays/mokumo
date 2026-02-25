@@ -10,13 +10,9 @@ import { GarmentCard } from './GarmentCard'
 import { GarmentTableRow } from './GarmentTableRow'
 import { GarmentDetailDrawer } from './GarmentDetailDrawer'
 import { BrandDetailDrawer } from './BrandDetailDrawer'
-import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
-import { getColorsMutable } from '@infra/repositories/colors'
-import { getCustomersMutable } from '@infra/repositories/customers'
-import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
-import { toggleStyleEnabled, toggleStyleFavorite } from '../actions'
+import { toggleStyleEnabled, toggleStyleFavorite, toggleColorFavorite } from '../actions'
 import {
   buildSkuToStyleIdMap,
   buildSkuToFrontImageUrl,
@@ -76,26 +72,11 @@ export function GarmentCatalogClient({
   // Local UI state — not in URL because toggling should not trigger a server re-render
   const [showDisabled, setShowDisabled] = useState(false)
 
-  // Color filter from extracted hook (fix #7)
+  // Color filter from extracted hook
   const { selectedColorIds, toggleColor, clearColors } = useColorFilter()
 
-  // Version counter — forces favorite recomputation after mock data mutations
-  // (e.g., brand drawer toggles isFavorite on colors). Phase 3 replaces with API fetch.
-  const [favoriteVersion, setFavoriteVersion] = useState(0)
-
-  // Resolved global favorites — single source of truth passed as props (fix #4)
-  const globalFavoriteColorIds = useMemo(
-    () =>
-      resolveEffectiveFavorites(
-        'global',
-        undefined,
-        getColorsMutable(),
-        getCustomersMutable(),
-        getBrandPreferencesMutable()
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [favoriteVersion]
-  )
+  // Shop color favorites — seeded from SSR fetch, updated optimistically by toggleColorFavorite
+  const [favoriteColorIds, setFavoriteColorIds] = useState<string[]>(initialFavoriteColorIds)
 
   // SKU → catalog_styles UUID lookup — used by toggle server actions
   const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
@@ -301,6 +282,21 @@ export function GarmentCatalogClient({
     [skuToStyleId]
   )
 
+  const handleToggleColorFavorite = useCallback(async (colorId: string) => {
+    // Optimistic update
+    setFavoriteColorIds((prev) =>
+      prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
+    )
+    const result = await toggleColorFavorite(colorId, 'shop')
+    if (!result.success) {
+      // Rollback
+      setFavoriteColorIds((prev) =>
+        prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
+      )
+      toast.error("Couldn't update color favorite — try again")
+    }
+  }, [])
+
   // Fix #11: handleClearAll for empty state CTA
   const handleClearAll = useCallback(() => {
     router.replace(pathname, { scroll: false })
@@ -315,7 +311,7 @@ export function GarmentCatalogClient({
         onToggleColor={toggleColor}
         onClearColors={clearColors}
         garmentCount={filteredGarments.length}
-        favoriteColorIds={globalFavoriteColorIds}
+        favoriteColorIds={favoriteColorIds}
         onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
         showDisabled={showDisabled}
@@ -330,7 +326,7 @@ export function GarmentCatalogClient({
               key={garment.id}
               garment={garment}
               showPrice={showPrice}
-              favoriteColorIds={globalFavoriteColorIds}
+              favoriteColorIds={favoriteColorIds}
               onToggleFavorite={handleToggleFavorite}
               onBrandClick={handleBrandClick}
               onClick={setSelectedGarmentId}
@@ -452,15 +448,10 @@ export function GarmentCatalogClient({
           brandName={selectedBrandName}
           open={true}
           onOpenChange={(open) => {
-            if (!open) {
-              setSelectedBrandName(null)
-              // Refresh favorites in case brand drawer mutated color preferences
-              setFavoriteVersion((v) => v + 1)
-            }
+            if (!open) setSelectedBrandName(null)
           }}
           onGarmentClick={(garmentId) => {
             setSelectedBrandName(null)
-            setFavoriteVersion((v) => v + 1)
             setSelectedGarmentId(garmentId)
           }}
         />
