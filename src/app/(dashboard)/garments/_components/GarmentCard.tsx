@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@shared/lib/cn'
+import { ssGarmentFrontImageUrl } from '@shared/lib/ss-image'
 import { GarmentMockup } from '@features/quotes/components/mockup'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { ColorSwatchPicker } from '@shared/ui/organisms/ColorSwatchPicker'
@@ -60,6 +61,12 @@ export function GarmentCard({
     ? garment.colors[0]?.images.find((i) => i.imageType === 'front')
     : undefined
 
+  // For legacy (non-normalized) garments, try S&S CDN as the image source.
+  // catalog_archived.id = S&S numeric styleId — the CDN URL key.
+  const [ssImageFailed, setSsImageFailed] = useState(false)
+  const ssImageUrl =
+    !isNormalized(garment) && !ssImageFailed ? ssGarmentFrontImageUrl(garment.id) : undefined
+
   return (
     <div
       role="button"
@@ -79,7 +86,7 @@ export function GarmentCard({
         !garment.isEnabled && 'opacity-50'
       )}
     >
-      {/* Image — real photo if available, SVG tinting fallback */}
+      {/* Image — normalized photo → S&S CDN fallback → SVG tinting */}
       <div className="flex justify-center py-2">
         {frontImage ? (
           <div className="relative w-16 h-20 rounded overflow-hidden bg-surface">
@@ -89,6 +96,17 @@ export function GarmentCard({
               fill
               sizes="64px"
               className="object-contain"
+            />
+          </div>
+        ) : ssImageUrl ? (
+          <div className="relative w-16 h-20 rounded overflow-hidden bg-surface">
+            <Image
+              src={ssImageUrl}
+              alt={`${garment.name} front view`}
+              fill
+              sizes="64px"
+              className="object-contain"
+              onError={() => setSsImageFailed(true)}
             />
           </div>
         ) : (

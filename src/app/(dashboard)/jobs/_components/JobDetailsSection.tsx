@@ -8,6 +8,7 @@ import { getGarmentCatalogMutable } from '@infra/repositories/garments-phase1'
 import { getColorsMutable } from '@infra/repositories/colors'
 import { getScreensMutable } from '@infra/repositories/screens'
 import { GarmentMockup } from '@features/quotes/components/mockup'
+import { ssGarmentFrontImageUrl } from '@shared/lib/ss-image'
 import type { Job } from '@domain/entities/job'
 
 type JobDetailsSectionProps = {
@@ -56,6 +57,7 @@ export function JobDetailsSection({ job }: JobDetailsSectionProps) {
                       <GarmentMockup
                         garmentCategory={garment.baseCategory}
                         colorHex={color.hex}
+                        imageUrl={ssGarmentFrontImageUrl(garment.id)}
                         size="xs"
                         className="w-full h-auto aspect-[5/6]"
                       />

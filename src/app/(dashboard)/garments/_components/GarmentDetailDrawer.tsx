@@ -164,6 +164,7 @@ export function GarmentDetailDrawer({
                   sku={garment.sku}
                   name={garment.name}
                   size="lg"
+                  styleId={garment.id}
                 />
               )}
             </div>
