@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Palette, Ruler } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import {
   Sheet,
   SheetContent,
@@ -62,6 +63,10 @@ export function GarmentDetailDrawer({
   const [selectedColorId, setSelectedColorId] = useState<string | null>(
     garment.availableColors[0] ?? null
   )
+  // Normalized path: tracks selected CatalogColor.id (UUID) for image carousel
+  const [selectedCatalogColorId, setSelectedCatalogColorId] = useState<string | null>(
+    normalizedColors?.[0]?.id ?? null
+  )
 
   // Version counter — forces re-render after mock data isFavorite mutation
   const [favoriteVersion, setFavoriteVersion] = useState(0)
@@ -119,16 +124,11 @@ export function GarmentDetailDrawer({
   // Resolve selected color object
   const selectedColor = selectedColorId ? getColorById(selectedColorId, getColorsMutable()) : null
 
-  // Resolve normalized color (with images) for the selected color slot
-  // Match by name because selectedColorId holds a mock Color entity ID (e.g., "color-white")
-  // while CatalogColor.id is a Supabase UUID — they can never be equal.
-  // Both old Color entities and CatalogColor share human-readable names (e.g., "Black", "White").
-  const selectedNormalizedColor =
-    normalizedColors && selectedColor
-      ? (normalizedColors.find((c) => c.name === selectedColor.name) ?? normalizedColors[0] ?? null)
-      : normalizedColors
-        ? (normalizedColors[0] ?? null)
-        : null
+  // When normalizedColors is available, drive the carousel from selectedCatalogColorId (UUID).
+  // Otherwise fall through to null (GarmentImage fallback renders instead).
+  const selectedNormalizedColor = normalizedColors
+    ? (normalizedColors.find((c) => c.id === selectedCatalogColorId) ?? normalizedColors[0] ?? null)
+    : null
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -213,29 +213,84 @@ export function GarmentDetailDrawer({
               />
             </div>
 
-            {/* Colors section — FavoritesColorSection replaces ColorSwatchPicker (scroll fix: no inner ScrollArea) */}
+            {/* Colors section */}
             <div className="flex flex-col gap-2">
               <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <Palette size={14} aria-hidden="true" />
                 Colors
-                <span className="text-muted-foreground/60">({garmentColors.length})</span>
+                <span className="text-muted-foreground/60">
+                  ({normalizedColors ? normalizedColors.length : garmentColors.length})
+                </span>
               </h3>
-              <FavoritesColorSection
-                favorites={favoriteColors}
-                allColors={garmentColors}
-                onToggle={handleToggleColorFavorite}
-              />
-              {/* Selected color display (U14) */}
-              {selectedColor && (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2">
-                  <div
-                    className="h-5 w-5 flex-shrink-0 rounded-sm border border-border"
-                    style={{ backgroundColor: selectedColor.hex }}
-                    aria-hidden="true"
+
+              {normalizedColors && normalizedColors.length > 0 ? (
+                // Real S&S colors from catalog_colors — clicking a swatch drives the image carousel
+                <>
+                  <div className="grid grid-cols-6 gap-0.5" role="group" aria-label="Available colors">
+                    {normalizedColors.map((color) => {
+                      const hex = color.hex1 ?? '#888888'
+                      const isSelected = selectedCatalogColorId === color.id
+                      return (
+                        <Tooltip key={color.id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCatalogColorId(color.id)}
+                              aria-label={color.name}
+                              aria-pressed={isSelected}
+                              className={cn(
+                                'h-8 w-8 flex-shrink-0 rounded-sm transition-all',
+                                'cursor-pointer hover:scale-105',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                'motion-reduce:transition-none',
+                                isSelected && 'ring-2 ring-action scale-110'
+                              )}
+                              style={{ backgroundColor: hex }}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" sideOffset={6}>
+                            {color.name}
+                          </TooltipContent>
+                        </Tooltip>
+                      )
+                    })}
+                  </div>
+                  {selectedNormalizedColor && (
+                    <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2">
+                      <div
+                        className="h-5 w-5 flex-shrink-0 rounded-sm border border-border"
+                        style={{ backgroundColor: selectedNormalizedColor.hex1 ?? '#888888' }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm text-foreground">{selectedNormalizedColor.name}</span>
+                      {selectedNormalizedColor.hex1 && (
+                        <span className="text-xs text-muted-foreground">
+                          {selectedNormalizedColor.hex1}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                // Phase 1 fallback — uses mock color data when normalizedColors is absent
+                <>
+                  <FavoritesColorSection
+                    favorites={favoriteColors}
+                    allColors={garmentColors}
+                    onToggle={handleToggleColorFavorite}
                   />
-                  <span className="text-sm text-foreground">{selectedColor.name}</span>
-                  <span className="text-xs text-muted-foreground">{selectedColor.hex}</span>
-                </div>
+                  {selectedColor && (
+                    <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2">
+                      <div
+                        className="h-5 w-5 flex-shrink-0 rounded-sm border border-border"
+                        style={{ backgroundColor: selectedColor.hex }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-sm text-foreground">{selectedColor.name}</span>
+                      <span className="text-xs text-muted-foreground">{selectedColor.hex}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

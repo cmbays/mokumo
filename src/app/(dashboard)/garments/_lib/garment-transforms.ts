@@ -4,6 +4,32 @@ import type { FilterColor } from '@features/garments/types'
 
 export type { FilterColor }
 
+// ---------------------------------------------------------------------------
+// normalizeColorName
+// ---------------------------------------------------------------------------
+
+/**
+ * Strips S&S measurement suffixes from catalog color names to produce canonical names.
+ *
+ * S&S activewear/workwear entries include inseam, waist, sleeve, and unhemmed
+ * variants as separate catalog_colors rows (e.g., "Black - 28I", "Black - 30I, 50W").
+ * These must resolve to the same canonical name ("Black") for deduplication and
+ * name-based filter matching to work correctly.
+ *
+ * Handles: " - 28I", " - 30I, 50W", " - B120", " - Sleeve 32/33",
+ *          " - 36 Unhemmed", " - Unhemmed", " - Size 50W",
+ *          " (Long Sizes)", " (Unhemmed)"
+ */
+export function normalizeColorName(name: string): string {
+  return name
+    .replace(
+      /\s*-\s*(?:\d[\d\s,/IWX]*(?:\s*Unhemmed)?|B\d+|Sleeve\s+[\d/]+|Size\s+\d+\w*|\d+\s+Unhemmed|Unhemmed)\s*$/i,
+      ''
+    )
+    .replace(/\s*\((?:Long\s+Sizes?|Unhemmed)\)\s*$/i, '')
+    .trim()
+}
+
 /** WCAG relative luminance — returns white or black text color for a hex background. */
 function computeSwatchTextColor(hex: string): string {
   const { r, g, b } = hexToRgb(hex)
@@ -36,12 +62,13 @@ export function extractUniqueColors(
 
   for (const style of normalizedCatalog) {
     for (const color of style.colors) {
-      const key = color.name.toLowerCase().trim()
+      const canonicalName = normalizeColorName(color.name)
+      const key = canonicalName.toLowerCase().trim()
       if (seen.has(key)) continue
       const hex = color.hex1 ?? '#888888'
       seen.set(key, {
         id: color.id,
-        name: color.name,
+        name: canonicalName,
         hex,
         swatchTextColor: computeSwatchTextColor(hex),
       })
@@ -67,7 +94,7 @@ export function buildStyleToColorNamesMap(
   return new Map(
     normalizedCatalog.map((style) => [
       style.styleNumber,
-      new Set(style.colors.map((c) => c.name.toLowerCase().trim())),
+      new Set(style.colors.map((c) => normalizeColorName(c.name).toLowerCase().trim())),
     ])
   )
 }
