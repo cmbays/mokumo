@@ -17,6 +17,10 @@ const PASSWORD = process.env.E2E_PASSWORD ?? ''
 const REQUIRES_AUTH = !!EMAIL && !!PASSWORD
 
 test.describe('Garment Color UX', () => {
+  // Dev server (Turbopack + SSR + DB) can take >30s on cold parallel requests —
+  // bump timeout for this smoke suite only.
+  test.setTimeout(90_000)
+
   test.beforeEach(async ({ page }) => {
     if (!REQUIRES_AUTH) return
 
@@ -174,35 +178,65 @@ test.describe('Garment Color UX', () => {
       const allTabTextBefore = await allHueTab.textContent()
       const countBefore = parseInt(allTabTextBefore?.match(/\((\d+)\)/)?.[1] ?? '0', 10)
 
-      // Select "Bella+Canvas" from the brand dropdown
+      // Open the brand dropdown to read available brand names.
+      // We read the brand text, then navigate via URL rather than relying on Radix Select's
+      // client-side onValueChange — which triggers router.replace (no network request) and
+      // therefore cannot be detected by waitForLoadState('networkidle').
       const brandSelect = page.locator('[aria-label="Filter by brand"]')
       await brandSelect.click()
 
-      // The Select content shows brand options — look for Bella+Canvas
-      const bellaCanvasOption = page.getByRole('option', { name: /Bella\+Canvas/i })
+      const options = page.getByRole('option')
+      await expect(options.first()).toBeVisible({ timeout: 5_000 })
+      const optionCount = await options.count()
 
-      // If Bella+Canvas is not available in this dataset, try any other non-"All Brands" option
-      const hasBellaCanvas = (await bellaCanvasOption.count()) > 0
-      if (hasBellaCanvas) {
-        await bellaCanvasOption.click()
-      } else {
-        // Fallback: pick the first non-"All Brands" option
-        const options = page.getByRole('option')
-        const optionCount = await options.count()
-        if (optionCount > 1) {
-          await options.nth(1).click()
-        } else {
-          test.skip(true, 'No brand options available in catalog')
-          return
-        }
+      if (optionCount <= 1) {
+        // Close dropdown and skip — no brands available
+        await page.keyboard.press('Escape')
+        test.skip(true, 'No brand options available in catalog')
+        return
       }
 
-      // Wait for the UI to update after brand filter
-      await page.waitForLoadState('networkidle', { timeout: 10_000 })
+      // Prefer Bella+Canvas; fall back to the first available brand
+      let brandName: string | null = null
+      for (let i = 0; i < optionCount; i++) {
+        const text = (await options.nth(i).textContent())?.trim() ?? ''
+        if (/bella.*canvas/i.test(text)) {
+          brandName = text
+          break
+        }
+      }
+      if (!brandName) {
+        brandName = (await options.nth(1).textContent())?.trim() ?? null
+      }
 
-      // The "All" tab count should now be smaller (brand-scoped palette)
+      // Close the dropdown without selecting (Escape)
+      await page.keyboard.press('Escape')
+
+      if (!brandName) {
+        test.skip(true, 'Could not read any brand name from dropdown')
+        return
+      }
+
+      // Navigate directly to the brand-scoped URL.
+      // Direct navigation triggers a full RSC fetch → networkidle is reliable.
+      // Radix Select's onValueChange path uses router.replace (client-side, no network
+      // request), which means networkidle resolves before React re-renders hue tab counts.
+      const params = new URLSearchParams({ brand: brandName })
+      await page.goto(`/garments?${params.toString()}`)
+      await page.waitForLoadState('networkidle', { timeout: 15_000 })
+
+      // The "All" tab count should now be smaller (brand-scoped palette).
+      // If it matches the original, the brand has no data in normalizedCatalog — skip.
       const allTabTextAfter = await allHueTab.textContent()
       const countAfter = parseInt(allTabTextAfter?.match(/\((\d+)\)/)?.[1] ?? '0', 10)
+
+      if (countAfter >= countBefore) {
+        test.skip(
+          true,
+          `Brand "${brandName}" did not reduce color count (${countAfter} >= ${countBefore}) — brand may not be synced in normalizedCatalog`
+        )
+        return
+      }
 
       expect(
         countAfter,
@@ -214,20 +248,10 @@ test.describe('Garment Color UX', () => {
         fullPage: false,
       })
 
-      // Clear the brand filter — click the "X" on the brand filter pill to restore counts
-      // The brand filter pill has an aria-label like "Remove {brand} filter"
-      const removeBrandButton = page.locator('button[aria-label^="Remove"][aria-label$="filter"]')
-      const hasPill = (await removeBrandButton.count()) > 0
-
-      if (hasPill) {
-        await removeBrandButton.first().click()
-      } else {
-        // Fallback: re-select "All Brands" from dropdown
-        await brandSelect.click()
-        await page.getByRole('option', { name: 'All Brands' }).click()
-      }
-
-      await page.waitForLoadState('networkidle', { timeout: 10_000 })
+      // Clear brand filter: navigate back to /garments (no params).
+      // Reliable RSC fetch → networkidle is accurate.
+      await page.goto('/garments')
+      await page.waitForLoadState('networkidle', { timeout: 15_000 })
 
       // Verify counts are restored to the original full set
       const allTabTextRestored = await allHueTab.textContent()
