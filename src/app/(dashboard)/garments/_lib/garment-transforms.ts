@@ -66,11 +66,14 @@ export function extractUniqueColors(
       const key = canonicalName.toLowerCase().trim()
       if (seen.has(key)) continue
       const hex = color.hex1 ?? '#888888'
+      // colorFamilyName is taken from the first occurrence of each canonical name.
+      // S&S curates family names consistently per color name, so this is stable.
       seen.set(key, {
         id: color.id,
         name: canonicalName,
         hex,
         swatchTextColor: computeSwatchTextColor(hex),
+        colorFamilyName: color.colorFamilyName ?? null,
       })
     }
   }

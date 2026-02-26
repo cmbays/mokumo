@@ -34,6 +34,8 @@ export class MockAdapter implements SupplierAdapter {
         hex1: null,
         hex2: null,
         images: [],
+        colorFamilyName: null,
+        colorCode: null,
       })),
       sizes: garment.availableSizes.map((s) => ({
         name: s.name,

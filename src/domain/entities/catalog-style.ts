@@ -30,6 +30,8 @@ export const catalogColorSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .nullable(),
   images: z.array(catalogImageSchema),
+  colorFamilyName: z.string().nullable().optional(),
+  colorCode: z.string().nullable().optional(),
 })
 
 export type CatalogColor = z.infer<typeof catalogColorSchema>

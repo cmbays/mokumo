@@ -50,6 +50,13 @@
       "when": 1772055403185,
       "tag": "0015_catalog_color_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1772125940389,
+      "tag": "0016_square_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }
