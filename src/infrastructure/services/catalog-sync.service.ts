@@ -130,6 +130,8 @@ export async function syncCatalogFromSupplier(): Promise<number> {
               set: {
                 hex1: sql`excluded.hex1`,
                 hex2: sql`excluded.hex2`,
+                colorFamilyName: sql`excluded.color_family_name`,
+                colorCode: sql`excluded.color_code`,
                 updatedAt: new Date(),
               },
             })
