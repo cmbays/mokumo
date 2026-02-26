@@ -1,5 +1,5 @@
 import { hexToRgb } from '@domain/rules/color.rules'
-import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { CatalogColor, NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { FilterColor } from '@features/garments/types'
 
 export type { FilterColor }
@@ -143,6 +143,23 @@ export function buildSkuToStyleIdMap(
   if (!normalizedCatalog) return new Map()
   // catalog_archived.sku matches catalog_styles.style_number, not externalId (supplierId)
   return new Map(normalizedCatalog.map((n) => [n.styleNumber, n.id]))
+}
+
+// ---------------------------------------------------------------------------
+// buildSkuToNormalizedColors
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a lookup map from S&S style number to its CatalogColor array.
+ *
+ * Passed to GarmentCard so the color strip can render real S&S hex swatches
+ * even though GarmentCatalog.availableColors is empty in supabase-catalog mode.
+ */
+export function buildSkuToNormalizedColors(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): Map<string, CatalogColor[]> {
+  if (!normalizedCatalog) return new Map()
+  return new Map(normalizedCatalog.map((n) => [n.styleNumber, n.colors]))
 }
 
 // ---------------------------------------------------------------------------

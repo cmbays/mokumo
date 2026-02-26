@@ -23,6 +23,7 @@ import { toggleStyleEnabled, toggleStyleFavorite, toggleColorFavorite } from '..
 import {
   buildSkuToStyleIdMap,
   buildSkuToFrontImageUrl,
+  buildSkuToNormalizedColors,
   buildStyleToColorNamesMap,
   hydrateCatalogPreferences,
 } from '../_lib/garment-transforms'
@@ -94,11 +95,32 @@ export function GarmentCatalogClient({
     [normalizedCatalog]
   )
 
+  // SKU → CatalogColor[] — feeds ColorSwatchStrip on each card with real S&S hex swatches
+  const skuToNormalizedColors = useMemo(
+    () => buildSkuToNormalizedColors(normalizedCatalog),
+    [normalizedCatalog]
+  )
+
   // styleNumber → Set<colorName> — bridges catalog_colors UUIDs to name-based filter matching
   const styleToColorNamesMap = useMemo(
     () => buildStyleToColorNamesMap(normalizedCatalog),
     [normalizedCatalog]
   )
+
+  // When a brand filter is active, compute the set of color names available for that brand.
+  // Passed to ColorFilterGrid (via GarmentCatalogToolbar) so tabs + swatches scope to the brand.
+  const brandAvailableColorNames = useMemo(() => {
+    if (!brand || !normalizedCatalog) return undefined
+    const names = new Set<string>()
+    for (const style of normalizedCatalog) {
+      if (style.brand === brand) {
+        for (const color of style.colors) {
+          names.add(color.name)
+        }
+      }
+    }
+    return names.size > 0 ? names : undefined
+  }, [brand, normalizedCatalog])
 
   // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
   const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
@@ -335,6 +357,7 @@ export function GarmentCatalogClient({
         categoryHits={categoryHits}
         showDisabled={showDisabled}
         onShowDisabledChange={setShowDisabled}
+        availableColorNames={brandAvailableColorNames}
       />
 
       {/* Grid View */}
@@ -350,6 +373,7 @@ export function GarmentCatalogClient({
               onBrandClick={handleBrandClick}
               onClick={setSelectedGarmentId}
               frontImageUrl={skuToFrontImageUrl.get(garment.sku)}
+              normalizedColors={skuToNormalizedColors.get(garment.sku)}
             />
           ))}
         </div>

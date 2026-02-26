@@ -54,6 +54,8 @@ type GarmentCatalogToolbarProps = {
   categoryHits: Partial<Record<GarmentCategory, number>>
   showDisabled: boolean
   onShowDisabledChange: (checked: boolean) => void
+  /** Brand-scoped color names: when a brand filter is active, only show that brand's colors. */
+  availableColorNames?: Set<string>
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +74,7 @@ export function GarmentCatalogToolbar({
   categoryHits,
   showDisabled,
   onShowDisabledChange,
+  availableColorNames,
 }: GarmentCatalogToolbarProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -308,6 +311,7 @@ export function GarmentCatalogToolbar({
         selectedColorIds={selectedColorIds}
         onToggleColor={onToggleColor}
         favoriteColorIds={favoriteColorIds}
+        availableColorNames={availableColorNames}
       />
 
       {/* Row 4: Active filter pills + color pills + result count */}

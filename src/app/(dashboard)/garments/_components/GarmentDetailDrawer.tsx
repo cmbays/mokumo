@@ -227,7 +227,7 @@ export function GarmentDetailDrawer({
                 // Real S&S colors from catalog_colors — clicking a swatch drives the image carousel
                 <>
                   <div
-                    className="grid grid-cols-6 gap-0.5"
+                    className="flex flex-wrap gap-px"
                     role="group"
                     aria-label="Available colors"
                   >
@@ -243,7 +243,7 @@ export function GarmentDetailDrawer({
                               aria-label={color.name}
                               aria-pressed={isSelected}
                               className={cn(
-                                'h-8 w-8 flex-shrink-0 rounded-sm transition-all',
+                                'h-10 w-10 flex-shrink-0 rounded-sm transition-all',
                                 'cursor-pointer hover:scale-105',
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                 'motion-reduce:transition-none',
