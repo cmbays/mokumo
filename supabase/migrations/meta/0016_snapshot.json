@@ -97,12 +97,8 @@
           "name": "catalog_brand_sources_brand_id_catalog_brands_id_fk",
           "tableFrom": "catalog_brand_sources",
           "tableTo": "catalog_brands",
-          "columnsFrom": [
-            "brand_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["brand_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -159,9 +155,7 @@
         "catalog_brands_canonical_name_unique": {
           "name": "catalog_brands_canonical_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "canonical_name"
-          ]
+          "columns": ["canonical_name"]
         }
       },
       "policies": {},
@@ -289,12 +283,8 @@
           "name": "catalog_color_preferences_color_id_catalog_colors_id_fk",
           "tableFrom": "catalog_color_preferences",
           "tableTo": "catalog_colors",
-          "columnsFrom": [
-            "color_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["color_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -410,12 +400,8 @@
           "name": "catalog_colors_style_id_catalog_styles_id_fk",
           "tableFrom": "catalog_colors",
           "tableTo": "catalog_styles",
-          "columnsFrom": [
-            "style_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["style_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -514,12 +500,8 @@
           "name": "catalog_images_color_id_catalog_colors_id_fk",
           "tableFrom": "catalog_images",
           "tableTo": "catalog_colors",
-          "columnsFrom": [
-            "color_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["color_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -639,12 +621,8 @@
           "name": "catalog_inventory_color_id_catalog_colors_id_fk",
           "tableFrom": "catalog_inventory",
           "tableTo": "catalog_colors",
-          "columnsFrom": [
-            "color_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["color_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -652,12 +630,8 @@
           "name": "catalog_inventory_size_id_catalog_sizes_id_fk",
           "tableFrom": "catalog_inventory",
           "tableTo": "catalog_sizes",
-          "columnsFrom": [
-            "size_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["size_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -763,12 +737,8 @@
           "name": "catalog_sizes_style_id_catalog_styles_id_fk",
           "tableFrom": "catalog_sizes",
           "tableTo": "catalog_styles",
-          "columnsFrom": [
-            "style_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["style_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -885,12 +855,8 @@
           "name": "catalog_style_preferences_style_id_catalog_styles_id_fk",
           "tableFrom": "catalog_style_preferences",
           "tableTo": "catalog_styles",
-          "columnsFrom": [
-            "style_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["style_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1031,12 +997,8 @@
           "name": "catalog_styles_brand_id_catalog_brands_id_fk",
           "tableFrom": "catalog_styles",
           "tableTo": "catalog_brands",
-          "columnsFrom": [
-            "brand_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["brand_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1547,12 +1509,8 @@
           "name": "shop_members_shop_id_shops_id_fk",
           "tableFrom": "shop_members",
           "tableTo": "shops",
-          "columnsFrom": [
-            "shop_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["shop_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1608,9 +1566,7 @@
         "shops_slug_unique": {
           "name": "shops_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -1856,10 +1812,7 @@
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "owner",
-        "operator"
-      ]
+      "values": ["owner", "operator"]
     }
   },
   "schemas": {

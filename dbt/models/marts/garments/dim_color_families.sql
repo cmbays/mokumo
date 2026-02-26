@@ -16,8 +16,8 @@ with colors as (
 families as (
     select
         color_family_name,
-        count(distinct style_id)    as style_count,
-        count(*)                    as swatch_count,
+        count(distinct style_id) as style_count,
+        count(*) as swatch_count,
         -- Representative hex: most common hex1 in this family.
         -- Null hex1 values are ignored by mode(). Families with all-null hex1
         -- produce representative_hex = NULL — acceptable.
