@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
@@ -90,10 +90,14 @@ export function ColorFilterGrid({
 
   const [activeTab, setActiveTab] = useState<HueBucket>('all')
 
-  // Reset to 'all' tab whenever the brand filter changes (availableColorNames identity changes)
-  useEffect(() => {
+  // Adjust state during render — resets tab to 'all' when the brand scope changes.
+  // This is React's documented "adjust state during render" pattern, which avoids
+  // the double-render cost of useEffect+setState while keeping the tab in sync.
+  const [lastAvailableColorNames, setLastAvailableColorNames] = useState(availableColorNames)
+  if (lastAvailableColorNames !== availableColorNames) {
+    setLastAvailableColorNames(availableColorNames)
     setActiveTab('all')
-  }, [availableColorNames])
+  }
 
   const selectedSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds])
 
