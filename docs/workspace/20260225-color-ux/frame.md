@@ -26,18 +26,23 @@ The garment catalog shipped real S&S colors (660+ canonical swatches, 30K+ per-s
 Four coordinated changes that transform the color browsing experience:
 
 ### S1: Dense Swatch Grid (#623)
+
 Reduce gap from 2px to 1px on `ColorFilterGrid` and `GarmentDetailDrawer` swatch grids. Keep 32px swatch size (readable names preferred). Results in ~25% more swatches per viewport.
 
 ### S2: Hue-Bucket Filter Tabs (#624)
+
 Add horizontal tab bar above the color swatch grid. 9 tabs:
+
 - All | Blacks & Grays | Whites & Neutrals | Blues | Reds | Greens | Yellows & Oranges | Purples & Pinks | Browns
 
 **Data source**: `colorFamily` from S&S API → stored as `catalog_colors.color_group`. Until #627 backfills this column, use HSL-derived fallback from `hex1`.
 
 ### S3: Brand-Scoped Color Palette (#625)
+
 When a brand filter is active, the color swatch grid shows ONLY colors available for that brand's styles. Computed by cross-referencing `catalog_colors.style_id` → `catalog_styles.brand_id` → selected brand.
 
 ### S4: GarmentCard Color Strip + Star Relocation (#626)
+
 - Add row of **square swatches** (12px) at bottom of GarmentCard info section
 - Show 8-10 swatches max, with `+N` overflow badge
 - **Hue-diverse selection**: pick one representative color from each hue family, not just first N colors

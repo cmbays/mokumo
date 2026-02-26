@@ -128,7 +128,8 @@ export function ColorFilterGrid({
   // Step 3a: Classify every color once — shared by bucketCounts and tabFilteredColors
   // to avoid a redundant second pass over 600+ colors when the active tab changes.
   const colorBucketCache = useMemo(
-    () => new Map<string, ColorBucket>(sortedColors.map((c) => [c.id, classifyColor({ hex: c.hex })])),
+    () =>
+      new Map<string, ColorBucket>(sortedColors.map((c) => [c.id, classifyColor({ hex: c.hex })])),
     [sortedColors]
   )
 
@@ -166,10 +167,7 @@ export function ColorFilterGrid({
       <div className="-mx-0.5 overflow-x-auto px-0.5">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as HueBucket)}>
           <TabsList variant="line" className="gap-0 flex-nowrap h-auto">
-            <TabsTrigger
-              value="all"
-              className="h-7 min-h-0 px-2 py-1 text-xs"
-            >
+            <TabsTrigger value="all" className="h-7 min-h-0 px-2 py-1 text-xs">
               All ({bucketCounts.all})
             </TabsTrigger>
             {ORDERED_HUE_BUCKETS.map((bucket) => (

@@ -226,11 +226,7 @@ export function GarmentDetailDrawer({
               {normalizedColors && normalizedColors.length > 0 ? (
                 // Real S&S colors from catalog_colors — clicking a swatch drives the image carousel
                 <>
-                  <div
-                    className="flex flex-wrap gap-px"
-                    role="group"
-                    aria-label="Available colors"
-                  >
+                  <div className="flex flex-wrap gap-px" role="group" aria-label="Available colors">
                     {normalizedColors.map((color) => {
                       const hex = color.hex1 ?? '#888888'
                       const isSelected = selectedCatalogColorId === color.id

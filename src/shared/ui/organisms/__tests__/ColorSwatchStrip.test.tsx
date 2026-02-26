@@ -7,13 +7,7 @@ import { ColorSwatchStrip } from '../ColorSwatchStrip'
 // Mock Tooltip primitives — no TooltipProvider in test environment
 vi.mock('@shared/ui/primitives/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({
-    children,
-    asChild,
-  }: {
-    children: React.ReactNode
-    asChild?: boolean
-  }) => {
+  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => {
     void asChild
     return <>{children}</>
   },
@@ -21,7 +15,6 @@ vi.mock('@shared/ui/primitives/tooltip', () => ({
     <div data-testid="tooltip-content">{children}</div>
   ),
 }))
-
 
 describe('ColorSwatchStrip', () => {
   it('renders nothing for an empty color array', () => {
@@ -61,7 +54,10 @@ describe('ColorSwatchStrip', () => {
   })
 
   it('does not show overflow badge when all colors fit', () => {
-    const colors = [{ name: 'Red', hex: '#ff0000' }, { name: 'Blue', hex: '#0000ff' }]
+    const colors = [
+      { name: 'Red', hex: '#ff0000' },
+      { name: 'Blue', hex: '#0000ff' },
+    ]
     render(<ColorSwatchStrip colors={colors} maxVisible={8} />)
     expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument()
   })
@@ -94,9 +90,7 @@ describe('ColorSwatchStrip', () => {
 
   it('applies custom className to the container', () => {
     const colors = [{ name: 'Red', hex: '#ff0000' }]
-    const { container } = render(
-      <ColorSwatchStrip colors={colors} className="my-custom-class" />
-    )
+    const { container } = render(<ColorSwatchStrip colors={colors} className="my-custom-class" />)
     expect(container.firstChild).toHaveClass('my-custom-class')
   })
 })

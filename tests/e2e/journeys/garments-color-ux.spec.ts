@@ -274,9 +274,7 @@ test.describe('Garment Color UX', () => {
   // ---------------------------------------------------------------------------
 
   test.describe('Garment card color strips', () => {
-    test('garment cards display ColorSwatchStrip with small colored swatches', async ({
-      page,
-    }) => {
+    test('garment cards display ColorSwatchStrip with small colored swatches', async ({ page }) => {
       await page.goto('/garments')
       await page.waitForLoadState('networkidle', { timeout: 20_000 })
 
@@ -299,10 +297,9 @@ test.describe('Garment Color UX', () => {
       const swatchImages = page.locator('div[role="img"][aria-label]')
       const swatchCount = await swatchImages.count()
 
-      expect(
-        swatchCount,
-        'Expected at least some color swatches on garment cards'
-      ).toBeGreaterThan(0)
+      expect(swatchCount, 'Expected at least some color swatches on garment cards').toBeGreaterThan(
+        0
+      )
 
       // Verify a swatch has a background color style (not just a placeholder)
       const firstSwatch = swatchImages.first()
@@ -342,7 +339,9 @@ test.describe('Garment Color UX', () => {
 
       // Verify the star button is inside a container with aspect-square (the image area).
       // We check by navigating up to the closest aspect-square parent.
-      const imageContainer = firstFavorite.locator('xpath=ancestor::div[contains(@class, "aspect-square")]')
+      const imageContainer = firstFavorite.locator(
+        'xpath=ancestor::div[contains(@class, "aspect-square")]'
+      )
       await expect(imageContainer).toBeVisible()
 
       // Verify the star is absolutely positioned (in the top-right corner overlay).
