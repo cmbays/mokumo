@@ -68,8 +68,7 @@ export function GarmentCard({
         ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
         : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
 
-  const hasBottomRow =
-    (showPrice && !isNormalized(garment)) || !garment.isEnabled
+  const hasBottomRow = (showPrice && !isNormalized(garment)) || !garment.isEnabled
 
   return (
     <div
