@@ -1,0 +1,41 @@
+version: 2
+
+sources:
+  - name: catalog
+    description: >
+      Normalized catalog tables in the public schema, populated by the
+      catalog sync service (run-image-sync.ts and pricing sync).
+      This source is the OLTP foundation for the garments analytics mart.
+      Note: catalog_colors is read directly (not via raw append-only tables)
+      because it already provides one deduplicated row per (style, color).
+      Re-evaluate if row count exceeds ~500k.
+    schema: public
+    tables:
+      - name: catalog_colors
+        description: >
+          One row per (style_id, color_name). Contains color metadata including
+          color_family_name (from S&S API) populated after migration 0016 sync.
+        columns:
+          - name: id
+            description: UUID primary key.
+            data_tests:
+              - not_null
+              - unique
+          - name: style_id
+            description: FK to catalog_styles.id.
+            data_tests:
+              - not_null
+          - name: name
+            description: Color name as provided by the supplier.
+            data_tests:
+              - not_null
+          - name: color_family_name
+            description: >
+              Human-curated color family from S&S API (e.g. 'Navy', 'Black', 'Royal').
+              NULL for rows synced before migration 0016 or for non-S&S sources.
+              Used by dim_color_families mart as the grouping key.
+          - name: color_code
+            description: >
+              Supplier color code (e.g. '032'). Nullable. Future cross-supplier join key.
+          - name: hex1
+            description: Primary hex color (with # prefix). Nullable.

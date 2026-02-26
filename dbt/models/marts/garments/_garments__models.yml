@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: dim_color_families
+    description: >
+      Color family dimension — one row per distinct color_family_name from
+      catalog_colors. Human-curated family names from S&S API (e.g. 'Navy',
+      'Royal', 'Black'). Populated after migration 0016 sync runs.
+      Grain: one row per color_family_name.
+      Source: public.catalog_colors (OLTP read — acceptable at 30k rows;
+      re-evaluate at 500k).
+    columns:
+      - name: family_key
+        description: >
+          Surrogate key generated from color_family_name.
+          Deterministic MD5 hash via dbt_utils.generate_surrogate_key.
+        data_tests:
+          - unique
+          - not_null
+      - name: color_family_name
+        description: >
+          Human-curated color family name from S&S API (e.g. 'Navy', 'Black', 'Forest').
+          Nulls are excluded at the model level (WHERE color_family_name IS NOT NULL);
+          this test validates that guarantee holds.
+        data_tests:
+          - not_null
+      - name: style_count
+        description: >
+          Number of distinct catalog_styles with at least one color in this family.
+        data_tests:
+          - not_null
+      - name: swatch_count
+        description: >
+          Total number of catalog_colors rows in this family (may include
+          multiple styles with the same color name).
+        data_tests:
+          - not_null
+      - name: representative_hex
+        description: >
+          Most common hex1 value among colors in this family (PostgreSQL mode() aggregate).
+          NULL when no hex1 values exist in the family.
+      - name: source
+        description: >
+          Source of the color data — always 'catalog' for this mart.
+          Extensible when SanMar or other suppliers populate catalog_colors.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['catalog']
