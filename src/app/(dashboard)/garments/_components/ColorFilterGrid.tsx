@@ -53,7 +53,7 @@ function FilterSwatch({
             }
           }}
           className={cn(
-            'relative flex h-8 w-8 min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) md:min-h-0 md:min-w-0 flex-shrink-0 items-center justify-center rounded-sm transition-all',
+            'relative flex h-10 w-10 min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) md:min-h-0 md:min-w-0 flex-shrink-0 items-center justify-center rounded-sm transition-all',
             'cursor-pointer hover:scale-105 hover:ring-1 hover:ring-foreground/30',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'motion-reduce:transition-none',
@@ -157,8 +157,8 @@ export function ColorFilterGrid({
     return sortedColors.filter((c) => colorBucketCache.get(c.id) === activeTab)
   }, [sortedColors, activeTab, colorBucketCache])
 
-  // swatch width: h-8 w-8 = 32px + gap-px (1px) ≈ 33px per cell
-  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 33)
+  // swatch width: h-10 w-10 = 40px + gap-px (1px) ≈ 41px per cell
+  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 41)
 
   return (
     <div className="space-y-2">
@@ -188,10 +188,10 @@ export function ColorFilterGrid({
         </Tabs>
       </div>
 
-      {/* Swatch grid — dense gap */}
+      {/* Swatch grid — flex-wrap packs swatches at natural width (no dead column space) */}
       <div
         ref={gridRef}
-        className="grid grid-cols-5 md:grid-cols-6 gap-px"
+        className="flex flex-wrap gap-px"
         role="group"
         aria-label="Filter by color"
         onKeyDown={handleKeyDown}
