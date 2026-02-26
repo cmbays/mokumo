@@ -17,13 +17,14 @@ import type { Color } from '@domain/entities/color'
 type GarmentCardProps = {
   garment: GarmentCatalog | NormalizedGarmentCatalog
   showPrice: boolean
-  favoriteColorIds: string[]
+  /** Unused by GarmentCard itself — kept for call-site compatibility during migration. @deprecated remove after #627 lands */
+  favoriteColorIds?: string[]
   onToggleFavorite: (garmentId: string) => void
   onBrandClick?: (brandName: string) => void
   onClick: (garmentId: string) => void
   /** Real front image URL from catalog_images — passed by parent via buildSkuToFrontImageUrl. */
   frontImageUrl?: string
-  /** Real S&S colors from normalizedCatalog — feeds ColorSwatchStrip when availableColors is empty. */
+  /** Real S&S colors from normalizedCatalog — feeds ColorSwatchStrip. Falls back when absent or empty. */
   normalizedColors?: CatalogColor[]
 }
 
@@ -56,13 +57,16 @@ export function GarmentCard({
 
   const sku = isNormalized(garment) ? garment.styleNumber : garment.sku
 
-  // Colors for the swatch strip — prefers normalizedColors (real S&S hex values) when present,
-  // falls back to the NormalizedGarmentCatalog shape, then to the legacy Color entity shape.
-  const swatchColors = normalizedColors
-    ? normalizedColors.map((c) => ({ name: c.name, hex1: c.hex1 }))
-    : isNormalized(garment)
-      ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
-      : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
+  // Colors for the swatch strip — priority: normalizedColors (real S&S hex, non-empty)
+  // → NormalizedGarmentCatalog.colors → legacy Color entity array.
+  // The `length > 0` check ensures an empty normalizedColors array doesn't bypass the
+  // fallback paths (e.g., a style with zero colors synced from run-image-sync).
+  const swatchColors =
+    normalizedColors && normalizedColors.length > 0
+      ? normalizedColors.map((c) => ({ name: c.name, hex1: c.hex1 }))
+      : isNormalized(garment)
+        ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
+        : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
 
   const hasBottomRow =
     (showPrice && !isNormalized(garment)) || !garment.isEnabled

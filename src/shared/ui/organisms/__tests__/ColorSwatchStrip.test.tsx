@@ -22,14 +22,6 @@ vi.mock('@shared/ui/primitives/tooltip', () => ({
   ),
 }))
 
-// Mock color-utils to keep tests deterministic
-vi.mock('@shared/lib/color-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@shared/lib/color-utils')>()
-  return {
-    ...actual,
-    // Keep selectRepresentativeColors real — it's the function under test
-  }
-})
 
 describe('ColorSwatchStrip', () => {
   it('renders nothing for an empty color array', () => {

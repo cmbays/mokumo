@@ -3,17 +3,10 @@
 import { useMemo } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { cn } from '@shared/lib/cn'
-import { selectRepresentativeColors } from '@shared/lib/color-utils'
-
-type SwatchColor = {
-  name: string
-  hex?: string | null
-  hex1?: string | null
-  family?: string
-}
+import { selectRepresentativeColors, type SwatchColorInput } from '@shared/lib/color-utils'
 
 type ColorSwatchStripProps = {
-  colors: SwatchColor[]
+  colors: SwatchColorInput[]
   /** Maximum number of swatches to show before displaying a +N overflow badge. Default: 8 */
   maxVisible?: number
   className?: string
@@ -41,16 +34,20 @@ export function ColorSwatchStrip({ colors, maxVisible = 8, className }: ColorSwa
     <div className={cn('flex items-center gap-px', className)}>
       {selectedIndices.map((idx) => {
         const color = colors[idx]
+        // Defensive: selectRepresentativeColors only produces in-bounds indices,
+        // but guard here prevents a crash cascade if that ever changes.
+        if (!color) return null
         const bg = color.hex ?? color.hex1 ?? null
 
         return (
           <Tooltip key={idx}>
             <TooltipTrigger asChild>
               <div
-                className="h-3 w-3 flex-shrink-0 rounded-[1px] bg-surface"
+                className="h-3 w-3 flex-shrink-0 rounded-sm bg-surface"
                 style={bg ? { backgroundColor: bg } : undefined}
                 aria-label={color.name}
                 role="img"
+                tabIndex={0}
               />
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={4}>

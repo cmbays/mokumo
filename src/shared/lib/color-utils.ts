@@ -22,13 +22,20 @@ export type HueBucket =
   | 'purples-pinks'
   | 'browns'
 
+/**
+ * The 8 classification buckets — HueBucket minus the 'all' tab-state sentinel.
+ * Use this as the return type for classification functions so callers know
+ * 'all' can never come back from classifyColor / classifyColorHue.
+ */
+export type ColorBucket = Exclude<HueBucket, 'all'>
+
 // ---------------------------------------------------------------------------
 // Config — tab labels, display order, family strings for Color.family lookup
 // ---------------------------------------------------------------------------
 
 export const HUE_BUCKET_CONFIG: Record<
   HueBucket,
-  { label: string; order: number; families: string[] }
+  { label: string; order: number; families: readonly string[] }
 > = {
   all: { label: 'All', order: 0, families: [] },
   'blacks-grays': {
@@ -136,9 +143,15 @@ export const HUE_BUCKET_CONFIG: Record<
   },
 }
 
-/** All non-'all' buckets in display order. */
-export const ORDERED_HUE_BUCKETS: Exclude<HueBucket, 'all'>[] = (
-  Object.keys(HUE_BUCKET_CONFIG).filter((k) => k !== 'all') as Exclude<HueBucket, 'all'>[]
+/**
+ * All non-'all' buckets in display order.
+ *
+ * The `as ColorBucket[]` assertion is safe: Object.keys() over a
+ * `Record<HueBucket, ...>` can only return HueBucket strings, and the
+ * filter removes the sole non-ColorBucket member ('all').
+ */
+export const ORDERED_HUE_BUCKETS: ColorBucket[] = (
+  Object.keys(HUE_BUCKET_CONFIG).filter((k) => k !== 'all') as ColorBucket[]
 ).sort((a, b) => HUE_BUCKET_CONFIG[a].order - HUE_BUCKET_CONFIG[b].order)
 
 /** Lowercase family string → HueBucket, derived from HUE_BUCKET_CONFIG.families. */
@@ -154,11 +167,22 @@ for (const [bucket, cfg] of Object.entries(HUE_BUCKET_CONFIG)) {
 // hexToHsl
 // ---------------------------------------------------------------------------
 
+/** Valid 6-digit hex color — same pattern used by hexToRgb in color.rules.ts. */
+const HEX6_RE = /^#[0-9a-fA-F]{6}$/
+
 /**
  * Convert a 6-digit hex color to HSL components.
  * Returns h in [0, 360), s in [0, 100], l in [0, 100].
+ *
+ * Returns { h: 0, s: 0, l: 0 } (maps to 'blacks-grays') for any non-6-digit input —
+ * same safe-default strategy as hexToRgb. Callers must not pass 3-digit hex, hex without
+ * '#', or color names; this guard makes invalid input explicit rather than silently
+ * producing NaN (NaN comparisons always return false, causing every if-branch to be
+ * skipped and colors to fall through to the 'purples-pinks' catch-all).
  */
 export function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  if (!HEX6_RE.test(hex)) return { h: 0, s: 0, l: 0 }
+
   const r = parseInt(hex.slice(1, 3), 16) / 255
   const g = parseInt(hex.slice(3, 5), 16) / 255
   const b = parseInt(hex.slice(5, 7), 16) / 255
@@ -186,8 +210,10 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
 // ---------------------------------------------------------------------------
 
 /**
- * Classify a hex color string into a HueBucket via HSL decomposition.
- * Returns 'blacks-grays' for null/empty input (safe default).
+ * Classify a hex color string into a ColorBucket via HSL decomposition.
+ * Returns 'blacks-grays' for null/empty input AND for any invalid hex string
+ * (hexToHsl returns { h:0, s:0, l:0 } for non-6-digit input, which maps to
+ * 'blacks-grays' via the achromatic S<10% branch).
  *
  * Evaluation order (specialize-first to prevent range overlap):
  * 1. Achromatic (S < 10%) → blacks-grays / whites-neutrals by lightness
@@ -198,7 +224,7 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
  * 6. Blues: hue 171–260
  * 7. Purples-pinks: hue 261–345
  */
-export function classifyColorHue(hex: string | null): Exclude<HueBucket, 'all'> {
+export function classifyColorHue(hex: string | null): ColorBucket {
   if (!hex) return 'blacks-grays'
 
   const { h, s, l } = hexToHsl(hex)
@@ -242,7 +268,7 @@ export function classifyColor(color: {
   family?: string
   hex?: string | null
   hex1?: string | null
-}): Exclude<HueBucket, 'all'> {
+}): ColorBucket {
   if (color.family) {
     const bucket = FAMILY_TO_BUCKET.get(color.family.toLowerCase())
     if (bucket) return bucket
@@ -253,6 +279,23 @@ export function classifyColor(color: {
 // ---------------------------------------------------------------------------
 // selectRepresentativeColors
 // ---------------------------------------------------------------------------
+
+/**
+ * Minimal color shape accepted by selectRepresentativeColors and ColorSwatchStrip.
+ * Handles all three entity forms coexisting during the catalog migration:
+ *   - mock Color:   { name, hex, family }
+ *   - CatalogColor: { name, hex1 }
+ *   - FilterColor:  { name, hex }
+ *
+ * `name` is required only for ColorSwatchStrip (tooltip label + aria-label).
+ * The classification functions only require the hex/family fields.
+ */
+export type SwatchColorInput = {
+  name: string
+  hex?: string | null
+  hex1?: string | null
+  family?: string
+}
 
 /**
  * Select up to `maxCount` indices from a color array using round-robin across
@@ -266,14 +309,14 @@ export function classifyColor(color: {
  *   3. Stop when maxCount reached or all colors exhausted
  */
 export function selectRepresentativeColors(
-  colors: Array<{ hex?: string | null; hex1?: string | null; family?: string }>,
+  colors: Array<Omit<SwatchColorInput, 'name'>>,
   maxCount = 8
 ): number[] {
   if (colors.length === 0) return []
   if (colors.length <= maxCount) return colors.map((_, i) => i)
 
   // Group original indices by hue bucket
-  const byBucket = new Map<Exclude<HueBucket, 'all'>, number[]>()
+  const byBucket = new Map<ColorBucket, number[]>()
   for (let i = 0; i < colors.length; i++) {
     const bucket = classifyColor(colors[i])
     const group = byBucket.get(bucket)

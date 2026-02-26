@@ -10,6 +10,7 @@ import {
   classifyColor,
   HUE_BUCKET_CONFIG,
   ORDERED_HUE_BUCKETS,
+  type ColorBucket,
   type HueBucket,
 } from '@shared/lib/color-utils'
 import type { FilterColor } from '@features/garments/types'
@@ -124,7 +125,14 @@ export function ColorFilterGrid({
     return [...favorites, ...rest]
   }, [scopedColors, favoriteColorIds])
 
-  // Step 3: Count per hue bucket (from the full scoped+sorted set — shown in tab badges)
+  // Step 3a: Classify every color once — shared by bucketCounts and tabFilteredColors
+  // to avoid a redundant second pass over 600+ colors when the active tab changes.
+  const colorBucketCache = useMemo(
+    () => new Map<string, ColorBucket>(sortedColors.map((c) => [c.id, classifyColor({ hex: c.hex })])),
+    [sortedColors]
+  )
+
+  // Step 3b: Count per hue bucket (from the full scoped+sorted set — shown in tab badges)
   const bucketCounts = useMemo(() => {
     const counts: Record<HueBucket, number> = {
       all: sortedColors.length,
@@ -138,16 +146,16 @@ export function ColorFilterGrid({
       browns: 0,
     }
     for (const color of sortedColors) {
-      counts[classifyColor({ hex: color.hex })]++
+      counts[colorBucketCache.get(color.id) ?? classifyColor({ hex: color.hex })]++
     }
     return counts
-  }, [sortedColors])
+  }, [sortedColors, colorBucketCache])
 
-  // Step 4: Filter by active tab
+  // Step 4: Filter by active tab — uses cache, no re-classification
   const tabFilteredColors = useMemo(() => {
     if (activeTab === 'all') return sortedColors
-    return sortedColors.filter((c) => classifyColor({ hex: c.hex }) === activeTab)
-  }, [sortedColors, activeTab])
+    return sortedColors.filter((c) => colorBucketCache.get(c.id) === activeTab)
+  }, [sortedColors, activeTab, colorBucketCache])
 
   // swatch width: h-8 w-8 = 32px + gap-px (1px) ≈ 33px per cell
   const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 33)
