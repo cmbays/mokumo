@@ -1,6 +1,13 @@
 'use client'
 
-import { useState, useMemo, useSyncExternalStore, useCallback, useEffect, useRef } from 'react'
+import {
+  useState,
+  useMemo,
+  useSyncExternalStore,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+} from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Package, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
@@ -99,9 +106,13 @@ export function GarmentCatalogClient({
   )
 
   // Ref always pointing to latest catalog — lets async handlers snapshot/rollback
-  // without closing over stale state or adding catalog to useCallback deps
+  // without closing over stale state or adding catalog to useCallback deps.
+  // useLayoutEffect (not render-time assignment) keeps the React Compiler lint rule happy
+  // while still guaranteeing the ref is current before any event handler fires.
   const catalogRef = useRef(catalog)
-  catalogRef.current = catalog
+  useLayoutEffect(() => {
+    catalogRef.current = catalog
+  })
 
   // Price visibility from localStorage (useSyncExternalStore avoids setState-in-effect)
   const subscribeToPriceStore = useCallback((onStoreChange: () => void) => {
@@ -141,8 +152,16 @@ export function GarmentCatalogClient({
     setSelectedBrandName(brandName)
   }, [])
 
-  // Pagination
+  // Pagination — page resets to 0 when any filter changes.
+  // "Adjust state during render" pattern (React docs) avoids the useEffect+setState
+  // double-render and the react-compiler "setState in effect" lint error.
   const [page, setPage] = useState(0)
+  const [lastFilterKey, setLastFilterKey] = useState('')
+  const currentFilterKey = `${category}|${searchQuery}|${brand}|${colorFilterKey}|${showDisabled}`
+  if (lastFilterKey !== currentFilterKey) {
+    setLastFilterKey(currentFilterKey)
+    setPage(0)
+  }
 
   // Single pass over the catalog — builds filteredGarments and categoryHits together.
   // categoryHits applies all filters except category (faceted search pattern) so the
@@ -200,12 +219,8 @@ export function GarmentCatalogClient({
     showDisabled,
   ])
 
-  // Reset to first page whenever any filter changes.
   // Sort before joining to produce a canonical key regardless of color selection order.
   const colorFilterKey = selectedColorIds.slice().sort().join(',')
-  useEffect(() => {
-    setPage(0)
-  }, [category, searchQuery, brand, colorFilterKey, showDisabled])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
@@ -288,7 +303,8 @@ export function GarmentCatalogClient({
     [skuToStyleId]
   )
 
-  const handleToggleColorFavorite = useCallback(async (colorId: string) => {
+  // Prefixed _ — handler is built but not yet wired to ColorFilterGrid UI (Phase 2 of #626)
+  const _handleToggleColorFavorite = useCallback(async (colorId: string) => {
     // Optimistic update
     setFavoriteColorIds((prev) =>
       prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
