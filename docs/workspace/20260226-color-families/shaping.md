@@ -11,6 +11,7 @@
 ### Wave 1 — Schema, Sync, Type System
 
 **Functional**:
+
 - R1.1: `catalog_colors` gains two nullable columns: `color_family_name varchar(100)` and `color_code varchar(50)`
 - R1.2: Drizzle schema (`src/db/schema/catalog-normalized.ts`) updated; migration 0016 generated and applied
 - R1.3: `ssProductSchema` in `lib/suppliers/adapters/ss-activewear.ts` gains `colorFamilyName` field (S&S API field is `colorFamilyName`)
@@ -21,11 +22,13 @@
 - R1.8: `FilterColor` type in `src/features/garments/types.ts` gains `colorFamilyName: string | null` (needed by Wave 3 UI)
 
 **Non-functional**:
+
 - NF1.1: Migration is additive-only (nullable columns, no NOT NULL). Zero downtime — no backfill required.
 - NF1.2: Existing sync runs with pre-migration rows are safe — `color_family_name` defaults to NULL.
 - NF1.3: No change to the S&S API call surface — `colorFamilyName` already flows through the `ssProductSchema` `.passthrough()` today; this change makes it explicit and typed.
 
 **Success criteria**:
+
 - `npm run db:generate` produces migration 0016 with the two ADD COLUMN statements
 - `npm run db:migrate` applies cleanly to local Supabase
 - `npx tsc --noEmit` passes
@@ -37,6 +40,7 @@
 ### Wave 2 — dbt dim_color_families Mart
 
 **Functional**:
+
 - R2.1: New dbt model `dbt/models/marts/garments/dim_color_families.sql` (new `garments/` subdirectory under `marts/`)
 - R2.2: Reads directly from `catalog_colors` (not from `raw.ss_activewear_products`) — uses the app's normalized table as source of truth
 - R2.3: Produces one row per distinct `color_family_name` with: `color_family_name`, `style_count` (distinct styles in that family), `swatch_count` (total color rows), `representative_hex` (most common `hex1` within the family), `source` (always `'catalog'` for now)
@@ -44,11 +48,13 @@
 - R2.5: Null family names are excluded (`WHERE color_family_name IS NOT NULL`)
 
 **Non-functional**:
+
 - NF2.1: Mart is `materialized='table'` — refresh on each `dbt run`
 - NF2.2: Source is registered in a new `_garments__sources.yml` pointing to the `public` schema `catalog_colors` table
 - NF2.3: No Drizzle `.existing()` read from this mart in Wave 2 — analytics-only
 
 **Success criteria**:
+
 - `npm run dbt:run` produces the `dim_color_families` table in the `analytics` schema
 - `npm run dbt:test` passes all tests on the new model
 - Row count is in the expected 60–80 range for S&S data
@@ -58,6 +64,7 @@
 ### Wave 3 — ColorFilterGrid Family Filter UI
 
 **Functional**:
+
 - R3.1: `ColorFilterGrid` props gain `colorFamilies: string[]` (sorted, distinct family names from server) and `selectedFamilies: string[]`
 - R3.2: Family tabs replace hue-bucket tabs as the primary filter surface. Tab list: "All" + one tab per distinct family name, sorted alphabetically. Count badge per tab shows how many swatches are in that family.
 - R3.3: Selecting a family tab filters the swatch grid to colors within that family. "All" shows all colors (current behavior).
@@ -68,12 +75,14 @@
 - R3.8: Family tab list is horizontally scrollable on mobile (same overflow pattern as current hue-bucket tabs).
 
 **Non-functional**:
+
 - NF3.1: Family tabs with zero visible swatches (after brand scope filtering) render at `opacity-40` — same treatment as current empty hue-bucket tabs.
 - NF3.2: Keyboard navigation across swatch grid is unchanged (useGridKeyboardNav).
 - NF3.3: Tooltip on hover still shows the individual color name, not the family name.
 - NF3.4: The `?colors=` URL param for individual color ID selection is preserved — families is a secondary scoping layer on top.
 
 **Success criteria**:
+
 - ColorFilterGrid renders ~60–80 family tabs (not 4,413 swatches) as the primary filter
 - Selecting "Navy" shows only Navy swatches across all brands
 - "All" tab shows all swatches (current behavior unchanged)
@@ -110,6 +119,7 @@ S&S API response
 **Key technical decision #1 — Where does `colorFamilyName` live in the type hierarchy?**
 
 It lives at every layer:
+
 - `ssProductSchema`: raw API field capture (already exists as `.passthrough()` artifact — make it explicit with `z.string().optional().default('')`)
 - `CanonicalColor`: domain transport type — add `colorFamilyName: z.string().nullable()` and `colorCode: z.string().nullable()`
 - `catalog_colors`: persisted as `color_family_name varchar(100) NULL` and `color_code varchar(50) NULL`
@@ -124,11 +134,13 @@ Promote it now alongside `colorFamilyName`. The `colorCode` field (e.g., `"032"`
 **Key technical decision #3 — Nullable in DB?**
 
 Yes, both columns are `NULL`-able. Rationale:
+
 1. Existing 30,614 `catalog_colors` rows synced pre-migration will have NULL — a NOT NULL constraint with a dummy default would be semantically wrong.
 2. Future suppliers (SanMar, alphabroder) may not provide a `colorFamilyName` concept — nullable is the multi-supplier-safe default.
 3. The Wave 3 UI handles nulls via the "Other" tab — no application-layer assumption of non-null.
 
 **Fit checks**:
+
 - The existing unique index `(style_id, name)` is unaffected — color name remains the natural key.
 - The `.passthrough()` on `ssProductSchema` means `colorFamilyName` was already flowing into the object as an untyped extra field — making it explicit cannot break existing behavior.
 - Mock adapter returns `CanonicalColor` objects built by hand — will need `colorFamilyName: null, colorCode: null` added to prevent TypeScript errors.
@@ -146,6 +158,7 @@ Model location: `dbt/models/marts/garments/dim_color_families.sql`
 Read from `catalog_colors` (the normalized app table), not from `raw.ss_activewear_products`.
 
 Rationale:
+
 - `raw.ss_activewear_products` has one row per SKU per sync run (append-only). A `dim_color_families` built from raw would need `row_number()` deduplication per SKU plus a separate color-level deduplication — two levels of grouping in one mart, complex.
 - `catalog_colors` already has one row per (style, color) with `color_family_name` normalized. A `GROUP BY color_family_name` is two lines.
 - Future: when SanMar arrives, its colors flow through the same `catalog_colors` table. The mart automatically includes cross-supplier data with no model changes.
@@ -189,6 +202,7 @@ select * from final
 ```
 
 **Fit checks**:
+
 - `mode() within group (order by hex1)` is standard PostgreSQL — supported by Supabase.
 - Null `hex1` values (colors with no hex data) will not contribute to the mode calculation — acceptable.
 - The `catalog` source requires a new `_garments__sources.yml` in `dbt/models/marts/garments/`. This follows the pattern of `_ss_activewear__sources.yml` in staging.
@@ -227,6 +241,7 @@ Replace as primary filter. Keep hue-bucket logic (`classifyColor`, `HUE_BUCKET_C
 The hue-bucket tabs had a structural problem: algorithmic classification of borderline colors. Family names from S&S are human-curated — strictly superior for the "find Navy" use case. Supplementing (keeping both) would double the tab surface and confuse the user.
 
 **Fit checks**:
+
 - `FilterColor` gaining `colorFamilyName: string | null` is an additive type change — no existing consumers of `FilterColor` will break (they only destructure `id`, `name`, `hex`, `swatchTextColor`).
 - `ColorFilterGrid` prop signature change (`colorFamilies` added) is a breaking change to the component API — all call sites must be updated. Audit: `GarmentCatalogClient.tsx` is the sole consumer.
 - The family tabs list with ~60–80 entries at `text-xs` tab height will overflow horizontally on all screen sizes — horizontal scroll with `overflow-x-auto` is already the pattern for hue-bucket tabs and must be preserved.
@@ -238,27 +253,27 @@ The hue-bucket tabs had a structural problem: algorithmic classification of bord
 
 ## Consistency Check
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Wave 1 type additions flow all the way to `FilterColor`? | Yes | `CanonicalColor` → `catalog_colors` → SSR query → `FilterColor` |
-| Wave 2 mart source matches Wave 1 DB columns? | Yes | Reads `color_family_name` from `catalog_colors` post-migration-0016 |
-| Wave 3 UI assumes non-null `color_family_name`? | No — handled | Null-family colors route to "Other" tab; Wave 3 degrades gracefully on un-synced data |
-| Wave 3 `selectedFamilies` state conflicts with existing `selectedColorIds`? | No | Two independent filter axes: family (scope) + color IDs (selection within scope) |
-| URL param `?families=` conflicts with existing `?colors=`? | No | Different param keys; both parsed in `useColorFilter` |
-| Mock adapter compatibility with new `CanonicalColor` fields? | Needs fix | Mock colors must add `colorFamilyName: null, colorCode: null` — straightforward |
-| `buildColorUpsertValue()` signature change breaks existing callers? | No | Returns same shape + two new fields; Drizzle upsert is additive |
-| dbt mart added to CI path filter? | Needs check | `dbt/` path filter in GitHub Actions should already cover `dbt/models/marts/garments/` |
+| Check                                                                       | Status       | Notes                                                                                  |
+| --------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------- |
+| Wave 1 type additions flow all the way to `FilterColor`?                    | Yes          | `CanonicalColor` → `catalog_colors` → SSR query → `FilterColor`                        |
+| Wave 2 mart source matches Wave 1 DB columns?                               | Yes          | Reads `color_family_name` from `catalog_colors` post-migration-0016                    |
+| Wave 3 UI assumes non-null `color_family_name`?                             | No — handled | Null-family colors route to "Other" tab; Wave 3 degrades gracefully on un-synced data  |
+| Wave 3 `selectedFamilies` state conflicts with existing `selectedColorIds`? | No           | Two independent filter axes: family (scope) + color IDs (selection within scope)       |
+| URL param `?families=` conflicts with existing `?colors=`?                  | No           | Different param keys; both parsed in `useColorFilter`                                  |
+| Mock adapter compatibility with new `CanonicalColor` fields?                | Needs fix    | Mock colors must add `colorFamilyName: null, colorCode: null` — straightforward        |
+| `buildColorUpsertValue()` signature change breaks existing callers?         | No           | Returns same shape + two new fields; Drizzle upsert is additive                        |
+| dbt mart added to CI path filter?                                           | Needs check  | `dbt/` path filter in GitHub Actions should already cover `dbt/models/marts/garments/` |
 
 ---
 
 ## Shape Fit Check
 
-| Dimension | Wave 1 | Wave 2 | Wave 3 |
-|-----------|--------|--------|--------|
-| **Scope tight?** | Yes — two columns, one type, one sync mapper | Yes — one mart, one YAML | Yes — one component refactor, one hook extension |
-| **Data source clear?** | S&S API → CanonicalColor → catalog_colors | catalog_colors (OLTP read) | FilterColor[] from SSR |
-| **Backwards compatible?** | Yes — nullable columns, no backfill | Yes — analytics-only | No breaking change to callers if ColorFilterGrid props versioned |
-| **Biggest risk** | S&S `colorFamilyName` field name differs from docs | Supabase OLTP source performance at scale | 60–80 tabs horizontal scroll UX on mobile |
-| **Mitigation** | Verify field name in raw API response before coding; `.passthrough()` already captures it | Benchmark at 30k rows; add index if needed | Use same overflow-x-auto pattern as hue-bucket tabs; test on 375px viewport |
-| **Spikes needed?** | No | No | No |
-| **Deferred rabbit holes** | Cross-supplier family normalization | SCD Type 2 for family history | Family URL persistence, hue-bucket secondary sub-filter |
+| Dimension                 | Wave 1                                                                                    | Wave 2                                     | Wave 3                                                                      |
+| ------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------- |
+| **Scope tight?**          | Yes — two columns, one type, one sync mapper                                              | Yes — one mart, one YAML                   | Yes — one component refactor, one hook extension                            |
+| **Data source clear?**    | S&S API → CanonicalColor → catalog_colors                                                 | catalog_colors (OLTP read)                 | FilterColor[] from SSR                                                      |
+| **Backwards compatible?** | Yes — nullable columns, no backfill                                                       | Yes — analytics-only                       | No breaking change to callers if ColorFilterGrid props versioned            |
+| **Biggest risk**          | S&S `colorFamilyName` field name differs from docs                                        | Supabase OLTP source performance at scale  | 60–80 tabs horizontal scroll UX on mobile                                   |
+| **Mitigation**            | Verify field name in raw API response before coding; `.passthrough()` already captures it | Benchmark at 30k rows; add index if needed | Use same overflow-x-auto pattern as hue-bucket tabs; test on 375px viewport |
+| **Spikes needed?**        | No                                                                                        | No                                         | No                                                                          |
+| **Deferred rabbit holes** | Cross-supplier family normalization                                                       | SCD Type 2 for family history              | Family URL persistence, hue-bucket secondary sub-filter                     |

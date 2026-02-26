@@ -35,22 +35,22 @@ Before mapping affordances, the following facts were confirmed by reading the ac
 
 ### Code Affordances
 
-| Affordance | Type | File | Connected To |
-|---|---|---|---|
-| `colorFamilyName` field (ssProductSchema) | schema field | `lib/suppliers/adapters/ss-activewear.ts` | `productsToCanonicalStyle()` |
-| `productsToCanonicalStyle()` | mapping function | `lib/suppliers/adapters/ss-activewear.ts` | `CanonicalColor` object literal at line 214 |
-| `canonicalColorSchema` | Zod schema | `lib/suppliers/types.ts` | `CanonicalColor` type (inferred) |
-| `colorFamilyName` field (canonicalColorSchema) | schema field | `lib/suppliers/types.ts` | `buildColorUpsertValue()`, mock adapter |
-| `colorCode` field (canonicalColorSchema) | schema field | `lib/suppliers/types.ts` | `buildColorUpsertValue()`, mock adapter |
-| `buildColorUpsertValue()` | upsert builder | `src/infrastructure/services/catalog-sync-normalized.ts` | `catalogColors` Drizzle upsert |
-| `color_family_name` column (DB) | DDL column | `supabase/migrations/0016_color_family_fields.sql` | `catalog_colors` table |
-| `color_code` column (DB) | DDL column | `supabase/migrations/0016_color_family_fields.sql` | `catalog_colors` table |
-| `colorFamilyName` column (Drizzle) | schema field | `src/db/schema/catalog-normalized.ts` | `buildColorUpsertValue()` return type |
-| `colorCode` column (Drizzle) | schema field | `src/db/schema/catalog-normalized.ts` | `buildColorUpsertValue()` return type |
-| `catalogColorSchema.colorFamilyName` | Zod field | `src/domain/entities/catalog-style.ts` | `NormalizedGarmentCatalog.colors[]` |
-| `catalogColorSchema.colorCode` | Zod field | `src/domain/entities/catalog-style.ts` | `NormalizedGarmentCatalog.colors[]` |
-| `FilterColor.colorFamilyName` | type field | `src/features/garments/types.ts` | `extractUniqueColors()`, `ColorFilterGrid` |
-| `toCanonicalStyle()` (mock adapter) | mapping function | `lib/suppliers/adapters/mock.ts` | `CanonicalColor` object literal (needs null fields) |
+| Affordance                                     | Type             | File                                                     | Connected To                                        |
+| ---------------------------------------------- | ---------------- | -------------------------------------------------------- | --------------------------------------------------- |
+| `colorFamilyName` field (ssProductSchema)      | schema field     | `lib/suppliers/adapters/ss-activewear.ts`                | `productsToCanonicalStyle()`                        |
+| `productsToCanonicalStyle()`                   | mapping function | `lib/suppliers/adapters/ss-activewear.ts`                | `CanonicalColor` object literal at line 214         |
+| `canonicalColorSchema`                         | Zod schema       | `lib/suppliers/types.ts`                                 | `CanonicalColor` type (inferred)                    |
+| `colorFamilyName` field (canonicalColorSchema) | schema field     | `lib/suppliers/types.ts`                                 | `buildColorUpsertValue()`, mock adapter             |
+| `colorCode` field (canonicalColorSchema)       | schema field     | `lib/suppliers/types.ts`                                 | `buildColorUpsertValue()`, mock adapter             |
+| `buildColorUpsertValue()`                      | upsert builder   | `src/infrastructure/services/catalog-sync-normalized.ts` | `catalogColors` Drizzle upsert                      |
+| `color_family_name` column (DB)                | DDL column       | `supabase/migrations/0016_color_family_fields.sql`       | `catalog_colors` table                              |
+| `color_code` column (DB)                       | DDL column       | `supabase/migrations/0016_color_family_fields.sql`       | `catalog_colors` table                              |
+| `colorFamilyName` column (Drizzle)             | schema field     | `src/db/schema/catalog-normalized.ts`                    | `buildColorUpsertValue()` return type               |
+| `colorCode` column (Drizzle)                   | schema field     | `src/db/schema/catalog-normalized.ts`                    | `buildColorUpsertValue()` return type               |
+| `catalogColorSchema.colorFamilyName`           | Zod field        | `src/domain/entities/catalog-style.ts`                   | `NormalizedGarmentCatalog.colors[]`                 |
+| `catalogColorSchema.colorCode`                 | Zod field        | `src/domain/entities/catalog-style.ts`                   | `NormalizedGarmentCatalog.colors[]`                 |
+| `FilterColor.colorFamilyName`                  | type field       | `src/features/garments/types.ts`                         | `extractUniqueColors()`, `ColorFilterGrid`          |
+| `toCanonicalStyle()` (mock adapter)            | mapping function | `lib/suppliers/adapters/mock.ts`                         | `CanonicalColor` object literal (needs null fields) |
 
 ### Wave 1 Wiring
 
@@ -79,6 +79,7 @@ S&S API /v2/products/ response
 ### Wave 1 Vertical Slices
 
 **Slice 1A — Type system only** (zero runtime change):
+
 - Add `colorFamilyName` + `colorCode` to `canonicalColorSchema` in `lib/suppliers/types.ts`
 - Add `colorFamilyName` + `colorCode` to `catalogColorSchema` in `src/domain/entities/catalog-style.ts`
 - Add `colorFamilyName` to `FilterColor` in `src/features/garments/types.ts`
@@ -86,18 +87,21 @@ S&S API /v2/products/ response
 - **Testable**: `npx tsc --noEmit` passes, `npm test` passes
 
 **Slice 1B — Schema + migration** (additive DB change):
+
 - Add `colorFamilyName` + `colorCode` columns to `catalogColors` Drizzle table
 - Run `npm run db:generate` → produces `0016_color_family_fields.sql`
 - Run `npm run db:migrate` → applies to local Supabase
 - **Testable**: Migration file exists with two ADD COLUMN statements; Drizzle Studio shows new columns
 
 **Slice 1C — Sync plumbing** (data flows on next sync):
+
 - Add `colorFamilyName` to `ssProductSchema` as explicit typed field (was passthrough artifact)
 - Update `productsToCanonicalStyle()` to include `colorFamilyName` and `colorCode` in color mapping
 - Update `buildColorUpsertValue()` to map new fields to DB columns
 - **Testable**: Run sync for one style; `SELECT color_family_name FROM catalog_colors WHERE style_id = X` returns non-null values
 
 **Slice 1D — `extractUniqueColors()` wire-through**:
+
 - Update `extractUniqueColors()` in `garment-transforms.ts` to pass `colorFamilyName` from `CatalogColor` to `FilterColor`
 - This requires `NormalizedGarmentCatalog.colors` to expose `colorFamilyName` from the DB query
 - Audit `getNormalizedCatalog()` repository to confirm `color_family_name` is SELECTed in the JOIN
@@ -119,20 +123,20 @@ S&S API /v2/products/ response
 
 ### Code Affordances
 
-| Affordance | Type | File | Connected To |
-|---|---|---|---|
-| `catalog` source declaration | dbt source | `dbt/models/marts/garments/_garments__sources.yml` | `dim_color_families.sql` |
-| `catalog_colors` source table | dbt source table | `_garments__sources.yml` → `public.catalog_colors` | `dim_color_families.sql` CTE |
-| `colors` CTE | SQL expression | `dbt/models/marts/garments/dim_color_families.sql` | `families` CTE |
-| `families` CTE | SQL expression | `dbt/models/marts/garments/dim_color_families.sql` | `final` CTE |
-| `final` CTE | SQL expression | `dbt/models/marts/garments/dim_color_families.sql` | `select * from final` |
-| `family_key` | surrogate key | `dim_color_families.sql` via `dbt_utils.generate_surrogate_key` | `_garments__models.yml` not_null + unique tests |
-| `color_family_name` | output column | `dim_color_families.sql` | `_garments__models.yml` not_null test |
-| `style_count` | output column | `dim_color_families.sql` | analytics consumers (future) |
-| `swatch_count` | output column | `dim_color_families.sql` | analytics consumers (future) |
-| `representative_hex` | output column | `dim_color_families.sql` via `mode() WITHIN GROUP` | analytics consumers (future) |
-| `source` | output column | `dim_color_families.sql` (hardcoded `'catalog'`) | analytics consumers (future) |
-| `_garments__models.yml` | dbt docs + tests | `dbt/models/marts/garments/_garments__models.yml` | `npm run dbt:test` |
+| Affordance                    | Type             | File                                                            | Connected To                                    |
+| ----------------------------- | ---------------- | --------------------------------------------------------------- | ----------------------------------------------- |
+| `catalog` source declaration  | dbt source       | `dbt/models/marts/garments/_garments__sources.yml`              | `dim_color_families.sql`                        |
+| `catalog_colors` source table | dbt source table | `_garments__sources.yml` → `public.catalog_colors`              | `dim_color_families.sql` CTE                    |
+| `colors` CTE                  | SQL expression   | `dbt/models/marts/garments/dim_color_families.sql`              | `families` CTE                                  |
+| `families` CTE                | SQL expression   | `dbt/models/marts/garments/dim_color_families.sql`              | `final` CTE                                     |
+| `final` CTE                   | SQL expression   | `dbt/models/marts/garments/dim_color_families.sql`              | `select * from final`                           |
+| `family_key`                  | surrogate key    | `dim_color_families.sql` via `dbt_utils.generate_surrogate_key` | `_garments__models.yml` not_null + unique tests |
+| `color_family_name`           | output column    | `dim_color_families.sql`                                        | `_garments__models.yml` not_null test           |
+| `style_count`                 | output column    | `dim_color_families.sql`                                        | analytics consumers (future)                    |
+| `swatch_count`                | output column    | `dim_color_families.sql`                                        | analytics consumers (future)                    |
+| `representative_hex`          | output column    | `dim_color_families.sql` via `mode() WITHIN GROUP`              | analytics consumers (future)                    |
+| `source`                      | output column    | `dim_color_families.sql` (hardcoded `'catalog'`)                | analytics consumers (future)                    |
+| `_garments__models.yml`       | dbt docs + tests | `dbt/models/marts/garments/_garments__models.yml`               | `npm run dbt:test`                              |
 
 ### Wave 2 Wiring
 
@@ -154,15 +158,18 @@ catalog_colors (Postgres public schema — populated by Wave 1 sync)
 ### Wave 2 Vertical Slices
 
 **Slice 2A — Source declaration**:
+
 - Create `dbt/models/marts/garments/_garments__sources.yml`
 - Declare `catalog` source pointing to `public` schema, `catalog_colors` table
 - **Testable**: `npm run dbt:debug` confirms source can be resolved
 
 **Slice 2B — mart model**:
+
 - Create `dbt/models/marts/garments/dim_color_families.sql`
 - **Testable**: `npm run dbt:run --select dim_color_families` produces table in analytics schema
 
 **Slice 2C — model YAML + tests**:
+
 - Create `dbt/models/marts/garments/_garments__models.yml`
 - Document all columns; add `unique` + `not_null` on `family_key`, `not_null` on `color_family_name`
 - **Testable**: `npm run dbt:test --select dim_color_families` passes; row count is 60–80
@@ -181,36 +188,36 @@ catalog_colors (Postgres public schema — populated by Wave 1 sync)
 
 ### UI Affordances
 
-| Affordance | Type | Description | Connected To |
-|---|---|---|---|
-| Family tab strip | trigger (scrollable) | Renders one tab per distinct `colorFamilyName` from `colorFamilies` prop, plus "All" and "Other" tabs | `activeFamily` state in `ColorFilterGrid`; `familyCounts` badge |
-| "All" tab | tab trigger | Shows all scoped+sorted colors (no family filter) | `activeFamily === 'all'` guard in `tabFilteredColors` |
-| "Other" tab | tab trigger | Shows colors where `colorFamilyName === null`; hidden when count is 0 | `activeFamily === '__other__'` guard; `familyCounts.__other__` |
-| Family tab badge | display | Count of swatches in this family after brand-scope filter | `familyCounts[family]` computed in `useMemo` |
-| Grayed-out family tab | display state | `opacity-40` when `familyCounts[family] === 0` after brand scope | same `cn()` logic as current hue-bucket zero-count treatment |
-| Swatch grid | interactive grid | Unchanged — `FilterSwatch` components within selected family | `tabFilteredColors` (now filtered by family, not hue bucket) |
-| Individual swatch | trigger | Unchanged — `onToggleColor(color.id)` | `useColorFilter.selectedColorIds` |
-| Color tooltip | display | Unchanged — shows `color.name` (not family name) | `<TooltipContent>` in `FilterSwatch` |
+| Affordance            | Type                 | Description                                                                                           | Connected To                                                    |
+| --------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Family tab strip      | trigger (scrollable) | Renders one tab per distinct `colorFamilyName` from `colorFamilies` prop, plus "All" and "Other" tabs | `activeFamily` state in `ColorFilterGrid`; `familyCounts` badge |
+| "All" tab             | tab trigger          | Shows all scoped+sorted colors (no family filter)                                                     | `activeFamily === 'all'` guard in `tabFilteredColors`           |
+| "Other" tab           | tab trigger          | Shows colors where `colorFamilyName === null`; hidden when count is 0                                 | `activeFamily === '__other__'` guard; `familyCounts.__other__`  |
+| Family tab badge      | display              | Count of swatches in this family after brand-scope filter                                             | `familyCounts[family]` computed in `useMemo`                    |
+| Grayed-out family tab | display state        | `opacity-40` when `familyCounts[family] === 0` after brand scope                                      | same `cn()` logic as current hue-bucket zero-count treatment    |
+| Swatch grid           | interactive grid     | Unchanged — `FilterSwatch` components within selected family                                          | `tabFilteredColors` (now filtered by family, not hue bucket)    |
+| Individual swatch     | trigger              | Unchanged — `onToggleColor(color.id)`                                                                 | `useColorFilter.selectedColorIds`                               |
+| Color tooltip         | display              | Unchanged — shows `color.name` (not family name)                                                      | `<TooltipContent>` in `FilterSwatch`                            |
 
 ### Code Affordances
 
-| Affordance | Type | File | Connected To |
-|---|---|---|---|
-| `extractColorFamilies()` | pure helper | `src/app/(dashboard)/garments/_lib/garment-transforms.ts` | `garments/page.tsx` SSR call |
-| `colorFamilies` prop (page) | SSR computation | `src/app/(dashboard)/garments/page.tsx` | `GarmentCatalogClient` props |
-| `colorFamilies` prop (GarmentCatalogClient) | component prop | `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx` | `ColorFilterGrid` props |
-| `colorFamilies` prop (ColorFilterGrid) | component prop | `ColorFilterGrid.tsx` | family tab rendering |
-| `activeFamily` state | React state | `ColorFilterGrid.tsx` (`useState<string>('all')`) | `tabFilteredColors` useMemo, tab reset |
-| `lastAvailableColorNames` state | React state | `ColorFilterGrid.tsx` | brand-scope reset trigger (adjust-state-during-render) |
-| `familyCounts` | useMemo | `ColorFilterGrid.tsx` | family tab badge rendering + `opacity-40` guard |
-| `tabFilteredColors` | useMemo | `ColorFilterGrid.tsx` | replaces current hue-bucket `tabFilteredColors` |
-| `HueBucket` type + `HUE_BUCKET_CONFIG` | removed as primary | `@shared/lib/color-utils` | remains in codebase as fallback; NOT imported by ColorFilterGrid in Wave 3 |
-| `colorBucketCache` | removed | `ColorFilterGrid.tsx` | deleted — replaced by `activeFamily` string comparison |
-| `bucketCounts` | removed | `ColorFilterGrid.tsx` | replaced by `familyCounts` |
-| `selectedFamilies` state | React state | `src/features/garments/hooks/useColorFilter.ts` | `ColorFilterGrid` `activeFamily` — NOTE: Wave 3 uses local component state, not hook state |
-| `toggleFamily()` | callback | `src/features/garments/hooks/useColorFilter.ts` | `ColorFilterGrid.onSelectFamily` |
-| `clearFamilies()` | callback | `src/features/garments/hooks/useColorFilter.ts` | brand-scope reset side-effect |
-| `useGridKeyboardNav` | hook | `@shared/hooks/useGridKeyboardNav` | unchanged — operates on swatch grid only |
+| Affordance                                  | Type               | File                                                                | Connected To                                                                               |
+| ------------------------------------------- | ------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `extractColorFamilies()`                    | pure helper        | `src/app/(dashboard)/garments/_lib/garment-transforms.ts`           | `garments/page.tsx` SSR call                                                               |
+| `colorFamilies` prop (page)                 | SSR computation    | `src/app/(dashboard)/garments/page.tsx`                             | `GarmentCatalogClient` props                                                               |
+| `colorFamilies` prop (GarmentCatalogClient) | component prop     | `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx` | `ColorFilterGrid` props                                                                    |
+| `colorFamilies` prop (ColorFilterGrid)      | component prop     | `ColorFilterGrid.tsx`                                               | family tab rendering                                                                       |
+| `activeFamily` state                        | React state        | `ColorFilterGrid.tsx` (`useState<string>('all')`)                   | `tabFilteredColors` useMemo, tab reset                                                     |
+| `lastAvailableColorNames` state             | React state        | `ColorFilterGrid.tsx`                                               | brand-scope reset trigger (adjust-state-during-render)                                     |
+| `familyCounts`                              | useMemo            | `ColorFilterGrid.tsx`                                               | family tab badge rendering + `opacity-40` guard                                            |
+| `tabFilteredColors`                         | useMemo            | `ColorFilterGrid.tsx`                                               | replaces current hue-bucket `tabFilteredColors`                                            |
+| `HueBucket` type + `HUE_BUCKET_CONFIG`      | removed as primary | `@shared/lib/color-utils`                                           | remains in codebase as fallback; NOT imported by ColorFilterGrid in Wave 3                 |
+| `colorBucketCache`                          | removed            | `ColorFilterGrid.tsx`                                               | deleted — replaced by `activeFamily` string comparison                                     |
+| `bucketCounts`                              | removed            | `ColorFilterGrid.tsx`                                               | replaced by `familyCounts`                                                                 |
+| `selectedFamilies` state                    | React state        | `src/features/garments/hooks/useColorFilter.ts`                     | `ColorFilterGrid` `activeFamily` — NOTE: Wave 3 uses local component state, not hook state |
+| `toggleFamily()`                            | callback           | `src/features/garments/hooks/useColorFilter.ts`                     | `ColorFilterGrid.onSelectFamily`                                                           |
+| `clearFamilies()`                           | callback           | `src/features/garments/hooks/useColorFilter.ts`                     | brand-scope reset side-effect                                                              |
+| `useGridKeyboardNav`                        | hook               | `@shared/hooks/useGridKeyboardNav`                                  | unchanged — operates on swatch grid only                                                   |
 
 > **Design note on state location**: The shaping doc specifies `selectedFamilies` in `useState` (not URL params) to avoid `router.replace` re-renders on every family click. The family state can live in `useColorFilter` hook (for consistency) or in the `ColorFilterGrid` component itself (as `activeFamily`). The existing `activeTab` state for hue buckets was in the component — the same location is appropriate for `activeFamily` in Wave 3. The hook extension is additive scaffolding for a future URL persistence upgrade.
 
@@ -259,12 +266,14 @@ Brand scope change → availableColorNames changes
 ### Wave 3 Vertical Slices
 
 **Slice 3A — Pure helper + types**:
+
 - Add `extractColorFamilies()` to `garment-transforms.ts`
 - Update `garments/page.tsx` to compute and pass `colorFamilies` prop
 - Update `GarmentCatalogClientProps` to accept `colorFamilies: string[]`
 - **Testable**: `npx tsc --noEmit` passes; prop flows to component without rendering changes yet
 
 **Slice 3B — ColorFilterGrid family tab system**:
+
 - Remove `activeTab: HueBucket`, `colorBucketCache`, `bucketCounts` state/memos from `ColorFilterGrid`
 - Add `colorFamilies` prop, `activeFamily: string` state, `familyCounts` memo, `tabFilteredColors` memo
 - Replace hue-bucket tab JSX with family tab JSX (same `Tabs`/`TabsList`/`TabsTrigger` primitives)
@@ -273,11 +282,13 @@ Brand scope change → availableColorNames changes
 - **Testable**: UI renders ~60–80 family tabs; "All" tab shows all swatches; selecting "Navy" shows only Navy swatches; zero-count tabs are `opacity-40`
 
 **Slice 3C — useColorFilter hook extension** (optional, additive):
+
 - Add `selectedFamilies: string[]`, `toggleFamily()`, `clearFamilies()` to `useColorFilter`
 - No breaking change — existing destructured callers are unaffected
 - **Testable**: Hook exports new fields; `GarmentCatalogClient` can optionally wire them
 
 **Slice 3D — Mobile smoke test**:
+
 - Verify horizontal scroll behavior at 375px viewport
 - Verify touch target sizes on family tabs (`min-h-(--mobile-touch-target)` not required on tabs — tabs are not primary interactive elements, but scrollability must work)
 - Verify "Other" tab hidden when `familyCounts.__other__ === 0`
@@ -332,15 +343,15 @@ catalog_colors.color_family_name (Postgres)  [Wave 1, Slice 1B]
 
 ## Smell Check
 
-| Potential smell | Assessment | Resolution |
-|---|---|---|
-| `__other__` sentinel string as tab value | Minor — string sentinel for null family is simpler than a union type here. Contained within `ColorFilterGrid` — not leaking to props or URL. | Acceptable. Document with a `// sentinel for null colorFamilyName` comment. |
-| `familyCounts` keyed by family name (string key map) | Safe — family names are not user input. No XSS risk on tab renders since family names come from the DB. | Acceptable. |
-| `extractColorFamilies()` re-derives from `FilterColor[]` (already computed) | Minimal cost — one `.map().filter().sort()` over ~4k entries at SSR time. Not a hot path. | Acceptable. Could be memoized in `extractUniqueColors()` itself in future. |
-| Wave 3 `activeFamily` state in component, not `useColorFilter` hook | Minor inconsistency — `selectedColorIds` is in the hook, `activeFamily` is in the component. | Wave 3 uses component-local state matching the pattern of the existing `activeTab` (hue bucket). `useColorFilter` gets additive scaffold in Slice 3C. Acceptable for Wave 3. |
-| `NormalizedGarmentCatalog.colors` via `getNormalizedCatalog()` must SELECT `color_family_name` | Dependency check needed — if the Drizzle query omits the new column, `FilterColor.colorFamilyName` will be undefined at runtime despite the type saying `string | null`. | **Action item in Slice 1D**: Audit `getNormalizedCatalog()` repository implementation to confirm the SELECT includes `color_family_name`. If the query uses `catalogColors.*`, it's automatic. If it lists columns explicitly, add `color_family_name`. |
-| Wave 2 reads OLTP table (`catalog_colors`) from dbt | Acknowledged tradeoff from shaping. Acceptable at 30k rows. | No action needed. Document in `_garments__sources.yml` description. |
-| `mode() WITHIN GROUP` null behavior | Null `hex1` values are ignored by aggregate — correct behavior. Empty families have `representative_hex = NULL`. | Acceptable. YAML docs note this. |
+| Potential smell                                                                                | Assessment                                                                                                                                                      | Resolution                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `__other__` sentinel string as tab value                                                       | Minor — string sentinel for null family is simpler than a union type here. Contained within `ColorFilterGrid` — not leaking to props or URL.                    | Acceptable. Document with a `// sentinel for null colorFamilyName` comment.                                                                                                  |
+| `familyCounts` keyed by family name (string key map)                                           | Safe — family names are not user input. No XSS risk on tab renders since family names come from the DB.                                                         | Acceptable.                                                                                                                                                                  |
+| `extractColorFamilies()` re-derives from `FilterColor[]` (already computed)                    | Minimal cost — one `.map().filter().sort()` over ~4k entries at SSR time. Not a hot path.                                                                       | Acceptable. Could be memoized in `extractUniqueColors()` itself in future.                                                                                                   |
+| Wave 3 `activeFamily` state in component, not `useColorFilter` hook                            | Minor inconsistency — `selectedColorIds` is in the hook, `activeFamily` is in the component.                                                                    | Wave 3 uses component-local state matching the pattern of the existing `activeTab` (hue bucket). `useColorFilter` gets additive scaffold in Slice 3C. Acceptable for Wave 3. |
+| `NormalizedGarmentCatalog.colors` via `getNormalizedCatalog()` must SELECT `color_family_name` | Dependency check needed — if the Drizzle query omits the new column, `FilterColor.colorFamilyName` will be undefined at runtime despite the type saying `string | null`.                                                                                                                                                                       | **Action item in Slice 1D**: Audit `getNormalizedCatalog()` repository implementation to confirm the SELECT includes `color_family_name`. If the query uses `catalogColors.*`, it's automatic. If it lists columns explicitly, add `color_family_name`. |
+| Wave 2 reads OLTP table (`catalog_colors`) from dbt                                            | Acknowledged tradeoff from shaping. Acceptable at 30k rows.                                                                                                     | No action needed. Document in `_garments__sources.yml` description.                                                                                                          |
+| `mode() WITHIN GROUP` null behavior                                                            | Null `hex1` values are ignored by aggregate — correct behavior. Empty families have `representative_hex = NULL`.                                                | Acceptable. YAML docs note this.                                                                                                                                             |
 
 ---
 
@@ -348,45 +359,45 @@ catalog_colors.color_family_name (Postgres)  [Wave 1, Slice 1B]
 
 ### Wave 1
 
-| Action | File | Change |
-|---|---|---|
-| MODIFY | `lib/suppliers/types.ts` | Add `colorFamilyName: z.string().nullable()` + `colorCode: z.string().nullable()` to `canonicalColorSchema` |
-| MODIFY | `lib/suppliers/adapters/ss-activewear.ts` | Add `colorFamilyName: z.string().optional().default('')` to `ssProductSchema`; update `productsToCanonicalStyle()` color mapping |
-| MODIFY | `lib/suppliers/adapters/mock.ts` | Add `colorFamilyName: null, colorCode: null` to `toCanonicalStyle()` color objects |
-| MODIFY | `src/db/schema/catalog-normalized.ts` | Add `colorFamilyName: varchar('color_family_name', { length: 100 })` + `colorCode: varchar('color_code', { length: 50 })` to `catalogColors` table |
-| CREATE | `supabase/migrations/0016_color_family_fields.sql` | Two `ALTER TABLE catalog_colors ADD COLUMN` statements (generated by `npm run db:generate`) |
-| MODIFY | `src/infrastructure/services/catalog-sync-normalized.ts` | Update `buildColorUpsertValue()` return type + implementation |
-| MODIFY | `src/domain/entities/catalog-style.ts` | Add `colorFamilyName: z.string().nullable()` + `colorCode: z.string().nullable()` to `catalogColorSchema` |
-| MODIFY | `src/features/garments/types.ts` | Add `colorFamilyName: string \| null` to `FilterColor` type |
-| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts` | Update `extractUniqueColors()` to forward `colorFamilyName` |
-| AUDIT | `src/infrastructure/repositories/garments.ts` | Verify `getNormalizedCatalog()` SELECT includes `color_family_name` from `catalogColors` |
+| Action | File                                                      | Change                                                                                                                                             |
+| ------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MODIFY | `lib/suppliers/types.ts`                                  | Add `colorFamilyName: z.string().nullable()` + `colorCode: z.string().nullable()` to `canonicalColorSchema`                                        |
+| MODIFY | `lib/suppliers/adapters/ss-activewear.ts`                 | Add `colorFamilyName: z.string().optional().default('')` to `ssProductSchema`; update `productsToCanonicalStyle()` color mapping                   |
+| MODIFY | `lib/suppliers/adapters/mock.ts`                          | Add `colorFamilyName: null, colorCode: null` to `toCanonicalStyle()` color objects                                                                 |
+| MODIFY | `src/db/schema/catalog-normalized.ts`                     | Add `colorFamilyName: varchar('color_family_name', { length: 100 })` + `colorCode: varchar('color_code', { length: 50 })` to `catalogColors` table |
+| CREATE | `supabase/migrations/0016_color_family_fields.sql`        | Two `ALTER TABLE catalog_colors ADD COLUMN` statements (generated by `npm run db:generate`)                                                        |
+| MODIFY | `src/infrastructure/services/catalog-sync-normalized.ts`  | Update `buildColorUpsertValue()` return type + implementation                                                                                      |
+| MODIFY | `src/domain/entities/catalog-style.ts`                    | Add `colorFamilyName: z.string().nullable()` + `colorCode: z.string().nullable()` to `catalogColorSchema`                                          |
+| MODIFY | `src/features/garments/types.ts`                          | Add `colorFamilyName: string \| null` to `FilterColor` type                                                                                        |
+| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts` | Update `extractUniqueColors()` to forward `colorFamilyName`                                                                                        |
+| AUDIT  | `src/infrastructure/repositories/garments.ts`             | Verify `getNormalizedCatalog()` SELECT includes `color_family_name` from `catalogColors`                                                           |
 
 ### Wave 2
 
-| Action | File | Change |
-|---|---|---|
+| Action | File                                               | Change                                                       |
+| ------ | -------------------------------------------------- | ------------------------------------------------------------ |
 | CREATE | `dbt/models/marts/garments/_garments__sources.yml` | Declare `catalog` source pointing to `public.catalog_colors` |
-| CREATE | `dbt/models/marts/garments/dim_color_families.sql` | New mart model (see shaping.md for SQL shape) |
-| CREATE | `dbt/models/marts/garments/_garments__models.yml` | Column docs + tests for `dim_color_families` |
+| CREATE | `dbt/models/marts/garments/dim_color_families.sql` | New mart model (see shaping.md for SQL shape)                |
+| CREATE | `dbt/models/marts/garments/_garments__models.yml`  | Column docs + tests for `dim_color_families`                 |
 
 ### Wave 3
 
-| Action | File | Change |
-|---|---|---|
-| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts` | Add `extractColorFamilies()` pure helper |
-| MODIFY | `src/app/(dashboard)/garments/page.tsx` | Call `extractColorFamilies(catalogColors)`, pass `colorFamilies` to `GarmentCatalogClient` |
-| MODIFY | `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx` | Add `colorFamilies: string[]` to `GarmentCatalogClientProps`; pass to `ColorFilterGrid` |
-| MODIFY | `src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx` | Replace hue-bucket tab system with family tab system; add `colorFamilies` prop |
-| MODIFY | `src/features/garments/hooks/useColorFilter.ts` | Add `selectedFamilies`, `toggleFamily`, `clearFamilies` (additive, Slice 3C) |
+| Action | File                                                                | Change                                                                                     |
+| ------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts`           | Add `extractColorFamilies()` pure helper                                                   |
+| MODIFY | `src/app/(dashboard)/garments/page.tsx`                             | Call `extractColorFamilies(catalogColors)`, pass `colorFamilies` to `GarmentCatalogClient` |
+| MODIFY | `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx` | Add `colorFamilies: string[]` to `GarmentCatalogClientProps`; pass to `ColorFilterGrid`    |
+| MODIFY | `src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx`      | Replace hue-bucket tab system with family tab system; add `colorFamilies` prop             |
+| MODIFY | `src/features/garments/hooks/useColorFilter.ts`                     | Add `selectedFamilies`, `toggleFamily`, `clearFamilies` (additive, Slice 3C)               |
 
 ---
 
 ## Open Questions (Resolved in Shaping)
 
-| Question | Resolution |
-|---|---|
-| Where does `activeFamily` state live? | Component-local `useState` in `ColorFilterGrid` — same as existing `activeTab`. Not in `useColorFilter` hook for Wave 3. |
-| Does `?families=` need to be a URL param? | No — `useState` in Wave 3. URL persistence deferred. |
-| Should hue-bucket code be deleted? | No — keep `classifyColor`, `HUE_BUCKET_CONFIG`, `ORDERED_HUE_BUCKETS` in `@shared/lib/color-utils`. Remove import from `ColorFilterGrid` only. |
-| What is the sentinel for null-family colors? | `'__other__'` string within `ColorFilterGrid` internals only. Not exposed to props or URL. |
-| Does `colorCode` exist in `ssProductSchema` already? | Yes — `colorCode: z.string().optional().default('')` at line 71. Only `colorFamilyName` is missing from the schema. |
+| Question                                             | Resolution                                                                                                                                     |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Where does `activeFamily` state live?                | Component-local `useState` in `ColorFilterGrid` — same as existing `activeTab`. Not in `useColorFilter` hook for Wave 3.                       |
+| Does `?families=` need to be a URL param?            | No — `useState` in Wave 3. URL persistence deferred.                                                                                           |
+| Should hue-bucket code be deleted?                   | No — keep `classifyColor`, `HUE_BUCKET_CONFIG`, `ORDERED_HUE_BUCKETS` in `@shared/lib/color-utils`. Remove import from `ColorFilterGrid` only. |
+| What is the sentinel for null-family colors?         | `'__other__'` string within `ColorFilterGrid` internals only. Not exposed to props or URL.                                                     |
+| Does `colorCode` exist in `ssProductSchema` already? | Yes — `colorCode: z.string().optional().default('')` at line 71. Only `colorFamilyName` is missing from the schema.                            |

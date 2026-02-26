@@ -23,16 +23,16 @@ Before starting any wave:
 
 ## Risk Register
 
-| Risk | Severity | Wave | Mitigation |
-|------|----------|------|-----------|
-| `getNormalizedCatalog()` raw SQL omits `colorFamilyName` — Fix 1 (HIGH) | HIGH | 1 | Slice 1D is a concrete MODIFY, not an audit. Two changes required: `JSONB_BUILD_OBJECT` + `parseNormalizedCatalogRow` inline type + `.map()` body. |
-| `colorFamilyName` empty string flows as `''` not `NULL` into DB — Fix 2 (HIGH) | HIGH | 1 | Use `z.string().optional()` (no default) in `ssProductSchema`. Use falsy coercion `color.colorFamilyName?.trim() \|\| null` in `productsToCanonicalStyle()`. Never use `??` on a possible empty string. |
-| dbt source name/filename mismatch — Fix 3 (MEDIUM) | MEDIUM | 2 | Use `_catalog__sources.yml` as the filename and `catalog` as the source name inside. Update all `{{ source('catalog', ...) }}` references consistently. |
-| `extractColorFamilies()` derives from deduplicated `FilterColor[]` — Fix 5 (MEDIUM) | MEDIUM | 3 | Accept `NormalizedGarmentCatalog[]` as input, not `FilterColor[]`. Iterate all style colors to build complete family set regardless of dedup order. Call site in `page.tsx` passes `normalizedCatalog` directly. |
-| `'__other__'` sentinel is a repeated string literal — Fix 4 (LOW) | LOW | 3 | Define `const COLOR_FAMILY_OTHER = '__other__'` at top of `ColorFilterGrid.tsx` and use it everywhere (at minimum 3 occurrences). |
-| Pre-migration catalog has null family names — large "Other" tab | LOW | 3 | Document in Slice 3B: "Other" tab badge may be large until re-sync runs. Acknowledged rabbit hole per frame.md. No blocking action. |
-| Slice 3C hook state shadows component state | LOW | 3 | Slice 3C is deferred — do NOT build it in Wave 3. `activeFamily` stays in `ColorFilterGrid` local state matching the existing `activeTab` pattern. |
-| `colorCode` empty-string behavior | LOW | 1 | Do NOT change `colorCode` default in `ssProductSchema`. Leave `colorCode: z.string().optional().default('')` as-is. The Wave 1 plan only changes `colorFamilyName`. |
+| Risk                                                                                | Severity | Wave | Mitigation                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------------- | -------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getNormalizedCatalog()` raw SQL omits `colorFamilyName` — Fix 1 (HIGH)             | HIGH     | 1    | Slice 1D is a concrete MODIFY, not an audit. Two changes required: `JSONB_BUILD_OBJECT` + `parseNormalizedCatalogRow` inline type + `.map()` body.                                                               |
+| `colorFamilyName` empty string flows as `''` not `NULL` into DB — Fix 2 (HIGH)      | HIGH     | 1    | Use `z.string().optional()` (no default) in `ssProductSchema`. Use falsy coercion `color.colorFamilyName?.trim() \|\| null` in `productsToCanonicalStyle()`. Never use `??` on a possible empty string.          |
+| dbt source name/filename mismatch — Fix 3 (MEDIUM)                                  | MEDIUM   | 2    | Use `_catalog__sources.yml` as the filename and `catalog` as the source name inside. Update all `{{ source('catalog', ...) }}` references consistently.                                                          |
+| `extractColorFamilies()` derives from deduplicated `FilterColor[]` — Fix 5 (MEDIUM) | MEDIUM   | 3    | Accept `NormalizedGarmentCatalog[]` as input, not `FilterColor[]`. Iterate all style colors to build complete family set regardless of dedup order. Call site in `page.tsx` passes `normalizedCatalog` directly. |
+| `'__other__'` sentinel is a repeated string literal — Fix 4 (LOW)                   | LOW      | 3    | Define `const COLOR_FAMILY_OTHER = '__other__'` at top of `ColorFilterGrid.tsx` and use it everywhere (at minimum 3 occurrences).                                                                                |
+| Pre-migration catalog has null family names — large "Other" tab                     | LOW      | 3    | Document in Slice 3B: "Other" tab badge may be large until re-sync runs. Acknowledged rabbit hole per frame.md. No blocking action.                                                                              |
+| Slice 3C hook state shadows component state                                         | LOW      | 3    | Slice 3C is deferred — do NOT build it in Wave 3. `activeFamily` stays in `ColorFilterGrid` local state matching the existing `activeTab` pattern.                                                               |
+| `colorCode` empty-string behavior                                                   | LOW      | 1    | Do NOT change `colorCode` default in `ssProductSchema`. Leave `colorCode: z.string().optional().default('')` as-is. The Wave 1 plan only changes `colorFamilyName`.                                              |
 
 ---
 
@@ -41,6 +41,7 @@ Before starting any wave:
 **Goal**: Two nullable columns added to `catalog_colors`; the full data pipeline (API → DB) populated on next sync run; `FilterColor` type extended for Wave 3 consumption.
 
 **Acceptance criteria**:
+
 - `npm run db:migrate` applies migration 0016 cleanly; Drizzle Studio shows `color_family_name` and `color_code` columns on `catalog_colors`
 - `npx tsc --noEmit` passes
 - `npm test` passes (existing schema tests still green)
@@ -132,11 +133,14 @@ This slice is the dependency gate for 1B, 1C, and 1D. All changes are type-only;
 - **Details**: Run `npm run db:migrate`. Verify with Drizzle Studio (`npm run db:studio`) or via SQL: `\d catalog_colors` — both `color_family_name varchar(100)` and `color_code varchar(50)` appear with `NULL` constraint.
 
   The migration content should look like:
+
   ```sql
   ALTER TABLE "catalog_colors" ADD COLUMN "color_family_name" varchar(100);
   ALTER TABLE "catalog_colors" ADD COLUMN "color_code" varchar(50);
   ```
+
   If `db:generate` produces extra statements (e.g., renaming existing columns), inspect carefully — this is additive-only.
+
 - **Test**: `npm run db:migrate` exits with code 0. `npx tsc --noEmit` passes (Drizzle infers new types from schema).
 
 ---
@@ -244,7 +248,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
     name: string
     hex1: string | null
     hex2: string | null
-    colorFamilyName: string | null    // <-- ADD THIS
+    colorFamilyName: string | null // <-- ADD THIS
     images: Array<{ imageType: string; url: string }>
   }>
   ```
@@ -273,7 +277,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
     name: canonicalName,
     hex,
     swatchTextColor: computeSwatchTextColor(hex),
-    colorFamilyName: color.colorFamilyName ?? null,   // <-- ADD THIS
+    colorFamilyName: color.colorFamilyName ?? null, // <-- ADD THIS
   })
   ```
   The `color` here is a `CatalogColor` from `NormalizedGarmentCatalog.colors` — after Step 1.11, it carries `colorFamilyName`. The deduplication behavior (first occurrence wins) is known and acceptable for S&S data where the same color name consistently maps to the same family. Add a JSDoc note:
@@ -292,6 +296,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
 **Goal**: A new dbt mart `dim_color_families` reads from `catalog_colors` (post-migration-0016) and produces one row per distinct `color_family_name`, with counts and a representative hex. Analytics-only — no app query changes.
 
 **Acceptance criteria**:
+
 - `npm run dbt:run --select dim_color_families` succeeds; `dim_color_families` table appears in the `analytics` schema
 - `npm run dbt:test --select dim_color_families` passes all tests
 - Row count is in the expected 60–80 range (after sync has populated `color_family_name` for S&S styles)
@@ -365,6 +370,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
 - **File**: `dbt/models/marts/garments/dim_color_families.sql` (CREATE — new file)
 - **Action**: Create the `dim_color_families` mart model
 - **Details**:
+
   ```sql
   {{ config(materialized='table') }}
 
@@ -400,7 +406,9 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
 
   select * from final
   ```
+
   Pattern reference: `dim_product.sql` uses the same `dbt_utils.generate_surrogate_key` pattern.
+
 - **Test**: `npm run dbt:run --select dim_color_families` succeeds.
 
 #### Step 2.3
@@ -408,6 +416,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
 - **File**: `dbt/models/marts/garments/_garments__models.yml` (CREATE — new file)
 - **Action**: Document columns and add tests for `dim_color_families`
 - **Details**:
+
   ```yaml
   version: 2
 
@@ -460,6 +469,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
                 arguments:
                   values: ['catalog']
   ```
+
 - **Test**: `npm run dbt:test --select dim_color_families` passes all tests. Verify row count: `SELECT count(*) FROM analytics.dim_color_families` — expect 60–80 rows after sync.
 
 **Commit checkpoint after Wave 2**: All dbt files in one PR. Message: `feat(dbt): dim_color_families mart — color family dimension from catalog_colors (#632)`
@@ -471,6 +481,7 @@ This slice was labeled "AUDIT" in the breadboard. It is NOT an audit — it requ
 **Goal**: Replace hue-bucket tabs with color family tabs as the primary filter surface in `ColorFilterGrid`. Family data comes from `NormalizedGarmentCatalog[]` via a new `extractColorFamilies()` SSR helper.
 
 **Acceptance criteria**:
+
 - `ColorFilterGrid` renders ~60–80 family tabs (not the 9 hue-bucket tabs)
 - Selecting "Navy" shows only swatches where `colorFamilyName === 'Navy'`
 - "All" tab shows all swatches (current behavior unchanged)
@@ -579,6 +590,7 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
   **3.4.2 — Sentinel constant**
 
   At the top of the file (before the `ColorFilterGridProps` type), add:
+
   ```ts
   // Sentinel value for the "Other" tab — groups colors where colorFamilyName is null.
   // Contained within ColorFilterGrid; not exposed to props or URL.
@@ -588,6 +600,7 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
   **3.4.3 — Props type**
 
   Update `ColorFilterGridProps`:
+
   ```ts
   type ColorFilterGridProps = {
     colors: FilterColor[]
@@ -603,6 +616,7 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
   **3.4.4 — State**
 
   Replace `const [activeTab, setActiveTab] = useState<HueBucket>('all')` with:
+
   ```ts
   const [activeFamily, setActiveFamily] = useState<string>('all')
   ```
@@ -610,6 +624,7 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
   **3.4.5 — Adjust-state-during-render (brand scope reset)**
 
   Replace the existing pattern that resets `activeTab` with one that resets `activeFamily`:
+
   ```ts
   const [lastAvailableColorNames, setLastAvailableColorNames] = useState(availableColorNames)
   if (lastAvailableColorNames !== availableColorNames) {
@@ -656,15 +671,15 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
   **3.4.9 — Replace tab JSX**
 
   Replace the existing `{/* Hue-bucket filter tabs */}` block with:
+
   ```tsx
-  {/* Color family filter tabs — human-curated S&S families replace algorithmic hue buckets */}
-  <div className="-mx-0.5 overflow-x-auto px-0.5">
+  {
+    /* Color family filter tabs — human-curated S&S families replace algorithmic hue buckets */
+  }
+  ;<div className="-mx-0.5 overflow-x-auto px-0.5">
     <Tabs value={activeFamily} onValueChange={setActiveFamily}>
       <TabsList variant="line" className="gap-0 flex-nowrap h-auto">
-        <TabsTrigger
-          value="all"
-          className="h-7 min-h-0 px-2 py-1 text-xs"
-        >
+        <TabsTrigger value="all" className="h-7 min-h-0 px-2 py-1 text-xs">
           All ({familyCounts.all})
         </TabsTrigger>
         {colorFamilies.map((family) => (
@@ -681,10 +696,7 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
         ))}
         {/* "Other" tab — shown only when null-family swatches exist in the scoped set */}
         {familyCounts[COLOR_FAMILY_OTHER] > 0 && (
-          <TabsTrigger
-            value={COLOR_FAMILY_OTHER}
-            className="h-7 min-h-0 px-2 py-1 text-xs"
-          >
+          <TabsTrigger value={COLOR_FAMILY_OTHER} className="h-7 min-h-0 px-2 py-1 text-xs">
             Other ({familyCounts[COLOR_FAMILY_OTHER]})
           </TabsTrigger>
         )}
@@ -717,12 +729,12 @@ This is the largest single change in Wave 3. Replace the hue-bucket tab system w
 
 ## Commit Cadence Summary
 
-| Checkpoint | When | PR? |
-|------------|------|-----|
+| Checkpoint                 | When                                | PR?               |
+| -------------------------- | ----------------------------------- | ----------------- |
 | After Slice 1A type system | All type-only changes land together | Part of Wave 1 PR |
-| After Slices 1B+1C+1D | Migration + sync + SSR wire-through | Wave 1 PR |
-| After Slices 2A+2B+2C | All dbt files together | Wave 2 PR |
-| After Slices 3A+3B+3D | Helper + UI + smoke test | Wave 3 PR |
+| After Slices 1B+1C+1D      | Migration + sync + SSR wire-through | Wave 1 PR         |
+| After Slices 2A+2B+2C      | All dbt files together              | Wave 2 PR         |
+| After Slices 3A+3B+3D      | Helper + UI + smoke test            | Wave 3 PR         |
 
 Each wave is a separate PR. Waves can be stacked (Wave 2 branch from Wave 1 branch) since Wave 2 has no code dependency on Wave 1 beyond the migration file existing.
 
@@ -732,35 +744,35 @@ Each wave is a separate PR. Waves can be stacked (Wave 2 branch from Wave 1 bran
 
 ### Wave 1 — Modified/Created
 
-| Action | File |
-|--------|------|
-| MODIFY | `lib/suppliers/types.ts` |
-| MODIFY | `lib/suppliers/adapters/ss-activewear.ts` |
-| MODIFY | `lib/suppliers/adapters/mock.ts` |
-| MODIFY | `src/db/schema/catalog-normalized.ts` |
-| CREATE (generated) | `supabase/migrations/0016_color_family_fields.sql` |
-| MODIFY | `src/infrastructure/services/catalog-sync-normalized.ts` |
-| MODIFY | `src/domain/entities/catalog-style.ts` |
-| MODIFY | `src/features/garments/types.ts` |
-| MODIFY | `src/infrastructure/repositories/_providers/supabase/catalog.ts` |
-| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts` |
+| Action             | File                                                             |
+| ------------------ | ---------------------------------------------------------------- |
+| MODIFY             | `lib/suppliers/types.ts`                                         |
+| MODIFY             | `lib/suppliers/adapters/ss-activewear.ts`                        |
+| MODIFY             | `lib/suppliers/adapters/mock.ts`                                 |
+| MODIFY             | `src/db/schema/catalog-normalized.ts`                            |
+| CREATE (generated) | `supabase/migrations/0016_color_family_fields.sql`               |
+| MODIFY             | `src/infrastructure/services/catalog-sync-normalized.ts`         |
+| MODIFY             | `src/domain/entities/catalog-style.ts`                           |
+| MODIFY             | `src/features/garments/types.ts`                                 |
+| MODIFY             | `src/infrastructure/repositories/_providers/supabase/catalog.ts` |
+| MODIFY             | `src/app/(dashboard)/garments/_lib/garment-transforms.ts`        |
 
 ### Wave 2 — Created
 
-| Action | File |
-|--------|------|
-| CREATE | `dbt/models/marts/garments/_catalog__sources.yml` |
+| Action | File                                               |
+| ------ | -------------------------------------------------- |
+| CREATE | `dbt/models/marts/garments/_catalog__sources.yml`  |
 | CREATE | `dbt/models/marts/garments/dim_color_families.sql` |
-| CREATE | `dbt/models/marts/garments/_garments__models.yml` |
+| CREATE | `dbt/models/marts/garments/_garments__models.yml`  |
 
 ### Wave 3 — Modified
 
-| Action | File |
-|--------|------|
-| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts` |
-| MODIFY | `src/app/(dashboard)/garments/page.tsx` |
+| Action | File                                                                |
+| ------ | ------------------------------------------------------------------- |
+| MODIFY | `src/app/(dashboard)/garments/_lib/garment-transforms.ts`           |
+| MODIFY | `src/app/(dashboard)/garments/page.tsx`                             |
 | MODIFY | `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx` |
-| MODIFY | `src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx` |
+| MODIFY | `src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx`      |
 
 ### Deliberately NOT modified
 
