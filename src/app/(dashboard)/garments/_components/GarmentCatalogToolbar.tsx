@@ -56,6 +56,8 @@ type GarmentCatalogToolbarProps = {
   onShowDisabledChange: (checked: boolean) => void
   /** Brand-scoped color names: when a brand filter is active, only show that brand's colors. */
   availableColorNames?: Set<string>
+  /** Sorted distinct color family names from SSR — drives the primary filter tabs. */
+  colorFamilies: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +66,7 @@ type GarmentCatalogToolbarProps = {
 
 export function GarmentCatalogToolbar({
   catalogColors,
+  colorFamilies,
   brands,
   selectedColorIds,
   onToggleColor,
@@ -308,6 +311,7 @@ export function GarmentCatalogToolbar({
       {/* Row 3: Color swatch filter grid */}
       <ColorFilterGrid
         colors={catalogColors}
+        colorFamilies={colorFamilies}
         selectedColorIds={selectedColorIds}
         onToggleColor={onToggleColor}
         favoriteColorIds={favoriteColorIds}

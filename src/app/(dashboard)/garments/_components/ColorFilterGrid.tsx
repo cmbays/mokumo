@@ -6,15 +6,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/t
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
-import {
-  classifyColor,
-  HUE_BUCKET_CONFIG,
-  ORDERED_HUE_BUCKETS,
-  type ColorBucket,
-  type HueBucket,
-} from '@shared/lib/color-utils'
 import type { FilterColor } from '@features/garments/types'
 import { useGridKeyboardNav } from '@shared/hooks/useGridKeyboardNav'
+
+// Sentinel value for the "Other" tab — groups colors where colorFamilyName is null.
+// Contained within ColorFilterGrid; not exposed to props or URL.
+const COLOR_FAMILY_OTHER = '__other__'
 
 type ColorFilterGridProps = {
   colors: FilterColor[]
@@ -23,6 +20,8 @@ type ColorFilterGridProps = {
   favoriteColorIds: string[]
   /** When provided (brand filter active), only show colors whose names are in this set. */
   availableColorNames?: Set<string>
+  /** Sorted distinct color family names from SSR — drives the primary filter tabs. */
+  colorFamilies: string[]
 }
 
 function FilterSwatch({
@@ -86,10 +85,11 @@ export function ColorFilterGrid({
   onToggleColor,
   favoriteColorIds,
   availableColorNames,
+  colorFamilies,
 }: ColorFilterGridProps) {
   const gridRef = useRef<HTMLDivElement>(null)
 
-  const [activeTab, setActiveTab] = useState<HueBucket>('all')
+  const [activeFamily, setActiveFamily] = useState<string>('all')
 
   // Adjust state during render — resets tab to 'all' when the brand scope changes.
   // This is React's documented "adjust state during render" pattern, which avoids
@@ -97,7 +97,7 @@ export function ColorFilterGrid({
   const [lastAvailableColorNames, setLastAvailableColorNames] = useState(availableColorNames)
   if (lastAvailableColorNames !== availableColorNames) {
     setLastAvailableColorNames(availableColorNames)
-    setActiveTab('all')
+    setActiveFamily('all')
   }
 
   const selectedSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds])
@@ -125,63 +125,59 @@ export function ColorFilterGrid({
     return [...favorites, ...rest]
   }, [scopedColors, favoriteColorIds])
 
-  // Step 3a: Classify every color once — shared by bucketCounts and tabFilteredColors
-  // to avoid a redundant second pass over 600+ colors when the active tab changes.
-  const colorBucketCache = useMemo(
-    () =>
-      new Map<string, ColorBucket>(sortedColors.map((c) => [c.id, classifyColor({ hex: c.hex })])),
-    [sortedColors]
-  )
-
-  // Step 3b: Count per hue bucket (from the full scoped+sorted set — shown in tab badges)
-  const bucketCounts = useMemo(() => {
-    const counts: Record<HueBucket, number> = {
+  // Count of scoped+sorted colors per family — drives tab badge numbers and opacity.
+  const familyCounts = useMemo(() => {
+    const counts: Record<string, number> = {
       all: sortedColors.length,
-      'blacks-grays': 0,
-      'whites-neutrals': 0,
-      reds: 0,
-      'yellows-oranges': 0,
-      greens: 0,
-      blues: 0,
-      'purples-pinks': 0,
-      browns: 0,
+      [COLOR_FAMILY_OTHER]: 0,
     }
     for (const color of sortedColors) {
-      counts[colorBucketCache.get(color.id) ?? classifyColor({ hex: color.hex })]++
+      if (color.colorFamilyName) {
+        counts[color.colorFamilyName] = (counts[color.colorFamilyName] ?? 0) + 1
+      } else {
+        counts[COLOR_FAMILY_OTHER]++
+      }
     }
     return counts
-  }, [sortedColors, colorBucketCache])
+  }, [sortedColors])
 
-  // Step 4: Filter by active tab — uses cache, no re-classification
+  // Filter swatch grid by active family tab.
   const tabFilteredColors = useMemo(() => {
-    if (activeTab === 'all') return sortedColors
-    return sortedColors.filter((c) => colorBucketCache.get(c.id) === activeTab)
-  }, [sortedColors, activeTab, colorBucketCache])
+    if (activeFamily === 'all') return sortedColors
+    if (activeFamily === COLOR_FAMILY_OTHER) return sortedColors.filter((c) => !c.colorFamilyName)
+    return sortedColors.filter((c) => c.colorFamilyName === activeFamily)
+  }, [sortedColors, activeFamily])
 
   // swatch width: h-10 w-10 = 40px + gap-px (1px) ≈ 41px per cell
   const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 41)
 
   return (
     <div className="space-y-2">
-      {/* Hue-bucket filter tabs */}
+      {/* Color family filter tabs — human-curated S&S families replace algorithmic hue buckets */}
       <div className="-mx-0.5 overflow-x-auto px-0.5">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as HueBucket)}>
+        <Tabs value={activeFamily} onValueChange={setActiveFamily}>
           <TabsList variant="line" className="gap-0 flex-nowrap h-auto">
             <TabsTrigger value="all" className="h-7 min-h-0 px-2 py-1 text-xs">
-              All ({bucketCounts.all})
+              All ({familyCounts.all})
             </TabsTrigger>
-            {ORDERED_HUE_BUCKETS.map((bucket) => (
+            {colorFamilies.map((family) => (
               <TabsTrigger
-                key={bucket}
-                value={bucket}
+                key={family}
+                value={family}
                 className={cn(
                   'h-7 min-h-0 px-2 py-1 text-xs',
-                  bucketCounts[bucket] === 0 && 'opacity-40'
+                  (familyCounts[family] ?? 0) === 0 && 'opacity-40'
                 )}
               >
-                {HUE_BUCKET_CONFIG[bucket].label} ({bucketCounts[bucket]})
+                {family} ({familyCounts[family] ?? 0})
               </TabsTrigger>
             ))}
+            {/* "Other" tab — shown only when null-family swatches exist in the scoped set */}
+            {familyCounts[COLOR_FAMILY_OTHER] > 0 && (
+              <TabsTrigger value={COLOR_FAMILY_OTHER} className="h-7 min-h-0 px-2 py-1 text-xs">
+                Other ({familyCounts[COLOR_FAMILY_OTHER]})
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
       </div>

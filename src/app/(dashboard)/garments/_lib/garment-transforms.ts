@@ -82,6 +82,30 @@ export function extractUniqueColors(
 }
 
 // ---------------------------------------------------------------------------
+// extractColorFamilies
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts a sorted, deduplicated list of color family names from the normalized catalog.
+ *
+ * Accepts NormalizedGarmentCatalog[] (not FilterColor[]) to avoid deduplication
+ * artifacts — the first occurrence of a canonical color name in extractUniqueColors()
+ * may have colorFamilyName === null for pre-migration rows. Iterating all style
+ * colors ensures the complete family set is captured regardless of dedup order.
+ *
+ * Returns alphabetically sorted array. Null/empty family names are excluded.
+ */
+export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): string[] {
+  const families = new Set<string>()
+  for (const style of catalog) {
+    for (const color of style.colors) {
+      if (color.colorFamilyName) families.add(color.colorFamilyName)
+    }
+  }
+  return [...families].sort()
+}
+
+// ---------------------------------------------------------------------------
 // buildStyleToColorNamesMap
 // ---------------------------------------------------------------------------
 

@@ -51,6 +51,8 @@ type GarmentCatalogClientProps = {
   normalizedCatalog?: NormalizedGarmentCatalog[]
   /** Deduplicated color list from catalog_colors, computed server-side. */
   catalogColors: FilterColor[]
+  /** Sorted distinct color family names derived from catalog_colors.color_family_name. */
+  colorFamilies: string[]
   /** Shop-scoped favorite color IDs from catalog_color_preferences, fetched server-side. */
   initialFavoriteColorIds: string[]
 }
@@ -65,6 +67,7 @@ export function GarmentCatalogClient({
   initialCustomers,
   normalizedCatalog,
   catalogColors,
+  colorFamilies,
   initialFavoriteColorIds,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
@@ -347,6 +350,7 @@ export function GarmentCatalogClient({
     <>
       <GarmentCatalogToolbar
         catalogColors={catalogColors}
+        colorFamilies={colorFamilies}
         brands={brands}
         selectedColorIds={selectedColorIds}
         onToggleColor={toggleColor}

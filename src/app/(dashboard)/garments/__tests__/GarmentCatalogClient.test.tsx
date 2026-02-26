@@ -172,6 +172,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCustomers={[]}
           normalizedCatalog={normalized}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -201,6 +202,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCustomers={[]}
           normalizedCatalog={normalized}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -229,6 +231,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCustomers={[]}
           normalizedCatalog={normalized}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -254,6 +257,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
           // no normalizedCatalog
         />
@@ -287,6 +291,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCustomers={[]}
           normalizedCatalog={normalized}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -321,6 +326,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCustomers={[]}
           normalizedCatalog={normalized}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -348,6 +354,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -374,6 +381,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCustomers={[]}
           normalizedCatalog={normalized}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -400,6 +408,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )
@@ -425,6 +434,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           catalogColors={[]}
+          colorFamilies={[]}
           initialFavoriteColorIds={[]}
         />
       )

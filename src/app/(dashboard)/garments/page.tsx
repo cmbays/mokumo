@@ -6,7 +6,7 @@ import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/garments'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
-import { extractUniqueColors } from './_lib/garment-transforms'
+import { extractUniqueColors, extractColorFamilies } from './_lib/garment-transforms'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
 
 export default async function GarmentCatalogPage() {
@@ -33,6 +33,7 @@ export default async function GarmentCatalogPage() {
   })
 
   const catalogColors = extractUniqueColors(normalizedCatalog)
+  const colorFamilies = extractColorFamilies(normalizedCatalog)
   const initialFavoriteColorIds = session
     ? await getColorFavorites('shop', session.shopId).catch(() => [] as string[])
     : []
@@ -54,6 +55,7 @@ export default async function GarmentCatalogPage() {
             initialCustomers={customers}
             normalizedCatalog={normalizedCatalog.length > 0 ? normalizedCatalog : undefined}
             catalogColors={catalogColors}
+            colorFamilies={colorFamilies}
             initialFavoriteColorIds={initialFavoriteColorIds}
           />
         </Suspense>
