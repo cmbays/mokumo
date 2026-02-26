@@ -23,6 +23,7 @@ import { toggleStyleEnabled, toggleStyleFavorite, toggleColorFavorite } from '..
 import {
   buildSkuToStyleIdMap,
   buildSkuToFrontImageUrl,
+  buildSkuToNormalizedColors,
   buildStyleToColorNamesMap,
   hydrateCatalogPreferences,
 } from '../_lib/garment-transforms'
@@ -91,6 +92,12 @@ export function GarmentCatalogClient({
   // SKU → first front image URL — real S&S CDN URLs from catalog_images
   const skuToFrontImageUrl = useMemo(
     () => buildSkuToFrontImageUrl(normalizedCatalog),
+    [normalizedCatalog]
+  )
+
+  // SKU → CatalogColor[] — feeds ColorSwatchStrip on each card with real S&S hex swatches
+  const skuToNormalizedColors = useMemo(
+    () => buildSkuToNormalizedColors(normalizedCatalog),
     [normalizedCatalog]
   )
 
@@ -366,6 +373,7 @@ export function GarmentCatalogClient({
               onBrandClick={handleBrandClick}
               onClick={setSelectedGarmentId}
               frontImageUrl={skuToFrontImageUrl.get(garment.sku)}
+              normalizedColors={skuToNormalizedColors.get(garment.sku)}
             />
           ))}
         </div>

@@ -11,7 +11,7 @@ import { formatCurrency } from '@domain/lib/money'
 import { getColorById } from '@domain/rules/garment.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { CatalogColor, NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Color } from '@domain/entities/color'
 
 type GarmentCardProps = {
@@ -23,6 +23,8 @@ type GarmentCardProps = {
   onClick: (garmentId: string) => void
   /** Real front image URL from catalog_images — passed by parent via buildSkuToFrontImageUrl. */
   frontImageUrl?: string
+  /** Real S&S colors from normalizedCatalog — feeds ColorSwatchStrip when availableColors is empty. */
+  normalizedColors?: CatalogColor[]
 }
 
 function isNormalized(g: GarmentCatalog | NormalizedGarmentCatalog): g is NormalizedGarmentCatalog {
@@ -36,6 +38,7 @@ export function GarmentCard({
   onBrandClick,
   onClick,
   frontImageUrl,
+  normalizedColors,
 }: GarmentCardProps) {
   const garmentColors = useMemo(() => {
     if (isNormalized(garment)) return []
@@ -53,10 +56,13 @@ export function GarmentCard({
 
   const sku = isNormalized(garment) ? garment.styleNumber : garment.sku
 
-  // Colors for the swatch strip — supports both entity shapes
-  const swatchColors = isNormalized(garment)
-    ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
-    : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
+  // Colors for the swatch strip — prefers normalizedColors (real S&S hex values) when present,
+  // falls back to the NormalizedGarmentCatalog shape, then to the legacy Color entity shape.
+  const swatchColors = normalizedColors
+    ? normalizedColors.map((c) => ({ name: c.name, hex1: c.hex1 }))
+    : isNormalized(garment)
+      ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
+      : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
 
   const hasBottomRow =
     (showPrice && !isNormalized(garment)) || !garment.isEnabled
