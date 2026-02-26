@@ -6,8 +6,11 @@ import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/garments'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
+import { logger } from '@shared/lib/logger'
 import { extractUniqueColors, extractColorFamilies } from './_lib/garment-transforms'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
+
+const pageLogger = logger.child({ domain: 'garments' })
 
 export default async function GarmentCatalogPage() {
   // Dynamic imports: verifySession + actions transitively import db.ts which throws
@@ -25,17 +28,20 @@ export default async function GarmentCatalogPage() {
     getCustomers(),
   ])
   const normalizedCatalog = await getNormalizedCatalog().catch((err: unknown) => {
-    console.error(
-      '[GarmentCatalogPage] getNormalizedCatalog failed — rendering without images:',
-      err
-    )
+    pageLogger.error('getNormalizedCatalog failed — color families and swatches unavailable', { err })
     return [] as Awaited<ReturnType<typeof getNormalizedCatalog>>
   })
 
   const catalogColors = extractUniqueColors(normalizedCatalog)
   const colorFamilies = extractColorFamilies(normalizedCatalog)
   const initialFavoriteColorIds = session
-    ? await getColorFavorites('shop', session.shopId).catch(() => [] as string[])
+    ? await getColorFavorites('shop', session.shopId).catch((err: unknown) => {
+        pageLogger.error('getColorFavorites failed — rendering without favorites', {
+          err,
+          shopId: session.shopId,
+        })
+        return [] as string[]
+      })
     : []
 
   return (

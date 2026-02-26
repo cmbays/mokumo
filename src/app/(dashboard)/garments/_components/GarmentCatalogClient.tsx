@@ -31,7 +31,10 @@ import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
+import { logger } from '@shared/lib/logger'
 import type { FilterColor } from '@features/garments/types'
+
+const clientLogger = logger.child({ domain: 'garments' })
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -281,9 +284,7 @@ export function GarmentCatalogClient({
       )
 
       if (!styleId) {
-        console.warn(
-          `[GarmentCatalogClient] No catalog_styles entry for sku=${garment.sku} — enabled toggle is local-only and will not persist`
-        )
+        clientLogger.warn('No catalog_styles entry — enabled toggle is local-only and will not persist', { sku: garment.sku })
         toast.warning("This garment hasn't been synced yet — toggle won't be saved")
         return
       }
@@ -309,9 +310,7 @@ export function GarmentCatalogClient({
       )
 
       if (!styleId) {
-        console.warn(
-          `[GarmentCatalogClient] No catalog_styles entry for sku=${garment.sku} — favorite toggle is local-only and will not persist`
-        )
+        clientLogger.warn('No catalog_styles entry — favorite toggle is local-only and will not persist', { sku: garment.sku })
         toast.warning("This garment hasn't been synced yet — toggle won't be saved")
         return
       }
@@ -366,7 +365,7 @@ export function GarmentCatalogClient({
 
       {/* Grid View */}
       {view === 'grid' ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {visibleGarments.map((garment) => (
             <GarmentCard
               key={garment.id}

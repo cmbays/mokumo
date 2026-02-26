@@ -209,11 +209,17 @@ export async function toggleColorFavorite(
     if (!scopeId) {
       return { success: false, error: 'Brand scope requires scopeId (brand name)' }
     }
-    const brand = await db
-      .select({ id: catalogBrands.id })
-      .from(catalogBrands)
-      .where(eq(catalogBrands.canonicalName, scopeId))
-      .limit(1)
+    let brand: { id: string }[]
+    try {
+      brand = await db
+        .select({ id: catalogBrands.id })
+        .from(catalogBrands)
+        .where(eq(catalogBrands.canonicalName, scopeId))
+        .limit(1)
+    } catch (err) {
+      actionsLogger.error('toggleColorFavorite brand lookup failed', { brandName: scopeId, err })
+      return { success: false, error: 'Failed to resolve brand' }
+    }
     if (!brand[0]) {
       actionsLogger.warn('toggleColorFavorite: brand not found', { brandName: scopeId })
       return { success: false, error: 'Brand not found' }

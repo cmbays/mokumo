@@ -45,16 +45,35 @@ export function parseNormalizedCatalogRow(row: {
     description: row.description,
     category: garmentCategoryEnum.parse(row.category),
     subcategory: row.subcategory,
-    colors: row.colors.map((c) => ({
-      id: c.id,
-      styleId: row.id,
-      name: c.name,
-      hex1: c.hex1,
-      hex2: c.hex2,
-      colorFamilyName: c.colorFamilyName,
-      images: catalogImageSchema.array().parse(c.images),
-    })),
-    sizes: catalogSizeSchema.array().parse(row.sizes),
+    colors: row.colors.map((c) => {
+      const imagesResult = catalogImageSchema.array().safeParse(c.images)
+      if (!imagesResult.success) {
+        repoLogger.warn('catalogImageSchema parse failed — using empty images', {
+          styleId: row.id,
+          colorId: c.id,
+          error: imagesResult.error.message,
+        })
+      }
+      return {
+        id: c.id,
+        styleId: row.id,
+        name: c.name,
+        hex1: c.hex1,
+        hex2: c.hex2,
+        colorFamilyName: c.colorFamilyName,
+        images: imagesResult.success ? imagesResult.data : [],
+      }
+    }),
+    sizes: (() => {
+      const sizesResult = catalogSizeSchema.array().safeParse(row.sizes)
+      if (!sizesResult.success) {
+        repoLogger.warn('catalogSizeSchema parse failed — using empty sizes', {
+          styleId: row.id,
+          error: sizesResult.error.message,
+        })
+      }
+      return sizesResult.success ? sizesResult.data : []
+    })(),
     isEnabled: row.is_enabled ?? true,
     isFavorite: row.is_favorite ?? false,
   }
@@ -81,70 +100,86 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
   // Drizzle doesn't natively support JSON_AGG aggregation sugar, so we use sql template.
   // Preferences are scoped to the authenticated shop — both scope_type AND scope_id are filtered
   // to prevent cross-shop data leakage.
-  const rows = await db.execute(sql`
-    SELECT
-      cs.id,
-      cs.source,
-      cs.external_id,
-      cb.canonical_name AS brand_canonical,
-      cs.style_number,
-      cs.name,
-      cs.description,
-      cs.category,
-      cs.subcategory,
-      COALESCE(
-        JSON_AGG(
-          DISTINCT JSONB_BUILD_OBJECT(
-            'id', cc.id,
-            'name', cc.name,
-            'hex1', cc.hex1,
-            'hex2', cc.hex2,
-            'colorFamilyName', cc.color_family_name,
-            'images', (
-              SELECT COALESCE(
-                JSON_AGG(
-                  JSONB_BUILD_OBJECT('imageType', ci.image_type, 'url', ci.url)
-                  ORDER BY ci.image_type
-                ),
-                '[]'::json
+  let rows: unknown[]
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        cs.id,
+        cs.source,
+        cs.external_id,
+        cb.canonical_name AS brand_canonical,
+        cs.style_number,
+        cs.name,
+        cs.description,
+        cs.category,
+        cs.subcategory,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSONB_BUILD_OBJECT(
+              'id', cc.id,
+              'name', cc.name,
+              'hex1', cc.hex1,
+              'hex2', cc.hex2,
+              'colorFamilyName', cc.color_family_name,
+              'images', (
+                SELECT COALESCE(
+                  JSON_AGG(
+                    JSONB_BUILD_OBJECT('imageType', ci.image_type, 'url', ci.url)
+                    ORDER BY ci.image_type
+                  ),
+                  '[]'::json
+                )
+                FROM catalog_images ci
+                WHERE ci.color_id = cc.id
               )
-              FROM catalog_images ci
-              WHERE ci.color_id = cc.id
             )
-          )
-        ) FILTER (WHERE cc.id IS NOT NULL),
-        '[]'::json
-      ) AS colors,
-      COALESCE(
-        JSON_AGG(
-          DISTINCT JSONB_BUILD_OBJECT(
-            'id', csi.id,
-            'name', csi.name,
-            'sortOrder', csi.sort_order,
-            'priceAdjustment', csi.price_adjustment
-          )
-        ) FILTER (WHERE csi.id IS NOT NULL),
-        '[]'::json
-      ) AS sizes,
-      csp.is_enabled,
-      csp.is_favorite
-    FROM catalog_styles cs
-    JOIN catalog_brands cb ON cb.id = cs.brand_id
-    LEFT JOIN catalog_colors cc ON cc.style_id = cs.id
-    LEFT JOIN catalog_sizes csi ON csi.style_id = cs.id
-    LEFT JOIN catalog_style_preferences csp
-      ON csp.style_id = cs.id
-      AND csp.scope_type = 'shop'
-      AND csp.scope_id = ${session.shopId}
-    GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite
-    ORDER BY cs.name ASC
-  `)
+          ) FILTER (WHERE cc.id IS NOT NULL),
+          '[]'::json
+        ) AS colors,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSONB_BUILD_OBJECT(
+              'id', csi.id,
+              'name', csi.name,
+              'sortOrder', csi.sort_order,
+              'priceAdjustment', csi.price_adjustment
+            )
+          ) FILTER (WHERE csi.id IS NOT NULL),
+          '[]'::json
+        ) AS sizes,
+        csp.is_enabled,
+        csp.is_favorite
+      FROM catalog_styles cs
+      JOIN catalog_brands cb ON cb.id = cs.brand_id
+      LEFT JOIN catalog_colors cc ON cc.style_id = cs.id
+      LEFT JOIN catalog_sizes csi ON csi.style_id = cs.id
+      LEFT JOIN catalog_style_preferences csp
+        ON csp.style_id = cs.id
+        AND csp.scope_type = 'shop'
+        AND csp.scope_id = ${session.shopId}
+      GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite
+      ORDER BY cs.name ASC
+    `)
+    rows = result as unknown[]
+  } catch (err) {
+    repoLogger.error('getNormalizedCatalog db.execute failed', { err, shopId: session.shopId })
+    throw err
+  }
 
-  repoLogger.info('Fetched normalized catalog', { count: (rows as unknown[]).length })
+  repoLogger.info('Fetched normalized catalog', { count: rows.length })
 
-  return (rows as unknown[]).map((row) =>
-    parseNormalizedCatalogRow(row as Parameters<typeof parseNormalizedCatalogRow>[0])
-  )
+  const parsed: NormalizedGarmentCatalog[] = []
+  for (const row of rows) {
+    try {
+      parsed.push(parseNormalizedCatalogRow(row as Parameters<typeof parseNormalizedCatalogRow>[0]))
+    } catch (err) {
+      repoLogger.error('parseNormalizedCatalogRow failed — skipping row', {
+        err,
+        styleId: (row as { id?: string }).id,
+      })
+    }
+  }
+  return parsed
 }
 
 /**

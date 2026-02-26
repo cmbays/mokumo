@@ -61,7 +61,7 @@ function FilterSwatch({
           style={{ backgroundColor: color.hex }}
         >
           {isSelected ? (
-            <Check size={14} style={{ color: color.swatchTextColor }} aria-hidden="true" />
+            <Check size={16} style={{ color: color.swatchTextColor }} aria-hidden="true" />
           ) : (
             <span
               className="pointer-events-none select-none text-center leading-tight"
@@ -157,7 +157,7 @@ export function ColorFilterGrid({
       <div className="-mx-0.5 overflow-x-auto px-0.5">
         <Tabs value={activeFamily} onValueChange={setActiveFamily}>
           <TabsList variant="line" className="gap-0 flex-nowrap h-auto">
-            <TabsTrigger value="all" className="h-7 min-h-0 px-2 py-1 text-xs">
+            <TabsTrigger value="all" className="min-h-(--mobile-touch-target) md:min-h-0 px-2 py-1 text-xs">
               All ({familyCounts.all})
             </TabsTrigger>
             {colorFamilies.map((family) => (
@@ -174,7 +174,7 @@ export function ColorFilterGrid({
             ))}
             {/* "Other" tab — shown only when null-family swatches exist in the scoped set */}
             {familyCounts[COLOR_FAMILY_OTHER] > 0 && (
-              <TabsTrigger value={COLOR_FAMILY_OTHER} className="h-7 min-h-0 px-2 py-1 text-xs">
+              <TabsTrigger value={COLOR_FAMILY_OTHER} className="min-h-(--mobile-touch-target) md:min-h-0 px-2 py-1 text-xs">
                 Other ({familyCounts[COLOR_FAMILY_OTHER]})
               </TabsTrigger>
             )}
