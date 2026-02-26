@@ -1,10 +1,17 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
+import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
+import {
+  classifyColor,
+  HUE_BUCKET_CONFIG,
+  ORDERED_HUE_BUCKETS,
+  type HueBucket,
+} from '@shared/lib/color-utils'
 import type { FilterColor } from '@features/garments/types'
 import { useGridKeyboardNav } from '@shared/hooks/useGridKeyboardNav'
 
@@ -13,6 +20,8 @@ type ColorFilterGridProps = {
   selectedColorIds: string[]
   onToggleColor: (colorId: string) => void
   favoriteColorIds: string[]
+  /** When provided (brand filter active), only show colors whose names are in this set. */
+  availableColorNames?: Set<string>
 }
 
 function FilterSwatch({
@@ -75,18 +84,32 @@ export function ColorFilterGrid({
   selectedColorIds,
   onToggleColor,
   favoriteColorIds,
+  availableColorNames,
 }: ColorFilterGridProps) {
   const gridRef = useRef<HTMLDivElement>(null)
 
+  const [activeTab, setActiveTab] = useState<HueBucket>('all')
+
+  // Reset to 'all' tab whenever the brand filter changes (availableColorNames identity changes)
+  useEffect(() => {
+    setActiveTab('all')
+  }, [availableColorNames])
+
   const selectedSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds])
 
-  // Favorites first, then remaining by alphabetical catalog order
+  // Step 1: Filter by brand scope (availableColorNames)
+  const scopedColors = useMemo(() => {
+    if (!availableColorNames) return colors
+    return colors.filter((c) => availableColorNames.has(c.name))
+  }, [colors, availableColorNames])
+
+  // Step 2: Favorites first, then rest
   const sortedColors = useMemo(() => {
     const favoriteSet = new Set(favoriteColorIds)
     const favorites: FilterColor[] = []
     const rest: FilterColor[] = []
 
-    for (const color of colors) {
+    for (const color of scopedColors) {
       if (favoriteSet.has(color.id)) {
         favorites.push(color)
       } else {
@@ -95,27 +118,82 @@ export function ColorFilterGrid({
     }
 
     return [...favorites, ...rest]
-  }, [colors, favoriteColorIds])
+  }, [scopedColors, favoriteColorIds])
 
-  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 5)
+  // Step 3: Count per hue bucket (from the full scoped+sorted set — shown in tab badges)
+  const bucketCounts = useMemo(() => {
+    const counts: Record<HueBucket, number> = {
+      all: sortedColors.length,
+      'blacks-grays': 0,
+      'whites-neutrals': 0,
+      reds: 0,
+      'yellows-oranges': 0,
+      greens: 0,
+      blues: 0,
+      'purples-pinks': 0,
+      browns: 0,
+    }
+    for (const color of sortedColors) {
+      counts[classifyColor({ hex: color.hex })]++
+    }
+    return counts
+  }, [sortedColors])
+
+  // Step 4: Filter by active tab
+  const tabFilteredColors = useMemo(() => {
+    if (activeTab === 'all') return sortedColors
+    return sortedColors.filter((c) => classifyColor({ hex: c.hex }) === activeTab)
+  }, [sortedColors, activeTab])
+
+  // swatch width: h-8 w-8 = 32px + gap-px (1px) ≈ 33px per cell
+  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 33)
 
   return (
-    <div
-      ref={gridRef}
-      className="grid grid-cols-5 md:grid-cols-6 gap-0.5"
-      role="group"
-      aria-label="Filter by color"
-      onKeyDown={handleKeyDown}
-    >
-      {sortedColors.map((color, i) => (
-        <FilterSwatch
-          key={color.id}
-          color={color}
-          isSelected={selectedSet.has(color.id)}
-          onToggle={() => onToggleColor(color.id)}
-          tabIndex={i === 0 ? 0 : -1}
-        />
-      ))}
+    <div className="space-y-2">
+      {/* Hue-bucket filter tabs */}
+      <div className="-mx-0.5 overflow-x-auto px-0.5">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as HueBucket)}>
+          <TabsList variant="line" className="gap-0 flex-nowrap h-auto">
+            <TabsTrigger
+              value="all"
+              className="h-7 min-h-0 px-2 py-1 text-xs"
+            >
+              All ({bucketCounts.all})
+            </TabsTrigger>
+            {ORDERED_HUE_BUCKETS.map((bucket) => (
+              <TabsTrigger
+                key={bucket}
+                value={bucket}
+                className={cn(
+                  'h-7 min-h-0 px-2 py-1 text-xs',
+                  bucketCounts[bucket] === 0 && 'opacity-40'
+                )}
+              >
+                {HUE_BUCKET_CONFIG[bucket].label} ({bucketCounts[bucket]})
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Swatch grid — dense gap */}
+      <div
+        ref={gridRef}
+        className="grid grid-cols-5 md:grid-cols-6 gap-px"
+        role="group"
+        aria-label="Filter by color"
+        onKeyDown={handleKeyDown}
+      >
+        {tabFilteredColors.map((color, i) => (
+          <FilterSwatch
+            key={color.id}
+            color={color}
+            isSelected={selectedSet.has(color.id)}
+            onToggle={() => onToggleColor(color.id)}
+            tabIndex={i === 0 ? 0 : -1}
+          />
+        ))}
+      </div>
     </div>
   )
 }
