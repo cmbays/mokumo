@@ -1,4 +1,103 @@
+import { hexToRgb } from '@domain/rules/color.rules'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { FilterColor } from '@features/garments/types'
+
+export type { FilterColor }
+
+// ---------------------------------------------------------------------------
+// normalizeColorName
+// ---------------------------------------------------------------------------
+
+/**
+ * Strips S&S measurement suffixes from catalog color names to produce canonical names.
+ *
+ * S&S activewear/workwear entries include inseam, waist, sleeve, and unhemmed
+ * variants as separate catalog_colors rows (e.g., "Black - 28I", "Black - 30I, 50W").
+ * These must resolve to the same canonical name ("Black") for deduplication and
+ * name-based filter matching to work correctly.
+ *
+ * Handles: " - 28I", " - 30I, 50W", " - B120", " - Sleeve 32/33",
+ *          " - 36 Unhemmed", " - Unhemmed", " - Size 50W",
+ *          " (Long Sizes)", " (Unhemmed)"
+ */
+export function normalizeColorName(name: string): string {
+  return name
+    .replace(
+      /\s*-\s*(?:\d[\d\s,/IWX]*(?:\s*Unhemmed)?|B\d+|Sleeve\s+[\d/]+|Size\s+\d+\w*|\d+\s+Unhemmed|Unhemmed)\s*$/i,
+      ''
+    )
+    .replace(/\s*\((?:Long\s+Sizes?|Unhemmed)\)\s*$/i, '')
+    .trim()
+}
+
+/** WCAG relative luminance — returns white or black text color for a hex background. */
+function computeSwatchTextColor(hex: string): string {
+  const { r, g, b } = hexToRgb(hex)
+  // Linearize sRGB components (IEC 61966-2-1)
+  const linearize = (c: number) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }
+  const L = 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+  return L > 0.179 ? '#000000' : '#FFFFFF'
+}
+
+// ---------------------------------------------------------------------------
+// extractUniqueColors
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts a deduplicated list of FilterColor objects from the normalized catalog.
+ *
+ * Deduplication is by lowercased, trimmed color name — the first CatalogColor.id
+ * encountered for each unique name becomes the canonical FilterColor.id.
+ * hex uses hex1 from catalog_colors (the primary swatch color).
+ * Returns alphabetically sorted by name.
+ */
+export function extractUniqueColors(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): FilterColor[] {
+  if (!normalizedCatalog) return []
+  const seen = new Map<string, FilterColor>()
+
+  for (const style of normalizedCatalog) {
+    for (const color of style.colors) {
+      const canonicalName = normalizeColorName(color.name)
+      const key = canonicalName.toLowerCase().trim()
+      if (seen.has(key)) continue
+      const hex = color.hex1 ?? '#888888'
+      seen.set(key, {
+        id: color.id,
+        name: canonicalName,
+        hex,
+        swatchTextColor: computeSwatchTextColor(hex),
+      })
+    }
+  }
+
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// ---------------------------------------------------------------------------
+// buildStyleToColorNamesMap
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a lookup map from styleNumber to the Set of lowercased color names for that style.
+ * Used by the garment filter loop as a name-based bridge between catalog_colors UUIDs
+ * and the legacy GarmentCatalog.availableColors slug IDs.
+ */
+export function buildStyleToColorNamesMap(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): Map<string, Set<string>> {
+  if (!normalizedCatalog) return new Map()
+  return new Map(
+    normalizedCatalog.map((style) => [
+      style.styleNumber,
+      new Set(style.colors.map((c) => normalizeColorName(c.name).toLowerCase().trim())),
+    ])
+  )
+}
 
 // ---------------------------------------------------------------------------
 // buildSkuToFrontImageUrl

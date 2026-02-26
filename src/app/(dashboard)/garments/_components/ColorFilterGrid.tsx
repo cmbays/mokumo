@@ -5,13 +5,11 @@ import { Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
-import { getColorsMutable } from '@infra/repositories/colors'
-import type { Color } from '@domain/entities/color'
+import type { FilterColor } from '@features/garments/types'
 import { useGridKeyboardNav } from '@shared/hooks/useGridKeyboardNav'
 
-const catalogColors = getColorsMutable()
-
 type ColorFilterGridProps = {
+  colors: FilterColor[]
   selectedColorIds: string[]
   onToggleColor: (colorId: string) => void
   favoriteColorIds: string[]
@@ -23,7 +21,7 @@ function FilterSwatch({
   onToggle,
   tabIndex,
 }: {
-  color: Color
+  color: FilterColor
   isSelected: boolean
   onToggle: () => void
   tabIndex: number
@@ -73,6 +71,7 @@ function FilterSwatch({
 }
 
 export function ColorFilterGrid({
+  colors,
   selectedColorIds,
   onToggleColor,
   favoriteColorIds,
@@ -81,13 +80,13 @@ export function ColorFilterGrid({
 
   const selectedSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds])
 
-  // Favorites first, then remaining by catalog order
+  // Favorites first, then remaining by alphabetical catalog order
   const sortedColors = useMemo(() => {
     const favoriteSet = new Set(favoriteColorIds)
-    const favorites: Color[] = []
-    const rest: Color[] = []
+    const favorites: FilterColor[] = []
+    const rest: FilterColor[] = []
 
-    for (const color of catalogColors) {
+    for (const color of colors) {
       if (favoriteSet.has(color.id)) {
         favorites.push(color)
       } else {
@@ -96,14 +95,14 @@ export function ColorFilterGrid({
     }
 
     return [...favorites, ...rest]
-  }, [favoriteColorIds])
+  }, [colors, favoriteColorIds])
 
-  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 34)
+  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 5)
 
   return (
     <div
       ref={gridRef}
-      className="flex flex-wrap gap-0.5"
+      className="grid grid-cols-5 md:grid-cols-6 gap-0.5"
       role="group"
       aria-label="Filter by color"
       onKeyDown={handleKeyDown}

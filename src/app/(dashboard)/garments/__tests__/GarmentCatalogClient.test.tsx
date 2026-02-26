@@ -41,19 +41,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/garments',
 }))
 
-// Heavy repos / rules that don't matter for toggle tests
-vi.mock('@domain/rules/customer.rules', () => ({
-  resolveEffectiveFavorites: () => [],
-}))
-vi.mock('@infra/repositories/colors', () => ({
-  getColorsMutable: () => [],
-}))
-vi.mock('@infra/repositories/customers', () => ({
-  getCustomersMutable: () => [],
-}))
-vi.mock('@infra/repositories/settings', () => ({
-  getBrandPreferencesMutable: () => ({}),
-}))
 vi.mock('@features/garments/hooks/useColorFilter', () => ({
   useColorFilter: () => ({ selectedColorIds: [], toggleColor: vi.fn(), clearColors: vi.fn() }),
 }))
@@ -184,6 +171,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -211,6 +200,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -237,6 +228,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -260,6 +253,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
           // no normalizedCatalog
         />
       )
@@ -291,6 +286,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -323,6 +320,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -344,7 +343,13 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       })
 
       render(
-        <GarmentCatalogClient initialCatalog={[garment]} initialJobs={[]} initialCustomers={[]} />
+        <GarmentCatalogClient
+          initialCatalog={[garment]}
+          initialJobs={[]}
+          initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
+        />
       )
 
       const favStar = screen.getByRole('button', { name: /favorite/i })
@@ -368,6 +373,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -392,6 +399,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
@@ -415,6 +424,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          catalogColors={[]}
+          initialFavoriteColorIds={[]}
         />
       )
 
