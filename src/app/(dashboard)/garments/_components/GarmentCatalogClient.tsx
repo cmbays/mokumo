@@ -157,7 +157,7 @@ export function GarmentCatalogClient({
   // double-render and the react-compiler "setState in effect" lint error.
   const [page, setPage] = useState(0)
   const [lastFilterKey, setLastFilterKey] = useState('')
-  const currentFilterKey = `${category}|${searchQuery}|${brand}|${colorFilterKey}|${showDisabled}`
+  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorIds.slice().sort().join(',')}|${showDisabled}`
   if (lastFilterKey !== currentFilterKey) {
     setLastFilterKey(currentFilterKey)
     setPage(0)
@@ -218,9 +218,6 @@ export function GarmentCatalogClient({
     styleToColorNamesMap,
     showDisabled,
   ])
-
-  // Sort before joining to produce a canonical key regardless of color selection order.
-  const colorFilterKey = selectedColorIds.slice().sort().join(',')
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
