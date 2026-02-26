@@ -50,6 +50,7 @@ describe('parseNormalizedCatalogRow', () => {
           name: 'Black',
           hex1: '#000000',
           hex2: null,
+          colorFamilyName: null,
           images: [{ imageType: 'front', url: 'https://example.com/front.jpg' }],
         },
       ],

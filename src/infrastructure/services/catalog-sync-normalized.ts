@@ -74,6 +74,8 @@ export function buildColorUpsertValue(
   name: string
   hex1: string | null
   hex2: string | null
+  colorFamilyName: string | null
+  colorCode: string | null
   updatedAt: Date
 } {
   return {
@@ -81,6 +83,8 @@ export function buildColorUpsertValue(
     name: color.name,
     hex1: color.hex1,
     hex2: color.hex2,
+    colorFamilyName: color.colorFamilyName || null,
+    colorCode: color.colorCode || null,
     updatedAt: new Date(),
   }
 }

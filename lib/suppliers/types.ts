@@ -31,6 +31,8 @@ export const canonicalColorSchema = z.object({
   hex1: z.string().nullable(),
   hex2: z.string().nullable(),
   images: z.array(canonicalImageSchema),
+  colorFamilyName: z.string().nullable().optional(),
+  colorCode: z.string().nullable().optional(),
 })
 
 // ─── Size ─────────────────────────────────────────────────────────────────────

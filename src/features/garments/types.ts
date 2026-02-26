@@ -1,6 +1,6 @@
 /**
  * Lightweight color type used by color filter UI (ColorFilterGrid, FavoritesColorSection).
- * Structural subtype of Color — omits `family` (never used in swatch rendering).
+ * Carries colorFamilyName for the family-based filter tab system (Wave 3, #632).
  * Computed at page SSR time via extractUniqueColors() in garment-transforms.ts.
  */
 export type FilterColor = {
@@ -8,4 +8,5 @@ export type FilterColor = {
   name: string
   hex: string
   swatchTextColor: string
+  colorFamilyName?: string | null
 }

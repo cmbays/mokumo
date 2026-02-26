@@ -69,6 +69,7 @@ const ssProductSchema = z
     description: z.string().optional().default(''),
     colorName: z.string(),
     colorCode: z.string().optional().default(''),
+    colorFamilyName: z.string().optional(),
     // S&S hex codes omit the # prefix (e.g. "FF0000"). Empty string = no hex.
     color1: z.string().optional().default(''),
     color2: z.string().optional().default(''),
@@ -216,6 +217,9 @@ export function productsToCanonicalStyle(
     hex1: normalizeHex(p.color1),
     hex2: normalizeHex(p.color2),
     images: buildImages(p),
+    // colorFamilyName: falsy coercion converts empty string to null (S&S may return '')
+    colorFamilyName: p.colorFamilyName?.trim() || null,
+    colorCode: p.colorCode?.trim() || null,
   }))
 
   const sizes: CanonicalSize[] = Array.from(sizeMap.values()).sort(
