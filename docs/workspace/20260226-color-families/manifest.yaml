@@ -1,0 +1,452 @@
+pipeline:
+  id: 20260226-color-families
+  issue: 632
+  title: "S&S colorFamilyName schema + color family filter upgrade"
+  branch: worktree-steady-sleeping-toucan
+  date: 2026-02-26
+
+waves:
+  - id: wave-1
+    name: "DB schema + sync pipeline"
+    description: >
+      Add color_family_name and color_code columns to catalog_colors (migration 0016),
+      propagate through CanonicalColor type → sync service → SSR → FilterColor.
+      No UI change. Data flows on next sync run.
+    can_start: true
+    acceptance_criteria:
+      - "npm run db:migrate applies migration 0016 cleanly"
+      - "Drizzle Studio shows color_family_name and color_code on catalog_colors"
+      - "npx tsc --noEmit passes"
+      - "npm test passes"
+      - "After sync: SELECT color_family_name FROM catalog_colors LIMIT 5 returns non-null values"
+
+    slices:
+      - id: slice-1a
+        name: "Type system expansion"
+        description: >
+          Zero runtime change. Adds colorFamilyName + colorCode to all type layers:
+          canonicalColorSchema, catalogColorSchema, FilterColor, mock adapter.
+          Gate slice — 1B, 1C, 1D depend on this completing first.
+        parallel_with: []
+        blocking_slices: [slice-1b, slice-1c, slice-1d]
+        steps:
+          - step: 1.1
+            file: lib/suppliers/types.ts
+            action: add_fields
+            fields:
+              - name: colorFamilyName
+                type: "z.string().nullable().optional()"
+              - name: colorCode
+                type: "z.string().nullable().optional()"
+            location: "canonicalColorSchema — after hex2"
+          - step: 1.2
+            file: src/domain/entities/catalog-style.ts
+            action: add_fields
+            fields:
+              - name: colorFamilyName
+                type: "z.string().nullable().optional()"
+              - name: colorCode
+                type: "z.string().nullable().optional()"
+            location: "catalogColorSchema — after hex2"
+          - step: 1.3
+            file: src/features/garments/types.ts
+            action: add_field
+            field: "colorFamilyName: string | null"
+            location: "FilterColor type"
+            note: "Will cause tsc error in extractUniqueColors until step 1.12"
+          - step: 1.4
+            file: lib/suppliers/adapters/mock.ts
+            action: update_color_mapping
+            change: "Add colorFamilyName: null, colorCode: null to toCanonicalStyle() colors.map()"
+        tests:
+          - "npx tsc --noEmit passes (after step 1.4 resolves mock adapter error)"
+          - "npm test passes"
+        commit_message: "feat(garments): add colorFamilyName + colorCode to CanonicalColor, catalogColorSchema, FilterColor types"
+
+      - id: slice-1b
+        name: "Drizzle schema + migration 0016"
+        description: >
+          Additive DDL — two nullable varchar columns added to catalog_colors.
+          No NOT NULL constraint, no backfill. Unique index unchanged.
+        parallel_with: [slice-1c, slice-1d]
+        blocking_slices: []
+        depends_on: [slice-1a]
+        steps:
+          - step: 1.5
+            file: src/db/schema/catalog-normalized.ts
+            action: add_columns
+            columns:
+              - name: "colorFamilyName"
+                drizzle: "varchar('color_family_name', { length: 100 })"
+              - name: "colorCode"
+                drizzle: "varchar('color_code', { length: 50 })"
+            location: "catalogColors table — after hex2 column"
+          - step: 1.6
+            action: generate_and_apply_migration
+            commands:
+              - "npm run db:generate"
+              - "npm run db:migrate"
+            expected_migration_file: "supabase/migrations/0016_color_family_fields.sql"
+            expected_content: "Two ALTER TABLE catalog_colors ADD COLUMN statements"
+        tests:
+          - "migration file exists with color_family_name and color_code ADD COLUMN statements"
+          - "npm run db:migrate exits with code 0"
+          - "npx tsc --noEmit passes"
+
+      - id: slice-1c
+        name: "Sync pipeline plumbing"
+        description: >
+          Makes colorFamilyName explicit in ssProductSchema (was passthrough artifact).
+          Propagates through productsToCanonicalStyle() and buildColorUpsertValue().
+          CRITICAL: use || null (falsy) not ?? null (nullish) for empty string conversion.
+        parallel_with: [slice-1b, slice-1d]
+        blocking_slices: []
+        depends_on: [slice-1a]
+        steps:
+          - step: 1.7
+            file: lib/suppliers/adapters/ss-activewear.ts
+            action: add_field_to_schema
+            change: "Add colorFamilyName: z.string().optional() to ssProductSchema (NO .default(''))"
+            location: "ssProductSchema — after colorCode field"
+          - step: 1.8
+            file: lib/suppliers/adapters/ss-activewear.ts
+            action: update_color_mapping
+            change: >
+              In productsToCanonicalStyle() colors.map(), add:
+                colorFamilyName: p.colorFamilyName?.trim() || null,
+                colorCode: p.colorCode?.trim() || null,
+            critical_note: "Use || null NOT ?? null — prevents empty strings entering DB as ''"
+          - step: 1.9
+            file: src/infrastructure/services/catalog-sync-normalized.ts
+            action: update_function
+            function: buildColorUpsertValue
+            change: >
+              Add colorFamilyName and colorCode to return type and return object.
+              Use color.colorFamilyName || null and color.colorCode || null.
+        tests:
+          - "npx tsc --noEmit passes"
+          - "Manual: run sync for one style; SELECT color_family_name FROM catalog_colors WHERE style_id = <uuid> returns non-null values"
+
+      - id: slice-1d
+        name: "SSR wire-through (getNormalizedCatalog + extractUniqueColors)"
+        description: >
+          CONCRETE SURGERY — not an audit. Two functions in catalog.ts must be modified.
+          (1) JSONB_BUILD_OBJECT in raw SQL gains 'colorFamilyName', cc.color_family_name.
+          (2) parseNormalizedCatalogRow inline type gains colorFamilyName: string | null.
+          (3) parseNormalizedCatalogRow colors.map() body gains colorFamilyName: c.colorFamilyName.
+          (4) extractUniqueColors() forwards colorFamilyName to FilterColor.
+        parallel_with: [slice-1b, slice-1c]
+        blocking_slices: []
+        depends_on: [slice-1a]
+        steps:
+          - step: 1.10
+            file: "src/infrastructure/repositories/_providers/supabase/catalog.ts"
+            action: modify_raw_sql
+            function: getNormalizedCatalog
+            change: >
+              In JSONB_BUILD_OBJECT for colors, add 6th pair:
+                'colorFamilyName', cc.color_family_name
+              (camelCase key maps to snake_case DB column)
+          - step: 1.11
+            file: "src/infrastructure/repositories/_providers/supabase/catalog.ts"
+            action: update_parse_function
+            function: parseNormalizedCatalogRow
+            changes:
+              - "Add colorFamilyName: string | null to colors inline Array type"
+              - "Add colorFamilyName: c.colorFamilyName to colors.map() return object"
+          - step: 1.12
+            file: src/app/(dashboard)/garments/_lib/garment-transforms.ts
+            action: update_function
+            function: extractUniqueColors
+            change: >
+              In seen.set() call, add:
+                colorFamilyName: color.colorFamilyName ?? null,
+              Add JSDoc note: "colorFamilyName taken from first occurrence per canonical name"
+        tests:
+          - "npx tsc --noEmit passes (resolves error from step 1.3)"
+          - "npm test passes"
+          - "Dev: FilterColor.colorFamilyName is non-null after sync"
+
+  - id: wave-2
+    name: "dbt dim_color_families mart"
+    description: >
+      New dbt mart reading from catalog_colors (post-migration-0016).
+      One row per distinct color_family_name with style_count, swatch_count, representative_hex.
+      Analytics-only — no app query in this wave.
+    can_start: false
+    depends_on: [wave-1]
+    prerequisite_note: "Migration 0016 must be applied and at least one sync run must have populated color_family_name values"
+    acceptance_criteria:
+      - "npm run dbt:run --select dim_color_families succeeds"
+      - "npm run dbt:test --select dim_color_families passes all tests"
+      - "Row count in analytics.dim_color_families is 60-80 (after sync)"
+
+    slices:
+      - id: slice-2a
+        name: "Source declaration"
+        description: >
+          Create _catalog__sources.yml in dbt/models/marts/garments/.
+          Filename prefix matches source name inside file — avoids reflection Fix 3 naming mismatch.
+          Use _catalog__sources.yml with sources: - name: catalog (NOT _garments__sources.yml with name: catalog).
+        parallel_with: []
+        blocking_slices: [slice-2b, slice-2c]
+        steps:
+          - step: 2.1
+            file: "dbt/models/marts/garments/_catalog__sources.yml"
+            action: create
+            source_name: catalog
+            schema: public
+            table: catalog_colors
+            document_column: color_family_name
+        tests:
+          - "npm run dbt:debug shows catalog source resolves"
+
+      - id: slice-2b
+        name: "dim_color_families mart model"
+        description: >
+          Core SQL: colors CTE (WHERE color_family_name IS NOT NULL) →
+          families CTE (GROUP BY, mode() for hex) →
+          final CTE (surrogate key via dbt_utils.generate_surrogate_key).
+        parallel_with: [slice-2c]
+        blocking_slices: []
+        depends_on: [slice-2a]
+        steps:
+          - step: 2.2
+            file: "dbt/models/marts/garments/dim_color_families.sql"
+            action: create
+            materialized: table
+            uses_source: "{{ source('catalog', 'catalog_colors') }}"
+            output_columns:
+              - family_key
+              - color_family_name
+              - style_count
+              - swatch_count
+              - representative_hex
+              - source
+        tests:
+          - "npm run dbt:run --select dim_color_families succeeds"
+          - "SELECT count(*) FROM analytics.dim_color_families returns 60-80"
+
+      - id: slice-2c
+        name: "Model YAML with column tests"
+        description: >
+          Document all columns. unique + not_null on family_key. not_null on color_family_name.
+          Add description note: WHERE clause already excludes nulls; test validates the guarantee.
+        parallel_with: [slice-2b]
+        blocking_slices: []
+        depends_on: [slice-2a]
+        steps:
+          - step: 2.3
+            file: "dbt/models/marts/garments/_garments__models.yml"
+            action: create
+            model: dim_color_families
+            tests:
+              - "family_key: unique, not_null"
+              - "color_family_name: not_null"
+              - "source: accepted_values ['catalog']"
+        tests:
+          - "npm run dbt:test --select dim_color_families passes"
+
+  - id: wave-3
+    name: "ColorFilterGrid family filter UI"
+    description: >
+      Replace hue-bucket tabs with color family tabs as primary filter.
+      extractColorFamilies() SSR helper derives families from NormalizedGarmentCatalog[].
+      ColorFilterGrid gains colorFamilies prop, activeFamily state, familyCounts memo.
+      COLOR_FAMILY_OTHER constant for null-family sentinel.
+      Slice 3C (useColorFilter hook extension) is DEFERRED — do not build.
+    can_start: false
+    depends_on: [wave-1]
+    prerequisite_note: "Wave 1 type changes (FilterColor.colorFamilyName) must be in place"
+    acceptance_criteria:
+      - "ColorFilterGrid renders ~60-80 family tabs (not 9 hue-bucket tabs)"
+      - "Selecting 'Navy' shows only swatches where colorFamilyName === 'Navy'"
+      - "'All' tab shows all swatches"
+      - "'Other' tab visible only when null-family swatches exist in scoped set"
+      - "Tab resets to 'All' on brand scope change"
+      - "npx tsc --noEmit passes"
+      - "npm test passes"
+      - "Mobile 375px: family tab row horizontally scrollable, no clipping"
+
+    slices:
+      - id: slice-3a
+        name: "Pure helper + type plumbing"
+        description: >
+          Add extractColorFamilies(NormalizedGarmentCatalog[]) to garment-transforms.ts.
+          CRITICAL: accepts NormalizedGarmentCatalog[] NOT FilterColor[] (reflection Fix 5).
+          Update page.tsx to compute colorFamilies and pass to GarmentCatalogClient.
+          Update GarmentCatalogClientProps to accept colorFamilies: string[].
+        parallel_with: []
+        blocking_slices: [slice-3b]
+        steps:
+          - step: 3.1
+            file: src/app/(dashboard)/garments/_lib/garment-transforms.ts
+            action: add_function
+            function: extractColorFamilies
+            signature: "(catalog: NormalizedGarmentCatalog[]): string[]"
+            implementation: >
+              Set-based dedup over all style.colors[].colorFamilyName.
+              Filter falsy values. Return sorted array.
+            note: "Iterates NormalizedGarmentCatalog[] directly — not FilterColor[] — to avoid dedup order artifacts"
+          - step: 3.2
+            file: "src/app/(dashboard)/garments/page.tsx"
+            action: update
+            changes:
+              - "Import extractColorFamilies from ./_lib/garment-transforms"
+              - "Add: const colorFamilies = extractColorFamilies(normalizedCatalog)"
+              - "Pass colorFamilies prop to GarmentCatalogClient"
+          - step: 3.3
+            file: "src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx"
+            action: update
+            changes:
+              - "Add colorFamilies: string[] to GarmentCatalogClientProps"
+              - "Destructure colorFamilies in component function"
+              - "Pass colorFamilies to ColorFilterGrid JSX"
+        tests:
+          - "npx tsc --noEmit passes (tsc will error on ColorFilterGrid until slice 3B)"
+
+      - id: slice-3b
+        name: "ColorFilterGrid family tab system"
+        description: >
+          Largest change in Wave 3. Remove hue-bucket infrastructure; add family tabs.
+          COLOR_FAMILY_OTHER = '__other__' constant at top of file.
+          activeFamily: string state replaces activeTab: HueBucket.
+          familyCounts memo replaces bucketCounts.
+          tabFilteredColors memo updated for family-based filtering.
+          Tab JSX: All + family tabs + conditional Other tab.
+          Keep adjust-state-during-render brand scope reset pattern.
+        parallel_with: []
+        blocking_slices: []
+        depends_on: [slice-3a]
+        steps:
+          - step: 3.4
+            file: "src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx"
+            action: major_refactor
+            sub_steps:
+              - "3.4.1: Remove imports: classifyColor, HUE_BUCKET_CONFIG, ORDERED_HUE_BUCKETS, ColorBucket, HueBucket"
+              - "3.4.2: Add const COLOR_FAMILY_OTHER = '__other__' at top of file"
+              - "3.4.3: Add colorFamilies: string[] to ColorFilterGridProps"
+              - "3.4.4: Replace useState<HueBucket>('all') with useState<string>('all') for activeFamily"
+              - "3.4.5: Update adjust-state-during-render to call setActiveFamily('all') on brand scope change"
+              - "3.4.6: Delete colorBucketCache useMemo and bucketCounts useMemo"
+              - "3.4.7: Add familyCounts useMemo — Record<string, number> keyed by family name + 'all' + COLOR_FAMILY_OTHER"
+              - "3.4.8: Replace tabFilteredColors useMemo — filter by activeFamily string, not hue bucket"
+              - "3.4.9: Replace tab JSX — All + colorFamilies.map() + conditional Other tab"
+        tests:
+          - "npx tsc --noEmit passes"
+          - "npm test passes"
+          - "Dev /garments: ~60-80 family tabs visible"
+          - "Dev: selecting 'Navy' shows only Navy swatches"
+          - "Dev: 'All' shows full grid"
+          - "Dev: brand scope change resets to 'All' tab"
+          - "Dev: 'Other' tab hidden when familyCounts.__other__ === 0"
+
+      - id: slice-3c
+        name: "useColorFilter hook extension"
+        description: >
+          DEFERRED — do not build in Wave 3.
+          Adding selectedFamilies/toggleFamily/clearFamilies to useColorFilter while
+          activeFamily lives in ColorFilterGrid would create two unconnected parallel states.
+          Defer to URL persistence upgrade cycle when the decision is made to move
+          activeFamily from component state to hook state.
+        parallel_with: []
+        blocking_slices: []
+        deferred: true
+        deferred_reason: "Would create parallel unconnected state with ColorFilterGrid.activeFamily. Defer to URL persistence upgrade."
+
+      - id: slice-3d
+        name: "Mobile smoke test"
+        description: >
+          Manual or Playwright verification at 375px viewport.
+          Horizontal scroll, touch targets, Other tab visibility.
+        parallel_with: []
+        blocking_slices: []
+        depends_on: [slice-3b]
+        steps:
+          - step: 3.5
+            action: smoke_test
+            viewport: 375px
+            checks:
+              - "Family tab row scrolls horizontally"
+              - "No horizontal overflow clipping — tab labels not cut off"
+              - "Other tab hidden when all swatches have a family (post-sync)"
+              - "Other tab visible with large badge when pre-migration swatches exist"
+              - "Swatch touch targets >= 44px preserved (min-h-(--mobile-touch-target))"
+        tests:
+          - "Playwright screenshot at 375px shows scrollable tab row"
+
+fixes_incorporated:
+  - id: fix-1
+    severity: HIGH
+    addresses: "S1, S2 — getNormalizedCatalog() raw SQL surgery"
+    resolution: "Slice 1D relabeled as MODIFY with explicit steps: JSONB_BUILD_OBJECT + inline type + .map() body"
+    steps: [1.10, 1.11]
+
+  - id: fix-2
+    severity: HIGH
+    addresses: "S8 — colorFamilyName empty string flows as '' not NULL"
+    resolution: "ssProductSchema uses z.string().optional() (no default). productsToCanonicalStyle() uses || null (falsy) not ?? null (nullish)"
+    steps: [1.7, 1.8]
+
+  - id: fix-3
+    severity: MEDIUM
+    addresses: "S4 — source name/filename mismatch in dbt"
+    resolution: "File named _catalog__sources.yml; source name inside is 'catalog'. All references use {{ source('catalog', 'catalog_colors') }}"
+    steps: [2.1]
+
+  - id: fix-4
+    severity: LOW
+    addresses: "S5 — __other__ sentinel repeated string literal"
+    resolution: "const COLOR_FAMILY_OTHER = '__other__' defined at top of ColorFilterGrid.tsx and used everywhere"
+    steps: [3.4]
+
+  - id: fix-5
+    severity: MEDIUM
+    addresses: "S9 — extractColorFamilies derives from deduplicated FilterColor[] (incorrect)"
+    resolution: "extractColorFamilies() accepts NormalizedGarmentCatalog[] and iterates all color rows directly"
+    steps: [3.1, 3.2]
+
+deferred_items:
+  - id: d1
+    description: "Slice 3C — useColorFilter hook extension (selectedFamilies, toggleFamily, clearFamilies)"
+    reason: "Would create parallel state with ColorFilterGrid.activeFamily. Defer to URL persistence upgrade."
+
+  - id: d2
+    description: "colorCode empty-string behavior in ssProductSchema"
+    reason: "colorCode: z.string().optional().default('') unchanged. Not consumed by Wave 3 UI. Revisit when colorCode used as supplier join key."
+
+  - id: d3
+    description: "Pre-migration 'Other' tab UX (large badge before re-sync)"
+    reason: "Acknowledged rabbit hole in frame.md. Options: hide Other until sync, add tooltip. Deferred to QA review."
+
+  - id: d4
+    description: "dbt not_null test redundancy documentation"
+    reason: "Add description note in _garments__models.yml explaining WHERE clause already excludes nulls; test validates the guarantee."
+
+files_by_wave:
+  wave-1:
+    modify:
+      - lib/suppliers/types.ts
+      - lib/suppliers/adapters/ss-activewear.ts
+      - lib/suppliers/adapters/mock.ts
+      - src/db/schema/catalog-normalized.ts
+      - src/infrastructure/services/catalog-sync-normalized.ts
+      - src/domain/entities/catalog-style.ts
+      - src/features/garments/types.ts
+      - src/infrastructure/repositories/_providers/supabase/catalog.ts
+      - src/app/(dashboard)/garments/_lib/garment-transforms.ts
+    create:
+      - supabase/migrations/0016_color_family_fields.sql
+
+  wave-2:
+    create:
+      - dbt/models/marts/garments/_catalog__sources.yml
+      - dbt/models/marts/garments/dim_color_families.sql
+      - dbt/models/marts/garments/_garments__models.yml
+
+  wave-3:
+    modify:
+      - src/app/(dashboard)/garments/_lib/garment-transforms.ts
+      - src/app/(dashboard)/garments/page.tsx
+      - src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx
+      - src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx
