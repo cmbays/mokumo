@@ -100,6 +100,21 @@ export function GarmentCatalogClient({
     [normalizedCatalog]
   )
 
+  // When a brand filter is active, compute the set of color names available for that brand.
+  // Passed to ColorFilterGrid (via GarmentCatalogToolbar) so tabs + swatches scope to the brand.
+  const brandAvailableColorNames = useMemo(() => {
+    if (!brand || !normalizedCatalog) return undefined
+    const names = new Set<string>()
+    for (const style of normalizedCatalog) {
+      if (style.brand === brand) {
+        for (const color of style.colors) {
+          names.add(color.name)
+        }
+      }
+    }
+    return names.size > 0 ? names : undefined
+  }, [brand, normalizedCatalog])
+
   // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
   const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
     hydrateCatalogPreferences(initialCatalog, normalizedCatalog)
@@ -335,6 +350,7 @@ export function GarmentCatalogClient({
         categoryHits={categoryHits}
         showDisabled={showDisabled}
         onShowDisabledChange={setShowDisabled}
+        availableColorNames={brandAvailableColorNames}
       />
 
       {/* Grid View */}
