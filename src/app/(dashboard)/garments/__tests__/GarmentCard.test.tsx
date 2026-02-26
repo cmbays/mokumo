@@ -19,6 +19,9 @@ vi.mock('next/image', () => ({
     <img src={src} alt={alt} onError={onError} />
   ),
 }))
+vi.mock('@shared/ui/organisms/ColorSwatchStrip', () => ({
+  ColorSwatchStrip: () => null,
+}))
 
 // localStorage stub for jsdom
 beforeAll(() => {
