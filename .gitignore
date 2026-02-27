@@ -41,6 +41,9 @@ next-env.d.ts
 # ephemeral scratch space (delete at will — nothing here is committed)
 tmp/
 
+# Design mockup route — dev-only, never committed, never deployed
+src/app/(dashboard)/mockup/
+
 # secrets
 **/*.pem
 **/*.key
