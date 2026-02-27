@@ -297,11 +297,12 @@ git -C ~/Github/print-4ink fetch origin && git -C ~/Github/print-4ink push origi
 | `docs/TECH_STACK.md`          | Tool choices, versions, decision context           | Adding/removing/upgrading deps       |
 | `docs/PRD.md`                 | Features, scope, acceptance criteria               | Scope changes or new features        |
 | `docs/APP_FLOW.md`            | Screens, routes, navigation paths                  | Adding/changing pages or flows       |
+| `docs/APP_IA.md`              | Nav taxonomy, interaction patterns, scope model, feature placement rules | Nav decisions, new feature areas, interaction pattern questions |
 | `docs/IMPLEMENTATION_PLAN.md` | Sequenced build steps                              | Completing steps or re-prioritizing  |
 | `docs/PM.md`                  | PM workflows, labels, templates                    | PM infrastructure changes            |
 | `docs/HOW_WE_WORK.md`         | Methodology, Shape Up philosophy                   | Process or tooling changes           |
 
-**Before starting work**: read `ROADMAP.md` (strategy) + `APP_FLOW.md` (routes) + `IMPLEMENTATION_PLAN.md` (current step). Before adding a dependency, check `TECH_STACK.md`.
+**Before starting work**: read `ROADMAP.md` (strategy) + `APP_FLOW.md` (routes) + `IMPLEMENTATION_PLAN.md` (current step). Before adding a dependency, check `TECH_STACK.md`. Before placing a new feature in nav or Settings, check `APP_IA.md` (governing IA principles — where features go, inline vs settings, scope model).
 
 ## Reference Documents
 
