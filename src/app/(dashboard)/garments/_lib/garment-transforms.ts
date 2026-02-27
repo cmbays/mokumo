@@ -113,13 +113,17 @@ export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): strin
 /**
  * Extracts a deduplicated list of FilterColorGroup objects from the normalized catalog.
  *
- * Deduplication is by colorGroupName. The representative hex is chosen by frequency —
- * the most common hex1 value across all rows in the group wins. This guards against
- * supplier data quality issues where a small number of rows carry incorrect hex values
- * (e.g. a dark swatch mis-tagged as "Safety Yellow").
+ * Deduplication is by colorGroupName. The representative hex is the weighted RGB average
+ * across all color rows in the group. This is more robust than picking the modal (most
+ * frequent exact hex string) because supplier data often has a handful of incorrect hex
+ * values that may happen to be the plurality — e.g. dark brown entries under "Texas Orange".
+ * The weighted average spreads influence across the many correct-but-slightly-different
+ * entries, drowning out small clusters of bad data.
  *
- * Colors without colorGroupName are excluded, as are S&S internal codes (ZZZ prefix,
- * DO NOT USE suffix).
+ * Excluded groups:
+ * - ZZZ prefix — S&S internal catch-all codes (ZZZ - Multi Color, ZZZ - No Match)
+ * - DO NOT USE suffix — S&S deprecated colorways
+ * - Camo — pattern categories with no meaningful single representative color
  *
  * Sorted by colorFamily then colorGroupName so the family tabs produce natural groupings.
  */
@@ -128,39 +132,55 @@ export function extractColorGroups(
 ): FilterColorGroup[] {
   if (!normalizedCatalog) return []
 
-  // Pass 1: collect hex frequency counts and family name per group
-  const hexCounts = new Map<string, Map<string, number>>()
+  // Pass 1: accumulate weighted RGB sums per group
+  const rgbSums = new Map<string, { r: number; g: number; b: number; total: number }>()
   const groupMeta = new Map<string, { colorFamilyName: string | null }>()
 
   for (const style of normalizedCatalog) {
     for (const color of style.colors) {
       if (!color.colorGroupName) continue
-      // Exclude S&S internal codes: catch-alls (ZZZ prefix) and deprecated colorways (DO NOT USE suffix)
-      if (color.colorGroupName.startsWith('ZZZ') || color.colorGroupName.includes('DO NOT USE')) continue
+      // Exclude S&S internal codes and pattern categories
+      if (
+        color.colorGroupName.startsWith('ZZZ') ||
+        color.colorGroupName.includes('DO NOT USE') ||
+        color.colorGroupName.includes('Camo')
+      )
+        continue
       const key = color.colorGroupName
       if (!groupMeta.has(key)) {
         groupMeta.set(key, { colorFamilyName: color.colorFamilyName ?? null })
       }
-      const hex = color.hex1
-      if (!hex) continue
-      const counts = hexCounts.get(key) ?? new Map<string, number>()
-      counts.set(hex.toLowerCase(), (counts.get(hex.toLowerCase()) ?? 0) + 1)
-      hexCounts.set(key, counts)
+      const raw = color.hex1?.replace('#', '')
+      if (!raw || raw.length !== 6) continue
+      const r = parseInt(raw.slice(0, 2), 16)
+      const g = parseInt(raw.slice(2, 4), 16)
+      const b = parseInt(raw.slice(4, 6), 16)
+      if (isNaN(r) || isNaN(g) || isNaN(b)) continue
+      const sums = rgbSums.get(key) ?? { r: 0, g: 0, b: 0, total: 0 }
+      sums.r += r
+      sums.g += g
+      sums.b += b
+      sums.total += 1
+      rgbSums.set(key, sums)
     }
   }
 
-  // Pass 2: pick the most-frequent hex per group
+  // Pass 2: compute average hex per group
   const result: FilterColorGroup[] = []
   for (const [groupName, meta] of groupMeta) {
-    const counts = hexCounts.get(groupName)
-    const dominantHex = counts
-      ? [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
-      : '#888888'
+    const sums = rgbSums.get(groupName)
+    let hex = '#888888'
+    if (sums && sums.total > 0) {
+      const r = Math.round(sums.r / sums.total).toString(16).padStart(2, '0')
+      const g = Math.round(sums.g / sums.total).toString(16).padStart(2, '0')
+      const b = Math.round(sums.b / sums.total).toString(16).padStart(2, '0')
+      hex = `#${r}${g}${b}`
+    }
     result.push({
       colorGroupName: groupName,
       colorFamilyName: meta.colorFamilyName,
-      hex: dominantHex,
-      swatchTextColor: computeSwatchTextColor(dominantHex),
+      hex,
+      swatchTextColor: computeSwatchTextColor(hex),
     })
   }
 
