@@ -31,6 +31,7 @@ export const catalogColorSchema = z.object({
     .nullable(),
   images: z.array(catalogImageSchema),
   colorFamilyName: z.string().nullable().optional(),
+  colorGroupName: z.string().nullable().optional(),
   colorCode: z.string().nullable().optional(),
 })
 

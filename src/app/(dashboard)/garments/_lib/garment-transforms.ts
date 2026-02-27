@@ -1,8 +1,8 @@
 import { hexToRgb } from '@domain/rules/color.rules'
 import type { CatalogColor, NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
-import type { FilterColor } from '@features/garments/types'
+import type { FilterColor, FilterColorGroup } from '@features/garments/types'
 
-export type { FilterColor }
+export type { FilterColor, FilterColorGroup }
 
 // ---------------------------------------------------------------------------
 // normalizeColorName
@@ -74,11 +74,147 @@ export function extractUniqueColors(
         hex,
         swatchTextColor: computeSwatchTextColor(hex),
         colorFamilyName: color.colorFamilyName ?? null,
+        colorGroupName: color.colorGroupName ?? null,
       })
     }
   }
 
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// ---------------------------------------------------------------------------
+// extractColorFamilies
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts a sorted, deduplicated list of color family names from the normalized catalog.
+ *
+ * Accepts NormalizedGarmentCatalog[] (not FilterColor[]) to avoid deduplication
+ * artifacts — the first occurrence of a canonical color name in extractUniqueColors()
+ * may have colorFamilyName === null for pre-migration rows. Iterating all style
+ * colors ensures the complete family set is captured regardless of dedup order.
+ *
+ * Returns alphabetically sorted array. Null/empty family names are excluded.
+ */
+export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): string[] {
+  const families = new Set<string>()
+  for (const style of catalog) {
+    for (const color of style.colors) {
+      if (color.colorFamilyName) families.add(color.colorFamilyName)
+    }
+  }
+  return [...families].sort()
+}
+
+// ---------------------------------------------------------------------------
+// extractColorGroups
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts a deduplicated list of FilterColorGroup objects from the normalized catalog.
+ *
+ * Deduplication is by colorGroupName. The representative hex is the weighted RGB average
+ * across all color rows in the group. This is more robust than picking the modal (most
+ * frequent exact hex string) because supplier data often has a handful of incorrect hex
+ * values that may happen to be the plurality — e.g. dark brown entries under "Texas Orange".
+ * The weighted average spreads influence across the many correct-but-slightly-different
+ * entries, drowning out small clusters of bad data.
+ *
+ * Excluded groups:
+ * - ZZZ prefix — S&S internal catch-all codes (ZZZ - Multi Color, ZZZ - No Match)
+ * - DO NOT USE suffix — S&S deprecated colorways
+ *
+ * Sorted by colorFamily then colorGroupName so the family tabs produce natural groupings.
+ */
+export function extractColorGroups(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): FilterColorGroup[] {
+  if (!normalizedCatalog) return []
+
+  // Pass 1: accumulate weighted RGB sums per group
+  const rgbSums = new Map<string, { r: number; g: number; b: number; total: number }>()
+  const groupMeta = new Map<string, { colorFamilyName: string | null }>()
+
+  for (const style of normalizedCatalog) {
+    for (const color of style.colors) {
+      if (!color.colorGroupName) continue
+      // Exclude S&S internal codes: catch-alls (ZZZ prefix) and deprecated colorways (DO NOT USE suffix)
+      if (color.colorGroupName.startsWith('ZZZ') || color.colorGroupName.includes('DO NOT USE'))
+        continue
+      const key = color.colorGroupName
+      if (!groupMeta.has(key)) {
+        groupMeta.set(key, { colorFamilyName: color.colorFamilyName ?? null })
+      }
+      const raw = color.hex1?.replace('#', '')
+      if (!raw || raw.length !== 6) continue
+      const r = parseInt(raw.slice(0, 2), 16)
+      const g = parseInt(raw.slice(2, 4), 16)
+      const b = parseInt(raw.slice(4, 6), 16)
+      if (isNaN(r) || isNaN(g) || isNaN(b)) continue
+      const sums = rgbSums.get(key) ?? { r: 0, g: 0, b: 0, total: 0 }
+      sums.r += r
+      sums.g += g
+      sums.b += b
+      sums.total += 1
+      rgbSums.set(key, sums)
+    }
+  }
+
+  // Pass 2: compute average hex per group
+  const result: FilterColorGroup[] = []
+  for (const [groupName, meta] of groupMeta) {
+    const sums = rgbSums.get(groupName)
+    let hex = '#888888'
+    if (sums && sums.total > 0) {
+      const r = Math.round(sums.r / sums.total)
+        .toString(16)
+        .padStart(2, '0')
+      const g = Math.round(sums.g / sums.total)
+        .toString(16)
+        .padStart(2, '0')
+      const b = Math.round(sums.b / sums.total)
+        .toString(16)
+        .padStart(2, '0')
+      hex = `#${r}${g}${b}`
+    }
+    result.push({
+      colorGroupName: groupName,
+      colorFamilyName: meta.colorFamilyName,
+      hex,
+      swatchTextColor: computeSwatchTextColor(hex),
+    })
+  }
+
+  return result.sort(
+    (a, b) =>
+      (a.colorFamilyName ?? 'ZZZ').localeCompare(b.colorFamilyName ?? 'ZZZ') ||
+      a.colorGroupName.localeCompare(b.colorGroupName)
+  )
+}
+
+// ---------------------------------------------------------------------------
+// buildStyleToColorGroupNamesMap
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a lookup map from styleNumber to the Set of colorGroupName values for that style.
+ * Used by the garment filter loop for group-based filtering.
+ * Only includes non-null colorGroupName values.
+ */
+export function buildStyleToColorGroupNamesMap(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): Map<string, Set<string>> {
+  if (!normalizedCatalog) return new Map()
+  return new Map(
+    normalizedCatalog.map((style) => [
+      style.styleNumber,
+      new Set(
+        style.colors
+          .map((c) => c.colorGroupName)
+          .filter((g): g is string => g != null && g.length > 0)
+      ),
+    ])
+  )
 }
 
 // ---------------------------------------------------------------------------

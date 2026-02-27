@@ -42,7 +42,11 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@features/garments/hooks/useColorFilter', () => ({
-  useColorFilter: () => ({ selectedColorIds: [], toggleColor: vi.fn(), clearColors: vi.fn() }),
+  useColorFilter: () => ({
+    selectedColorGroups: [],
+    toggleColorGroup: vi.fn(),
+    clearColorGroups: vi.fn(),
+  }),
 }))
 
 // Stub out the toolbar and drawers — they have their own complex deps
@@ -171,6 +175,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -200,6 +205,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -228,6 +234,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -253,6 +260,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           // no normalizedCatalog
@@ -286,6 +294,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -320,6 +329,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -347,6 +357,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -373,6 +384,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialJobs={[]}
           initialCustomers={[]}
           normalizedCatalog={normalized}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -399,6 +411,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />
@@ -424,6 +437,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
         />

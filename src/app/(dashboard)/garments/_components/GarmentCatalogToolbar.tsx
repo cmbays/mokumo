@@ -20,7 +20,7 @@ import { Label } from '@shared/ui/primitives/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { ColorFilterGrid } from './ColorFilterGrid'
 import { garmentCategoryEnum } from '@domain/entities/garment'
-import type { FilterColor } from '@features/garments/types'
+import type { FilterColorGroup } from '@features/garments/types'
 import type { GarmentCategory } from '@domain/entities/garment'
 import { GARMENT_CATEGORY_LABELS } from '@domain/constants'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
@@ -42,20 +42,19 @@ const CATEGORIES = [
 // ---------------------------------------------------------------------------
 
 type GarmentCatalogToolbarProps = {
-  catalogColors: FilterColor[]
+  colorGroups: FilterColorGroup[]
   brands: string[]
-  selectedColorIds: string[]
-  onToggleColor: (colorId: string) => void
-  onClearColors: () => void
+  selectedColorGroups: string[]
+  onToggleColorGroup: (colorGroupName: string) => void
+  onClearColorGroups: () => void
   garmentCount: number
-  favoriteColorIds: string[]
   onBrandClick?: (brandName: string) => void
   /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
   categoryHits: Partial<Record<GarmentCategory, number>>
   showDisabled: boolean
   onShowDisabledChange: (checked: boolean) => void
-  /** Brand-scoped color names: when a brand filter is active, only show that brand's colors. */
-  availableColorNames?: Set<string>
+  /** Brand-scoped color group names: when a brand filter is active, only show that brand's groups. */
+  availableColorGroups?: Set<string>
 }
 
 // ---------------------------------------------------------------------------
@@ -63,18 +62,17 @@ type GarmentCatalogToolbarProps = {
 // ---------------------------------------------------------------------------
 
 export function GarmentCatalogToolbar({
-  catalogColors,
+  colorGroups,
   brands,
-  selectedColorIds,
-  onToggleColor,
-  onClearColors,
+  selectedColorGroups,
+  onToggleColorGroup,
+  onClearColorGroups,
   garmentCount,
-  favoriteColorIds,
   onBrandClick,
   categoryHits,
   showDisabled,
   onShowDisabledChange,
-  availableColorNames,
+  availableColorGroups,
 }: GarmentCatalogToolbarProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -123,11 +121,13 @@ export function GarmentCatalogToolbar({
     router.replace(pathname, { scroll: false })
   }, [router, pathname])
 
-  // --- Resolved color objects for pills ---
-  const selectedColors = useMemo(
+  // --- Resolved color group objects for pills ---
+  const selectedGroupObjects = useMemo(
     () =>
-      selectedColorIds.map((id) => catalogColors.find((c) => c.id === id)).filter((c) => c != null),
-    [selectedColorIds, catalogColors]
+      selectedColorGroups
+        .map((name) => colorGroups.find((g) => g.colorGroupName === name))
+        .filter((g): g is FilterColorGroup => g != null),
+    [selectedColorGroups, colorGroups]
   )
 
   // --- Active filters (for pills — excludes color swatches which get their own row) ---
@@ -148,7 +148,7 @@ export function GarmentCatalogToolbar({
     activeFilters.push({ key: 'brand', label: brand, value: brand })
   }
 
-  const hasAnyFilter = activeFilters.length > 0 || selectedColorIds.length > 0
+  const hasAnyFilter = activeFilters.length > 0 || selectedColorGroups.length > 0
 
   // Hide category tabs with zero inventory given other active filters.
   // Always keep "all" and the currently-selected tab visible (avoids jarring disappearance).
@@ -156,9 +156,9 @@ export function GarmentCatalogToolbar({
     (cat) => cat.value === 'all' || cat.value === category || (categoryHits[cat.value] ?? 0) > 0
   )
 
-  // Fix #9: Show "Clear colors" only when colors are the sole active filter.
+  // Show "Clear colors" only when color groups are the sole active filter.
   // Show "Clear all" only when mixed filters are active. Never show both.
-  const showClearColors = activeFilters.length === 0 && selectedColorIds.length > 0
+  const showClearColors = activeFilters.length === 0 && selectedColorGroups.length > 0
   const showClearAll = activeFilters.length > 0
 
   return (
@@ -305,13 +305,12 @@ export function GarmentCatalogToolbar({
         </div>
       </div>
 
-      {/* Row 3: Color swatch filter grid */}
+      {/* Row 3: Color group swatch filter grid */}
       <ColorFilterGrid
-        colors={catalogColors}
-        selectedColorIds={selectedColorIds}
-        onToggleColor={onToggleColor}
-        favoriteColorIds={favoriteColorIds}
-        availableColorNames={availableColorNames}
+        colorGroups={colorGroups}
+        selectedColorGroups={selectedColorGroups}
+        onToggleColorGroup={onToggleColorGroup}
+        availableColorGroups={availableColorGroups}
       />
 
       {/* Row 4: Active filter pills + color pills + result count */}
@@ -343,24 +342,24 @@ export function GarmentCatalogToolbar({
               </Badge>
             ))}
 
-            {/* Color swatch pills */}
-            {selectedColors.length > 0 && (
+            {/* Color group swatch pills */}
+            {selectedGroupObjects.length > 0 && (
               <div className="flex items-center gap-1">
-                {selectedColors.map((color) => (
-                  <Tooltip key={color.id}>
+                {selectedGroupObjects.map((group) => (
+                  <Tooltip key={group.colorGroupName}>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        onClick={() => onToggleColor(color.id)}
+                        onClick={() => onToggleColorGroup(group.colorGroupName)}
                         className="flex h-5 w-5 min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) md:min-h-0 md:min-w-0 items-center justify-center rounded-sm ring-1 ring-action transition-all hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        style={{ backgroundColor: color.hex }}
-                        aria-label={`Remove ${color.name} filter`}
+                        style={{ backgroundColor: group.hex }}
+                        aria-label={`Remove ${group.colorGroupName} filter`}
                       >
-                        <X size={10} style={{ color: color.swatchTextColor }} aria-hidden="true" />
+                        <X size={10} style={{ color: group.swatchTextColor }} aria-hidden="true" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={6}>
-                      {color.name}
+                      {group.colorGroupName}
                     </TooltipContent>
                   </Tooltip>
                 ))}
@@ -369,7 +368,7 @@ export function GarmentCatalogToolbar({
                     variant="ghost"
                     size="xs"
                     className="text-muted-foreground hover:text-foreground"
-                    onClick={onClearColors}
+                    onClick={onClearColorGroups}
                   >
                     Clear colors
                   </Button>

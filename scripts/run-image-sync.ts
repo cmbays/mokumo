@@ -21,6 +21,10 @@ const ssProductSchema = z
     sku: z.string(),
     styleID: z.union([z.number(), z.string()]).transform(String),
     colorName: z.string(),
+    colorCode: z.string().optional().default(''),
+    // S&S returns "colorFamily" (not "colorFamilyName") — the DB column is named color_family_name
+    colorFamily: z.string().optional(),
+    colorGroupName: z.string().optional(),
     color1: z.string().optional().default(''),
     color2: z.string().optional().default(''),
     colorFrontImage: z.string().optional().default(''),
@@ -154,6 +158,10 @@ void (async () => {
           name: p.colorName,
           hex1: normalizeHex(p.color1),
           hex2: normalizeHex(p.color2),
+          // S&S field is "colorFamily"; falsy coercion handles empty strings S&S may return
+          colorFamilyName: p.colorFamily?.trim() || null,
+          colorGroupName: p.colorGroupName?.trim() || null,
+          colorCode: p.colorCode?.trim() || null,
           updatedAt: new Date(),
         }))
 
@@ -165,6 +173,9 @@ void (async () => {
             set: {
               hex1: sql`excluded.hex1`,
               hex2: sql`excluded.hex2`,
+              colorFamilyName: sql`excluded.color_family_name`,
+              colorGroupName: sql`excluded.color_group_name`,
+              colorCode: sql`excluded.color_code`,
               updatedAt: new Date(),
             },
           })

@@ -6,8 +6,11 @@ import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/garments'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
-import { extractUniqueColors } from './_lib/garment-transforms'
+import { logger } from '@shared/lib/logger'
+import { extractUniqueColors, extractColorGroups } from './_lib/garment-transforms'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
+
+const pageLogger = logger.child({ domain: 'garments' })
 
 export default async function GarmentCatalogPage() {
   // Dynamic imports: verifySession + actions transitively import db.ts which throws
@@ -25,16 +28,22 @@ export default async function GarmentCatalogPage() {
     getCustomers(),
   ])
   const normalizedCatalog = await getNormalizedCatalog().catch((err: unknown) => {
-    console.error(
-      '[GarmentCatalogPage] getNormalizedCatalog failed — rendering without images:',
-      err
-    )
+    pageLogger.error('getNormalizedCatalog failed — color families and swatches unavailable', {
+      err,
+    })
     return [] as Awaited<ReturnType<typeof getNormalizedCatalog>>
   })
 
   const catalogColors = extractUniqueColors(normalizedCatalog)
+  const colorGroups = extractColorGroups(normalizedCatalog)
   const initialFavoriteColorIds = session
-    ? await getColorFavorites('shop', session.shopId).catch(() => [] as string[])
+    ? await getColorFavorites('shop', session.shopId).catch((err: unknown) => {
+        pageLogger.error('getColorFavorites failed — rendering without favorites', {
+          err,
+          shopId: session.shopId,
+        })
+        return [] as string[]
+      })
     : []
 
   return (
@@ -53,6 +62,7 @@ export default async function GarmentCatalogPage() {
             initialJobs={jobs}
             initialCustomers={customers}
             normalizedCatalog={normalizedCatalog.length > 0 ? normalizedCatalog : undefined}
+            colorGroups={colorGroups}
             catalogColors={catalogColors}
             initialFavoriteColorIds={initialFavoriteColorIds}
           />
