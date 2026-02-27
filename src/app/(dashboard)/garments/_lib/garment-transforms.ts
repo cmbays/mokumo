@@ -123,7 +123,6 @@ export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): strin
  * Excluded groups:
  * - ZZZ prefix — S&S internal catch-all codes (ZZZ - Multi Color, ZZZ - No Match)
  * - DO NOT USE suffix — S&S deprecated colorways
- * - Camo — pattern categories with no meaningful single representative color
  *
  * Sorted by colorFamily then colorGroupName so the family tabs produce natural groupings.
  */
@@ -139,12 +138,8 @@ export function extractColorGroups(
   for (const style of normalizedCatalog) {
     for (const color of style.colors) {
       if (!color.colorGroupName) continue
-      // Exclude S&S internal codes and pattern categories
-      if (
-        color.colorGroupName.startsWith('ZZZ') ||
-        color.colorGroupName.includes('DO NOT USE') ||
-        color.colorGroupName.includes('Camo')
-      )
+      // Exclude S&S internal codes: catch-alls (ZZZ prefix) and deprecated colorways (DO NOT USE suffix)
+      if (color.colorGroupName.startsWith('ZZZ') || color.colorGroupName.includes('DO NOT USE'))
         continue
       const key = color.colorGroupName
       if (!groupMeta.has(key)) {
