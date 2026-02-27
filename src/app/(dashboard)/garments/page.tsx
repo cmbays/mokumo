@@ -28,7 +28,9 @@ export default async function GarmentCatalogPage() {
     getCustomers(),
   ])
   const normalizedCatalog = await getNormalizedCatalog().catch((err: unknown) => {
-    pageLogger.error('getNormalizedCatalog failed — color families and swatches unavailable', { err })
+    pageLogger.error('getNormalizedCatalog failed — color families and swatches unavailable', {
+      err,
+    })
     return [] as Awaited<ReturnType<typeof getNormalizedCatalog>>
   })
 

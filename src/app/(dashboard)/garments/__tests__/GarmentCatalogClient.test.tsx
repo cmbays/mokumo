@@ -42,7 +42,11 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@features/garments/hooks/useColorFilter', () => ({
-  useColorFilter: () => ({ selectedColorGroups: [], toggleColorGroup: vi.fn(), clearColorGroups: vi.fn() }),
+  useColorFilter: () => ({
+    selectedColorGroups: [],
+    toggleColorGroup: vi.fn(),
+    clearColorGroups: vi.fn(),
+  }),
 }))
 
 // Stub out the toolbar and drawers — they have their own complex deps

@@ -281,7 +281,10 @@ export function GarmentCatalogClient({
       )
 
       if (!styleId) {
-        clientLogger.warn('No catalog_styles entry — enabled toggle is local-only and will not persist', { sku: garment.sku })
+        clientLogger.warn(
+          'No catalog_styles entry — enabled toggle is local-only and will not persist',
+          { sku: garment.sku }
+        )
         toast.warning("This garment hasn't been synced yet — toggle won't be saved")
         return
       }
@@ -307,7 +310,10 @@ export function GarmentCatalogClient({
       )
 
       if (!styleId) {
-        clientLogger.warn('No catalog_styles entry — favorite toggle is local-only and will not persist', { sku: garment.sku })
+        clientLogger.warn(
+          'No catalog_styles entry — favorite toggle is local-only and will not persist',
+          { sku: garment.sku }
+        )
         toast.warning("This garment hasn't been synced yet — toggle won't be saved")
         return
       }
