@@ -113,9 +113,13 @@ export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): strin
 /**
  * Extracts a deduplicated list of FilterColorGroup objects from the normalized catalog.
  *
- * Deduplication is by colorGroupName — the first CatalogColor with a given group name
- * provides the representative hex and family. Colors without colorGroupName are excluded
- * (they will not appear in the filter grid).
+ * Deduplication is by colorGroupName. The representative hex is chosen by frequency —
+ * the most common hex1 value across all rows in the group wins. This guards against
+ * supplier data quality issues where a small number of rows carry incorrect hex values
+ * (e.g. a dark swatch mis-tagged as "Safety Yellow").
+ *
+ * Colors without colorGroupName are excluded, as are S&S internal codes (ZZZ prefix,
+ * DO NOT USE suffix).
  *
  * Sorted by colorFamily then colorGroupName so the family tabs produce natural groupings.
  */
@@ -123,7 +127,10 @@ export function extractColorGroups(
   normalizedCatalog: NormalizedGarmentCatalog[] | undefined
 ): FilterColorGroup[] {
   if (!normalizedCatalog) return []
-  const seen = new Map<string, FilterColorGroup>()
+
+  // Pass 1: collect hex frequency counts and family name per group
+  const hexCounts = new Map<string, Map<string, number>>()
+  const groupMeta = new Map<string, { colorFamilyName: string | null }>()
 
   for (const style of normalizedCatalog) {
     for (const color of style.colors) {
@@ -131,18 +138,33 @@ export function extractColorGroups(
       // Exclude S&S internal codes: catch-alls (ZZZ prefix) and deprecated colorways (DO NOT USE suffix)
       if (color.colorGroupName.startsWith('ZZZ') || color.colorGroupName.includes('DO NOT USE')) continue
       const key = color.colorGroupName
-      if (seen.has(key)) continue
-      const hex = color.hex1 ?? '#888888'
-      seen.set(key, {
-        colorGroupName: color.colorGroupName,
-        colorFamilyName: color.colorFamilyName ?? null,
-        hex,
-        swatchTextColor: computeSwatchTextColor(hex),
-      })
+      if (!groupMeta.has(key)) {
+        groupMeta.set(key, { colorFamilyName: color.colorFamilyName ?? null })
+      }
+      const hex = color.hex1
+      if (!hex) continue
+      const counts = hexCounts.get(key) ?? new Map<string, number>()
+      counts.set(hex.toLowerCase(), (counts.get(hex.toLowerCase()) ?? 0) + 1)
+      hexCounts.set(key, counts)
     }
   }
 
-  return [...seen.values()].sort(
+  // Pass 2: pick the most-frequent hex per group
+  const result: FilterColorGroup[] = []
+  for (const [groupName, meta] of groupMeta) {
+    const counts = hexCounts.get(groupName)
+    const dominantHex = counts
+      ? [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
+      : '#888888'
+    result.push({
+      colorGroupName: groupName,
+      colorFamilyName: meta.colorFamilyName,
+      hex: dominantHex,
+      swatchTextColor: computeSwatchTextColor(dominantHex),
+    })
+  }
+
+  return result.sort(
     (a, b) =>
       (a.colorFamilyName ?? 'ZZZ').localeCompare(b.colorFamilyName ?? 'ZZZ') ||
       a.colorGroupName.localeCompare(b.colorGroupName)
