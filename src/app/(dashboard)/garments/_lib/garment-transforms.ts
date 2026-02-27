@@ -128,8 +128,8 @@ export function extractColorGroups(
   for (const style of normalizedCatalog) {
     for (const color of style.colors) {
       if (!color.colorGroupName) continue
-      // Exclude S&S internal catch-all codes (e.g. "ZZZ - Multi Color", "ZZZ - No Match")
-      if (color.colorGroupName.startsWith('ZZZ')) continue
+      // Exclude S&S internal codes: catch-alls (ZZZ prefix) and deprecated colorways (DO NOT USE suffix)
+      if (color.colorGroupName.startsWith('ZZZ') || color.colorGroupName.includes('DO NOT USE')) continue
       const key = color.colorGroupName
       if (seen.has(key)) continue
       const hex = color.hex1 ?? '#888888'
