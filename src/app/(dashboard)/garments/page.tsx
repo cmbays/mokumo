@@ -7,7 +7,7 @@ import { getGarmentCatalog, getNormalizedCatalog } from '@infra/repositories/gar
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
 import { logger } from '@shared/lib/logger'
-import { extractUniqueColors, extractColorFamilies } from './_lib/garment-transforms'
+import { extractUniqueColors, extractColorGroups } from './_lib/garment-transforms'
 import { GarmentCatalogClient } from './_components/GarmentCatalogClient'
 
 const pageLogger = logger.child({ domain: 'garments' })
@@ -33,7 +33,7 @@ export default async function GarmentCatalogPage() {
   })
 
   const catalogColors = extractUniqueColors(normalizedCatalog)
-  const colorFamilies = extractColorFamilies(normalizedCatalog)
+  const colorGroups = extractColorGroups(normalizedCatalog)
   const initialFavoriteColorIds = session
     ? await getColorFavorites('shop', session.shopId).catch((err: unknown) => {
         pageLogger.error('getColorFavorites failed — rendering without favorites', {
@@ -60,8 +60,8 @@ export default async function GarmentCatalogPage() {
             initialJobs={jobs}
             initialCustomers={customers}
             normalizedCatalog={normalizedCatalog.length > 0 ? normalizedCatalog : undefined}
+            colorGroups={colorGroups}
             catalogColors={catalogColors}
-            colorFamilies={colorFamilies}
             initialFavoriteColorIds={initialFavoriteColorIds}
           />
         </Suspense>

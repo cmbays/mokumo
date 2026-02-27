@@ -1,8 +1,8 @@
 import { hexToRgb } from '@domain/rules/color.rules'
 import type { CatalogColor, NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
-import type { FilterColor } from '@features/garments/types'
+import type { FilterColor, FilterColorGroup } from '@features/garments/types'
 
-export type { FilterColor }
+export type { FilterColor, FilterColorGroup }
 
 // ---------------------------------------------------------------------------
 // normalizeColorName
@@ -74,6 +74,7 @@ export function extractUniqueColors(
         hex,
         swatchTextColor: computeSwatchTextColor(hex),
         colorFamilyName: color.colorFamilyName ?? null,
+        colorGroupName: color.colorGroupName ?? null,
       })
     }
   }
@@ -103,6 +104,72 @@ export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): strin
     }
   }
   return [...families].sort()
+}
+
+// ---------------------------------------------------------------------------
+// extractColorGroups
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts a deduplicated list of FilterColorGroup objects from the normalized catalog.
+ *
+ * Deduplication is by colorGroupName — the first CatalogColor with a given group name
+ * provides the representative hex and family. Colors without colorGroupName are excluded
+ * (they will not appear in the filter grid).
+ *
+ * Sorted by colorFamily then colorGroupName so the family tabs produce natural groupings.
+ */
+export function extractColorGroups(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): FilterColorGroup[] {
+  if (!normalizedCatalog) return []
+  const seen = new Map<string, FilterColorGroup>()
+
+  for (const style of normalizedCatalog) {
+    for (const color of style.colors) {
+      if (!color.colorGroupName) continue
+      const key = color.colorGroupName
+      if (seen.has(key)) continue
+      const hex = color.hex1 ?? '#888888'
+      seen.set(key, {
+        colorGroupName: color.colorGroupName,
+        colorFamilyName: color.colorFamilyName ?? null,
+        hex,
+        swatchTextColor: computeSwatchTextColor(hex),
+      })
+    }
+  }
+
+  return [...seen.values()].sort(
+    (a, b) =>
+      (a.colorFamilyName ?? 'ZZZ').localeCompare(b.colorFamilyName ?? 'ZZZ') ||
+      a.colorGroupName.localeCompare(b.colorGroupName)
+  )
+}
+
+// ---------------------------------------------------------------------------
+// buildStyleToColorGroupNamesMap
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a lookup map from styleNumber to the Set of colorGroupName values for that style.
+ * Used by the garment filter loop for group-based filtering.
+ * Only includes non-null colorGroupName values.
+ */
+export function buildStyleToColorGroupNamesMap(
+  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
+): Map<string, Set<string>> {
+  if (!normalizedCatalog) return new Map()
+  return new Map(
+    normalizedCatalog.map((style) => [
+      style.styleNumber,
+      new Set(
+        style.colors
+          .map((c) => c.colorGroupName)
+          .filter((g): g is string => g != null && g.length > 0)
+      ),
+    ])
+  )
 }
 
 // ---------------------------------------------------------------------------

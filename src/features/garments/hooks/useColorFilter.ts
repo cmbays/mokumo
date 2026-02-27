@@ -3,15 +3,17 @@
 import { useState, useCallback } from 'react'
 
 export function useColorFilter() {
-  const [selectedColorIds, setSelectedColorIds] = useState<string[]>([])
+  const [selectedColorGroups, setSelectedColorGroups] = useState<string[]>([])
 
-  const toggleColor = useCallback((colorId: string) => {
-    setSelectedColorIds((prev) =>
-      prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
+  const toggleColorGroup = useCallback((colorGroupName: string) => {
+    setSelectedColorGroups((prev) =>
+      prev.includes(colorGroupName)
+        ? prev.filter((g) => g !== colorGroupName)
+        : [...prev, colorGroupName]
     )
   }, [])
 
-  const clearColors = useCallback(() => setSelectedColorIds([]), [])
+  const clearColorGroups = useCallback(() => setSelectedColorGroups([]), [])
 
-  return { selectedColorIds, toggleColor, clearColors }
+  return { selectedColorGroups, toggleColorGroup, clearColorGroups }
 }

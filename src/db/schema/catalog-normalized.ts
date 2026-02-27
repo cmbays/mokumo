@@ -112,6 +112,7 @@ export const catalogColors = pgTable(
     hex1: varchar('hex1', { length: 7 }),
     hex2: varchar('hex2', { length: 7 }),
     colorFamilyName: varchar('color_family_name', { length: 100 }),
+    colorGroupName: varchar('color_group_name', { length: 100 }),
     colorCode: varchar('color_code', { length: 50 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

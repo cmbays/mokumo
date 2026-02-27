@@ -29,6 +29,7 @@ export function parseNormalizedCatalogRow(row: {
     hex1: string | null
     hex2: string | null
     colorFamilyName: string | null
+    colorGroupName: string | null
     images: Array<{ imageType: string; url: string }>
   }>
   sizes: unknown[]
@@ -61,6 +62,7 @@ export function parseNormalizedCatalogRow(row: {
         hex1: c.hex1,
         hex2: c.hex2,
         colorFamilyName: c.colorFamilyName,
+        colorGroupName: c.colorGroupName,
         images: imagesResult.success ? imagesResult.data : [],
       }
     }),
@@ -121,6 +123,7 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
               'hex1', cc.hex1,
               'hex2', cc.hex2,
               'colorFamilyName', cc.color_family_name,
+              'colorGroupName', cc.color_group_name,
               'images', (
                 SELECT COALESCE(
                   JSON_AGG(

@@ -6,31 +6,27 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/t
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
-import type { FilterColor } from '@features/garments/types'
+import type { FilterColorGroup } from '@features/garments/types'
 import { useGridKeyboardNav } from '@shared/hooks/useGridKeyboardNav'
 
 // Sentinel value for the "Other" tab — groups colors where colorFamilyName is null.
-// Contained within ColorFilterGrid; not exposed to props or URL.
 const COLOR_FAMILY_OTHER = '__other__'
 
 type ColorFilterGridProps = {
-  colors: FilterColor[]
-  selectedColorIds: string[]
-  onToggleColor: (colorId: string) => void
-  favoriteColorIds: string[]
-  /** When provided (brand filter active), only show colors whose names are in this set. */
-  availableColorNames?: Set<string>
-  /** Sorted distinct color family names from SSR — drives the primary filter tabs. */
-  colorFamilies: string[]
+  colorGroups: FilterColorGroup[]
+  selectedColorGroups: string[]
+  onToggleColorGroup: (colorGroupName: string) => void
+  /** When provided (brand filter active), only show groups whose names are in this set. */
+  availableColorGroups?: Set<string>
 }
 
-function FilterSwatch({
-  color,
+function GroupSwatch({
+  group,
   isSelected,
   onToggle,
   tabIndex,
 }: {
-  color: FilterColor
+  group: FilterColorGroup
   isSelected: boolean
   onToggle: () => void
   tabIndex: number
@@ -42,7 +38,7 @@ function FilterSwatch({
           type="button"
           role="checkbox"
           aria-checked={isSelected}
-          aria-label={`Filter by ${color.name}`}
+          aria-label={`Filter by ${group.colorGroupName}`}
           tabIndex={tabIndex}
           onClick={onToggle}
           onKeyDown={(e) => {
@@ -58,102 +54,104 @@ function FilterSwatch({
             'motion-reduce:transition-none',
             isSelected && 'ring-2 ring-action scale-110'
           )}
-          style={{ backgroundColor: color.hex }}
+          style={{ backgroundColor: group.hex }}
         >
           {isSelected ? (
-            <Check size={16} style={{ color: color.swatchTextColor }} aria-hidden="true" />
+            <Check size={16} style={{ color: group.swatchTextColor }} aria-hidden="true" />
           ) : (
             <span
               className="pointer-events-none select-none text-center leading-tight"
-              style={swatchTextStyle(color.swatchTextColor)}
+              style={swatchTextStyle(group.swatchTextColor)}
             >
-              {color.name}
+              {group.colorGroupName}
             </span>
           )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={6}>
-        {color.name}
+        {group.colorGroupName}
       </TooltipContent>
     </Tooltip>
   )
 }
 
 export function ColorFilterGrid({
-  colors,
-  selectedColorIds,
-  onToggleColor,
-  favoriteColorIds,
-  availableColorNames,
-  colorFamilies,
+  colorGroups,
+  selectedColorGroups,
+  onToggleColorGroup,
+  availableColorGroups,
 }: ColorFilterGridProps) {
   const gridRef = useRef<HTMLDivElement>(null)
 
   const [activeFamily, setActiveFamily] = useState<string>('all')
 
   // Adjust state during render — resets tab to 'all' when the brand scope changes.
-  // This is React's documented "adjust state during render" pattern, which avoids
-  // the double-render cost of useEffect+setState while keeping the tab in sync.
-  const [lastAvailableColorNames, setLastAvailableColorNames] = useState(availableColorNames)
-  if (lastAvailableColorNames !== availableColorNames) {
-    setLastAvailableColorNames(availableColorNames)
+  const [lastAvailableColorGroups, setLastAvailableColorGroups] = useState(availableColorGroups)
+  if (lastAvailableColorGroups !== availableColorGroups) {
+    setLastAvailableColorGroups(availableColorGroups)
     setActiveFamily('all')
   }
 
-  const selectedSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds])
+  const selectedSet = useMemo(() => new Set(selectedColorGroups), [selectedColorGroups])
 
-  // Step 1: Filter by brand scope (availableColorNames)
-  const scopedColors = useMemo(() => {
-    if (!availableColorNames) return colors
-    return colors.filter((c) => availableColorNames.has(c.name))
-  }, [colors, availableColorNames])
+  // Step 1: Filter by brand scope (availableColorGroups)
+  const scopedGroups = useMemo(() => {
+    if (!availableColorGroups) return colorGroups
+    return colorGroups.filter((g) => availableColorGroups.has(g.colorGroupName))
+  }, [colorGroups, availableColorGroups])
 
-  // Step 2: Favorites first, then rest
-  const sortedColors = useMemo(() => {
-    const favoriteSet = new Set(favoriteColorIds)
-    const favorites: FilterColor[] = []
-    const rest: FilterColor[] = []
-
-    for (const color of scopedColors) {
-      if (favoriteSet.has(color.id)) {
-        favorites.push(color)
+  // Step 2: Selected groups first, then rest (mirrors old favorites-first behavior)
+  const sortedGroups = useMemo(() => {
+    const selected: FilterColorGroup[] = []
+    const rest: FilterColorGroup[] = []
+    for (const group of scopedGroups) {
+      if (selectedSet.has(group.colorGroupName)) {
+        selected.push(group)
       } else {
-        rest.push(color)
+        rest.push(group)
       }
     }
+    return [...selected, ...rest]
+  }, [scopedGroups, selectedSet])
 
-    return [...favorites, ...rest]
-  }, [scopedColors, favoriteColorIds])
+  // Derive distinct family names from scoped groups — drives tab list
+  const colorFamilies = useMemo(() => {
+    const families = new Set<string>()
+    for (const group of scopedGroups) {
+      if (group.colorFamilyName) families.add(group.colorFamilyName)
+    }
+    return [...families].sort()
+  }, [scopedGroups])
 
-  // Count of scoped+sorted colors per family — drives tab badge numbers and opacity.
+  // Count of scoped groups per family — drives tab badge numbers and opacity
   const familyCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      all: sortedColors.length,
+      all: sortedGroups.length,
       [COLOR_FAMILY_OTHER]: 0,
     }
-    for (const color of sortedColors) {
-      if (color.colorFamilyName) {
-        counts[color.colorFamilyName] = (counts[color.colorFamilyName] ?? 0) + 1
+    for (const group of sortedGroups) {
+      if (group.colorFamilyName) {
+        counts[group.colorFamilyName] = (counts[group.colorFamilyName] ?? 0) + 1
       } else {
         counts[COLOR_FAMILY_OTHER]++
       }
     }
     return counts
-  }, [sortedColors])
+  }, [sortedGroups])
 
-  // Filter swatch grid by active family tab.
-  const tabFilteredColors = useMemo(() => {
-    if (activeFamily === 'all') return sortedColors
-    if (activeFamily === COLOR_FAMILY_OTHER) return sortedColors.filter((c) => !c.colorFamilyName)
-    return sortedColors.filter((c) => c.colorFamilyName === activeFamily)
-  }, [sortedColors, activeFamily])
+  // Filter swatch grid by active family tab
+  const tabFilteredGroups = useMemo(() => {
+    if (activeFamily === 'all') return sortedGroups
+    if (activeFamily === COLOR_FAMILY_OTHER) return sortedGroups.filter((g) => !g.colorFamilyName)
+    return sortedGroups.filter((g) => g.colorFamilyName === activeFamily)
+  }, [sortedGroups, activeFamily])
 
   // swatch width: h-10 w-10 = 40px + gap-px (1px) ≈ 41px per cell
   const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 41)
 
   return (
     <div className="space-y-2">
-      {/* Color family filter tabs — human-curated S&S families replace algorithmic hue buckets */}
+      {/* Color family filter tabs */}
       <div className="-mx-0.5 overflow-x-auto px-0.5">
         <Tabs value={activeFamily} onValueChange={setActiveFamily}>
           <TabsList variant="line" className="gap-0 flex-nowrap h-auto">
@@ -172,7 +170,6 @@ export function ColorFilterGrid({
                 {family} ({familyCounts[family] ?? 0})
               </TabsTrigger>
             ))}
-            {/* "Other" tab — shown only when null-family swatches exist in the scoped set */}
             {familyCounts[COLOR_FAMILY_OTHER] > 0 && (
               <TabsTrigger value={COLOR_FAMILY_OTHER} className="min-h-(--mobile-touch-target) md:min-h-0 px-2 py-1 text-xs">
                 Other ({familyCounts[COLOR_FAMILY_OTHER]})
@@ -182,20 +179,20 @@ export function ColorFilterGrid({
         </Tabs>
       </div>
 
-      {/* Swatch grid — flex-wrap packs swatches at natural width (no dead column space) */}
+      {/* Color group swatch grid — ~80 canonical groups instead of 4,731 individual colors */}
       <div
         ref={gridRef}
         className="flex flex-wrap gap-px"
         role="group"
-        aria-label="Filter by color"
+        aria-label="Filter by color group"
         onKeyDown={handleKeyDown}
       >
-        {tabFilteredColors.map((color, i) => (
-          <FilterSwatch
-            key={color.id}
-            color={color}
-            isSelected={selectedSet.has(color.id)}
-            onToggle={() => onToggleColor(color.id)}
+        {tabFilteredGroups.map((group, i) => (
+          <GroupSwatch
+            key={group.colorGroupName}
+            group={group}
+            isSelected={selectedSet.has(group.colorGroupName)}
+            onToggle={() => onToggleColorGroup(group.colorGroupName)}
             tabIndex={i === 0 ? 0 : -1}
           />
         ))}
