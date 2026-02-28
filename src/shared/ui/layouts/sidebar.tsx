@@ -46,7 +46,7 @@ export function Sidebar() {
         <span className="text-sm font-semibold tracking-tight">Screen Print Pro</span>
       </div>
       <nav className="flex flex-1 flex-col px-2 py-3">
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 space-y-0.5">
           {mainNavItems.map((item) => (
             <SidebarNavLink key={item.href} {...item} />
           ))}

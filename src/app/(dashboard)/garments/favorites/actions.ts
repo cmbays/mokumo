@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { eq, and, count, inArray, min, isNotNull } from 'drizzle-orm'
+import { eq, and, count, inArray, min, isNotNull, or, isNull } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import {
   catalogBrands,
@@ -37,6 +37,15 @@ export type StyleSummary = {
   styleNumber: string
   thumbnailUrl: string | null
   isFavorite: boolean
+  isEnabled: boolean
+}
+
+export type BrandFavoriteSummary = {
+  brandId: string
+  brandName: string
+  isBrandEnabled: boolean | null
+  favoritedColors: { colorGroupName: string; hex: string | null }[]
+  favoritedStyles: { id: string; styleNumber: string; name: string; thumbnailUrl: string | null }[]
 }
 
 export type ColorGroupSummary = {
@@ -188,13 +197,14 @@ export async function getBrandConfigureData(
       )
       .limit(1)
 
-    // Step 3: styles with their shop-scope favorite preference
+    // Step 3: styles with their shop-scope favorite + enabled preference
     const styleRows = await db
       .select({
         id: catalogStyles.id,
         name: catalogStyles.name,
         styleNumber: catalogStyles.styleNumber,
         isFavorite: catalogStylePreferences.isFavorite,
+        isEnabled: catalogStylePreferences.isEnabled,
       })
       .from(catalogStyles)
       .leftJoin(
@@ -291,6 +301,8 @@ export async function getBrandConfigureData(
         styleNumber: s.styleNumber,
         thumbnailUrl: thumbnailMap.get(s.id) ?? null,
         isFavorite: s.isFavorite ?? false,
+        // NULL = unset = defaults to enabled
+        isEnabled: s.isEnabled !== false,
       })),
       colorGroups: colorGroupRows.map((cg) => ({
         id: cg.id,
@@ -482,5 +494,262 @@ export async function toggleColorGroupFavorite(
   } catch (err) {
     actionsLogger.error('toggleColorGroupFavorite failed', { colorGroupId, err })
     return { success: false, error: 'Failed to update color group favorite' }
+  }
+}
+
+// ─── setStyleEnabled ──────────────────────────────────────────────────────────
+
+/**
+ * Upserts catalog_style_preferences.is_enabled for the shop scope.
+ *
+ * Explicit set-value pattern — client owns optimistic state.
+ */
+export async function setStyleEnabled(
+  styleId: string,
+  value: boolean
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!uuidSchema.safeParse(styleId).success) {
+    return { success: false, error: 'Invalid styleId' }
+  }
+
+  const session = await verifySession()
+  if (!session) return { success: false, error: 'Unauthorized' }
+
+  try {
+    await db
+      .insert(catalogStylePreferences)
+      .values({
+        scopeType: 'shop',
+        scopeId: session.shopId,
+        styleId,
+        isEnabled: value,
+      })
+      .onConflictDoUpdate({
+        target: [
+          catalogStylePreferences.scopeType,
+          catalogStylePreferences.scopeId,
+          catalogStylePreferences.styleId,
+        ],
+        set: { isEnabled: value, updatedAt: new Date() },
+      })
+
+    actionsLogger.info('setStyleEnabled', {
+      styleId,
+      isEnabled: value,
+      shopIdPrefix: session.shopId.slice(0, 8),
+    })
+
+    return { success: true }
+  } catch (err) {
+    actionsLogger.error('setStyleEnabled failed', { styleId, err })
+    return { success: false, error: 'Failed to update style enabled state' }
+  }
+}
+
+// ─── getFavoritedBrandsSummary ────────────────────────────────────────────────
+
+/**
+ * Returns only favorited brands (isBrandFavorite = true) with their favorited
+ * color groups (hex) and favorited styles (thumbnail URL) for the summary page.
+ *
+ * Safe degradation: returns [] on auth failure or DB error.
+ */
+export async function getFavoritedBrandsSummary(
+  shopId: string
+): Promise<BrandFavoriteSummary[]> {
+  const session = await verifySession()
+  if (!session) return []
+
+  try {
+    // Step 1: Brands where isBrandFavorite = true
+    const favBrands = await db
+      .select({
+        brandId: catalogBrands.id,
+        brandName: catalogBrands.canonicalName,
+        isBrandEnabled: catalogBrandPreferences.isEnabled,
+      })
+      .from(catalogBrands)
+      .innerJoin(
+        catalogBrandPreferences,
+        and(
+          eq(catalogBrandPreferences.brandId, catalogBrands.id),
+          eq(catalogBrandPreferences.scopeType, 'shop'),
+          eq(catalogBrandPreferences.scopeId, shopId),
+          eq(catalogBrandPreferences.isFavorite, true)
+        )
+      )
+      .orderBy(catalogBrands.canonicalName)
+
+    if (favBrands.length === 0) return []
+
+    const brandIds = favBrands.map((b) => b.brandId)
+
+    // Step 2: Favorited color groups per brand (names only — hex comes from Step 3)
+    const favColorRows = await db
+      .select({
+        brandId: catalogColorGroups.brandId,
+        colorGroupName: catalogColorGroups.colorGroupName,
+      })
+      .from(catalogColorGroupPreferences)
+      .innerJoin(
+        catalogColorGroups,
+        eq(catalogColorGroupPreferences.colorGroupId, catalogColorGroups.id)
+      )
+      .where(
+        and(
+          eq(catalogColorGroupPreferences.scopeType, 'shop'),
+          eq(catalogColorGroupPreferences.scopeId, shopId),
+          eq(catalogColorGroupPreferences.isFavorite, true),
+          inArray(catalogColorGroups.brandId, brandIds)
+        )
+      )
+
+    // Step 3: Representative hex per (brandId, colorGroupName) — lexicographically first
+    const hexRows = await db
+      .select({
+        brandId: catalogStyles.brandId,
+        colorGroupName: catalogColors.colorGroupName,
+        hex: min(catalogColors.hex1),
+      })
+      .from(catalogColors)
+      .innerJoin(catalogStyles, eq(catalogStyles.id, catalogColors.styleId))
+      .where(
+        and(
+          inArray(catalogStyles.brandId, brandIds),
+          isNotNull(catalogColors.colorGroupName),
+          isNotNull(catalogColors.hex1)
+        )
+      )
+      .groupBy(catalogStyles.brandId, catalogColors.colorGroupName)
+
+    const hexMap = new Map(
+      hexRows
+        .filter(
+          (r): r is { brandId: string; colorGroupName: string; hex: string } =>
+            r.colorGroupName !== null && r.hex !== null
+        )
+        .map((r) => [`${r.brandId}|${r.colorGroupName}`, r.hex])
+    )
+
+    // Step 4a: Favorited style IDs per brand
+    const favStyleRows = await db
+      .select({
+        brandId: catalogStyles.brandId,
+        styleId: catalogStyles.id,
+        styleNumber: catalogStyles.styleNumber,
+        name: catalogStyles.name,
+      })
+      .from(catalogStylePreferences)
+      .innerJoin(catalogStyles, eq(catalogStylePreferences.styleId, catalogStyles.id))
+      .where(
+        and(
+          eq(catalogStylePreferences.scopeType, 'shop'),
+          eq(catalogStylePreferences.scopeId, shopId),
+          eq(catalogStylePreferences.isFavorite, true),
+          inArray(catalogStyles.brandId, brandIds)
+        )
+      )
+
+    // Step 4b: Thumbnail URLs for those styles
+    let thumbnailMap = new Map<string, string>()
+    if (favStyleRows.length > 0) {
+      const allStyleIds = favStyleRows.map((s) => s.styleId)
+      const thumbRows = await db
+        .select({
+          styleId: catalogColors.styleId,
+          url: min(catalogImages.url),
+        })
+        .from(catalogColors)
+        .innerJoin(
+          catalogImages,
+          and(
+            eq(catalogImages.colorId, catalogColors.id),
+            eq(catalogImages.imageType, 'front')
+          )
+        )
+        .where(inArray(catalogColors.styleId, allStyleIds))
+        .groupBy(catalogColors.styleId)
+
+      thumbnailMap = new Map(thumbRows.map((r) => [r.styleId, r.url ?? '']))
+    }
+
+    // Assemble per brand
+    const colorsByBrand = new Map<string, { colorGroupName: string; hex: string | null }[]>()
+    const stylesByBrand = new Map<
+      string,
+      { id: string; styleNumber: string; name: string; thumbnailUrl: string | null }[]
+    >()
+
+    for (const b of favBrands) {
+      colorsByBrand.set(b.brandId, [])
+      stylesByBrand.set(b.brandId, [])
+    }
+    for (const row of favColorRows) {
+      colorsByBrand.get(row.brandId)?.push({
+        colorGroupName: row.colorGroupName,
+        hex: hexMap.get(`${row.brandId}|${row.colorGroupName}`) ?? null,
+      })
+    }
+    for (const row of favStyleRows) {
+      stylesByBrand.get(row.brandId)?.push({
+        id: row.styleId,
+        styleNumber: row.styleNumber,
+        name: row.name,
+        thumbnailUrl: thumbnailMap.get(row.styleId) ?? null,
+      })
+    }
+
+    return favBrands.map((b) => ({
+      brandId: b.brandId,
+      brandName: b.brandName,
+      isBrandEnabled: b.isBrandEnabled,
+      favoritedColors: colorsByBrand.get(b.brandId) ?? [],
+      favoritedStyles: stylesByBrand.get(b.brandId) ?? [],
+    }))
+  } catch (err) {
+    actionsLogger.error('getFavoritedBrandsSummary failed', { shopId, err })
+    return []
+  }
+}
+
+// ─── getAvailableBrandsToAdd ──────────────────────────────────────────────────
+
+/**
+ * Returns brands that are NOT yet favorited — shown in the "Add brand" dropdown.
+ */
+export async function getAvailableBrandsToAdd(
+  shopId: string
+): Promise<{ brandId: string; brandName: string }[]> {
+  const session = await verifySession()
+  if (!session) return []
+
+  try {
+    const rows = await db
+      .select({
+        brandId: catalogBrands.id,
+        brandName: catalogBrands.canonicalName,
+        isBrandFavorite: catalogBrandPreferences.isFavorite,
+      })
+      .from(catalogBrands)
+      .leftJoin(
+        catalogBrandPreferences,
+        and(
+          eq(catalogBrandPreferences.brandId, catalogBrands.id),
+          eq(catalogBrandPreferences.scopeType, 'shop'),
+          eq(catalogBrandPreferences.scopeId, shopId)
+        )
+      )
+      .where(
+        or(
+          isNull(catalogBrandPreferences.isFavorite),
+          eq(catalogBrandPreferences.isFavorite, false)
+        )
+      )
+      .orderBy(catalogBrands.canonicalName)
+
+    return rows.map((r) => ({ brandId: r.brandId, brandName: r.brandName }))
+  } catch (err) {
+    actionsLogger.error('getAvailableBrandsToAdd failed', { shopId, err })
+    return []
   }
 }
