@@ -24,17 +24,20 @@ This separates concerns — print-4ink remains the production application, zeroc
 ## Pipeline Milestones
 
 ### ✅ Phase 1: Research & Discovery
+
 - Analyzed NanoClaw user stories: PM workflow bottlenecks, Linear automation gaps
 - Identified candidate platforms: ZeroClaw (Rust agent framework) vs. building from scratch
 - Evaluated TCO: fork cost vs. greenfield build complexity
 
 ### ✅ Phase 2: Shaping (Shape A Selected)
+
 - **Direction**: Fork ZeroClaw + extend with Slack Socket Mode transport
 - **Architecture**: Mode layer (AIEOS personas) + Linear Tool (GraphQL) + Wake/Sleep engine
 - **Stack**: Rust (tokio-tungstenite for Socket Mode), Ollama (Qwen 3 14B), Docker Compose
 - **Isolation**: New code in `src/modes/`, `src/tools/linear.rs`, `src/wake_sleep.rs`; minimal fork surface (6 files modified, ~10 dependencies added)
 
 ### ✅ Phase 3: Implementation Planning
+
 - Wave 0 (Phase Zero): Repo fork, ZeroClaw baseline validation
 - Waves 1–7: Staged feature delivery (Slack transport → Mode layer → Agent intelligence → Linear tools → Interactive flows → Webhooks → Deployment)
 - Fork surface tracker documented (see `docs/workspace/20260221-nanoclaw-hub/impl-plan.md`)
@@ -94,12 +97,12 @@ For now, **zeroclaw is independent and builds its own stability story**.
 
 ## Decision Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-02-21 | Fork ZeroClaw, not build from scratch | TCO: 4 weeks fork vs. 8+ weeks greenfield |
-| 2026-02-22 | Separate repository (cmbays/zeroclaw) | Decouple print-4ink from R&D cadence |
-| 2026-02-22 | Bounded module approach (~1,100 LOC) | Minimize upstream merge conflicts, preserve update path |
-| 2026-02-22 | Ollama + Qwen 3 14B (local, no API keys) | Gary's M4 Mac, zero inference cost, privacy-first |
+| Date       | Decision                                 | Rationale                                               |
+| ---------- | ---------------------------------------- | ------------------------------------------------------- |
+| 2026-02-21 | Fork ZeroClaw, not build from scratch    | TCO: 4 weeks fork vs. 8+ weeks greenfield               |
+| 2026-02-22 | Separate repository (cmbays/zeroclaw)    | Decouple print-4ink from R&D cadence                    |
+| 2026-02-22 | Bounded module approach (~1,100 LOC)     | Minimize upstream merge conflicts, preserve update path |
+| 2026-02-22 | Ollama + Qwen 3 14B (local, no API keys) | Gary's M4 Mac, zero inference cost, privacy-first       |
 
 ## Status
 
