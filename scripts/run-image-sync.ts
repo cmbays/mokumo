@@ -11,6 +11,7 @@ import dotenv from 'dotenv'
 import { existsSync } from 'fs'
 import { z } from 'zod'
 import { sql } from 'drizzle-orm'
+import { collectColorGroupPairs } from './color-group-utils'
 
 if (existsSync('.env.local')) dotenv.config({ path: '.env.local', override: false })
 
@@ -122,14 +123,15 @@ void (async () => {
   console.log(`Grouped into ${styleMap.size} unique styles`)
 
   const { db } = await import('../src/shared/lib/supabase/db.js')
-  const { catalogStyles, catalogColors, catalogImages } =
+  const { catalogStyles, catalogColors, catalogImages, catalogColorGroups } =
     await import('../src/db/schema/catalog-normalized.js')
 
-  // Load all catalog_styles rows to map externalId → UUID
+  // Load all catalog_styles rows to map externalId → UUID and UUID → brandId
   const styleRows = await db
-    .select({ id: catalogStyles.id, externalId: catalogStyles.externalId })
+    .select({ id: catalogStyles.id, externalId: catalogStyles.externalId, brandId: catalogStyles.brandId })
     .from(catalogStyles)
   const styleIdByExternalId = new Map(styleRows.map((r) => [r.externalId, r.id]))
+  const brandIdByStyleId = new Map(styleRows.map((r) => [r.id, r.brandId]))
   console.log(`Loaded ${styleIdByExternalId.size} catalog_styles rows`)
 
   let colorCount = 0
@@ -137,6 +139,10 @@ void (async () => {
   let skipped = 0
   let failedStyles = 0
   const BATCH_SIZE = 50
+
+  // Collect distinct (brandId, colorGroupName) pairs for catalog_color_groups upsert
+  const colorGroupSet = new Set<string>() // dedup key: `${brandId}::${colorGroupName}`
+  const colorGroupPairs: Array<{ brandId: string; colorGroupName: string }> = []
 
   const externalIds = Array.from(styleMap.keys())
   for (let i = 0; i < externalIds.length; i += BATCH_SIZE) {
@@ -184,6 +190,16 @@ void (async () => {
         colorCount += colorRows.length
         const colorIdByName = new Map(colorRows.map((r) => [r.name, r.id]))
 
+        // Collect distinct (brandId, colorGroupName) pairs for later batch upsert
+        const newPairs = collectColorGroupPairs(colorValues, brandIdByStyleId)
+        for (const pair of newPairs) {
+          const key = `${pair.brandId}::${pair.colorGroupName}`
+          if (!colorGroupSet.has(key)) {
+            colorGroupSet.add(key)
+            colorGroupPairs.push(pair)
+          }
+        }
+
         const imageValues = Array.from(colorMap.values()).flatMap((p) => {
           const colorId = colorIdByName.get(p.colorName)
           if (!colorId) return []
@@ -225,8 +241,20 @@ void (async () => {
     )
   }
 
+  // Upsert all collected color groups (single batch, ON CONFLICT DO NOTHING)
+  let colorGroupCount = 0
+  if (colorGroupPairs.length > 0) {
+    const CG_BATCH_SIZE = 1000
+    for (let j = 0; j < colorGroupPairs.length; j += CG_BATCH_SIZE) {
+      const chunk = colorGroupPairs.slice(j, j + CG_BATCH_SIZE)
+      await db.insert(catalogColorGroups).values(chunk).onConflictDoNothing()
+      colorGroupCount += chunk.length
+    }
+    console.log(`Upserted ${colorGroupCount} color group entries into catalog_color_groups`)
+  }
+
   console.log(
-    `Image sync complete — ${colorCount} colors, ${imageCount} images, ${skipped} styles skipped (not in catalog_styles), ${failedStyles} styles failed`
+    `Image sync complete — ${colorCount} colors, ${imageCount} images, ${colorGroupCount} color groups, ${skipped} styles skipped (not in catalog_styles), ${failedStyles} styles failed`
   )
   if (failedStyles > 0) process.exit(1)
 })().catch((err) => {

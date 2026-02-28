@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { eq, and, count, inArray, min } from 'drizzle-orm'
+import { eq, and, count, inArray, min, isNotNull } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import {
   catalogBrands,
@@ -43,6 +43,8 @@ export type ColorGroupSummary = {
   id: string
   colorGroupName: string
   isFavorite: boolean
+  /** Representative hex from catalog_colors; null if no colors synced yet. */
+  hex: string | null
 }
 
 export type ConfigureData = {
@@ -152,7 +154,6 @@ export async function getBrandPreferencesSummary(shopId: string): Promise<BrandS
  * Returns full configure data for a single brand in the given shop scope.
  *
  * Returns null if the brand is not found (page should call notFound()).
- * styles/colorGroups are stubs in Wave 1 — filled by Wave 2 and Wave 3.
  */
 export async function getBrandConfigureData(
   shopId: string,
@@ -228,6 +229,53 @@ export async function getBrandConfigureData(
       thumbnailMap = new Map(thumbRows.map((r) => [r.styleId, r.url ?? '']))
     }
 
+    // Step 5: color groups for this brand with shop-scope preference
+    const colorGroupRows = await db
+      .select({
+        id: catalogColorGroups.id,
+        colorGroupName: catalogColorGroups.colorGroupName,
+        isFavorite: catalogColorGroupPreferences.isFavorite,
+      })
+      .from(catalogColorGroups)
+      .leftJoin(
+        catalogColorGroupPreferences,
+        and(
+          eq(catalogColorGroupPreferences.scopeType, 'shop'),
+          eq(catalogColorGroupPreferences.scopeId, shopId),
+          eq(catalogColorGroupPreferences.colorGroupId, catalogColorGroups.id)
+        )
+      )
+      .where(eq(catalogColorGroups.brandId, brandId))
+      .orderBy(catalogColorGroups.colorGroupName)
+
+    // Step 6: representative hex per color group (first non-null hex1 alphabetically)
+    let colorGroupHexMap = new Map<string, string>()
+    if (colorGroupRows.length > 0) {
+      const hexRows = await db
+        .select({
+          colorGroupName: catalogColors.colorGroupName,
+          hex: min(catalogColors.hex1),
+        })
+        .from(catalogColors)
+        .innerJoin(catalogStyles, eq(catalogStyles.id, catalogColors.styleId))
+        .where(
+          and(
+            eq(catalogStyles.brandId, brandId),
+            isNotNull(catalogColors.colorGroupName),
+            isNotNull(catalogColors.hex1)
+          )
+        )
+        .groupBy(catalogColors.colorGroupName)
+
+      colorGroupHexMap = new Map(
+        hexRows
+          .filter((r): r is { colorGroupName: string; hex: string } =>
+            r.colorGroupName !== null && r.hex !== null
+          )
+          .map((r) => [r.colorGroupName, r.hex])
+      )
+    }
+
     return {
       brand: {
         id: brandRows[0].id,
@@ -242,7 +290,12 @@ export async function getBrandConfigureData(
         thumbnailUrl: thumbnailMap.get(s.id) ?? null,
         isFavorite: s.isFavorite ?? false,
       })),
-      colorGroups: [],
+      colorGroups: colorGroupRows.map((cg) => ({
+        id: cg.id,
+        colorGroupName: cg.colorGroupName,
+        isFavorite: cg.isFavorite ?? false,
+        hex: colorGroupHexMap.get(cg.colorGroupName) ?? null,
+      })),
     }
   } catch (err) {
     actionsLogger.error('getBrandConfigureData failed', { brandId, err })
@@ -344,5 +397,54 @@ export async function toggleBrandEnabled(
   } catch (err) {
     actionsLogger.error('toggleBrandEnabled failed', { brandId, err })
     return { success: false, error: 'Failed to update brand enabled state' }
+  }
+}
+
+// ─── toggleColorGroupFavorite ─────────────────────────────────────────────────
+
+/**
+ * Upserts catalog_color_group_preferences.is_favorite for the shop scope.
+ *
+ * Takes the desired `value` directly — the client owns the optimistic state.
+ */
+export async function toggleColorGroupFavorite(
+  colorGroupId: string,
+  value: boolean
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!uuidSchema.safeParse(colorGroupId).success) {
+    return { success: false, error: 'Invalid colorGroupId' }
+  }
+
+  const session = await verifySession()
+  if (!session) return { success: false, error: 'Unauthorized' }
+
+  try {
+    await db
+      .insert(catalogColorGroupPreferences)
+      .values({
+        scopeType: 'shop',
+        scopeId: session.shopId,
+        colorGroupId,
+        isFavorite: value,
+      })
+      .onConflictDoUpdate({
+        target: [
+          catalogColorGroupPreferences.scopeType,
+          catalogColorGroupPreferences.scopeId,
+          catalogColorGroupPreferences.colorGroupId,
+        ],
+        set: { isFavorite: value, updatedAt: new Date() },
+      })
+
+    actionsLogger.info('toggleColorGroupFavorite', {
+      colorGroupId,
+      isFavorite: value,
+      shopIdPrefix: session.shopId.slice(0, 8),
+    })
+
+    return { success: true }
+  } catch (err) {
+    actionsLogger.error('toggleColorGroupFavorite failed', { colorGroupId, err })
+    return { success: false, error: 'Failed to update color group favorite' }
   }
 }

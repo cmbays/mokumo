@@ -6,10 +6,11 @@ import { toast } from 'sonner'
 import { Switch } from '@shared/ui/primitives/switch'
 import { Label } from '@shared/ui/primitives/label'
 import { cn } from '@shared/lib/cn'
-import { toggleBrandFavorite, toggleBrandEnabled } from '../../actions'
+import { toggleBrandFavorite, toggleBrandEnabled, toggleColorGroupFavorite } from '../../actions'
 import { toggleStyleFavorite } from '../../../actions'
 import type { ConfigureData } from '../../actions'
 import { StyleGrid } from './StyleGrid'
+import { ColorGroupGrid } from './ColorGroupGrid'
 
 type Props = {
   initialData: ConfigureData
@@ -54,6 +55,26 @@ export function FavoritesConfigureClient({ initialData }: Props) {
     if (!result.success) {
       setConfigureState(original)
       toast.error("Couldn't update brand enabled state — try again")
+    }
+  }
+
+  async function handleToggleColorGroupFavorite(colorGroupId: string) {
+    const original = configureState
+    const cg = configureState.colorGroups.find((g) => g.id === colorGroupId)
+    if (!cg) return
+    const nextValue = !cg.isFavorite
+
+    setConfigureState((prev) => ({
+      ...prev,
+      colorGroups: prev.colorGroups.map((g) =>
+        g.id === colorGroupId ? { ...g, isFavorite: nextValue } : g
+      ),
+    }))
+
+    const result = await toggleColorGroupFavorite(colorGroupId, nextValue)
+    if (!result.success) {
+      setConfigureState(original)
+      toast.error("Couldn't update color group favorite — try again")
     }
   }
 
@@ -125,12 +146,15 @@ export function FavoritesConfigureClient({ initialData }: Props) {
         <StyleGrid styles={configureState.styles} onToggle={handleToggleStyleFavorite} />
       </section>
 
-      {/* Color group section — stub (Wave 3) */}
+      {/* Color group section */}
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-elevated p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Color Groups
         </h2>
-        <p className="text-sm text-muted-foreground">Color group favorites coming soon.</p>
+        <ColorGroupGrid
+          colorGroups={configureState.colorGroups}
+          onToggle={handleToggleColorGroupFavorite}
+        />
       </section>
     </div>
   )
