@@ -36,7 +36,7 @@ export default async function GarmentCatalogPage() {
   })
 
   const catalogColors = extractUniqueColors(normalizedCatalog)
-  const colorGroups = extractColorGroups(normalizedCatalog)
+  const colorGroupsRaw = extractColorGroups(normalizedCatalog)
   const [initialFavoriteColorIds, initialFavoriteColorGroupNames] = await Promise.all([
     session
       ? getColorFavorites('shop', session.shopId).catch((err: unknown) => {
@@ -57,6 +57,14 @@ export default async function GarmentCatalogPage() {
         })
       : Promise.resolve([] as string[]),
   ])
+
+  // Pre-sort colorGroups so favorites appear first in the filter tabs
+  const favoriteSet = new Set(initialFavoriteColorGroupNames)
+  const colorGroups = [...colorGroupsRaw].sort((a, b) => {
+    const aFav = favoriteSet.has(a.colorGroupName) ? 0 : 1
+    const bFav = favoriteSet.has(b.colorGroupName) ? 0 : 1
+    return aFav - bFav
+  })
 
   return (
     <>

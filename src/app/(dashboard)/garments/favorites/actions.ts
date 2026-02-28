@@ -712,6 +712,18 @@ export async function getFavoritedBrandsSummary(
   }
 }
 
+// ─── getBrandData ─────────────────────────────────────────────────────────────
+
+/**
+ * Session-aware wrapper around getBrandConfigureData — client components call
+ * this instead of passing shopId as a prop.
+ */
+export async function getBrandData(brandId: string): Promise<ConfigureData | null> {
+  const session = await verifySession()
+  if (!session) return null
+  return getBrandConfigureData(session.shopId, brandId)
+}
+
 // ─── getAvailableBrandsToAdd ──────────────────────────────────────────────────
 
 /**
