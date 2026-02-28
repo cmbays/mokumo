@@ -16,7 +16,7 @@ import {
   Printer,
   Shirt,
   Settings,
-  Palette,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -47,6 +47,6 @@ export const SECONDARY_NAV: NavItem[] = [
   { label: 'Invoices', href: '/invoices', icon: Receipt, iconColor: 'text-success' },
   { label: 'Screens', href: '/screens', icon: Printer, iconColor: 'text-action' },
   { label: 'Garments', href: '/garments', icon: Shirt },
+  { label: 'Garment Favorites', href: '/garments/favorites', icon: Star, iconColor: 'text-warning' },
   { label: 'Pricing Settings', href: '/settings/pricing', icon: Settings },
-  { label: 'Color Settings', href: '/settings/colors', icon: Palette },
 ]
