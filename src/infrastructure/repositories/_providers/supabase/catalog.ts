@@ -1,5 +1,4 @@
 import 'server-only'
-import { unstable_cache } from 'next/cache'
 import { sql, eq, and } from 'drizzle-orm'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import { catalogImageSchema, catalogSizeSchema } from '@domain/entities/catalog-style'
@@ -83,8 +82,8 @@ export function parseNormalizedCatalogRow(row: {
 }
 
 /**
- * Inner fetch — receives shopId explicitly so unstable_cache can key on it.
- * Different shops never share a cache entry (data-leak prevention).
+ * Inner fetch — extracted so the public function stays readable.
+ * Receives shopId explicitly (does not call verifySession internally).
  */
 async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmentCatalog[]> {
   const { db } = await import('@shared/lib/supabase/db')
@@ -180,12 +179,6 @@ async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmen
   return parsed
 }
 
-const _fetchNormCatalogCached = unstable_cache(
-  _fetchNormalizedCatalog,
-  ['normalized-catalog'],
-  { revalidate: 300, tags: ['catalog'] }
-)
-
 /**
  * Fetch all normalized catalog styles with their colors, images, and sizes.
  *
@@ -193,7 +186,10 @@ const _fetchNormCatalogCached = unstable_cache(
  * (scope_type='shop', scope_id=$shopId) to resolve isEnabled/isFavorite with defaults.
  *
  * Security: requires an authenticated session. Returns [] if unauthenticated.
- * Cached per shopId for 5 minutes — invalidated by revalidateTag('catalog') on mutations.
+ *
+ * NOTE: unstable_cache is NOT used here — the serialized payload is ~30 MB which exceeds
+ * Next.js's 2 MB cache limit. See issue #642 for the architectural fix (materialized view /
+ * payload split). getGarmentCatalog (a much smaller table) IS cached.
  */
 export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
   const session = await verifySession()
@@ -201,7 +197,7 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
     repoLogger.warn('getNormalizedCatalog called without authenticated session')
     return []
   }
-  return _fetchNormCatalogCached(session.shopId)
+  return _fetchNormalizedCatalog(session.shopId)
 }
 
 /**
