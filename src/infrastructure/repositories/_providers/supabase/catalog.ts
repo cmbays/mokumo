@@ -161,6 +161,7 @@ async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmen
                 'sortOrder', sort_order,
                 'priceAdjustment', price_adjustment
               )
+              ORDER BY sort_order
             ) FILTER (WHERE id IS NOT NULL),
             '[]'::json
           ) AS sizes

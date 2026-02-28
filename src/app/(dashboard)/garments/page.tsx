@@ -14,11 +14,8 @@ export const dynamic = 'force-dynamic'
  * which also fires immediately before step 1 begins.
  */
 import { Suspense } from 'react'
-import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
-import { Topbar } from '@shared/ui/layouts/topbar'
-import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { getGarmentCatalog } from '@infra/repositories/garments'
+import { CatalogTopbar } from './_components/CatalogTopbar'
 import { getJobs } from '@infra/repositories/jobs'
 import { getCustomers } from '@infra/repositories/customers'
 import { GarmentCatalogSection } from './_components/GarmentCatalogSection'
@@ -41,18 +38,7 @@ export default async function GarmentCatalogPage() {
 
   return (
     <>
-      <Topbar
-        breadcrumbs={buildBreadcrumbs({ label: 'Garment Catalog' })}
-        actions={
-          <Link
-            href="/garments/favorites"
-            className="flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-action/40 hover:text-action"
-          >
-            Preferences
-            <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        }
-      />
+      <CatalogTopbar />
       <div className="flex flex-col gap-4">
         <Suspense fallback={<GarmentCatalogSkeleton />}>
           <GarmentCatalogSection
