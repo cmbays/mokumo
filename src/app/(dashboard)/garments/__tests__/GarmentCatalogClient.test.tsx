@@ -52,13 +52,9 @@ vi.mock('@features/garments/hooks/useColorFilter', () => ({
 // Stub out the toolbar and drawers — they have their own complex deps
 // and are not the subject of these tests
 vi.mock('../_components/GarmentCatalogToolbar', () => ({
-  GarmentCatalogToolbar: ({
-    onShowDisabledChange,
-  }: {
-    onShowDisabledChange: (v: boolean) => void
-  }) => (
+  GarmentCatalogToolbar: ({ onViewChange }: { onViewChange: (view: 'grid' | 'table') => void }) => (
     <div data-testid="toolbar">
-      <button data-testid="show-disabled-btn" onClick={() => onShowDisabledChange(true)} />
+      <button data-testid="table-view-btn" onClick={() => onViewChange('table')} />
     </div>
   ),
 }))
@@ -159,8 +155,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     vi.clearAllMocks()
     mockToggleStyleEnabled.mockResolvedValue({ success: true, isEnabled: false })
     mockToggleStyleFavorite.mockResolvedValue({ success: true, isFavorite: true })
-    // Default: table view, no disabled filter
-    setupSearchParams({ view: 'table' })
+    setupSearchParams({})
   })
 
   describe('handleToggleEnabled', () => {
@@ -178,9 +173,11 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
+      await user.click(screen.getByTestId('table-view-btn'))
       const enableSwitch = screen.getByRole('switch', { name: /disable unisex tee/i })
       await user.click(enableSwitch)
 
@@ -208,9 +205,11 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
+      await user.click(screen.getByTestId('table-view-btn'))
       // Click the switch for garment B specifically
       const enableSwitchB = screen.getByRole('switch', { name: /disable tee b/i })
       await user.click(enableSwitchB)
@@ -237,9 +236,11 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
+      await user.click(screen.getByTestId('table-view-btn'))
       const enableSwitch = screen.getByRole('switch', { name: /disable unisex tee/i })
       await user.click(enableSwitch)
 
@@ -263,10 +264,12 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
           // no normalizedCatalog
         />
       )
 
+      await user.click(screen.getByTestId('table-view-btn'))
       const enableSwitch = screen.getByRole('switch', { name: /disable unisex tee/i })
       await user.click(enableSwitch)
 
@@ -297,6 +300,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -332,6 +336,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -360,6 +365,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -387,6 +393,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -396,34 +403,8 @@ describe('GarmentCatalogClient — toggle persistence', () => {
   })
 
   describe('showDisabled filter', () => {
-    it('hides disabled garments by default', () => {
-      setupSearchParams({ view: 'table' })
-      const enabled = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Enabled Tee', isEnabled: true })
-      const disabled = makeGarment({
-        id: 'g2',
-        sku: 'G500',
-        name: 'Disabled Tee',
-        isEnabled: false,
-      })
-
-      render(
-        <GarmentCatalogClient
-          initialCatalog={[enabled, disabled]}
-          initialJobs={[]}
-          initialCustomers={[]}
-          colorGroups={[]}
-          catalogColors={[]}
-          initialFavoriteColorIds={[]}
-        />
-      )
-
-      expect(screen.getByRole('switch', { name: /enabled tee/i })).toBeInTheDocument()
-      expect(screen.queryByRole('switch', { name: /disabled tee/i })).not.toBeInTheDocument()
-    })
-
-    it('shows disabled garments after onShowDisabledChange(true) is called', async () => {
+    it('hides disabled garments by default (table view)', async () => {
       const user = userEvent.setup()
-      setupSearchParams({ view: 'table' })
       const enabled = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Enabled Tee', isEnabled: true })
       const disabled = makeGarment({
         id: 'g2',
@@ -440,15 +421,13 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
-      expect(screen.queryByRole('switch', { name: /disabled tee/i })).not.toBeInTheDocument()
-
-      await user.click(screen.getByTestId('show-disabled-btn'))
-
+      await user.click(screen.getByTestId('table-view-btn'))
       expect(screen.getByRole('switch', { name: /enabled tee/i })).toBeInTheDocument()
-      expect(screen.getByRole('switch', { name: /disabled tee/i })).toBeInTheDocument()
+      expect(screen.queryByRole('switch', { name: /disabled tee/i })).not.toBeInTheDocument()
     })
   })
 })

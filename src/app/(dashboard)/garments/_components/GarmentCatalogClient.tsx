@@ -33,6 +33,7 @@ import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
 import type { FilterColor, FilterColorGroup } from '@features/garments/types'
+import { sortColorGroupsByFavorites } from '@features/garments/utils/favorites-sort'
 
 const clientLogger = logger.child({ domain: 'garments' })
 
@@ -58,6 +59,8 @@ type GarmentCatalogClientProps = {
   catalogColors: FilterColor[]
   /** Shop-scoped favorite color IDs from catalog_color_preferences, fetched server-side. */
   initialFavoriteColorIds: string[]
+  /** Shop-scoped favorite colorGroupNames from catalog_color_group_preferences, fetched server-side. */
+  initialFavoriteColorGroupNames: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -72,25 +75,36 @@ export function GarmentCatalogClient({
   colorGroups,
   catalogColors,
   initialFavoriteColorIds,
+  initialFavoriteColorGroupNames,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  // URL state
-  const category = searchParams.get('category') ?? 'all'
+  // URL state — only search + brand; these are rarely changed rapidly so server round-trips are ok
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
-  const view = searchParams.get('view') ?? 'grid'
 
-  // Local UI state — not in URL because toggling should not trigger a server re-render
-  const [showDisabled, setShowDisabled] = useState(false)
+  // Local UI state — NOT in URL to avoid server re-renders on every tab/view click
+  const [category, setCategory] = useState('all')
+  const [view, setView] = useState<'grid' | 'table'>('grid')
 
   // Color group filter
   const { selectedColorGroups, toggleColorGroup, clearColorGroups } = useColorFilter()
 
   // Shop color favorites — seeded from SSR fetch, updated optimistically by toggleColorFavorite
   const [favoriteColorIds, setFavoriteColorIds] = useState<string[]>(initialFavoriteColorIds)
+
+  // Shop color-group favorites — seeded from SSR fetch, used to pre-sort ColorFilterGrid
+  const [favoriteColorGroupNames] = useState<Set<string>>(
+    () => new Set(initialFavoriteColorGroupNames)
+  )
+
+  // Pre-sort color groups so favorited swatches appear first in the filter grid
+  const sortedColorGroups = useMemo(
+    () => sortColorGroupsByFavorites(colorGroups, favoriteColorGroupNames),
+    [colorGroups, favoriteColorGroupNames]
+  )
 
   // SKU → catalog_styles UUID lookup — used by toggle server actions
   const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
@@ -185,7 +199,7 @@ export function GarmentCatalogClient({
   // double-render and the react-compiler "setState in effect" lint error.
   const [page, setPage] = useState(0)
   const [lastFilterKey, setLastFilterKey] = useState('')
-  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}|${showDisabled}`
+  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}`
   if (lastFilterKey !== currentFilterKey) {
     setLastFilterKey(currentFilterKey)
     setPage(0)
@@ -206,8 +220,8 @@ export function GarmentCatalogClient({
     const filtered: GarmentCatalog[] = []
 
     for (const g of catalog) {
-      // Enabled filter — skips disabled garments unless "Show disabled" is active
-      if (!showDisabled && !g.isEnabled) continue
+      // Always hide disabled garments — toggle removed in favor of Favorites page
+      if (!g.isEnabled) continue
 
       // Search filter
       if (q) {
@@ -233,23 +247,22 @@ export function GarmentCatalogClient({
       if (category === 'all' || g.baseCategory === category) filtered.push(g)
     }
 
+    // Sort favorites first so starred garments surface to the top of the grid
+    filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
+
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [
-    catalog,
-    category,
-    searchQuery,
-    brand,
-    selectedGroupSet,
-    styleToColorGroupNamesMap,
-    showDisabled,
-  ])
+  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleToColorGroupNamesMap])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
   const visibleGarments = filteredGarments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
-  // Extract unique brands for filter dropdown
-  const brands = useMemo(() => [...new Set(catalog.map((g) => g.brand))].sort(), [catalog])
+  // Extract unique brands for filter dropdown — only from enabled garments so disabled-brand
+  // names don't ghost in the dropdown after being hidden from the grid
+  const brands = useMemo(
+    () => [...new Set(catalog.filter((g) => g.isEnabled).map((g) => g.brand))].sort(),
+    [catalog]
+  )
 
   // Linked jobs for drawer
   const linkedJobs = useMemo(() => {
@@ -343,15 +356,16 @@ export function GarmentCatalogClient({
     }
   }, [])
 
-  // Fix #11: handleClearAll for empty state CTA
+  // handleClearAll for empty state CTA — clears URL params + resets local category state
   const handleClearAll = useCallback(() => {
     router.replace(pathname, { scroll: false })
+    setCategory('all')
   }, [router, pathname])
 
   return (
     <>
       <GarmentCatalogToolbar
-        colorGroups={colorGroups}
+        colorGroups={sortedColorGroups}
         brands={brands}
         selectedColorGroups={selectedColorGroups}
         onToggleColorGroup={toggleColorGroup}
@@ -359,8 +373,10 @@ export function GarmentCatalogClient({
         garmentCount={filteredGarments.length}
         onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
-        showDisabled={showDisabled}
-        onShowDisabledChange={setShowDisabled}
+        category={category}
+        onCategoryChange={setCategory}
+        view={view}
+        onViewChange={setView}
         availableColorGroups={brandAvailableColorGroups}
       />
 

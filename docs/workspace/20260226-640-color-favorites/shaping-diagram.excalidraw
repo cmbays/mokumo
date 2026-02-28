@@ -1,0 +1,362 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "el01", "type": "rectangle",
+      "x": 10, "y": 10, "width": 1440, "height": 55, "angle": 0,
+      "strokeColor": "#1864ab", "backgroundColor": "#1864ab", "fillStyle": "solid",
+      "strokeWidth": 2, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el02", "type": "text",
+      "x": 10, "y": 20, "width": 1440, "height": 33, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 24, "fontFamily": 2,
+      "text": "Issue #640 — Color Group Favorites: Shaping",
+      "textAlign": "center", "verticalAlign": "top",
+      "containerId": null, "originalText": "Issue #640 — Color Group Favorites: Shaping",
+      "autoResize": true, "lineHeight": 1.25
+    },
+
+    {
+      "id": "el03", "type": "rectangle",
+      "x": 10, "y": 75, "width": 460, "height": 665, "angle": 0,
+      "strokeColor": "#ced4da", "backgroundColor": "#f8f9fa", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el04", "type": "rectangle",
+      "x": 10, "y": 75, "width": 460, "height": 38, "angle": 0,
+      "strokeColor": "#1864ab", "backgroundColor": "#1864ab", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el05", "type": "text",
+      "x": 18, "y": 84, "width": 440, "height": 22, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Requirements (R)",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Requirements (R)",
+      "autoResize": true, "lineHeight": 1.25
+    },
+    {
+      "id": "el06", "type": "text",
+      "x": 18, "y": 122, "width": 442, "height": 600, "angle": 0,
+      "strokeColor": "#343a40", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "R0  ● Core goal\n    At every garment selection surface (catalog browser,\n    quote picker), favorited items surface first\n\nR1  ● Must-have\n    Three-tier preferences: brand / styles / color groups\n    — all brand-anchored, no global scope\n  R1.1 ● Must  Brand favorites (ordering; non-favorited accessible)\n  R1.2 ● Must  Style favorites per brand\n  R1.3 ● Must  Color group favorites (colorGroupName level)\n\nR2  ● Undecided  →  [RESOLVED: V2 — no customers table yet]\n    Customer prefs override shop defaults when active\n    Priority: customer › shop › everything else\n\nR3  ● Must-have\n    Cross-brand read-only overview of all saved favorites\n\nR4  ● Must-have\n    Color/style editing requires explicit single-brand context\n\nR5  ● Must-have\n    Unfavoriting never erases data (soft-delete)\n    Re-enabling restores prior selections\n\nR6  ● Must-have\n    Prefs stored at (brand_id, colorGroupName)\n    NOT at individual catalog_colors row level\n\nR7  ● Undecided  →  [LEAN YES — same tables as R1]\n    Data model queryable by quote picker\n    given (scope, brand_id) → ordered favorites list\n\nR8  ● Must-have\n    Clear nav home + stable, bookmarkable URL",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "R0 requirements...",
+      "autoResize": true, "lineHeight": 1.4
+    },
+
+    {
+      "id": "el07", "type": "rectangle",
+      "x": 480, "y": 75, "width": 460, "height": 665, "angle": 0,
+      "strokeColor": "#ced4da", "backgroundColor": "#f8f9fa", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el08", "type": "rectangle",
+      "x": 480, "y": 75, "width": 460, "height": 38, "angle": 0,
+      "strokeColor": "#1864ab", "backgroundColor": "#1864ab", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el09", "type": "text",
+      "x": 488, "y": 84, "width": 440, "height": 22, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Navigation Shapes  —  DP1: OPEN (your call)",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Navigation Shapes  —  DP1: OPEN (your call)",
+      "autoResize": true, "lineHeight": 1.25
+    },
+
+    {
+      "id": "el10", "type": "rectangle",
+      "x": 488, "y": 122, "width": 444, "height": 188, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "#ebfbee", "fillStyle": "solid",
+      "strokeWidth": 2, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 6},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el11", "type": "text",
+      "x": 496, "y": 130, "width": 428, "height": 22, "angle": 0,
+      "strokeColor": "#1a6b2e", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Shape A: Sub-page under Garments",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Shape A: Sub-page under Garments",
+      "autoResize": true, "lineHeight": 1.25
+    },
+    {
+      "id": "el12", "type": "text",
+      "x": 496, "y": 156, "width": 430, "height": 120, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "URL:      /garments/favorites\n          /garments/favorites/configure?brand=[id]\nSidebar:  Garments item with sub-navigation\nCrumbs:   Garments › Garment Favorites › [Brand]\n\nReplaces Color Settings? No (two entries co-exist)",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Shape A content",
+      "autoResize": true, "lineHeight": 1.4
+    },
+    {
+      "id": "el13", "type": "rectangle",
+      "x": 488, "y": 283, "width": 140, "height": 24, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "#2f9e44", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 4},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el14", "type": "text",
+      "x": 488, "y": 286, "width": 140, "height": 18, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "✅ PASSES ALL R",
+      "textAlign": "center", "verticalAlign": "top",
+      "containerId": null, "originalText": "✅ PASSES ALL R",
+      "autoResize": true, "lineHeight": 1.25
+    },
+
+    {
+      "id": "el15", "type": "rectangle",
+      "x": 488, "y": 322, "width": 444, "height": 200, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "#ebfbee", "fillStyle": "solid",
+      "strokeWidth": 2, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 6},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el16", "type": "text",
+      "x": 496, "y": 330, "width": 428, "height": 22, "angle": 0,
+      "strokeColor": "#1a6b2e", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Shape B: Standalone sidebar entry  ★ recommended",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Shape B: Standalone sidebar entry",
+      "autoResize": true, "lineHeight": 1.25
+    },
+    {
+      "id": "el17", "type": "text",
+      "x": 496, "y": 356, "width": 430, "height": 130, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "URL:      /garments/favorites\n          /garments/favorites/configure?brand=[id]\nSidebar:  \"Garment Favorites\" — own top-level nav entry\nCrumbs:   Garment Favorites › [Brand]\n\nReplaces Color Settings? YES — supersedes it entirely\nHigher prominence for a daily-use feature",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Shape B content",
+      "autoResize": true, "lineHeight": 1.4
+    },
+    {
+      "id": "el18", "type": "rectangle",
+      "x": 488, "y": 496, "width": 140, "height": 24, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "#2f9e44", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 4},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el19", "type": "text",
+      "x": 488, "y": 499, "width": 140, "height": 18, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "✅ PASSES ALL R",
+      "textAlign": "center", "verticalAlign": "top",
+      "containerId": null, "originalText": "✅ PASSES ALL R",
+      "autoResize": true, "lineHeight": 1.25
+    },
+
+    {
+      "id": "el20", "type": "rectangle",
+      "x": 488, "y": 534, "width": 444, "height": 196, "angle": 0,
+      "strokeColor": "#e03131", "backgroundColor": "#fff5f5", "fillStyle": "solid",
+      "strokeWidth": 2, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 6},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el21", "type": "text",
+      "x": 496, "y": 542, "width": 428, "height": 22, "angle": 0,
+      "strokeColor": "#c92a2a", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Shape C: Settings placement",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Shape C: Settings placement",
+      "autoResize": true, "lineHeight": 1.25
+    },
+    {
+      "id": "el22", "type": "text",
+      "x": 496, "y": 568, "width": 430, "height": 120, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "URL:      /settings/garment-preferences\n          /settings/garment-preferences/configure?brand=[id]\nSidebar:  Under Settings alongside Pricing\nCrumbs:   Settings › Garment Preferences › [Brand]\n\n❌ FAILS R8: Buries an operational (daily-use) feature\n   under Settings. Wrong mental model for quoting work.",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Shape C content",
+      "autoResize": true, "lineHeight": 1.4
+    },
+    {
+      "id": "el23", "type": "rectangle",
+      "x": 488, "y": 706, "width": 155, "height": 24, "angle": 0,
+      "strokeColor": "#e03131", "backgroundColor": "#e03131", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 4},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el24", "type": "text",
+      "x": 488, "y": 709, "width": 155, "height": 18, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "❌ FAILS R8",
+      "textAlign": "center", "verticalAlign": "top",
+      "containerId": null, "originalText": "❌ FAILS R8",
+      "autoResize": true, "lineHeight": 1.25
+    },
+
+    {
+      "id": "el25", "type": "rectangle",
+      "x": 950, "y": 75, "width": 510, "height": 665, "angle": 0,
+      "strokeColor": "#ced4da", "backgroundColor": "#f8f9fa", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el26", "type": "rectangle",
+      "x": 950, "y": 75, "width": 510, "height": 38, "angle": 0,
+      "strokeColor": "#1864ab", "backgroundColor": "#1864ab", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el27", "type": "text",
+      "x": 958, "y": 84, "width": 490, "height": 22, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Fit Check: R × {A, B, C}",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Fit Check: R × {A, B, C}",
+      "autoResize": true, "lineHeight": 1.25
+    },
+    {
+      "id": "el28", "type": "text",
+      "x": 958, "y": 122, "width": 494, "height": 580, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 11, "fontFamily": 3,
+      "text": "Req    Status        Description                        A    B    C\n─────────────────────────────────────────────────────────────────\nR0     Core goal     Favorited items surface first      ✅   ✅   ✅\nR1     Must-have     Three-tier preferences per brand   ✅   ✅   ✅\nR1.1   Must-have     Brand favorites (ordering only)    ✅   ✅   ✅\nR1.2   Must-have     Style favorites per brand          ✅   ✅   ✅\nR1.3   Must-have     Color group favorites (name lvl)   ✅   ✅   ✅\nR2     V2 (blocked)  Customer prefs override shop       ✅   ✅   ✅\nR3     Must-have     Cross-brand read-only overview     ✅   ✅   ✅\nR4     Must-have     Single-brand editing context       ✅   ✅   ✅\nR5     Must-have     Soft-delete: data never lost       ✅   ✅   ✅\nR6     Must-have     Prefs at colorGroupName+brand_id   ✅   ✅   ✅\nR7     Lean yes      Queryable by quote picker          ✅   ✅   ✅\nR8     Must-have     Clear nav home + bookmarkable URL  ✅   ✅   ❌\n─────────────────────────────────────────────────────────────────\n       VERDICT                                         OK   OK  FAIL\n\nNotes:\n• A and B pass all requirements.\n• C fails R8 only: settings placement buries a\n  daily-use operational feature under Settings —\n  wrong mental model for quoting work.\n• DP1 (A vs B): both pass. Decision is about nav\n  prominence — sub-item under Garments vs own entry.\n  Shape B also cleans up by replacing Color Settings\n  (which this feature fully supersedes).",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Fit check table",
+      "autoResize": true, "lineHeight": 1.5
+    },
+
+    {
+      "id": "el29", "type": "rectangle",
+      "x": 10, "y": 750, "width": 1450, "height": 125, "angle": 0,
+      "strokeColor": "#e67700", "backgroundColor": "#fff9db", "fillStyle": "solid",
+      "strokeWidth": 2, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el30", "type": "rectangle",
+      "x": 10, "y": 750, "width": 1450, "height": 35, "angle": 0,
+      "strokeColor": "#e67700", "backgroundColor": "#e67700", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": {"type": 3, "value": 8},
+      "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "el31", "type": "text",
+      "x": 20, "y": 758, "width": 400, "height": 22, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 2,
+      "text": "Decision Points Log",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Decision Points Log",
+      "autoResize": true, "lineHeight": 1.25
+    },
+    {
+      "id": "el32", "type": "text",
+      "x": 20, "y": 793, "width": 1430, "height": 80, "angle": 0,
+      "strokeColor": "#495057", "backgroundColor": "transparent", "fillStyle": "solid",
+      "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0, "opacity": 100,
+      "groupIds": [], "frameId": null, "roundness": null,
+      "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 12, "fontFamily": 2,
+      "text": "DP1  [OPEN]      Navigation: Shape A (sub-page under Garments) vs Shape B (standalone nav entry, replaces Color Settings) — your call\nDP2  [RESOLVED]  Data Model: DM-B selected — first-class catalog_color_groups entity (+ catalog_color_group_preferences + catalog_brand_preferences)  |  see spike-data-model.md\nDP3  [RESOLVED]  Customer scope → V2. No customers table in DB schema. New tables designed multi-scope from day 1 (scope_type/scope_id pattern).\nDP4  [LEAN YES]  Quote Builder readiness (R7) — same tables as R1/R6, no extra schema work needed. Query interface is Wave 5.",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null, "originalText": "Decision points",
+      "autoResize": true, "lineHeight": 1.5
+    }
+  ],
+  "appState": {
+    "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}

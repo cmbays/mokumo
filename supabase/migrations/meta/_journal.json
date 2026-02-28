@@ -57,6 +57,13 @@
       "when": 1772125940389,
       "tag": "0016_square_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1772243038884,
+      "tag": "0018_red_talkback",
+      "breakpoints": true
     }
   ]
 }

@@ -82,20 +82,10 @@ export function parseNormalizedCatalogRow(row: {
 }
 
 /**
- * Fetch all normalized catalog styles with their colors, images, and sizes.
- *
- * Left-joins catalog_style_preferences scoped to the authenticated shop
- * (scope_type='shop', scope_id=$shopId) to resolve isEnabled/isFavorite with defaults.
- *
- * Security: requires an authenticated session. Returns [] if unauthenticated.
+ * Inner fetch — extracted so the public function stays readable.
+ * Receives shopId explicitly (does not call verifySession internally).
  */
-export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
-  const session = await verifySession()
-  if (!session) {
-    repoLogger.warn('getNormalizedCatalog called without authenticated session')
-    return []
-  }
-
+async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmentCatalog[]> {
   const { db } = await import('@shared/lib/supabase/db')
 
   // Use a raw SQL query for the joined result with JSON aggregation.
@@ -150,7 +140,7 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
           ) FILTER (WHERE csi.id IS NOT NULL),
           '[]'::json
         ) AS sizes,
-        csp.is_enabled,
+        (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
         csp.is_favorite
       FROM catalog_styles cs
       JOIN catalog_brands cb ON cb.id = cs.brand_id
@@ -159,13 +149,17 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
       LEFT JOIN catalog_style_preferences csp
         ON csp.style_id = cs.id
         AND csp.scope_type = 'shop'
-        AND csp.scope_id = ${session.shopId}
-      GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite
+        AND csp.scope_id = ${shopId}
+      LEFT JOIN catalog_brand_preferences cbp
+        ON cbp.brand_id = cs.brand_id
+        AND cbp.scope_type = 'shop'
+        AND cbp.scope_id = ${shopId}
+      GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite, cbp.is_enabled
       ORDER BY cs.name ASC
     `)
     rows = result as unknown[]
   } catch (err) {
-    repoLogger.error('getNormalizedCatalog db.execute failed', { err, shopId: session.shopId })
+    repoLogger.error('getNormalizedCatalog db.execute failed', { err, shopId })
     throw err
   }
 
@@ -183,6 +177,27 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
     }
   }
   return parsed
+}
+
+/**
+ * Fetch all normalized catalog styles with their colors, images, and sizes.
+ *
+ * Left-joins catalog_style_preferences scoped to the authenticated shop
+ * (scope_type='shop', scope_id=$shopId) to resolve isEnabled/isFavorite with defaults.
+ *
+ * Security: requires an authenticated session. Returns [] if unauthenticated.
+ *
+ * NOTE: unstable_cache is NOT used here — the serialized payload is ~30 MB which exceeds
+ * Next.js's 2 MB cache limit. See issue #642 for the architectural fix (materialized view /
+ * payload split). getGarmentCatalog (a much smaller table) IS cached.
+ */
+export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
+  const session = await verifySession()
+  if (!session) {
+    repoLogger.warn('getNormalizedCatalog called without authenticated session')
+    return []
+  }
+  return _fetchNormalizedCatalog(session.shopId)
 }
 
 /**

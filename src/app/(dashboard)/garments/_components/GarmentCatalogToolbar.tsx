@@ -51,8 +51,12 @@ type GarmentCatalogToolbarProps = {
   onBrandClick?: (brandName: string) => void
   /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
   categoryHits: Partial<Record<GarmentCategory, number>>
-  showDisabled: boolean
-  onShowDisabledChange: (checked: boolean) => void
+  /** Controlled category state — managed by parent to avoid router.replace re-renders */
+  category: string
+  onCategoryChange: (category: string) => void
+  /** Controlled view state — managed by parent to avoid router.replace re-renders */
+  view: 'grid' | 'table'
+  onViewChange: (view: 'grid' | 'table') => void
   /** Brand-scoped color group names: when a brand filter is active, only show that brand's groups. */
   availableColorGroups?: Set<string>
 }
@@ -70,19 +74,19 @@ export function GarmentCatalogToolbar({
   garmentCount,
   onBrandClick,
   categoryHits,
-  showDisabled,
-  onShowDisabledChange,
+  category,
+  onCategoryChange,
+  view,
+  onViewChange,
   availableColorGroups,
 }: GarmentCatalogToolbarProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  // --- Read URL state ---
-  const category = searchParams.get('category') ?? 'all'
+  // --- Read URL state (search + brand only — category/view are now local state in parent) ---
   const query = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
-  const view = searchParams.get('view') ?? 'grid'
 
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
@@ -96,16 +100,11 @@ export function GarmentCatalogToolbar({
     localStorage.setItem(PRICE_STORAGE_KEY, String(checked))
   }, [])
 
-  // --- URL update helper ---
+  // --- URL update helper (search + brand only) ---
   const updateParam = useCallback(
     (key: string, value: string | null) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (
-        value === null ||
-        value === '' ||
-        (key === 'category' && value === 'all') ||
-        (key === 'view' && value === 'grid')
-      ) {
+      if (value === null || value === '') {
         params.delete(key)
       } else {
         params.set(key, value)
@@ -115,11 +114,11 @@ export function GarmentCatalogToolbar({
     [searchParams, router, pathname]
   )
 
-  // Fix #5: clearAll uses a single router.replace that strips all params (including colors).
-  // No need to call onClearColors separately — router.replace(pathname) already clears ?colors=.
+  // clearAll: reset URL params (search/brand) AND reset category local state
   const clearAll = useCallback(() => {
     router.replace(pathname, { scroll: false })
-  }, [router, pathname])
+    onCategoryChange('all')
+  }, [router, pathname, onCategoryChange])
 
   // --- Resolved color group objects for pills ---
   const selectedGroupObjects = useMemo(
@@ -163,10 +162,10 @@ export function GarmentCatalogToolbar({
 
   return (
     <div className="space-y-3">
-      {/* Row 1: Category Tabs — overflow-x-auto on mobile, wrap on desktop */}
+      {/* Row 1: Category Tabs — horizontal scroll on mobile (no wrap = no scrollbar), wrap on desktop */}
       <div className="-mx-1 overflow-x-auto px-1 md:overflow-visible">
-        <Tabs value={category} onValueChange={(v) => updateParam('category', v)}>
-          <TabsList variant="line" className="w-full flex-wrap md:w-auto">
+        <Tabs value={category} onValueChange={onCategoryChange}>
+          <TabsList variant="line" className="w-max flex-nowrap md:w-auto md:flex-wrap">
             {visibleCategories.map((cat) => (
               <TabsTrigger
                 key={cat.value}
@@ -232,7 +231,7 @@ export function GarmentCatalogToolbar({
         {/* Spacer (desktop only) */}
         <div className="hidden flex-1 md:block" />
 
-        {/* View Toggle + Price Switch */}
+        {/* View Toggle + Favorites Link */}
         <div className="flex items-center gap-3">
           {/* View Toggle */}
           <div
@@ -249,7 +248,7 @@ export function GarmentCatalogToolbar({
               )}
               aria-label="Grid view"
               aria-pressed={view === 'grid'}
-              onClick={() => updateParam('view', 'grid')}
+              onClick={() => onViewChange('grid')}
             >
               <LayoutGrid className="size-3.5" />
             </Button>
@@ -262,7 +261,7 @@ export function GarmentCatalogToolbar({
               )}
               aria-label="Table view"
               aria-pressed={view === 'table'}
-              onClick={() => updateParam('view', 'table')}
+              onClick={() => onViewChange('table')}
             >
               <List className="size-3.5" />
             </Button>
@@ -281,25 +280,6 @@ export function GarmentCatalogToolbar({
             />
             <Label htmlFor="price-toggle" className="cursor-pointer text-xs text-muted-foreground">
               Prices
-            </Label>
-          </div>
-
-          {/* Divider */}
-          <div className="h-4 w-px bg-border/50" />
-
-          {/* Show Disabled Toggle */}
-          <div className="flex items-center gap-1.5">
-            <Switch
-              id="show-disabled-toggle"
-              size="sm"
-              checked={showDisabled}
-              onCheckedChange={onShowDisabledChange}
-            />
-            <Label
-              htmlFor="show-disabled-toggle"
-              className="cursor-pointer text-xs text-muted-foreground"
-            >
-              Disabled
             </Label>
           </div>
         </div>

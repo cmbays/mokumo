@@ -4,14 +4,17 @@ description: 'Every screen, route, navigation path, and user journey. The author
 category: canonical
 status: active
 phase: 1
-last_updated: 2026-02-16
+last_updated: 2026-02-27
 last_verified: 2026-02-16
 depends_on:
   - docs/PRD.md
   - docs/strategy/jobs-scope-definition.md
+  - docs/APP_IA.md
 ---
 
 # Screen Print Pro — App Flow
+
+> **See also**: `docs/APP_IA.md` — the _why_ behind this inventory. Governing principles for where features go, how settings vs nav is decided, interaction patterns, and feature placement criteria. Read APP_IA before placing a new feature in the nav or Settings.
 
 ---
 
