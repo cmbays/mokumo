@@ -19,16 +19,15 @@ import { GarmentDetailDrawer } from './GarmentDetailDrawer'
 import { BrandDetailDrawer } from './BrandDetailDrawer'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
-import { toggleStyleEnabled, toggleStyleFavorite, toggleColorFavorite } from '../actions'
 import {
-  buildSkuToStyleIdMap,
-  buildSkuToFrontImageUrl,
-  buildSkuToNormalizedColors,
-  buildStyleToColorGroupNamesMap,
-  hydrateCatalogPreferences,
-} from '../_lib/garment-transforms'
+  toggleStyleEnabled,
+  toggleStyleFavorite,
+  toggleColorFavorite,
+  fetchStyleDetail,
+} from '../actions'
+import { hydrateCatalogPreferences } from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { CatalogStyleMetadata, CatalogColor } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
@@ -51,8 +50,12 @@ type GarmentCatalogClientProps = {
   initialCatalog: GarmentCatalog[]
   initialJobs: Job[]
   initialCustomers: Customer[]
-  /** Normalized catalog data with color images — used to power ImageTypeCarousel in the detail drawer. Optional: drawer falls back to GarmentImage when absent. */
-  normalizedCatalog?: NormalizedGarmentCatalog[]
+  /** Slim style metadata (Tier 1) — id, brand, styleNumber, isEnabled, isFavorite, cardImageUrl. */
+  styleMetas: CatalogStyleMetadata[]
+  /** styleNumber → [{name, hex1}] — for GarmentCard color swatch strip. */
+  styleSwatches: Record<string, Array<{ name: string; hex1: string | null }>>
+  /** styleNumber → colorGroupName[] — for color group filter matching. */
+  styleColorGroups: Record<string, string[]>
   /** Deduplicated color group list for the filter grid (~80 groups), computed server-side. */
   colorGroups: FilterColorGroup[]
   /** Full individual color list — used by BrandDetailDrawer favorites section. */
@@ -71,7 +74,9 @@ export function GarmentCatalogClient({
   initialCatalog,
   initialJobs,
   initialCustomers,
-  normalizedCatalog,
+  styleMetas,
+  styleSwatches,
+  styleColorGroups,
   colorGroups,
   catalogColors,
   initialFavoriteColorIds,
@@ -106,45 +111,46 @@ export function GarmentCatalogClient({
     [colorGroups, favoriteColorGroupNames]
   )
 
-  // SKU → catalog_styles UUID lookup — used by toggle server actions
-  const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
-
-  // SKU → first front image URL — real S&S CDN URLs from catalog_images
-  const skuToFrontImageUrl = useMemo(
-    () => buildSkuToFrontImageUrl(normalizedCatalog),
-    [normalizedCatalog]
+  // SKU → catalog_styles UUID — built from Tier 1 slim metadata for toggle server actions
+  const skuToStyleId = useMemo(
+    () => new Map(styleMetas.map((m) => [m.styleNumber, m.id])),
+    [styleMetas]
   )
 
-  // SKU → CatalogColor[] — feeds ColorSwatchStrip on each card with real S&S hex swatches
-  const skuToNormalizedColors = useMemo(
-    () => buildSkuToNormalizedColors(normalizedCatalog),
-    [normalizedCatalog]
+  // SKU → cardImageUrl — precomputed in SQL, replaces buildSkuToFrontImageUrl
+  const skuToCardImageUrl = useMemo(
+    () =>
+      new Map(
+        styleMetas
+          .filter((m) => m.cardImageUrl != null)
+          .map((m) => [m.styleNumber, m.cardImageUrl as string])
+      ),
+    [styleMetas]
   )
 
-  // styleNumber → Set<colorGroupName> — for group-based filter matching
-  const styleToColorGroupNamesMap = useMemo(
-    () => buildStyleToColorGroupNamesMap(normalizedCatalog),
-    [normalizedCatalog]
+  // styleNumber → Set<colorGroupName> — for color group filter matching
+  const styleColorGroupsMap = useMemo(
+    () => new Map(Object.entries(styleColorGroups).map(([k, v]) => [k, new Set(v)])),
+    [styleColorGroups]
   )
 
   // When a brand filter is active, compute the set of color group names for that brand.
   // Passed to ColorFilterGrid so tabs + swatches scope to the brand.
   const brandAvailableColorGroups = useMemo(() => {
-    if (!brand || !normalizedCatalog) return undefined
+    if (!brand) return undefined
     const groups = new Set<string>()
-    for (const style of normalizedCatalog) {
-      if (style.brand === brand) {
-        for (const color of style.colors) {
-          if (color.colorGroupName) groups.add(color.colorGroupName)
-        }
+    for (const meta of styleMetas) {
+      if (meta.brand !== brand) continue
+      for (const cgName of styleColorGroups[meta.styleNumber] ?? []) {
+        groups.add(cgName)
       }
     }
     return groups.size > 0 ? groups : undefined
-  }, [brand, normalizedCatalog])
+  }, [brand, styleMetas, styleColorGroups])
 
-  // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
+  // Catalog state — seeded with isEnabled/isFavorite from Tier 1 slim metadata (source of truth)
   const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
-    hydrateCatalogPreferences(initialCatalog, normalizedCatalog)
+    hydrateCatalogPreferences(initialCatalog, styleMetas)
   )
 
   // Ref always pointing to latest catalog — lets async handlers snapshot/rollback
@@ -174,16 +180,58 @@ export function GarmentCatalogClient({
     () => true // server snapshot
   )
 
-  // Selected garment for drawer
+  // Selected garment for detail drawer
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
-  // Normalized colors for selected garment — matched by styleNumber (= catalog_archived.sku)
-  const selectedNormalizedColors = useMemo(() => {
-    if (!normalizedCatalog || !selectedGarment) return undefined
-    const match = normalizedCatalog.find((n) => n.styleNumber === selectedGarment.sku)
-    return match?.colors
-  }, [normalizedCatalog, selectedGarment])
+  // Tier 2 lazy state — colors + images loaded on drawer open, cached per style
+  const styleDetailsCacheRef = useRef(new Map<string, CatalogColor[]>())
+  const [drawerColors, setDrawerColors] = useState<CatalogColor[] | undefined>(undefined)
+  const [isLoadingColors, setIsLoadingColors] = useState(false)
+
+  // handleSelectGarment — opens drawer and triggers Tier 2 fetch if not cached
+  const handleSelectGarment = useCallback(
+    async (garmentId: string) => {
+      const garment = catalogRef.current.find((g) => g.id === garmentId)
+      if (!garment) return
+
+      setSelectedGarmentId(garmentId)
+
+      // Serve from client-side cache on repeat opens (same session)
+      const cached = styleDetailsCacheRef.current.get(garment.sku)
+      if (cached) {
+        setDrawerColors(cached)
+        setIsLoadingColors(false)
+        return
+      }
+
+      // No cache: show skeleton while fetching Tier 2
+      setDrawerColors(undefined)
+      setIsLoadingColors(true)
+
+      const styleId = skuToStyleId.get(garment.sku)
+      if (!styleId) {
+        clientLogger.warn('handleSelectGarment: no styleId for sku — drawer colors unavailable', {
+          sku: garment.sku,
+        })
+        setIsLoadingColors(false)
+        return
+      }
+
+      try {
+        const colors = await fetchStyleDetail(styleId)
+        styleDetailsCacheRef.current.set(garment.sku, colors)
+        setDrawerColors(colors)
+      } catch (err) {
+        clientLogger.error('fetchStyleDetail failed', { styleId, err })
+        toast.error("Couldn't load color details — try again")
+        setDrawerColors(undefined)
+      } finally {
+        setIsLoadingColors(false)
+      }
+    },
+    [skuToStyleId]
+  )
 
   // N25: Brand detail drawer state
   const [selectedBrandName, setSelectedBrandName] = useState<string | null>(null)
@@ -235,7 +283,7 @@ export function GarmentCatalogClient({
       if (brand && g.brand !== brand) continue
       // Color group filter — match styles with at least one color in the selected groups
       if (selectedGroupSet) {
-        const garmentColorGroups = styleToColorGroupNamesMap.get(g.sku)
+        const garmentColorGroups = styleColorGroupsMap.get(g.sku)
         if (!garmentColorGroups || ![...garmentColorGroups].some((g) => selectedGroupSet.has(g)))
           continue
       }
@@ -251,7 +299,7 @@ export function GarmentCatalogClient({
     filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleToColorGroupNamesMap])
+  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleColorGroupsMap])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
@@ -391,9 +439,9 @@ export function GarmentCatalogClient({
               favoriteColorIds={favoriteColorIds}
               onToggleFavorite={handleToggleFavorite}
               onBrandClick={handleBrandClick}
-              onClick={setSelectedGarmentId}
-              frontImageUrl={skuToFrontImageUrl.get(garment.sku)}
-              normalizedColors={skuToNormalizedColors.get(garment.sku)}
+              onClick={handleSelectGarment}
+              frontImageUrl={skuToCardImageUrl.get(garment.sku)}
+              normalizedColors={styleSwatches[garment.sku]}
             />
           ))}
         </div>
@@ -436,7 +484,7 @@ export function GarmentCatalogClient({
                   showPrice={showPrice}
                   onToggleEnabled={handleToggleEnabled}
                   onToggleFavorite={handleToggleFavorite}
-                  onClick={setSelectedGarmentId}
+                  onClick={handleSelectGarment}
                 />
               ))}
             </tbody>
@@ -500,8 +548,9 @@ export function GarmentCatalogClient({
           onToggleEnabled={handleToggleEnabled}
           onToggleFavorite={handleToggleFavorite}
           onBrandClick={handleBrandClick}
-          normalizedColors={selectedNormalizedColors}
-          frontImageUrl={skuToFrontImageUrl.get(selectedGarment.sku)}
+          normalizedColors={drawerColors}
+          isLoadingColors={isLoadingColors}
+          frontImageUrl={skuToCardImageUrl.get(selectedGarment.sku)}
         />
       )}
 
@@ -515,7 +564,7 @@ export function GarmentCatalogClient({
           }}
           onGarmentClick={(garmentId) => {
             setSelectedBrandName(null)
-            setSelectedGarmentId(garmentId)
+            void handleSelectGarment(garmentId)
           }}
           colors={catalogColors}
         />

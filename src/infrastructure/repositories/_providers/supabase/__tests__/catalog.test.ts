@@ -3,7 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock server-only module so tests can run outside Next.js server context
 vi.mock('server-only', () => ({}))
 
-import { parseNormalizedCatalogRow, getEffectiveStylePreferences } from '../catalog'
+// Mock next/cache so unstable_cache is a transparent passthrough in tests
+vi.mock('next/cache', () => ({
+  unstable_cache: vi.fn((fn: () => Promise<unknown>) => fn),
+}))
+
+import {
+  parseNormalizedCatalogRow,
+  getEffectiveStylePreferences,
+  getCatalogStylesSlim,
+  getCatalogColorSupplement,
+  getCatalogStyleDetail,
+} from '../catalog'
+import { verifySession } from '@infra/auth/session'
 
 // ---------------------------------------------------------------------------
 // parseNormalizedCatalogRow — unit tests (pure mapping)
@@ -132,7 +144,8 @@ const SHOP_B = '00000000-0000-4000-8000-cccccccccccc'
 const mockLimit = vi.fn()
 const mockWhere = vi.fn(() => ({ limit: mockLimit }))
 const mockSelect = vi.fn(() => ({ from: vi.fn(() => ({ where: mockWhere })) }))
-const mockDb = { select: mockSelect }
+const mockExecute = vi.fn()
+const mockDb = { select: mockSelect, execute: mockExecute }
 
 vi.mock('@shared/lib/supabase/db', () => ({ db: mockDb }))
 
@@ -210,5 +223,153 @@ describe('getEffectiveStylePreferences', () => {
     const result = await getEffectiveStylePreferences(STYLE_ID, SHOP_A)
 
     expect(result.isEnabled).toBe(false) // explicit false ≠ null; must not revert to default
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getCatalogStylesSlim — Tier 1 slim metadata
+// ---------------------------------------------------------------------------
+
+const MOCK_SESSION = { userId: 'user-1', role: 'owner' as const, shopId: 'shop-uuid-1' }
+
+describe('getCatalogStylesSlim', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns [] when verifySession returns null (unauthenticated)', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce(null)
+    const result = await getCatalogStylesSlim()
+    expect(result).toEqual([])
+  })
+
+  it('returns mapped slim styles for authenticated session', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce(MOCK_SESSION)
+    mockExecute.mockResolvedValueOnce([
+      {
+        id: '00000000-0000-4000-8000-aaaaaaaaaaaa',
+        brand_canonical: 'Bella+Canvas',
+        style_number: 'BC3001',
+        is_enabled: null,
+        is_favorite: null,
+        card_image_url: 'https://example.com/img.jpg',
+      },
+    ])
+    const result = await getCatalogStylesSlim()
+    expect(result).toHaveLength(1)
+    expect(result[0].styleNumber).toBe('BC3001')
+    expect(result[0].brand).toBe('Bella+Canvas')
+    expect(result[0].isEnabled).toBe(true) // NULL → default true
+    expect(result[0].isFavorite).toBe(false) // NULL → default false
+    expect(result[0].cardImageUrl).toBe('https://example.com/img.jpg')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getCatalogColorSupplement — Tier 1 supplement
+// ---------------------------------------------------------------------------
+
+describe('getCatalogColorSupplement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns [] when verifySession returns null (unauthenticated)', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce(null)
+    const result = await getCatalogColorSupplement()
+    expect(result).toEqual([])
+  })
+
+  it('returns mapped supplement rows for authenticated session', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce(MOCK_SESSION)
+    mockExecute.mockResolvedValueOnce([
+      {
+        style_number: 'BC3001',
+        color_id: '00000000-0000-4000-8000-cccccccccccc',
+        color_name: 'Black',
+        hex1: '#000000',
+        color_family_name: 'Neutrals',
+        color_group_name: 'Black',
+      },
+    ])
+    const result = await getCatalogColorSupplement()
+    expect(result).toHaveLength(1)
+    expect(result[0].styleNumber).toBe('BC3001')
+    expect(result[0].name).toBe('Black')
+    expect(result[0].hex1).toBe('#000000')
+    expect(result[0].colorFamilyName).toBe('Neutrals')
+    expect(result[0].colorGroupName).toBe('Black')
+  })
+
+  it('rethrows db errors', async () => {
+    vi.mocked(verifySession).mockResolvedValueOnce(MOCK_SESSION)
+    mockExecute.mockRejectedValueOnce(new Error('DB connection failed'))
+    await expect(getCatalogColorSupplement()).rejects.toThrow('DB connection failed')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getCatalogStyleDetail — Tier 2 lazy color detail
+// ---------------------------------------------------------------------------
+
+const VALID_STYLE_UUID = '00000000-0000-4000-8000-aaaaaaaaaaaa'
+
+describe('getCatalogStyleDetail', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns [] for non-UUID styleId (Zod validation)', async () => {
+    const result = await getCatalogStyleDetail('not-a-uuid')
+    expect(result).toEqual([])
+    expect(mockExecute).not.toHaveBeenCalled()
+  })
+
+  it('returns [] for empty string styleId', async () => {
+    const result = await getCatalogStyleDetail('')
+    expect(result).toEqual([])
+    expect(mockExecute).not.toHaveBeenCalled()
+  })
+
+  it('returns mapped color detail rows for valid UUID', async () => {
+    mockExecute.mockResolvedValueOnce([
+      {
+        id: '00000000-0000-4000-8000-cccccccccccc',
+        name: 'Black',
+        hex1: '#000000',
+        hex2: null,
+        color_family_name: 'Neutrals',
+        color_group_name: 'Black',
+        images: [{ imageType: 'front', url: 'https://example.com/front.jpg' }],
+      },
+    ])
+    const result = await getCatalogStyleDetail(VALID_STYLE_UUID)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('Black')
+    expect(result[0].hex1).toBe('#000000')
+    expect(result[0].images).toHaveLength(1)
+    expect(result[0].images[0].imageType).toBe('front')
+  })
+
+  it('returns item with empty images array when image schema parse fails', async () => {
+    mockExecute.mockResolvedValueOnce([
+      {
+        id: '00000000-0000-4000-8000-cccccccccccc',
+        name: 'Black',
+        hex1: '#000000',
+        hex2: null,
+        color_family_name: null,
+        color_group_name: null,
+        images: [{ badField: 'wrong-shape' }], // invalid → images: []
+      },
+    ])
+    const result = await getCatalogStyleDetail(VALID_STYLE_UUID)
+    expect(result).toHaveLength(1)
+    expect(result[0].images).toEqual([]) // parse failure degrades to empty
+  })
+
+  it('rethrows db errors', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('DB connection failed'))
+    await expect(getCatalogStyleDetail(VALID_STYLE_UUID)).rejects.toThrow('DB connection failed')
   })
 })

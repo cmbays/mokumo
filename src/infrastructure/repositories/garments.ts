@@ -1,4 +1,5 @@
 import 'server-only'
+import { z } from 'zod'
 
 // Auth classification: PUBLIC — product catalog; no PII or financial data.
 // Phase 2: May be exposed to unauthenticated customer-facing quote requests.
@@ -108,6 +109,49 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
   return mod.getNormalizedCatalog()
 }
 
+/**
+ * Fetch slim style metadata (Tier 1) — no colors, no images, with precomputed cardImageUrl.
+ * Cached 60s per shopId. Only available in supabase-catalog mode. Returns [] otherwise.
+ */
+export async function getCatalogStylesSlim(): Promise<
+  import('@domain/entities/catalog-style').CatalogStyleMetadata[]
+> {
+  if (getActiveProvider() !== 'supabase-catalog') return []
+  const mod = await loadSupabaseCatalogModule()
+  return mod.getCatalogStylesSlim()
+}
+
+/**
+ * Fetch slim color supplement (Tier 1 supplement) — name/hex1/colorGroupName per color, no images.
+ * Not cached. Only available in supabase-catalog mode. Returns [] otherwise.
+ */
+export async function getCatalogColorSupplement(): Promise<
+  import('@infra/repositories/_providers/supabase/catalog').CatalogColorSupplementRow[]
+> {
+  if (getActiveProvider() !== 'supabase-catalog') return []
+  const mod = await loadSupabaseCatalogModule()
+  return mod.getCatalogColorSupplement()
+}
+
+/**
+ * Fetch full color + image data for a single style (Tier 2, lazy on drawer open).
+ * Only available in supabase-catalog mode. Returns [] otherwise.
+ */
+const styleIdSchema = z.string().min(1).max(100)
+
+export async function getCatalogStyleDetail(
+  styleId: string
+): Promise<import('@domain/entities/catalog-style').CatalogColor[]> {
+  if (!styleIdSchema.safeParse(styleId).success) return []
+  if (getActiveProvider() !== 'supabase-catalog') return []
+  const mod = await loadSupabaseCatalogModule()
+  return mod.getCatalogStyleDetail(styleId)
+}
+
 // Phase 1 mutable export - for development only, always returns mock data
 // Client components should import from garments-phase1.ts instead
 export { getGarmentCatalogMutable }
+
+// Re-exported so app-layer files can import from '@infra/repositories/garments'
+// without importing directly from the _providers/* subdirectory (architecture rule).
+export type { CatalogColorSupplementRow } from './_providers/supabase/catalog'
