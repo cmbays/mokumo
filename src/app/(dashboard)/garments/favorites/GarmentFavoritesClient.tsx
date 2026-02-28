@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Star, Eye, EyeOff, Shirt, ExternalLink, Loader2 } from 'lucide-react'
+import { Star, Eye, EyeOff, Shirt, ExternalLink, Loader2, Palette } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@shared/lib/cn'
 import {
@@ -425,13 +425,17 @@ function BrandSidebarRow({
           {brand.brandName}
         </span>
         {(brand.favoritedStyleCount > 0 || brand.favoritedColorGroupCount > 0) && (
-          <span className="text-[10px] text-muted-foreground">
-            {brand.favoritedStyleCount}s · {brand.favoritedColorGroupCount}c
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Shirt className="h-2.5 w-2.5 shrink-0" />
+            {brand.favoritedStyleCount}
+            <span className="text-border">|</span>
+            <Palette className="h-2.5 w-2.5 shrink-0" />
+            {brand.favoritedColorGroupCount}
           </span>
         )}
       </button>
 
-      {/* Eye icon */}
+      {/* Eye icon — always visible when disabled; hover-only when enabled */}
       <button
         type="button"
         onClick={(e) => {
@@ -441,7 +445,7 @@ function BrandSidebarRow({
         aria-label={isEnabled ? 'Hide brand' : 'Show brand'}
         className={cn(
           'shrink-0 rounded p-0.5 transition-colors',
-          'md:opacity-0 md:group-hover:opacity-100',
+          !isEnabled ? 'opacity-100' : 'md:opacity-0 md:group-hover:opacity-100',
           isSelected && 'md:opacity-100',
           'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
         )}
@@ -453,7 +457,7 @@ function BrandSidebarRow({
         )}
       </button>
 
-      {/* Star icon */}
+      {/* Star icon — always visible when favorited; hover-only when not */}
       <button
         type="button"
         onClick={(e) => {
@@ -463,9 +467,8 @@ function BrandSidebarRow({
         aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
         className={cn(
           'shrink-0 rounded p-0.5 transition-colors',
-          'md:opacity-0 md:group-hover:opacity-100',
+          isFav ? 'opacity-100' : 'md:opacity-0 md:group-hover:opacity-100',
           isSelected && 'md:opacity-100',
-          isFav && 'md:opacity-100',
           'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
         )}
       >
@@ -491,11 +494,18 @@ type StyleCardProps = {
 
 function StyleCard({ style, onToggleFavorite, onToggleEnabled, onExpand }: StyleCardProps) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onExpand(style)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onExpand(style)
+        }
+      }}
       className={cn(
-        'group relative overflow-hidden rounded-lg border text-left transition-all',
+        'group relative cursor-pointer overflow-hidden rounded-lg border text-left transition-all',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action',
         style.isFavorite
           ? 'border-warning/30 bg-elevated hover:border-warning/50'
@@ -565,6 +575,6 @@ function StyleCard({ style, onToggleFavorite, onToggleEnabled, onExpand }: Style
         <p className="truncate text-xs font-medium leading-tight text-foreground">{style.name}</p>
         <p className="text-[10px] text-muted-foreground">{style.styleNumber}</p>
       </div>
-    </button>
+    </div>
   )
 }

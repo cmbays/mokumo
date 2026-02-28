@@ -81,14 +81,13 @@ export function GarmentCatalogClient({
   const router = useRouter()
   const pathname = usePathname()
 
-  // URL state
-  const category = searchParams.get('category') ?? 'all'
+  // URL state — only search + brand; these are rarely changed rapidly so server round-trips are ok
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
-  const view = searchParams.get('view') ?? 'grid'
 
-  // Local UI state — not in URL because toggling should not trigger a server re-render
-  const [showDisabled, setShowDisabled] = useState(false)
+  // Local UI state — NOT in URL to avoid server re-renders on every tab/view click
+  const [category, setCategory] = useState('all')
+  const [view, setView] = useState<'grid' | 'table'>('grid')
 
   // Color group filter
   const { selectedColorGroups, toggleColorGroup, clearColorGroups } = useColorFilter()
@@ -200,7 +199,7 @@ export function GarmentCatalogClient({
   // double-render and the react-compiler "setState in effect" lint error.
   const [page, setPage] = useState(0)
   const [lastFilterKey, setLastFilterKey] = useState('')
-  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}|${showDisabled}`
+  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}`
   if (lastFilterKey !== currentFilterKey) {
     setLastFilterKey(currentFilterKey)
     setPage(0)
@@ -221,8 +220,8 @@ export function GarmentCatalogClient({
     const filtered: GarmentCatalog[] = []
 
     for (const g of catalog) {
-      // Enabled filter — skips disabled garments unless "Show disabled" is active
-      if (!showDisabled && !g.isEnabled) continue
+      // Always hide disabled garments — toggle removed in favor of Favorites page
+      if (!g.isEnabled) continue
 
       // Search filter
       if (q) {
@@ -248,6 +247,9 @@ export function GarmentCatalogClient({
       if (category === 'all' || g.baseCategory === category) filtered.push(g)
     }
 
+    // Sort favorites first so starred garments surface to the top of the grid
+    filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
+
     return { filteredGarments: filtered, categoryHits: hits }
   }, [
     catalog,
@@ -256,7 +258,6 @@ export function GarmentCatalogClient({
     brand,
     selectedGroupSet,
     styleToColorGroupNamesMap,
-    showDisabled,
   ])
 
   // Per-page slice — enables true prev/next navigation
@@ -358,9 +359,10 @@ export function GarmentCatalogClient({
     }
   }, [])
 
-  // Fix #11: handleClearAll for empty state CTA
+  // handleClearAll for empty state CTA — clears URL params + resets local category state
   const handleClearAll = useCallback(() => {
     router.replace(pathname, { scroll: false })
+    setCategory('all')
   }, [router, pathname])
 
   return (
@@ -374,8 +376,10 @@ export function GarmentCatalogClient({
         garmentCount={filteredGarments.length}
         onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
-        showDisabled={showDisabled}
-        onShowDisabledChange={setShowDisabled}
+        category={category}
+        onCategoryChange={setCategory}
+        view={view}
+        onViewChange={setView}
         availableColorGroups={brandAvailableColorGroups}
       />
 

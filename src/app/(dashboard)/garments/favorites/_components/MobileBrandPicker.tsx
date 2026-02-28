@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Star, Eye, EyeOff } from 'lucide-react'
+import { ChevronDown, Star, Eye, EyeOff, Shirt, Palette } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import type { BrandSummaryRow } from '../actions'
 
@@ -47,9 +47,13 @@ export function MobileBrandPicker({
         <span className="flex-1 text-left font-medium">
           {selected?.brandName ?? 'Select a brand'}
         </span>
-        {selected && (
-          <span className="text-xs text-muted-foreground">
-            {selected.favoritedStyleCount}s · {selected.favoritedColorGroupCount}c
+        {selected && (selected.favoritedStyleCount > 0 || selected.favoritedColorGroupCount > 0) && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Shirt className="h-3 w-3 shrink-0" />
+            {selected.favoritedStyleCount}
+            <span className="text-border">|</span>
+            <Palette className="h-3 w-3 shrink-0" />
+            {selected.favoritedColorGroupCount}
           </span>
         )}
         <ChevronDown
@@ -97,8 +101,12 @@ export function MobileBrandPicker({
                       {brand.brandName}
                     </span>
                     {(brand.favoritedStyleCount > 0 || brand.favoritedColorGroupCount > 0) && (
-                      <span className="text-xs text-muted-foreground">
-                        {brand.favoritedStyleCount}s · {brand.favoritedColorGroupCount}c
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Shirt className="h-3 w-3 shrink-0" />
+                        {brand.favoritedStyleCount}
+                        <span className="text-border">|</span>
+                        <Palette className="h-3 w-3 shrink-0" />
+                        {brand.favoritedColorGroupCount}
                       </span>
                     )}
                   </button>

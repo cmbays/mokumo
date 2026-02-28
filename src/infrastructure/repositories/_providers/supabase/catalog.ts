@@ -150,7 +150,7 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
           ) FILTER (WHERE csi.id IS NOT NULL),
           '[]'::json
         ) AS sizes,
-        csp.is_enabled,
+        (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
         csp.is_favorite
       FROM catalog_styles cs
       JOIN catalog_brands cb ON cb.id = cs.brand_id
@@ -160,7 +160,11 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
         ON csp.style_id = cs.id
         AND csp.scope_type = 'shop'
         AND csp.scope_id = ${session.shopId}
-      GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite
+      LEFT JOIN catalog_brand_preferences cbp
+        ON cbp.brand_id = cs.brand_id
+        AND cbp.scope_type = 'shop'
+        AND cbp.scope_id = ${session.shopId}
+      GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite, cbp.is_enabled
       ORDER BY cs.name ASC
     `)
     rows = result as unknown[]
