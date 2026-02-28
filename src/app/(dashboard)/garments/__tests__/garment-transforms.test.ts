@@ -82,7 +82,37 @@ describe('buildSkuToFrontImageUrl', () => {
     expect(map.has('BC3001')).toBe(false)
   })
 
-  it('returns no entry when color has no front image', () => {
+  it('falls back to first available image type when no front image exists', () => {
+    // Bayside-style: only 'back' and 'swatch' images in catalog_images
+    const backUrl = 'https://cdn.ssactivewear.com/Images/Color/1_b.jpg'
+    const normalized = [
+      makeNormalized({
+        styleNumber: 'BC3001',
+        colors: [
+          {
+            id: 'c1',
+            styleId: 'uuid-001',
+            name: 'Black',
+            hex1: '#000000',
+            hex2: null,
+            images: [
+              { imageType: 'back', url: backUrl },
+              {
+                imageType: 'swatch',
+                url: 'https://cdn.ssactivewear.com/Images/Color/1_sw.jpg',
+              },
+            ],
+          },
+        ],
+      }),
+    ]
+    const map = buildSkuToFrontImageUrl(normalized)
+    // 'back' is next in preference order after 'front' and 'on-model-front'
+    expect(map.get('BC3001')).toBe(backUrl)
+  })
+
+  it('prefers on-model-front over back when no front image exists', () => {
+    const onModelUrl = 'https://cdn.ssactivewear.com/Images/Color/1_omf.jpg'
     const normalized = [
       makeNormalized({
         styleNumber: 'BC3001',
@@ -95,7 +125,28 @@ describe('buildSkuToFrontImageUrl', () => {
             hex2: null,
             images: [
               { imageType: 'back', url: 'https://cdn.ssactivewear.com/Images/Color/1_b.jpg' },
+              { imageType: 'on-model-front', url: onModelUrl },
             ],
+          },
+        ],
+      }),
+    ]
+    const map = buildSkuToFrontImageUrl(normalized)
+    expect(map.get('BC3001')).toBe(onModelUrl)
+  })
+
+  it('returns no entry when style has no images at all', () => {
+    const normalized = [
+      makeNormalized({
+        styleNumber: 'BC3001',
+        colors: [
+          {
+            id: 'c1',
+            styleId: 'uuid-001',
+            name: 'Black',
+            hex1: '#000000',
+            hex2: null,
+            images: [],
           },
         ],
       }),
