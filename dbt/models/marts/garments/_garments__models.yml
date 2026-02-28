@@ -1,6 +1,57 @@
 version: 2
 
 models:
+  - name: dim_color_groups
+    description: >
+      Color group dimension — one row per distinct color_group_name from
+      catalog_colors. More granular than color families — represents S&S's
+      specific color groupings (e.g. 'Navy', 'Royal Blue', 'Sky Blue').
+      Used for analytics on color group distribution and popularity.
+      The catalog filter UI reads directly from catalog_colors (OLTP) for
+      real-time freshness; this mart is for reporting only.
+      Grain: one row per color_group_name.
+      Source: public.catalog_colors (OLTP read — acceptable at 30k rows;
+      re-evaluate at 500k).
+    columns:
+      - name: color_group_key
+        description: >
+          Surrogate key generated from color_group_name.
+          Deterministic MD5 hash via dbt_utils.generate_surrogate_key.
+        data_tests:
+          - unique
+          - not_null
+      - name: color_group_name
+        description: >
+          S&S color group name (e.g. 'Navy', 'Royal Blue', 'Sky Blue').
+          More specific than color_family_name. Nulls are excluded at the
+          model level (WHERE color_group_name IS NOT NULL).
+        data_tests:
+          - not_null
+      - name: style_count
+        description: >
+          Number of distinct catalog_styles with at least one color in this group.
+        data_tests:
+          - not_null
+      - name: swatch_count
+        description: >
+          Total number of catalog_colors rows in this group (may include
+          multiple styles with the same color group name).
+        data_tests:
+          - not_null
+      - name: representative_hex
+        description: >
+          Most common hex1 value among colors in this group (PostgreSQL mode() aggregate).
+          NULL when no hex1 values exist in the group.
+      - name: source
+        description: >
+          Source of the color data — always 'catalog' for this mart.
+          Extensible when SanMar or other suppliers populate catalog_colors.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['catalog']
+
   - name: dim_color_families
     description: >
       Color family dimension — one row per distinct color_family_name from

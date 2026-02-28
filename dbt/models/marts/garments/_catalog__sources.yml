@@ -14,7 +14,8 @@ sources:
       - name: catalog_colors
         description: >
           One row per (style_id, color_name). Contains color metadata including
-          color_family_name (from S&S API) populated after migration 0016 sync.
+          color_family_name (broad S&S bucket) and color_group_name (more specific
+          S&S grouping), both populated during sync.
         columns:
           - name: id
             description: UUID primary key.
@@ -31,9 +32,15 @@ sources:
               - not_null
           - name: color_family_name
             description: >
-              Human-curated color family from S&S API (e.g. 'Navy', 'Black', 'Royal').
+              Broad color family from S&S API (e.g. 'Blue', 'Green', 'Red').
               NULL for rows synced before migration 0016 or for non-S&S sources.
               Used by dim_color_families mart as the grouping key.
+          - name: color_group_name
+            description: >
+              More specific S&S color grouping (e.g. 'Navy', 'Royal Blue', 'Sky Blue').
+              More granular than color_family_name. NULL for non-S&S sources.
+              Used by dim_color_groups mart as the grouping key.
+              The catalog filter UI reads this directly from catalog_colors (OLTP).
           - name: color_code
             description: >
               Supplier color code (e.g. '032'). Nullable. Future cross-supplier join key.
