@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -94,7 +94,7 @@ jobs:
       PUSH_BEFORE_SHA: ${{ github.event.before }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -201,7 +201,7 @@ jobs:
     # Production deploys via Vercel's native Git integration (tracks production branch)
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Deploy to Vercel preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -222,7 +222,7 @@ jobs:
       PUSH_BEFORE_SHA: ${{ github.event.before }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -302,7 +302,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create CalVer release with auto-generated notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
