@@ -115,7 +115,7 @@ function getAmbientContext(): LogContext {
         level: 'error',
         message: 'Log context getter threw — ambient context fields missing from this entry',
         timestamp: new Date().toISOString(),
-        err: err instanceof Error ? err.message : String(err),
+        err: Error.isError(err) ? err.message : String(err),
       })
     )
     return {}
