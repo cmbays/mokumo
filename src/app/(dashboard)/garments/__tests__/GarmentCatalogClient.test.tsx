@@ -52,11 +52,7 @@ vi.mock('@features/garments/hooks/useColorFilter', () => ({
 // Stub out the toolbar and drawers — they have their own complex deps
 // and are not the subject of these tests
 vi.mock('../_components/GarmentCatalogToolbar', () => ({
-  GarmentCatalogToolbar: ({
-    onViewChange,
-  }: {
-    onViewChange: (view: 'grid' | 'table') => void
-  }) => (
+  GarmentCatalogToolbar: ({ onViewChange }: { onViewChange: (view: 'grid' | 'table') => void }) => (
     <div data-testid="toolbar">
       <button data-testid="table-view-btn" onClick={() => onViewChange('table')} />
     </div>
@@ -433,6 +429,5 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       expect(screen.getByRole('switch', { name: /enabled tee/i })).toBeInTheDocument()
       expect(screen.queryByRole('switch', { name: /disabled tee/i })).not.toBeInTheDocument()
     })
-
   })
 })
