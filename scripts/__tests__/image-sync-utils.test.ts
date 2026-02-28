@@ -233,51 +233,33 @@ describe('mapSSProductToColorValue', () => {
   })
 
   it('sets colorFamilyName to null when colorFamily is undefined', () => {
-    const result = mapSSProductToColorValue(
-      makeProduct({ colorFamily: undefined }),
-      STYLE_UUID
-    )
+    const result = mapSSProductToColorValue(makeProduct({ colorFamily: undefined }), STYLE_UUID)
     expect(result.colorFamilyName).toBeNull()
   })
 
   it('sets colorFamilyName to null when colorFamily is empty string (falsy coercion)', () => {
     // S&S returns "" for missing colorFamily — must become null, not ""
-    const result = mapSSProductToColorValue(
-      makeProduct({ colorFamily: '' }),
-      STYLE_UUID
-    )
+    const result = mapSSProductToColorValue(makeProduct({ colorFamily: '' }), STYLE_UUID)
     expect(result.colorFamilyName).toBeNull()
   })
 
   it('sets colorFamilyName to null when colorFamily is whitespace-only', () => {
-    const result = mapSSProductToColorValue(
-      makeProduct({ colorFamily: '   ' }),
-      STYLE_UUID
-    )
+    const result = mapSSProductToColorValue(makeProduct({ colorFamily: '   ' }), STYLE_UUID)
     expect(result.colorFamilyName).toBeNull()
   })
 
   it('trims whitespace from colorFamily', () => {
-    const result = mapSSProductToColorValue(
-      makeProduct({ colorFamily: '  Blues  ' }),
-      STYLE_UUID
-    )
+    const result = mapSSProductToColorValue(makeProduct({ colorFamily: '  Blues  ' }), STYLE_UUID)
     expect(result.colorFamilyName).toBe('Blues')
   })
 
   it('trims whitespace from colorGroupName', () => {
-    const result = mapSSProductToColorValue(
-      makeProduct({ colorGroupName: '  Navy  ' }),
-      STYLE_UUID
-    )
+    const result = mapSSProductToColorValue(makeProduct({ colorGroupName: '  Navy  ' }), STYLE_UUID)
     expect(result.colorGroupName).toBe('Navy')
   })
 
   it('sets colorGroupName to null when undefined', () => {
-    const result = mapSSProductToColorValue(
-      makeProduct({ colorGroupName: undefined }),
-      STYLE_UUID
-    )
+    const result = mapSSProductToColorValue(makeProduct({ colorGroupName: undefined }), STYLE_UUID)
     expect(result.colorGroupName).toBeNull()
   })
 
