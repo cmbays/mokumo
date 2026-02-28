@@ -312,6 +312,34 @@ export async function getColorFavorites(scopeType: 'shop', scopeId: string): Pro
 }
 
 // ---------------------------------------------------------------------------
+// fetchStyleDetail — Tier 2 lazy load for garment drawer
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch full color + image data for a single catalog style.
+ *
+ * Called by GarmentCatalogClient when a garment drawer opens and the detail
+ * is not yet in the client-side cache. Returns CatalogColor[] including all
+ * image URLs for the ImageTypeCarousel. Expected latency: ~10-50 ms.
+ *
+ * Security: requires an authenticated session. styleId validated as UUID.
+ */
+export async function fetchStyleDetail(
+  styleId: string
+): Promise<import('@domain/entities/catalog-style').CatalogColor[]> {
+  const parsed = uuidSchema.safeParse(styleId)
+  if (!parsed.success) {
+    actionsLogger.warn('fetchStyleDetail called with invalid styleId', { styleId })
+    return []
+  }
+  const session = await verifySession()
+  if (!session) return []
+
+  const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
+  return getCatalogStyleDetail(styleId)
+}
+
+// ---------------------------------------------------------------------------
 // getBrandColorFavorites
 // ---------------------------------------------------------------------------
 

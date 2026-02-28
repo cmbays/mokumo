@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Palette, Ruler } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
@@ -43,6 +43,8 @@ type GarmentDetailDrawerProps = {
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
   /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
   normalizedColors?: CatalogColor[]
+  /** True while Tier 2 style detail is loading — shows pulse skeleton in image + colors sections. */
+  isLoadingColors?: boolean
   /** Real front image URL from catalog_images — shown in GarmentImage when no normalized colors available. */
   frontImageUrl?: string
 }
@@ -58,15 +60,27 @@ export function GarmentDetailDrawer({
   onBrandClick,
   favoriteContext = { context: 'global' },
   normalizedColors,
+  isLoadingColors = false,
   frontImageUrl,
 }: GarmentDetailDrawerProps) {
   const [selectedColorId, setSelectedColorId] = useState<string | null>(
     garment.availableColors[0] ?? null
   )
-  // Normalized path: tracks selected CatalogColor.id (UUID) for image carousel
+  // Normalized path: tracks selected CatalogColor.id (UUID) for image carousel.
+  // Starts null because drawer mounts before Tier 2 fetch completes (isLoadingColors=true).
+  // Effect below initializes to first color once normalizedColors arrives.
   const [selectedCatalogColorId, setSelectedCatalogColorId] = useState<string | null>(
     normalizedColors?.[0]?.id ?? null
   )
+
+  // When Tier 2 data arrives after the drawer has already mounted (async load),
+  // select the first color so the carousel has something to show.
+  useEffect(() => {
+    if (normalizedColors && normalizedColors.length > 0 && selectedCatalogColorId === null) {
+      setSelectedCatalogColorId(normalizedColors[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedColors])
 
   // Version counter — forces re-render after mock data isFavorite mutation
   const [favoriteVersion, setFavoriteVersion] = useState(0)
@@ -153,8 +167,10 @@ export function GarmentDetailDrawer({
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-6 p-4">
-            {/* Garment image — carousel when normalized color images are available, placeholder fallback otherwise */}
-            {selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
+            {/* Garment image — skeleton while Tier 2 loads, carousel when ready, placeholder fallback */}
+            {isLoadingColors && !normalizedColors ? (
+              <div className="aspect-square w-full rounded-md bg-surface animate-pulse" />
+            ) : selectedNormalizedColor && selectedNormalizedColor.images.length > 0 ? (
               <ImageTypeCarousel
                 images={selectedNormalizedColor.images}
                 alt={`${garment.name} — ${selectedNormalizedColor.name}`}
@@ -218,12 +234,21 @@ export function GarmentDetailDrawer({
               <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <Palette size={14} aria-hidden="true" />
                 Colors
-                <span className="text-muted-foreground/60">
-                  ({normalizedColors ? normalizedColors.length : garmentColors.length})
-                </span>
+                {!(isLoadingColors && !normalizedColors) && (
+                  <span className="text-muted-foreground/60">
+                    ({normalizedColors ? normalizedColors.length : garmentColors.length})
+                  </span>
+                )}
               </h3>
 
-              {normalizedColors && normalizedColors.length > 0 ? (
+              {isLoadingColors && !normalizedColors ? (
+                // Pulse skeleton while Tier 2 fetch is in-flight
+                <div className="flex flex-wrap gap-px" aria-busy="true" aria-label="Loading colors">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="h-10 w-10 rounded-sm bg-surface animate-pulse" />
+                  ))}
+                </div>
+              ) : normalizedColors && normalizedColors.length > 0 ? (
                 // Real S&S colors from catalog_colors — clicking a swatch drives the image carousel
                 <>
                   <div className="flex flex-wrap gap-px" role="group" aria-label="Available colors">
