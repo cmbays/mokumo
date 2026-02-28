@@ -252,13 +252,14 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
 /**
  * Inner fetch for slim style metadata. Receives shopId explicitly.
  *
- * Query design — LATERAL subquery for card image URL:
- *   For each of the 4,808 catalog_styles rows, a LATERAL subquery finds the best
- *   available image using the CARD_IMAGE_PREFERENCE order (front → on-model-front → …).
+ * Query design — 6 columns only (the fields GarmentCatalogClient actually uses):
+ *   id, brand, style_number, is_enabled, is_favorite, card_image_url.
+ *   No name/description/category — those are already on GarmentCatalog and are
+ *   Tier 2 drawer data. Stripping them keeps the payload ~1.2 MB (under 2 MB cache limit).
+ *
+ *   LATERAL subquery finds the best card image per style using CARD_IMAGE_PREFERENCE order.
  *   Uses the covering index on catalog_images(color_id, image_type) INCLUDE (url) from
  *   migration 0019 for index-only scans per color lookup.
- *
- * Payload: ~225 bytes/style × 4,808 styles ≈ ~1.2 MB — fits under the 2 MB unstable_cache limit.
  */
 async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMetadata[]> {
   const { db } = await import('@shared/lib/supabase/db')
@@ -268,14 +269,8 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
     const result = await db.execute(sql`
       SELECT
         cs.id,
-        cs.source,
-        cs.external_id,
         cb.canonical_name AS brand_canonical,
         cs.style_number,
-        cs.name,
-        cs.description,
-        cs.category,
-        cs.subcategory,
         (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
         csp.is_favorite,
         card_img.url AS card_image_url
@@ -308,7 +303,7 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
           END
         LIMIT 1
       ) card_img ON true
-      ORDER BY cs.name ASC
+      ORDER BY cs.style_number ASC
     `)
     rows = result as unknown[]
   } catch (err) {
@@ -322,39 +317,20 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
   for (const row of rows) {
     const r = row as {
       id: string
-      source: string
-      external_id: string
       brand_canonical: string
       style_number: string
-      name: string
-      description: string | null
-      category: string
-      subcategory: string | null
       is_enabled: boolean | null
       is_favorite: boolean | null
       card_image_url: string | null
     }
-    try {
-      parsed.push({
-        id: r.id,
-        source: r.source,
-        externalId: r.external_id,
-        brand: r.brand_canonical,
-        styleNumber: r.style_number,
-        name: r.name,
-        description: r.description,
-        category: garmentCategoryEnum.parse(r.category),
-        subcategory: r.subcategory,
-        isEnabled: r.is_enabled ?? true,
-        isFavorite: r.is_favorite ?? false,
-        cardImageUrl: r.card_image_url,
-      })
-    } catch (err) {
-      repoLogger.error('parseCatalogStyleMetadata failed — skipping row', {
-        err,
-        styleId: r.id,
-      })
-    }
+    parsed.push({
+      id: r.id,
+      brand: r.brand_canonical,
+      styleNumber: r.style_number,
+      isEnabled: r.is_enabled ?? true,
+      isFavorite: r.is_favorite ?? false,
+      cardImageUrl: r.card_image_url,
+    })
   }
   return parsed
 }

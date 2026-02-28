@@ -123,14 +123,8 @@ function makeGarment(overrides: Partial<GarmentCatalog> = {}): GarmentCatalog {
 function makeStyleMeta(overrides: Partial<CatalogStyleMetadata> = {}): CatalogStyleMetadata {
   return {
     id: STYLE_UUID_A,
-    source: 'ss',
-    externalId: '12345',
     brand: 'Bella+Canvas',
     styleNumber: 'BC3001',
-    name: 'Unisex Jersey Tee',
-    description: null,
-    category: 't-shirts',
-    subcategory: null,
     isEnabled: true,
     isFavorite: false,
     cardImageUrl: null,

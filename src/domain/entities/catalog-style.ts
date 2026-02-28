@@ -49,20 +49,16 @@ export type CatalogSize = z.infer<typeof catalogSizeSchema>
 /**
  * Slim catalog style for Tier 1 (initial page load).
  *
- * Contains only style metadata + a precomputed card image URL.
- * No colors, no images — serializes to ~225 bytes per style (~1.2 MB total for 4,808 styles).
- * Safe to cache with unstable_cache(60s).
+ * Contains only the 6 fields GarmentCatalogClient actually uses — no name, description,
+ * category, source, externalId (those are already on GarmentCatalog from the legacy table
+ * and are Tier 2 drawer data anyway).
+ *
+ * ~250 bytes/style × 4,808 styles ≈ 1.2 MB — safely under Next.js unstable_cache's 2 MB limit.
  */
 export const catalogStyleMetadataSchema = z.object({
   id: z.string().uuid(),
-  source: z.string().min(1),
-  externalId: z.string().min(1),
   brand: z.string().min(1),
   styleNumber: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().nullable(),
-  category: garmentCategoryEnum,
-  subcategory: z.string().nullable(),
   isEnabled: z.boolean(),
   isFavorite: z.boolean(),
   /** Precomputed in SQL — best available image following CARD_IMAGE_PREFERENCE order. */
