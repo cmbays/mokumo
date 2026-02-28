@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import Image from 'next/image'
+import { useMemo } from 'react'
 import { cn } from '@shared/lib/cn'
-import { GarmentMockup } from '@features/quotes/components/mockup'
+import { GarmentImage } from '@shared/ui/organisms/GarmentImage'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { ColorSwatchStrip } from '@shared/ui/organisms/ColorSwatchStrip'
 import { Badge } from '@shared/ui/primitives/badge'
@@ -53,8 +52,6 @@ export function GarmentCard({
     ? (garment.colors[0]?.images.find((i) => i.imageType === 'front')?.url ?? frontImageUrl)
     : frontImageUrl
 
-  const [imgError, setImgError] = useState(false)
-
   const sku = isNormalized(garment) ? garment.styleNumber : garment.sku
 
   // Colors for the swatch strip — priority: normalizedColors (real S&S hex, non-empty)
@@ -90,46 +87,23 @@ export function GarmentCard({
       )}
     >
       {/* Image — FavoriteStar overlays top-right corner */}
-      {displayImageUrl && !imgError ? (
-        <div className="relative aspect-square w-full bg-surface">
-          <Image
-            src={displayImageUrl}
-            alt={`${garment.name} front view`}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain"
-            onError={() => setImgError(true)}
+      <div className="relative aspect-square w-full bg-surface">
+        <GarmentImage
+          brand={garment.brand}
+          sku={sku}
+          name={garment.name}
+          imageUrl={displayImageUrl}
+          className="w-full h-full"
+        />
+        <div className="absolute top-1.5 right-1.5 z-10">
+          <FavoriteStar
+            isFavorite={garment.isFavorite}
+            onToggle={() => onToggleFavorite(garment.id)}
+            size={14}
+            className="bg-background/60 rounded-full"
           />
-          <div className="absolute top-1.5 right-1.5 z-10">
-            <FavoriteStar
-              isFavorite={garment.isFavorite}
-              onToggle={() => onToggleFavorite(garment.id)}
-              size={14}
-              className="bg-background/60 rounded-full"
-            />
-          </div>
         </div>
-      ) : (
-        <div className="relative flex aspect-square w-full items-center justify-center bg-surface">
-          <GarmentMockup
-            garmentCategory={isNormalized(garment) ? garment.category : garment.baseCategory}
-            colorHex={
-              isNormalized(garment)
-                ? (garment.colors[0]?.hex1 ?? '#ffffff')
-                : (garmentColors[0]?.hex ?? '#ffffff')
-            }
-            size="md"
-          />
-          <div className="absolute top-1.5 right-1.5 z-10">
-            <FavoriteStar
-              isFavorite={garment.isFavorite}
-              onToggle={() => onToggleFavorite(garment.id)}
-              size={14}
-              className="ring-1 ring-border rounded-full"
-            />
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Info strip */}
       <div className="px-2.5 py-2 space-y-0.5">

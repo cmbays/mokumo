@@ -6,7 +6,6 @@ import { getCustomerById } from '@infra/repositories/customers'
 import { getQuoteById } from '@infra/repositories/quotes'
 import { getInvoiceById } from '@infra/repositories/invoices'
 import { getGarmentById } from '@infra/repositories/garments'
-import { getColorById } from '@infra/repositories/colors'
 import { getArtworks } from '@infra/repositories/artworks'
 import { normalizePosition } from '@domain/constants/print-zones'
 import { JobDetail } from './_components/JobDetail'
@@ -36,14 +35,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const garmentId = job.garmentDetails[0]?.garmentId
-  const colorId = job.garmentDetails[0]?.colorId
 
-  const [customer, quote, invoice, garment, color, artworks] = await Promise.all([
+  const [customer, quote, invoice, garment, artworks] = await Promise.all([
     getCustomerById(job.customerId),
     job.sourceQuoteId ? getQuoteById(job.sourceQuoteId) : Promise.resolve(null),
     job.invoiceId ? getInvoiceById(job.invoiceId) : Promise.resolve(null),
     garmentId ? getGarmentById(garmentId) : Promise.resolve(null),
-    colorId ? getColorById(colorId) : Promise.resolve(null),
     getArtworks(),
   ])
 
@@ -51,24 +48,21 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const quoteTotal = quote?.total
   const invoiceStatus = invoice?.status
 
-  const mockupData =
-    garment && color
-      ? {
-          garmentCategory: garment.baseCategory,
-          colorHex: color.hex,
-          artworkPlacements: job.printLocations
-            .map((loc, i) => {
-              const artworkId = i < job.artworkIds.length ? job.artworkIds[i] : undefined
-              const artwork = artworkId ? artworks.find((a) => a.id === artworkId) : undefined
-              return {
-                artworkUrl: artwork?.thumbnailUrl ?? '',
-                position: normalizePosition(loc.position),
-              }
-            })
-            .filter((p): p is ArtworkPlacement => Boolean(p.artworkUrl)),
-          colors: [color.hex],
-        }
-      : null
+  const mockupData = garment
+    ? {
+        garmentCategory: garment.baseCategory,
+        artworkPlacements: job.printLocations
+          .map((loc, i) => {
+            const artworkId = i < job.artworkIds.length ? job.artworkIds[i] : undefined
+            const artwork = artworkId ? artworks.find((a) => a.id === artworkId) : undefined
+            return {
+              artworkUrl: artwork?.thumbnailUrl ?? '',
+              position: normalizePosition(loc.position),
+            }
+          })
+          .filter((p): p is ArtworkPlacement => Boolean(p.artworkUrl)),
+      }
+    : null
 
   return (
     <JobDetail

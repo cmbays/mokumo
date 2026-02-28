@@ -137,56 +137,6 @@ describe('computeArtworkRect', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Filter ID construction
-// ---------------------------------------------------------------------------
-
-describe('filter ID construction', () => {
-  it('generates consistent filter ID from hex color', () => {
-    const hex = '#2ab9ff'
-    const filterId = `garment-tint-${hex.replace('#', '').toLowerCase()}`
-    expect(filterId).toBe('garment-tint-2ab9ff')
-  })
-
-  it('normalizes uppercase hex', () => {
-    const hex = '#2AB9FF'
-    const filterId = `garment-tint-${hex.replace('#', '').toLowerCase()}`
-    expect(filterId).toBe('garment-tint-2ab9ff')
-  })
-
-  it('matches between GarmentMockup and MockupFilterProvider', () => {
-    // Both use the same pattern: garment-tint-{hex without #, lowercase}
-    const color = '#FF5733'
-    const mockupId = `garment-tint-${color.replace('#', '').toLowerCase()}`
-    const providerId = `garment-tint-${color.replace('#', '').toLowerCase()}`
-    expect(mockupId).toBe(providerId)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// MockupFilterProvider deduplication logic
-// ---------------------------------------------------------------------------
-
-describe('MockupFilterProvider deduplication', () => {
-  it('deduplicates colors by lowercase normalization', () => {
-    const colors = ['#FF5733', '#ff5733', '#FF5733', '#2ab9ff']
-    const unique = [...new Set(colors.map((c) => c.toLowerCase()))]
-    expect(unique).toEqual(['#ff5733', '#2ab9ff'])
-  })
-
-  it('handles empty color array', () => {
-    const colors: string[] = []
-    const unique = [...new Set(colors.map((c) => c.toLowerCase()))]
-    expect(unique).toEqual([])
-  })
-
-  it('handles single color', () => {
-    const colors = ['#000000']
-    const unique = [...new Set(colors.map((c) => c.toLowerCase()))]
-    expect(unique).toEqual(['#000000'])
-  })
-})
-
-// ---------------------------------------------------------------------------
 // Every position in PRINT_ZONES maps to a VIEW_POSITION_MAP view
 // ---------------------------------------------------------------------------
 

@@ -7,7 +7,6 @@ import { DiscountRow } from './DiscountRow'
 import { QuoteActions } from './QuoteActions'
 import { EmailPreviewModal } from './EmailPreviewModal'
 import {
-  MockupFilterProvider,
   GarmentMockupThumbnail,
   GarmentMockupModal,
   GarmentMockupCard,
@@ -30,7 +29,7 @@ function positionToLockedView(position: string): MockupView | undefined {
 }
 import { Button } from '@shared/ui/primitives/button'
 import Link from 'next/link'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Copy, DollarSign, Hammer, Info, Pencil, Receipt, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { MatrixPeekSheet } from './MatrixPeekSheet'
@@ -108,17 +107,8 @@ export function QuoteDetailView({
   const subtotal = toNumber(money(garmentTotal).plus(decorationTotal).plus(setupFeesTotal))
   const effectiveTotal = quote.total
 
-  const garmentColors = useMemo(
-    () =>
-      quote.lineItems
-        .map((item) => allColors.find((c) => c.id === item.colorId)?.hex)
-        .filter(Boolean) as string[],
-    [quote.lineItems, allColors]
-  )
-
   return (
     <div className={cn('space-y-6', mode === 'detail' && 'pb-20 md:pb-0')}>
-      {garmentColors.length > 0 && <MockupFilterProvider colors={garmentColors} />}
       {/* Header — sticky at top */}
       <div className="sticky top-0 z-10 rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -175,19 +165,15 @@ export function QuoteDetailView({
           const firstGarment = firstItem
             ? garmentCatalog.find((g) => g.id === firstItem.garmentId)
             : undefined
-          const firstColor = firstItem
-            ? allColors.find((c) => c.id === firstItem.colorId)
-            : undefined
           const firstDetail = firstItem?.printLocationDetails[0]
           const firstArtwork = firstDetail?.artworkId
             ? artworkMap.get(firstDetail.artworkId)
             : undefined
-          if (!firstGarment || !firstColor) return null
+          if (!firstGarment) return null
           return (
             <GarmentMockupCard
               size="lg"
               garmentCategory={firstGarment.baseCategory}
-              colorHex={firstColor.hex}
               artworkPlacements={
                 firstArtwork && firstDetail
                   ? [
@@ -296,7 +282,6 @@ export function QuoteDetailView({
                       {color && (
                         <GarmentMockupModal
                           garmentCategory={garment?.baseCategory ?? 't-shirts'}
-                          colorHex={color.hex}
                           artworkPlacements={
                             artwork
                               ? [
@@ -311,7 +296,6 @@ export function QuoteDetailView({
                         >
                           <GarmentMockupThumbnail
                             garmentCategory={garment?.baseCategory ?? 't-shirts'}
-                            colorHex={color.hex}
                             view={
                               positionToLockedView(normalizePosition(detail.location)) ?? 'front'
                             }

@@ -1,9 +1,9 @@
 'use client'
 
 import { useId, useMemo } from 'react'
+import { Shirt } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { getZoneForPosition, getZonesForCategory } from '@domain/constants/print-zones'
-import { hexToColorMatrix } from '@domain/rules/color.rules'
 import type { GarmentCategory } from '@domain/entities/garment'
 import type { MockupView } from '@domain/entities/mockup-template'
 
@@ -25,26 +25,6 @@ function isResolved<T extends Record<string, unknown>>(p: T | null): p is T & Re
 
 const EMPTY_PLACEMENTS: ArtworkPlacement[] = []
 
-function isHexDark(hex: string): boolean {
-  const clean = hex.replace('#', '').padEnd(6, '0')
-  const r = parseInt(clean.slice(0, 2), 16)
-  const g = parseInt(clean.slice(2, 4), 16)
-  const b = parseInt(clean.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.4
-}
-
-function resolveTemplatePath(
-  category: GarmentCategory,
-  colorHex: string,
-  view: MockupView
-): string {
-  if (category === 't-shirts') {
-    const shade = isHexDark(colorHex) ? 'black' : 'white'
-    return `/mockup-templates/${category}-${view}-${shade}.png`
-  }
-  return `/mockup-templates/${category}-${view}.svg`
-}
-
 // Size presets (classes applied to the root wrapper)
 const SIZE_CLASSES = {
   xs: 'w-10 h-12', // 40x48 — Kanban cards, table rows
@@ -55,52 +35,37 @@ const SIZE_CLASSES = {
 
 type GarmentMockupProps = {
   garmentCategory: GarmentCategory
-  /**
-   * The hex color used for SVG color tinting (e.g. '#ffffff').
-   * Only used when `imageUrl` is absent — pass any value when providing `imageUrl`.
-   */
-  colorHex: string
   artworkPlacements?: ArtworkPlacement[]
   view?: MockupView
   size?: keyof typeof SIZE_CLASSES
   className?: string
-  /** Path to SVG template. Falls back to /mockup-templates/{category}-{view}.svg */
-  templatePath?: string
   /** ViewBox width of the SVG template. Defaults to 400. */
   viewBoxWidth?: number
   /** ViewBox height of the SVG template. Defaults to 480. */
   viewBoxHeight?: number
   /** Dev-only: renders dashed amber overlay showing print zone boundaries. */
   debug?: boolean
-  /** Real S&S product photo URL. When provided, renders as the base layer instead of SVG tinting. */
+  /** Real S&S product photo URL. When absent, renders a Lucide Shirt empty state. */
   imageUrl?: string
 }
 
 /**
  * Core SVG composition engine for garment mockups.
- * Renders a garment template with color tinting and artwork overlays.
- *
- * Self-contained: renders its own inline feColorMatrix filter for color
- * tinting. MockupFilterProvider is optional — when present, it provides
- * shared filter definitions that the browser deduplicates for performance.
- * Uses mix-blend-mode: multiply for realistic fabric texture.
+ * Renders a garment base layer (real photo or empty state) with artwork overlays.
+ * Uses mix-blend-mode: multiply on artwork images for realistic fabric texture.
  */
 export function GarmentMockup({
   garmentCategory,
-  colorHex,
   artworkPlacements = EMPTY_PLACEMENTS,
   view = 'front',
   size = 'md',
   className,
-  templatePath,
   viewBoxWidth = 400,
   viewBoxHeight = 480,
   debug = false,
   imageUrl,
 }: GarmentMockupProps) {
   const instanceId = useId()
-  const svgPath = templatePath ?? resolveTemplatePath(garmentCategory, colorHex, view)
-  const filterId = `garment-tint-${colorHex.replace('#', '').toLowerCase()}`
 
   // Resolve print zones for artwork placements
   const resolvedPlacements = useMemo(
@@ -129,19 +94,7 @@ export function GarmentMockup({
         role="img"
         aria-label={`${garmentCategory} mockup - ${view} view`}
       >
-        {/* Inline color tint filter — self-contained fallback.
-            MockupFilterProvider may also define this filter ID at page level
-            for deduplication, but this ensures the component works standalone.
-            Omitted when a real photo is provided — no tinting needed. */}
-        {!imageUrl && (
-          <defs>
-            <filter id={filterId}>
-              <feColorMatrix type="matrix" values={hexToColorMatrix(colorHex)} />
-            </filter>
-          </defs>
-        )}
-
-        {/* Garment base layer: real photo when available, SVG tinting fallback otherwise */}
+        {/* Garment base layer: real photo or empty state */}
         {imageUrl ? (
           <image
             href={imageUrl}
@@ -150,12 +103,14 @@ export function GarmentMockup({
             preserveAspectRatio="xMidYMid meet"
           />
         ) : (
-          <image
-            href={svgPath}
-            width={viewBoxWidth}
-            height={viewBoxHeight}
-            filter={`url(#${filterId})`}
-          />
+          <foreignObject x="0" y="0" width={viewBoxWidth} height={viewBoxHeight}>
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+              <Shirt className="text-muted-foreground" size={32} />
+              {size !== 'xs' && size !== 'sm' && (
+                <span className="text-xs text-muted-foreground">No photo available</span>
+              )}
+            </div>
+          </foreignObject>
         )}
 
         {/* Artwork overlays */}

@@ -15,7 +15,6 @@ import {
   type DragEndEvent,
   type DropAnimation,
 } from '@dnd-kit/core'
-import { MockupFilterProvider } from '@features/quotes/components/mockup'
 import { Button } from '@shared/ui/primitives/button'
 import { CapacitySummaryBar } from '../../_components/CapacitySummaryBar'
 import {
@@ -51,7 +50,6 @@ import type { ScratchNote } from '@domain/entities/scratch-note'
 import { getCustomersMutable } from '@infra/repositories/customers'
 import { getInvoicesMutable } from '@infra/repositories/invoices'
 import { getGarmentCatalogMutable } from '@infra/repositories/garments-phase1'
-import { getColorsMutable } from '@infra/repositories/colors'
 import { getArtworksMutable } from '@infra/repositories/artworks'
 
 // ---------------------------------------------------------------------------
@@ -153,11 +151,10 @@ function ProductionBoardInner({
     const customers = getCustomersMutable()
     const invoices = getInvoicesMutable()
     const garmentCatalog = getGarmentCatalogMutable()
-    const colors = getColorsMutable()
     const artworks = getArtworksMutable()
     return initialJobs
       .filter((j) => !j.isArchived)
-      .map((job) => projectJobToCard(job, customers, invoices, garmentCatalog, colors, artworks))
+      .map((job) => projectJobToCard(job, customers, invoices, garmentCatalog, artworks))
   })
   const [quoteCardState, setQuoteCardState] = useState<QuoteCard[]>(() => [...initialQuoteCards])
   const [scratchNoteCards, setScratchNoteCards] = useState<ScratchNoteCardType[]>(() =>
@@ -215,11 +212,6 @@ function ProductionBoardInner({
     [filteredJobCards, filteredQuoteCards]
   )
   const summary = useMemo(() => computeCapacitySummary(allFilteredCards), [allFilteredCards])
-
-  // ---- Garment colors for mockup filter ----
-  const garmentColors = useMemo(() => {
-    return jobCards.map((card) => card.garmentColorHex).filter(Boolean) as string[]
-  }, [jobCards])
 
   const isEmpty = allFilteredCards.length === 0
 
@@ -427,7 +419,6 @@ function ProductionBoardInner({
 
   return (
     <div className="flex flex-col gap-4">
-      <MockupFilterProvider colors={garmentColors} />
       {/* Desktop board — hidden on mobile */}
       <div className="hidden md:block">
         {/* Accessibility: DnD instructions (visually hidden) */}

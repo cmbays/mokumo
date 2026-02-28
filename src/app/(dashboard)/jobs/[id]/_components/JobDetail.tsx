@@ -11,11 +11,7 @@ import { BottomActionBar } from '@shared/ui/layouts/bottom-action-bar'
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs, CRUMBS } from '@shared/lib/breadcrumbs'
 
-import {
-  GarmentMockupCard,
-  GarmentMockupModal,
-  MockupFilterProvider,
-} from '@features/quotes/components/mockup'
+import { GarmentMockupCard, GarmentMockupModal } from '@features/quotes/components/mockup'
 import type { ArtworkPlacement } from '@features/quotes/components/mockup'
 
 import { JobHeader } from '../../_components/JobHeader'
@@ -30,16 +26,15 @@ import { MoveLaneDialog } from '../../_components/MoveLaneDialog'
 
 import type { Job, Lane, JobNoteType } from '@domain/entities/job'
 import type { InvoiceStatus } from '@domain/entities/invoice'
+import type { GarmentCategory } from '@domain/entities/garment'
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 type MockupData = {
-  garmentCategory: string
-  colorHex: string
+  garmentCategory: GarmentCategory
   artworkPlacements: ArtworkPlacement[]
-  colors: string[]
 } | null
 
 type JobDetailProps = {
@@ -267,29 +262,16 @@ export function JobDetail({
           />
         </div>
 
-        {/* Per-page MockupFilterProvider */}
-        {mockupData && <MockupFilterProvider colors={mockupData.colors} />}
-
         {/* What We're Printing */}
         {mockupData && (
           <div className="rounded-lg border border-border bg-card p-4">
             <h3 className="mb-3 text-sm font-semibold text-foreground">What We&apos;re Printing</h3>
             <GarmentMockupModal
-              garmentCategory={
-                mockupData.garmentCategory as Parameters<
-                  typeof GarmentMockupCard
-                >[0]['garmentCategory']
-              }
-              colorHex={mockupData.colorHex}
+              garmentCategory={mockupData.garmentCategory}
               artworkPlacements={mockupData.artworkPlacements}
             >
               <GarmentMockupCard
-                garmentCategory={
-                  mockupData.garmentCategory as Parameters<
-                    typeof GarmentMockupCard
-                  >[0]['garmentCategory']
-                }
-                colorHex={mockupData.colorHex}
+                garmentCategory={mockupData.garmentCategory}
                 artworkPlacements={mockupData.artworkPlacements}
                 size="md"
               />

@@ -52,10 +52,9 @@ export function JobDetailsSection({ job }: JobDetailsSectionProps) {
                 const color = getColorById(gd.colorId, allColors)
                 return (
                   <div key={`${gd.garmentId}:${gd.colorId}`} className="flex flex-col gap-2">
-                    {garment && color && (
+                    {garment && (
                       <GarmentMockup
                         garmentCategory={garment.baseCategory}
-                        colorHex={color.hex}
                         size="xs"
                         className="w-full h-auto aspect-[5/6]"
                       />

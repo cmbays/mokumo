@@ -1,23 +1,17 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeAll } from 'vitest'
 import { GarmentCard } from '../_components/GarmentCard'
 import type { GarmentCatalog } from '@domain/entities/garment'
 
-vi.mock('@features/quotes/components/mockup', () => ({
-  GarmentMockup: ({ garmentCategory }: { garmentCategory: string }) => (
-    <div data-testid="garment-mockup" data-category={garmentCategory} />
+vi.mock('@shared/ui/organisms/GarmentImage', () => ({
+  GarmentImage: ({ imageUrl }: { imageUrl?: string }) => (
+    <div data-testid="garment-image" data-has-url={String(!!imageUrl)} />
   ),
 }))
 vi.mock('@infra/repositories/colors', () => ({
   getColorsMutable: () => [],
-}))
-vi.mock('next/image', () => ({
-  default: ({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} onError={onError} />
-  ),
 }))
 vi.mock('@shared/ui/organisms/ColorSwatchStrip', () => ({
   ColorSwatchStrip: () => null,
@@ -67,7 +61,7 @@ const defaultProps = {
 
 describe('GarmentCard', () => {
   describe('image rendering', () => {
-    it('shows the product image when frontImageUrl is provided', () => {
+    it('renders GarmentImage with photo URL when frontImageUrl is provided', () => {
       render(
         <GarmentCard
           {...defaultProps}
@@ -75,28 +69,16 @@ describe('GarmentCard', () => {
           frontImageUrl="https://cdn.ssactivewear.com/Images/Color/79851_f_fm.jpg"
         />
       )
-      expect(screen.getByRole('img', { name: /unisex jersey tee front view/i })).toBeInTheDocument()
-      expect(screen.queryByTestId('garment-mockup')).not.toBeInTheDocument()
+      const img = screen.getByTestId('garment-image')
+      expect(img).toBeInTheDocument()
+      expect(img).toHaveAttribute('data-has-url', 'true')
     })
 
-    it('shows GarmentMockup fallback when no frontImageUrl is provided', () => {
+    it('renders GarmentImage without photo when no frontImageUrl is provided', () => {
       render(<GarmentCard {...defaultProps} garment={makeGarment()} />)
-      expect(screen.getByTestId('garment-mockup')).toBeInTheDocument()
-      expect(screen.queryByRole('img', { name: /front view/i })).not.toBeInTheDocument()
-    })
-
-    it('falls back to GarmentMockup when the image fires onError', () => {
-      render(
-        <GarmentCard
-          {...defaultProps}
-          garment={makeGarment()}
-          frontImageUrl="https://cdn.ssactivewear.com/Images/Color/broken.jpg"
-        />
-      )
-      const img = screen.getByRole('img', { name: /front view/i })
-      fireEvent.error(img)
-      expect(screen.queryByRole('img', { name: /front view/i })).not.toBeInTheDocument()
-      expect(screen.getByTestId('garment-mockup')).toBeInTheDocument()
+      const img = screen.getByTestId('garment-image')
+      expect(img).toBeInTheDocument()
+      expect(img).toHaveAttribute('data-has-url', 'false')
     })
   })
 

@@ -9,7 +9,7 @@ import type { MockupView } from '@domain/entities/mockup-template'
 
 type GarmentMockupCardProps = {
   garmentCategory: GarmentCategory
-  colorHex: string
+  imageUrl?: string
   artworkPlacements?: ArtworkPlacement[]
   size?: 'sm' | 'md' | 'lg'
   className?: string
@@ -41,7 +41,7 @@ const VIEW_LABELS: Record<MockupView, string> = {
  */
 export function GarmentMockupCard({
   garmentCategory,
-  colorHex,
+  imageUrl,
   artworkPlacements = [],
   size = 'md',
   className,
@@ -142,7 +142,7 @@ export function GarmentMockupCard({
       <div role="tabpanel" id={panelId} aria-labelledby={tabId(activeView)}>
         <GarmentMockup
           garmentCategory={garmentCategory}
-          colorHex={colorHex}
+          imageUrl={imageUrl}
           artworkPlacements={artworkPlacements}
           view={activeView}
           size={size}

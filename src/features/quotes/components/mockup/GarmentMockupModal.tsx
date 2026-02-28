@@ -9,7 +9,7 @@ import type { MockupView } from '@domain/entities/mockup-template'
 
 type GarmentMockupModalProps = {
   garmentCategory: GarmentCategory
-  colorHex: string
+  imageUrl?: string
   artworkPlacements?: ArtworkPlacement[]
   children: React.ReactNode
   defaultView?: MockupView
@@ -32,7 +32,7 @@ const VIEW_LABELS: Record<MockupView, string> = {
  */
 export function GarmentMockupModal({
   garmentCategory,
-  colorHex,
+  imageUrl,
   artworkPlacements = [],
   children,
   defaultView = 'front',
@@ -88,7 +88,7 @@ export function GarmentMockupModal({
 
             <GarmentMockup
               garmentCategory={garmentCategory}
-              colorHex={colorHex}
+              imageUrl={imageUrl}
               artworkPlacements={artworkPlacements}
               view={view}
               size="lg"
