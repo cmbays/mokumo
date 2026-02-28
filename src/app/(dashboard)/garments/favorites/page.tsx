@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
 
+import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs, CRUMBS } from '@shared/lib/breadcrumbs'
 import { GarmentFavoritesClient } from './GarmentFavoritesClient'
@@ -12,7 +14,18 @@ export default async function GarmentFavoritesPage() {
   if (!session) {
     return (
       <>
-        <Topbar breadcrumbs={buildBreadcrumbs(CRUMBS.garmentFavorites)} />
+        <Topbar
+          breadcrumbs={buildBreadcrumbs(CRUMBS.garmentFavorites)}
+          actions={
+            <Link
+              href="/garments"
+              className="flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-action/40 hover:text-action"
+            >
+              View in Catalog
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          }
+        />
         <div className="p-6 text-sm text-muted-foreground">Not authenticated.</div>
       </>
     )
@@ -26,7 +39,18 @@ export default async function GarmentFavoritesPage() {
 
   return (
     <>
-      <Topbar breadcrumbs={buildBreadcrumbs(CRUMBS.garmentFavorites)} />
+      <Topbar
+        breadcrumbs={buildBreadcrumbs(CRUMBS.garmentFavorites)}
+        actions={
+          <Link
+            href="/garments"
+            className="flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-action/40 hover:text-action"
+          >
+            View in Catalog
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        }
+      />
       <GarmentFavoritesClient
         initialBrands={brands}
         initialSelectedBrandId={firstBrand?.brandId ?? null}

@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { Star, Eye, EyeOff, Shirt, ArrowUpRight, Loader2, Palette } from 'lucide-react'
+import { Star, Eye, EyeOff, Shirt, Loader2, Palette } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@shared/lib/cn'
 import {
@@ -37,14 +36,34 @@ export function GarmentFavoritesClient({
   const [brandLoading, startBrandLoad] = useTransition()
   const [expandedStyle, setExpandedStyle] = useState<StyleSummary | null>(null)
 
+  // Client-side cache — seeded with SSR data, avoids re-fetching on repeat brand visits
+  const brandDataCache = useRef(
+    new Map<string, ConfigureData>(
+      initialBrandData && initialSelectedBrandId
+        ? [[initialSelectedBrandId, initialBrandData]]
+        : undefined
+    )
+  )
+
   // ── Brand selection ────────────────────────────────────────────────────────
 
   function handleBrandSelect(brandId: string) {
     if (brandId === selectedBrandId) return
+    // Save current brand's state (with any mutations) before switching away
+    if (selectedBrandId && brandData) {
+      brandDataCache.current.set(selectedBrandId, brandData)
+    }
     setSelectedBrandId(brandId)
+    // Serve from cache for instant response on repeat visits
+    const cached = brandDataCache.current.get(brandId)
+    if (cached) {
+      setBrandData(cached)
+      return
+    }
     startBrandLoad(async () => {
       const data = await getBrandData(brandId)
       setBrandData(data)
+      if (data) brandDataCache.current.set(brandId, data)
     })
   }
 
@@ -217,18 +236,6 @@ export function GarmentFavoritesClient({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h1 className="text-sm font-semibold text-foreground">Garment Favorites</h1>
-        <Link
-          href="/garments"
-          className="flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-action/40 hover:text-action"
-        >
-          View in Catalog
-          <ArrowUpRight className="h-3 w-3" />
-        </Link>
-      </div>
-
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Desktop sidebar ──────────────────────────────────────────────── */}
         <aside className="hidden md:flex w-52 shrink-0 flex-col border-r border-border bg-elevated overflow-y-auto">
