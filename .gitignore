@@ -23,9 +23,14 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 
-# env
-.env
-.env*.local
+# env — all .env* files; allow only documented example/template files
+.env*
+!.env.example
+!.env*.example
+!.env.sample
+!.env*.sample
+!.env.template
+!.env*.template
 
 # Claude Code
 .claude/*
@@ -44,9 +49,38 @@ tmp/
 # Design mockup route — dev-only, never committed, never deployed
 src/app/(dashboard)/mockup/
 
-# secrets
+# secrets — private keys and certificates
 **/*.pem
 **/*.key
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+**/*.jks
+**/*.keystore
+
+# secrets — SSH private keys (defense-in-depth against copy-paste accidents)
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+*.ppk
+
+# secrets — infrastructure state (contains embedded secrets and resource IDs)
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# secrets — credential and token files
+credentials.json
+service-account*.json
+service_account*.json
+secrets.json
+secret.json
+application_default_credentials.json
+token.json
+.npmrc
+.netrc
 
 
 # debug
@@ -91,3 +125,14 @@ dbt/dbt_packages/
 dbt/logs/
 dbt/profiles/profiles.yml
 dbt/profiles/.user.yml
+
+# Playwright test artifacts (regenerated on each run)
+playwright-report/
+test-results/
+tests/e2e/screenshots/
+
+# Excalidraw desktop app logs
+excalidraw.log
+
+# Claude Code internal worktree-tracking state
+.claire/
