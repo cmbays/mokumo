@@ -84,17 +84,90 @@ export function parseNormalizedCatalogRow(row: {
 /**
  * Inner fetch — extracted so the public function stays readable.
  * Receives shopId explicitly (does not call verifySession internally).
+ *
+ * Query design — CTE-based pre-aggregation (replaces the old cross-product approach):
+ *
+ * Old approach problem:
+ *   catalog_colors × catalog_sizes per style → N_colors × N_sizes rows in working set
+ *   (~214,000 rows across the catalog). DISTINCT JSONB_BUILD_OBJECT() had to compare
+ *   ~214,000 opaque JSON blobs. The correlated image subquery ran once per cross-product
+ *   row (not once per color), so effectively ~214,000 index lookups instead of 30,614.
+ *
+ * CTE approach:
+ *   1. color_images CTE  — one full scan of catalog_images (144,056 rows), GROUP BY color_id
+ *   2. style_colors CTE  — join colors → color_images, GROUP BY style_id → 4,808 JSON arrays
+ *   3. style_sizes CTE   — GROUP BY style_id → 4,808 JSON arrays
+ *   4. Main SELECT        — 4,808 rows with LEFT JOIN to pre-aggregated CTEs
+ *
+ * No cross-product. No DISTINCT on JSONB. No correlated subquery.
+ * The covering index on catalog_images(color_id, image_type) INCLUDE (url)
+ * added in migration 0019 enables index-only scans in CTE step 1.
  */
 async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmentCatalog[]> {
   const { db } = await import('@shared/lib/supabase/db')
 
-  // Use a raw SQL query for the joined result with JSON aggregation.
-  // Drizzle doesn't natively support JSON_AGG aggregation sugar, so we use sql template.
   // Preferences are scoped to the authenticated shop — both scope_type AND scope_id are filtered
   // to prevent cross-shop data leakage.
   let rows: unknown[]
   try {
     const result = await db.execute(sql`
+      WITH
+      -- Step 1: Pre-aggregate images per color (one full scan of catalog_images)
+      color_images AS (
+        SELECT
+          color_id,
+          COALESCE(
+            JSON_AGG(
+              JSONB_BUILD_OBJECT('imageType', image_type, 'url', url)
+              ORDER BY image_type
+            ),
+            '[]'::json
+          ) AS images
+        FROM catalog_images
+        GROUP BY color_id
+      ),
+      -- Step 2: Pre-aggregate colors per style (join with color images from step 1)
+      style_colors AS (
+        SELECT
+          cc.style_id,
+          COALESCE(
+            JSON_AGG(
+              JSONB_BUILD_OBJECT(
+                'id', cc.id,
+                'name', cc.name,
+                'hex1', cc.hex1,
+                'hex2', cc.hex2,
+                'colorFamilyName', cc.color_family_name,
+                'colorGroupName', cc.color_group_name,
+                'images', COALESCE(ci.images, '[]'::json)
+              )
+              ORDER BY cc.name
+            ) FILTER (WHERE cc.id IS NOT NULL),
+            '[]'::json
+          ) AS colors
+        FROM catalog_colors cc
+        LEFT JOIN color_images ci ON ci.color_id = cc.id
+        GROUP BY cc.style_id
+      ),
+      -- Step 3: Pre-aggregate sizes per style
+      style_sizes AS (
+        SELECT
+          style_id,
+          COALESCE(
+            JSON_AGG(
+              JSONB_BUILD_OBJECT(
+                'id', id,
+                'name', name,
+                'sortOrder', sort_order,
+                'priceAdjustment', price_adjustment
+              )
+            ) FILTER (WHERE id IS NOT NULL),
+            '[]'::json
+          ) AS sizes
+        FROM catalog_sizes
+        GROUP BY style_id
+      )
+      -- Step 4: Main query — simple 4,808-row scan with LEFT JOIN to pre-aggregated CTEs
       SELECT
         cs.id,
         cs.source,
@@ -105,47 +178,14 @@ async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmen
         cs.description,
         cs.category,
         cs.subcategory,
-        COALESCE(
-          JSON_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
-              'id', cc.id,
-              'name', cc.name,
-              'hex1', cc.hex1,
-              'hex2', cc.hex2,
-              'colorFamilyName', cc.color_family_name,
-              'colorGroupName', cc.color_group_name,
-              'images', (
-                SELECT COALESCE(
-                  JSON_AGG(
-                    JSONB_BUILD_OBJECT('imageType', ci.image_type, 'url', ci.url)
-                    ORDER BY ci.image_type
-                  ),
-                  '[]'::json
-                )
-                FROM catalog_images ci
-                WHERE ci.color_id = cc.id
-              )
-            )
-          ) FILTER (WHERE cc.id IS NOT NULL),
-          '[]'::json
-        ) AS colors,
-        COALESCE(
-          JSON_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
-              'id', csi.id,
-              'name', csi.name,
-              'sortOrder', csi.sort_order,
-              'priceAdjustment', csi.price_adjustment
-            )
-          ) FILTER (WHERE csi.id IS NOT NULL),
-          '[]'::json
-        ) AS sizes,
+        COALESCE(sc.colors, '[]'::json) AS colors,
+        COALESCE(ss.sizes, '[]'::json) AS sizes,
         (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
         csp.is_favorite
       FROM catalog_styles cs
       JOIN catalog_brands cb ON cb.id = cs.brand_id
-      LEFT JOIN catalog_colors cc ON cc.style_id = cs.id
-      LEFT JOIN catalog_sizes csi ON csi.style_id = cs.id
+      LEFT JOIN style_colors sc ON sc.style_id = cs.id
+      LEFT JOIN style_sizes ss ON ss.style_id = cs.id
       LEFT JOIN catalog_style_preferences csp
         ON csp.style_id = cs.id
         AND csp.scope_type = 'shop'
@@ -154,7 +194,6 @@ async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmen
         ON cbp.brand_id = cs.brand_id
         AND cbp.scope_type = 'shop'
         AND cbp.scope_id = ${shopId}
-      GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite, cbp.is_enabled
       ORDER BY cs.name ASC
     `)
     rows = result as unknown[]
