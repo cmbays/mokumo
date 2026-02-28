@@ -90,6 +90,7 @@ void (async () => {
   let skipped = 0
   let failedStyles = 0
   const BATCH_SIZE = 50
+  const CG_BATCH_SIZE = 1000
 
   // Collect distinct (brandId, colorGroupName) pairs for catalog_color_groups upsert
   const colorGroupSet = new Set<string>() // dedup key: `${brandId}::${colorGroupName}`
@@ -141,15 +142,7 @@ void (async () => {
             if (!colorId) return []
             return buildImages(p).map((img) => ({
               colorId,
-              imageType: img.type as
-                | 'front'
-                | 'back'
-                | 'side'
-                | 'direct-side'
-                | 'on-model-front'
-                | 'on-model-back'
-                | 'on-model-side'
-                | 'swatch',
+              imageType: img.type,
               url: img.url,
               updatedAt: new Date(),
             }))
@@ -196,7 +189,6 @@ void (async () => {
   // Upsert all collected color groups (single batch, ON CONFLICT DO NOTHING)
   let colorGroupCount = 0
   if (colorGroupPairs.length > 0) {
-    const CG_BATCH_SIZE = 1000
     for (let j = 0; j < colorGroupPairs.length; j += CG_BATCH_SIZE) {
       const chunk = colorGroupPairs.slice(j, j + CG_BATCH_SIZE)
       await db.insert(catalogColorGroups).values(chunk).onConflictDoNothing()
