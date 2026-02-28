@@ -8,5 +8,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { validateEnv } = await import('@/config/env')
     validateEnv()
+
+    // Register ALS request context with logger — must happen before requests are served.
+    // Importing this module is sufficient; it installs the context getter as a side effect.
+    await import('@shared/lib/request-context')
   }
 }

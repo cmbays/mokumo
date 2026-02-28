@@ -6,11 +6,33 @@
  *
  * No third-party deps — pure TypeScript over console.*.
  * Pino / Winston will replace this in Phase 2 once a real server exists.
+ *
+ * Request context injection: call `setLogContextGetter()` once at server startup
+ * (see `@shared/lib/request-context`) and every log entry will automatically
+ * include the current request's `requestId`, `userId`, etc.
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 type LogContext = Record<string, unknown>
+
+// ---------------------------------------------------------------------------
+// Request context injection
+// ---------------------------------------------------------------------------
+
+// Default no-op: no extra fields until request-context registers its getter.
+// On the client this stays a no-op permanently (AsyncLocalStorage is server-only).
+let _contextGetter: () => LogContext = () => ({})
+
+/**
+ * Register a function that returns ambient per-request context (e.g. requestId,
+ * userId). Called once at server startup from `@shared/lib/request-context`.
+ * The getter is invoked on every `emit()` call and its output is merged at the
+ * lowest priority — bound context and per-call context always win.
+ */
+export function setLogContextGetter(fn: () => LogContext): void {
+  _contextGetter = fn
+}
 
 const LEVELS: Record<LogLevel, number> = {
   debug: 10,
@@ -79,10 +101,14 @@ function logFormatted(level: LogLevel, message: string, context: LogContext): vo
 function emit(level: LogLevel, message: string, context: LogContext): void {
   if (!shouldLog(level)) return
 
+  // Merge ambient request context at lowest priority so bound context and
+  // per-call fields always win. On the client _contextGetter returns {}.
+  const merged = { ..._contextGetter(), ...context }
+
   if (isServer) {
-    logJson(level, message, context)
+    logJson(level, message, merged)
   } else {
-    logFormatted(level, message, context)
+    logFormatted(level, message, merged)
   }
 }
 

@@ -11,6 +11,7 @@ vi.mock('@shared/lib/logger', () => ({
       debug: vi.fn(),
     }),
   },
+  setLogContextGetter: vi.fn(),
 }))
 
 vi.mock('@shared/lib/rate-limit', () => ({
