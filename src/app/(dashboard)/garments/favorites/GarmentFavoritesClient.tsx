@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Star, Eye, EyeOff, Shirt, ExternalLink, Loader2, Palette } from 'lucide-react'
+import { Star, Eye, EyeOff, Shirt, ArrowUpRight, Loader2, Palette } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@shared/lib/cn'
 import {
@@ -222,10 +222,10 @@ export function GarmentFavoritesClient({
         <h1 className="text-sm font-semibold text-foreground">Garment Favorites</h1>
         <Link
           href="/garments"
-          className="flex items-center gap-1 text-xs text-action transition-colors hover:text-action/80"
+          className="flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-action/40 hover:text-action"
         >
           View in Catalog
-          <ExternalLink className="h-3 w-3" />
+          <ArrowUpRight className="h-3 w-3" />
         </Link>
       </div>
 

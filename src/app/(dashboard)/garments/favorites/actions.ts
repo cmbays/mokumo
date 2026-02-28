@@ -174,96 +174,94 @@ export async function getBrandConfigureData(
   if (!session) return null
 
   try {
-    const brandRows = await db
-      .select({ id: catalogBrands.id, name: catalogBrands.canonicalName })
-      .from(catalogBrands)
-      .where(eq(catalogBrands.id, brandId))
-      .limit(1)
+    // Batch 1: brand info, brand prefs, styles, and color groups are all independent —
+    // run in parallel to avoid 4 sequential round-trips.
+    const [brandRows, prefRows, styleRows, colorGroupRows] = await Promise.all([
+      db
+        .select({ id: catalogBrands.id, name: catalogBrands.canonicalName })
+        .from(catalogBrands)
+        .where(eq(catalogBrands.id, brandId))
+        .limit(1),
+
+      db
+        .select({
+          isFavorite: catalogBrandPreferences.isFavorite,
+          isEnabled: catalogBrandPreferences.isEnabled,
+        })
+        .from(catalogBrandPreferences)
+        .where(
+          and(
+            eq(catalogBrandPreferences.scopeType, 'shop'),
+            eq(catalogBrandPreferences.scopeId, shopId),
+            eq(catalogBrandPreferences.brandId, brandId)
+          )
+        )
+        .limit(1),
+
+      db
+        .select({
+          id: catalogStyles.id,
+          name: catalogStyles.name,
+          styleNumber: catalogStyles.styleNumber,
+          isFavorite: catalogStylePreferences.isFavorite,
+          isEnabled: catalogStylePreferences.isEnabled,
+        })
+        .from(catalogStyles)
+        .leftJoin(
+          catalogStylePreferences,
+          and(
+            eq(catalogStylePreferences.scopeType, 'shop'),
+            eq(catalogStylePreferences.scopeId, shopId),
+            eq(catalogStylePreferences.styleId, catalogStyles.id)
+          )
+        )
+        .where(eq(catalogStyles.brandId, brandId))
+        .orderBy(catalogStyles.styleNumber),
+
+      db
+        .select({
+          id: catalogColorGroups.id,
+          colorGroupName: catalogColorGroups.colorGroupName,
+          isFavorite: catalogColorGroupPreferences.isFavorite,
+        })
+        .from(catalogColorGroups)
+        .leftJoin(
+          catalogColorGroupPreferences,
+          and(
+            eq(catalogColorGroupPreferences.scopeType, 'shop'),
+            eq(catalogColorGroupPreferences.scopeId, shopId),
+            eq(catalogColorGroupPreferences.colorGroupId, catalogColorGroups.id)
+          )
+        )
+        .where(eq(catalogColorGroups.brandId, brandId))
+        .orderBy(catalogColorGroups.colorGroupName),
+    ])
 
     if (!brandRows[0]) return null
 
-    const prefRows = await db
-      .select({
-        isFavorite: catalogBrandPreferences.isFavorite,
-        isEnabled: catalogBrandPreferences.isEnabled,
-      })
-      .from(catalogBrandPreferences)
-      .where(
-        and(
-          eq(catalogBrandPreferences.scopeType, 'shop'),
-          eq(catalogBrandPreferences.scopeId, shopId),
-          eq(catalogBrandPreferences.brandId, brandId)
-        )
-      )
-      .limit(1)
+    // Batch 2: thumbnails (needs style IDs from batch 1) and hex values (needs brandId only) —
+    // run in parallel for one final round-trip instead of two.
+    const styleIds = styleRows.map((s) => s.id)
+    const [thumbRows, hexRows] = await Promise.all([
+      styleIds.length > 0
+        ? db
+            .select({
+              styleId: catalogColors.styleId,
+              url: min(catalogImages.url),
+            })
+            .from(catalogColors)
+            .innerJoin(
+              catalogImages,
+              and(
+                eq(catalogImages.colorId, catalogColors.id),
+                eq(catalogImages.imageType, 'front')
+              )
+            )
+            .where(inArray(catalogColors.styleId, styleIds))
+            .groupBy(catalogColors.styleId)
+        : Promise.resolve([]),
 
-    // Step 3: styles with their shop-scope favorite + enabled preference
-    const styleRows = await db
-      .select({
-        id: catalogStyles.id,
-        name: catalogStyles.name,
-        styleNumber: catalogStyles.styleNumber,
-        isFavorite: catalogStylePreferences.isFavorite,
-        isEnabled: catalogStylePreferences.isEnabled,
-      })
-      .from(catalogStyles)
-      .leftJoin(
-        catalogStylePreferences,
-        and(
-          eq(catalogStylePreferences.scopeType, 'shop'),
-          eq(catalogStylePreferences.scopeId, shopId),
-          eq(catalogStylePreferences.styleId, catalogStyles.id)
-        )
-      )
-      .where(eq(catalogStyles.brandId, brandId))
-      .orderBy(catalogStyles.styleNumber)
-
-    // Step 4: one front thumbnail URL per style (lexicographically first across colors)
-    let thumbnailMap = new Map<string, string>()
-    if (styleRows.length > 0) {
-      const styleIds = styleRows.map((s) => s.id)
-      const thumbRows = await db
-        .select({
-          styleId: catalogColors.styleId,
-          url: min(catalogImages.url),
-        })
-        .from(catalogColors)
-        .innerJoin(
-          catalogImages,
-          and(
-            eq(catalogImages.colorId, catalogColors.id),
-            eq(catalogImages.imageType, 'front')
-          )
-        )
-        .where(inArray(catalogColors.styleId, styleIds))
-        .groupBy(catalogColors.styleId)
-
-      thumbnailMap = new Map(thumbRows.map((r) => [r.styleId, r.url ?? '']))
-    }
-
-    // Step 5: color groups for this brand with shop-scope preference
-    const colorGroupRows = await db
-      .select({
-        id: catalogColorGroups.id,
-        colorGroupName: catalogColorGroups.colorGroupName,
-        isFavorite: catalogColorGroupPreferences.isFavorite,
-      })
-      .from(catalogColorGroups)
-      .leftJoin(
-        catalogColorGroupPreferences,
-        and(
-          eq(catalogColorGroupPreferences.scopeType, 'shop'),
-          eq(catalogColorGroupPreferences.scopeId, shopId),
-          eq(catalogColorGroupPreferences.colorGroupId, catalogColorGroups.id)
-        )
-      )
-      .where(eq(catalogColorGroups.brandId, brandId))
-      .orderBy(catalogColorGroups.colorGroupName)
-
-    // Step 6: representative hex per color group (first non-null hex1 alphabetically)
-    let colorGroupHexMap = new Map<string, string>()
-    if (colorGroupRows.length > 0) {
-      const hexRows = await db
+      db
         .select({
           colorGroupName: catalogColors.colorGroupName,
           hex: min(catalogColors.hex1),
@@ -277,16 +275,18 @@ export async function getBrandConfigureData(
             isNotNull(catalogColors.hex1)
           )
         )
-        .groupBy(catalogColors.colorGroupName)
+        .groupBy(catalogColors.colorGroupName),
+    ])
 
-      colorGroupHexMap = new Map(
-        hexRows
-          .filter((r): r is { colorGroupName: string; hex: string } =>
+    const thumbnailMap = new Map(thumbRows.map((r) => [r.styleId, r.url ?? '']))
+    const colorGroupHexMap = new Map(
+      hexRows
+        .filter(
+          (r): r is { colorGroupName: string; hex: string } =>
             r.colorGroupName !== null && r.hex !== null
-          )
-          .map((r) => [r.colorGroupName, r.hex])
-      )
-    }
+        )
+        .map((r) => [r.colorGroupName, r.hex])
+    )
 
     return {
       brand: {

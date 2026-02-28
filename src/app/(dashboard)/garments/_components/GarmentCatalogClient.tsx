@@ -264,8 +264,12 @@ export function GarmentCatalogClient({
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
   const visibleGarments = filteredGarments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
-  // Extract unique brands for filter dropdown
-  const brands = useMemo(() => [...new Set(catalog.map((g) => g.brand))].sort(), [catalog])
+  // Extract unique brands for filter dropdown — only from enabled garments so disabled-brand
+  // names don't ghost in the dropdown after being hidden from the grid
+  const brands = useMemo(
+    () => [...new Set(catalog.filter((g) => g.isEnabled).map((g) => g.brand))].sort(),
+    [catalog]
+  )
 
   // Linked jobs for drawer
   const linkedJobs = useMemo(() => {

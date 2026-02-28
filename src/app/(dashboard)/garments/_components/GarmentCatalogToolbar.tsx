@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
-import { Search, LayoutGrid, List, X, Star } from 'lucide-react'
+import { Search, LayoutGrid, List, X, ArrowUpRight } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
 import { Input } from '@shared/ui/primitives/input'
@@ -287,13 +287,13 @@ export function GarmentCatalogToolbar({
           {/* Divider */}
           <div className="h-4 w-px bg-border/50" />
 
-          {/* Favorites link */}
+          {/* Preferences nav link */}
           <Link
             href="/garments/favorites"
-            className="flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-warning/40 hover:text-warning"
+            className="flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-action/40 hover:text-action"
           >
-            <Star className="size-3.5" />
             Preferences
+            <ArrowUpRight className="size-3" />
           </Link>
         </div>
       </div>
