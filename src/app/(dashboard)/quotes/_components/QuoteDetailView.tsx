@@ -165,9 +165,6 @@ export function QuoteDetailView({
           const firstGarment = firstItem
             ? garmentCatalog.find((g) => g.id === firstItem.garmentId)
             : undefined
-          const firstColor = firstItem
-            ? allColors.find((c) => c.id === firstItem.colorId)
-            : undefined
           const firstDetail = firstItem?.printLocationDetails[0]
           const firstArtwork = firstDetail?.artworkId
             ? artworkMap.get(firstDetail.artworkId)
