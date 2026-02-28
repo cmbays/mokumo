@@ -400,6 +400,40 @@ export async function toggleBrandEnabled(
   }
 }
 
+// ─── getColorGroupFavorites ───────────────────────────────────────────────────
+
+/**
+ * Returns the list of favorited colorGroupNames for the shop scope.
+ * Returns colorGroupName strings (not IDs) since FilterColorGroup uses name-based lookup.
+ *
+ * Safe degradation: returns [] on auth failure or DB error.
+ */
+export async function getColorGroupFavorites(shopId: string): Promise<string[]> {
+  const session = await verifySession()
+  if (!session) return []
+
+  try {
+    const rows = await db
+      .select({ colorGroupName: catalogColorGroups.colorGroupName })
+      .from(catalogColorGroupPreferences)
+      .innerJoin(
+        catalogColorGroups,
+        eq(catalogColorGroupPreferences.colorGroupId, catalogColorGroups.id)
+      )
+      .where(
+        and(
+          eq(catalogColorGroupPreferences.scopeType, 'shop'),
+          eq(catalogColorGroupPreferences.scopeId, shopId),
+          eq(catalogColorGroupPreferences.isFavorite, true)
+        )
+      )
+    return rows.map((r) => r.colorGroupName)
+  } catch (err) {
+    actionsLogger.error('getColorGroupFavorites failed', { shopId, err })
+    return []
+  }
+}
+
 // ─── toggleColorGroupFavorite ─────────────────────────────────────────────────
 
 /**

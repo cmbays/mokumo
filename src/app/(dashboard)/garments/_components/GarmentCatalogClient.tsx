@@ -33,6 +33,7 @@ import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
 import type { FilterColor, FilterColorGroup } from '@features/garments/types'
+import { sortColorGroupsByFavorites } from '@features/garments/utils/favorites-sort'
 
 const clientLogger = logger.child({ domain: 'garments' })
 
@@ -58,6 +59,8 @@ type GarmentCatalogClientProps = {
   catalogColors: FilterColor[]
   /** Shop-scoped favorite color IDs from catalog_color_preferences, fetched server-side. */
   initialFavoriteColorIds: string[]
+  /** Shop-scoped favorite colorGroupNames from catalog_color_group_preferences, fetched server-side. */
+  initialFavoriteColorGroupNames: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +75,7 @@ export function GarmentCatalogClient({
   colorGroups,
   catalogColors,
   initialFavoriteColorIds,
+  initialFavoriteColorGroupNames,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -91,6 +95,17 @@ export function GarmentCatalogClient({
 
   // Shop color favorites — seeded from SSR fetch, updated optimistically by toggleColorFavorite
   const [favoriteColorIds, setFavoriteColorIds] = useState<string[]>(initialFavoriteColorIds)
+
+  // Shop color-group favorites — seeded from SSR fetch, used to pre-sort ColorFilterGrid
+  const [favoriteColorGroupNames] = useState<Set<string>>(
+    () => new Set(initialFavoriteColorGroupNames)
+  )
+
+  // Pre-sort color groups so favorited swatches appear first in the filter grid
+  const sortedColorGroups = useMemo(
+    () => sortColorGroupsByFavorites(colorGroups, favoriteColorGroupNames),
+    [colorGroups, favoriteColorGroupNames]
+  )
 
   // SKU → catalog_styles UUID lookup — used by toggle server actions
   const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
@@ -351,7 +366,7 @@ export function GarmentCatalogClient({
   return (
     <>
       <GarmentCatalogToolbar
-        colorGroups={colorGroups}
+        colorGroups={sortedColorGroups}
         brands={brands}
         selectedColorGroups={selectedColorGroups}
         onToggleColorGroup={toggleColorGroup}

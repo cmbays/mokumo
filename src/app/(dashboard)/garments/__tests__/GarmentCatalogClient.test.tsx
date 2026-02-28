@@ -178,6 +178,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -208,6 +209,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -237,6 +239,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -263,6 +266,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
           // no normalizedCatalog
         />
       )
@@ -297,6 +301,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -332,6 +337,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -360,6 +366,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -387,6 +394,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -414,6 +422,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
@@ -440,6 +449,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
+          initialFavoriteColorGroupNames={[]}
         />
       )
 
