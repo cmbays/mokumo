@@ -27,6 +27,13 @@ vi.mock('@infra/repositories/_providers/supabase/garments', () => ({
   getAvailableBrands: vi.fn().mockResolvedValue(['SupabaseBrand']),
 }))
 
+vi.mock('@infra/repositories/_providers/supabase/catalog', () => ({
+  getNormalizedCatalog: vi.fn().mockResolvedValue([{ id: 'normalized-1', source: 'ss-activewear' }]),
+  getCatalogStylesSlim: vi.fn().mockResolvedValue([{ id: 'slim-1', styleNumber: 'BC3001' }]),
+  getCatalogColorSupplement: vi.fn().mockResolvedValue([{ id: 'supp-1', name: 'Black' }]),
+  getCatalogStyleDetail: vi.fn().mockResolvedValue([{ id: 'detail-1', name: 'Black' }]),
+}))
+
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.resetModules()
@@ -101,5 +108,76 @@ describe('garments repository router', () => {
     const { getAvailableBrands } = await import('@infra/repositories/garments')
     const result = await getAvailableBrands()
     expect(result).toEqual(['SupabaseBrand'])
+  })
+
+  // -------------------------------------------------------------------------
+  // Tier 1/2 catalog functions
+  // -------------------------------------------------------------------------
+
+  it('getNormalizedCatalog returns [] when not supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', '')
+    const { getNormalizedCatalog } = await import('@infra/repositories/garments')
+    const result = await getNormalizedCatalog()
+    expect(result).toEqual([])
+  })
+
+  it('getNormalizedCatalog delegates to catalog module when supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getNormalizedCatalog } = await import('@infra/repositories/garments')
+    const result = await getNormalizedCatalog()
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ id: 'normalized-1' })
+  })
+
+  it('getCatalogStylesSlim returns [] when not supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', '')
+    const { getCatalogStylesSlim } = await import('@infra/repositories/garments')
+    const result = await getCatalogStylesSlim()
+    expect(result).toEqual([])
+  })
+
+  it('getCatalogStylesSlim delegates to catalog module when supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getCatalogStylesSlim } = await import('@infra/repositories/garments')
+    const result = await getCatalogStylesSlim()
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ styleNumber: 'BC3001' })
+  })
+
+  it('getCatalogColorSupplement returns [] when not supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', '')
+    const { getCatalogColorSupplement } = await import('@infra/repositories/garments')
+    const result = await getCatalogColorSupplement()
+    expect(result).toEqual([])
+  })
+
+  it('getCatalogColorSupplement delegates to catalog module when supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getCatalogColorSupplement } = await import('@infra/repositories/garments')
+    const result = await getCatalogColorSupplement()
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: 'Black' })
+  })
+
+  it('getCatalogStyleDetail returns [] for empty styleId (validation)', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
+    const result = await getCatalogStyleDetail('')
+    expect(result).toEqual([])
+  })
+
+  it('getCatalogStyleDetail returns [] when not supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', '')
+    const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
+    const result = await getCatalogStyleDetail('style-123')
+    expect(result).toEqual([])
+  })
+
+  it('getCatalogStyleDetail delegates to catalog module when supabase-catalog', async () => {
+    vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
+    const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
+    const result = await getCatalogStyleDetail('style-123')
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ name: 'Black' })
   })
 })
