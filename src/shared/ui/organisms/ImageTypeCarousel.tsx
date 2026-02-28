@@ -25,10 +25,17 @@ type ImageTypeCarouselProps = {
 }
 
 export function ImageTypeCarousel({ images, alt, className }: ImageTypeCarouselProps) {
-  const [activeType, setActiveType] = useState<ImageType>('front')
-
   const imageMap = new Map(images.map((img) => [img.imageType, img.url]))
-  const activeUrl = imageMap.get(activeType) ?? imageMap.get('front')
+
+  // Prefer 'front'; fall back to first available type rather than always 'front'.
+  // This prevents a blank carousel when a style has images but not a 'front' entry
+  // (e.g. Bayside styles that only have 'on-model-front' or 'swatch' in catalog_images).
+  const [activeType, setActiveType] = useState<ImageType>(() =>
+    imageMap.has('front') ? 'front' : (images[0]?.imageType ?? 'front')
+  )
+
+  // Fall back to first image in array when the active type is missing from the map
+  const activeUrl = imageMap.get(activeType) ?? images[0]?.url
 
   if (!activeUrl) return null
 
