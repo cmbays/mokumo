@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { ssGet, SSClientError, SSRateLimitError, SS_CACHE_TTL } from '@lib/suppliers/ss-client'
 import { logger } from '@shared/lib/logger'
+import { withRequestContext } from '@shared/lib/request-context'
 
 const routeLogger = logger.child({ domain: 'supplier-route', segment: 'products' })
 
@@ -14,7 +15,7 @@ const querySchema = z.object({
   styleId: z.string().min(1).max(500),
 })
 
-export async function GET(request: NextRequest) {
+export const GET = withRequestContext(async (request: NextRequest) => {
   // TODO(Phase 2): Replace with Supabase Auth JWT verification
   const cookieStore = await cookies()
   const demoAccess = cookieStore.get('demo-access')?.value
@@ -49,4 +50,4 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

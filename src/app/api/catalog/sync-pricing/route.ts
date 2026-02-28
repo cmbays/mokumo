@@ -4,6 +4,7 @@ import { syncRawPricingFromSupplier } from '@infra/services/pricing-sync.service
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { logger } from '@shared/lib/logger'
 import { checkAdminSyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
+import { withRequestContext } from '@shared/lib/request-context'
 
 const syncLogger = logger.child({ domain: 'pricing-sync-endpoint' })
 
@@ -20,7 +21,7 @@ const requestBodySchema = z
  * into the raw analytics table. Optional body: { styleIds: string[] } to
  * sync specific styles.
  */
-export async function POST(request: Request): Promise<Response> {
+export const POST = withRequestContext(async (request: Request): Promise<Response> => {
   try {
     const ip = getClientIp(request)
     const { limited } = await checkAdminSyncRateLimit(ip)
@@ -55,7 +56,10 @@ export async function POST(request: Request): Promise<Response> {
 
     return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
   } catch (error) {
-    syncLogger.error('Pricing sync failed', { error })
+    syncLogger.error('Pricing sync failed', {
+      error: Error.isError(error) ? error.message : String(error),
+      errorName: Error.isError(error) ? error.name : 'unknown',
+    })
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
