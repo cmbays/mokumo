@@ -90,6 +90,7 @@ void (async () => {
   let skipped = 0
   let failedStyles = 0
   const BATCH_SIZE = 50
+  const CG_BATCH_SIZE = 1000
 
   // Collect distinct (brandId, colorGroupName) pairs for catalog_color_groups upsert
   const colorGroupSet = new Set<string>() // dedup key: `${brandId}::${colorGroupName}`
@@ -107,33 +108,64 @@ void (async () => {
       }
 
       try {
-        const colorMap = styleMap.get(externalId)!
-        if (colorMap.size === 0) continue
+        const colorMap = styleMap.get(externalId)
+        if (!colorMap || colorMap.size === 0) continue
 
         const colorValues = Array.from(colorMap.values()).map((p) =>
           mapSSProductToColorValue(p, styleUuid)
         )
 
-        const colorRows = await db
-          .insert(catalogColors)
-          .values(colorValues)
-          .onConflictDoUpdate({
-            target: [catalogColors.styleId, catalogColors.name],
-            set: {
-              hex1: sql`excluded.hex1`,
-              hex2: sql`excluded.hex2`,
-              colorFamilyName: sql`excluded.color_family_name`,
-              colorGroupName: sql`excluded.color_group_name`,
-              colorCode: sql`excluded.color_code`,
+        // Wrap color + image inserts in a transaction so they succeed or fail
+        // together — a style cannot end up with colors but no images on error.
+        // Counts are returned from the callback so they only increment on commit.
+        const { newColorCount, newImageCount } = await db.transaction(async (tx) => {
+          const colorRows = await tx
+            .insert(catalogColors)
+            .values(colorValues)
+            .onConflictDoUpdate({
+              target: [catalogColors.styleId, catalogColors.name],
+              set: {
+                hex1: sql`excluded.hex1`,
+                hex2: sql`excluded.hex2`,
+                colorFamilyName: sql`excluded.color_family_name`,
+                colorGroupName: sql`excluded.color_group_name`,
+                colorCode: sql`excluded.color_code`,
+                updatedAt: new Date(),
+              },
+            })
+            .returning({ id: catalogColors.id, name: catalogColors.name })
+
+          const colorIdByName = new Map(colorRows.map((r) => [r.name, r.id]))
+
+          const imageValues = Array.from(colorMap.values()).flatMap((p) => {
+            const colorId = colorIdByName.get(p.colorName)
+            if (!colorId) return []
+            return buildImages(p).map((img) => ({
+              colorId,
+              imageType: img.type,
+              url: img.url,
               updatedAt: new Date(),
-            },
+            }))
           })
-          .returning({ id: catalogColors.id, name: catalogColors.name })
 
-        colorCount += colorRows.length
-        const colorIdByName = new Map(colorRows.map((r) => [r.name, r.id]))
+          if (imageValues.length > 0) {
+            await tx
+              .insert(catalogImages)
+              .values(imageValues)
+              .onConflictDoUpdate({
+                target: [catalogImages.colorId, catalogImages.imageType],
+                set: { url: sql`excluded.url`, updatedAt: new Date() },
+              })
+          }
 
-        // Collect distinct (brandId, colorGroupName) pairs for later batch upsert
+          return { newColorCount: colorRows.length, newImageCount: imageValues.length }
+        })
+
+        colorCount += newColorCount
+        imageCount += newImageCount
+
+        // Collect color group pairs after the transaction commits — pure in-memory
+        // derivation from colorValues; does not need to be inside the transaction.
         const newPairs = collectColorGroupPairs(colorValues, brandIdByStyleId)
         for (const pair of newPairs) {
           const key = `${pair.brandId}::${pair.colorGroupName}`
@@ -141,36 +173,6 @@ void (async () => {
             colorGroupSet.add(key)
             colorGroupPairs.push(pair)
           }
-        }
-
-        const imageValues = Array.from(colorMap.values()).flatMap((p) => {
-          const colorId = colorIdByName.get(p.colorName)
-          if (!colorId) return []
-          return buildImages(p).map((img) => ({
-            colorId,
-            imageType: img.type as
-              | 'front'
-              | 'back'
-              | 'side'
-              | 'direct-side'
-              | 'on-model-front'
-              | 'on-model-back'
-              | 'on-model-side'
-              | 'swatch',
-            url: img.url,
-            updatedAt: new Date(),
-          }))
-        })
-
-        if (imageValues.length > 0) {
-          await db
-            .insert(catalogImages)
-            .values(imageValues)
-            .onConflictDoUpdate({
-              target: [catalogImages.colorId, catalogImages.imageType],
-              set: { url: sql`excluded.url`, updatedAt: new Date() },
-            })
-          imageCount += imageValues.length
         }
       } catch (err) {
         failedStyles++
@@ -187,7 +189,6 @@ void (async () => {
   // Upsert all collected color groups (single batch, ON CONFLICT DO NOTHING)
   let colorGroupCount = 0
   if (colorGroupPairs.length > 0) {
-    const CG_BATCH_SIZE = 1000
     for (let j = 0; j < colorGroupPairs.length; j += CG_BATCH_SIZE) {
       const chunk = colorGroupPairs.slice(j, j + CG_BATCH_SIZE)
       await db.insert(catalogColorGroups).values(chunk).onConflictDoNothing()

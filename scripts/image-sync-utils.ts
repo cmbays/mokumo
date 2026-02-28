@@ -68,7 +68,7 @@ export function normalizeHex(raw: string): string | null {
 // Image record builder
 // ---------------------------------------------------------------------------
 
-export const IMAGE_FIELDS: Array<{ field: keyof SSProduct; type: string }> = [
+export const IMAGE_FIELDS = [
   { field: 'colorFrontImage', type: 'front' },
   { field: 'colorBackImage', type: 'back' },
   { field: 'colorSideImage', type: 'side' },
@@ -77,12 +77,15 @@ export const IMAGE_FIELDS: Array<{ field: keyof SSProduct; type: string }> = [
   { field: 'colorOnModelBackImage', type: 'on-model-back' },
   { field: 'colorOnModelSideImage', type: 'on-model-side' },
   { field: 'colorSwatchImage', type: 'swatch' },
-]
+] as const satisfies ReadonlyArray<{ field: keyof SSProduct; type: string }>
+
+/** Union of all valid catalog image type strings, derived from IMAGE_FIELDS. */
+export type CatalogImageType = (typeof IMAGE_FIELDS)[number]['type']
 
 /** Extracts all non-empty image records from a single product row. */
-export function buildImages(product: SSProduct): Array<{ type: string; url: string }> {
+export function buildImages(product: SSProduct): Array<{ type: CatalogImageType; url: string }> {
   return IMAGE_FIELDS.flatMap(({ field, type }) => {
-    const url = resolveImageUrl(product[field] as string)
+    const url = resolveImageUrl(product[field])
     return url ? [{ type, url }] : []
   })
 }
