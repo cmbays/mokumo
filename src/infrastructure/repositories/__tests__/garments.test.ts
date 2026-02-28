@@ -28,7 +28,9 @@ vi.mock('@infra/repositories/_providers/supabase/garments', () => ({
 }))
 
 vi.mock('@infra/repositories/_providers/supabase/catalog', () => ({
-  getNormalizedCatalog: vi.fn().mockResolvedValue([{ id: 'normalized-1', source: 'ss-activewear' }]),
+  getNormalizedCatalog: vi
+    .fn()
+    .mockResolvedValue([{ id: 'normalized-1', source: 'ss-activewear' }]),
   getCatalogStylesSlim: vi.fn().mockResolvedValue([{ id: 'slim-1', styleNumber: 'BC3001' }]),
   getCatalogColorSupplement: vi.fn().mockResolvedValue([{ id: 'supp-1', name: 'Black' }]),
   getCatalogStyleDetail: vi.fn().mockResolvedValue([{ id: 'detail-1', name: 'Black' }]),
