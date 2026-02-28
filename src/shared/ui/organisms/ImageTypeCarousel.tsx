@@ -42,7 +42,7 @@ export function ImageTypeCarousel({ images, alt, className }: ImageTypeCarouselP
     return (
       <div className={cn('group relative', className)}>
         <div className="relative w-full aspect-square bg-surface rounded-md flex flex-col items-center justify-center gap-2">
-          <ImageOff className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+          <ImageOff className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
           <span className="text-xs text-muted-foreground">No image available</span>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function ImageTypeCarousel({ images, alt, className }: ImageTypeCarouselP
                 setActiveType(type)
               }}
               className={cn(
-                'px-2 py-1.5 min-h-(--mobile-touch-target) md:min-h-0 md:py-0.5 text-xs rounded border transition-colors motion-reduce:transition-none active:scale-95',
+                'px-2 py-1.5 min-h-(--mobile-touch-target) md:min-h-0 md:py-0.5 text-xs rounded border transition-colors motion-reduce:transition-none active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/50',
                 activeType === type
                   ? 'border-action text-action bg-action/10'
