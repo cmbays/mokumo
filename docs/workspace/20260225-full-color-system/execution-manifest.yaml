@@ -1,0 +1,581 @@
+pipeline_id: 20260225-full-color-system
+issue: 618
+session_id: 0a1b62cb-84e6-46ff-b178-9021bb5a09ae
+branch: worktree-graceful-tinkering-beaver
+date: 2026-02-25
+
+# Structural fixes from breadboard-reflection that are embedded below:
+#   Fix #1: GarmentCatalogToolbar receives catalogColors prop instead of calling getColorsMutable()
+#   Fix #2: getBrandColorFavorites(brandName) is a separate server action (not getColorFavorites)
+#   Fix #3: FilterColor exported as standalone type; FavoritesColorSection updated to accept FilterColor[]
+
+# Critical path: wave-0 → wave-3 (server actions) → wave-3 (client wiring) → wave-4
+# Parallel-safe after wave-0: wave-1a, wave-1b, wave-2a, wave-2b can start simultaneously
+# wave-1e must wait for wave-2a (selectedColorIds contain real UUIDs post-2a)
+
+waves:
+  - id: wave-0
+    name: 'DB Migrations'
+    parallel: false
+    description: >
+      Add catalog_color_preferences and catalog_inventory tables to Drizzle schema.
+      Apply migration to local Supabase. RLS for catalog_color_preferences mirrors
+      catalog_style_preferences. No application code or UI in this wave.
+    steps:
+      - id: '0.1'
+        action: edit_file
+        file: src/db/schema/catalog-normalized.ts
+        description: >
+          Add catalogColorPreferences pgTable definition after catalogStylePreferences block.
+          Columns: id (uuid PK defaultRandom), scopeType (varchar 20 NOT NULL default 'shop'),
+          scopeId (uuid NOT NULL), colorId (uuid NOT NULL FK catalogColors.id ON DELETE CASCADE),
+          isFavorite (boolean nullable), createdAt (timestamptz defaultNow),
+          updatedAt (timestamptz defaultNow).
+          Constraints: uniqueIndex on (scope_type, scope_id, color_id);
+          index on color_id; index on (scope_type, scope_id).
+
+      - id: '0.2'
+        action: edit_file
+        file: src/db/schema/catalog-normalized.ts
+        description: >
+          Add catalogInventory pgTable definition after catalogColorPreferences block.
+          Columns: id (uuid PK defaultRandom), colorId (uuid NOT NULL FK catalogColors.id CASCADE),
+          sizeId (uuid NOT NULL FK catalogSizes.id CASCADE), quantity (integer NOT NULL default 0),
+          lastSyncedAt (timestamptz nullable), createdAt (timestamptz defaultNow),
+          updatedAt (timestamptz defaultNow).
+          Constraints: uniqueIndex on (color_id, size_id); index on color_id; index on size_id.
+
+      - id: '0.3'
+        action: edit_file
+        file: src/db/schema/index.ts
+        description: >
+          Add named exports for catalogColorPreferences and catalogInventory
+          alongside the existing catalog table exports.
+
+      - id: '0.4'
+        action: run_command
+        command: npm run db:generate
+        description: >
+          Generate SQL migration file from Drizzle schema diff.
+          Expected output: supabase/migrations/0015_catalog_color_preferences.sql
+          containing CREATE TABLE for both new tables with all indexes and FK constraints.
+
+      - id: '0.5'
+        action: edit_file
+        file: supabase/migrations/0015_catalog_color_preferences.sql
+        description: >
+          Append RLS statements for catalog_color_preferences after the generated DDL.
+          Enable RLS on the table. Add authenticated-user SELECT/INSERT/UPDATE policy
+          where scope_id matches the user's shop UUID.
+          Mirror the pattern from 0005_enable_rls_normalized_catalog.sql.
+          Do NOT add RLS for catalog_inventory (no app reads in this issue).
+
+      - id: '0.6'
+        action: run_command
+        command: npm run db:migrate
+        description: Apply migration 0015 to local Supabase.
+
+      - id: '0.7'
+        action: verify
+        command: npx supabase migration list
+        description: >
+          Confirm migration 0015 appears in the Applied column.
+          Both catalog_color_preferences and catalog_inventory tables must exist.
+
+      - id: '0.8'
+        action: verify
+        command: npm test
+        description: All existing tests still pass after schema additions.
+
+      - id: '0.9'
+        action: verify
+        command: npx tsc --noEmit
+        description: No TypeScript errors after adding schema exports to index.ts.
+
+    commit: 'feat(db): add catalog_color_preferences and catalog_inventory schema (#618)'
+
+  - id: wave-1
+    name: 'Color Data Pipeline'
+    parallel: true
+    description: >
+      Eliminate all getColorsMutable() calls from the garments feature.
+      Thread real FilterColor[] from GarmentCatalogPage down to ColorFilterGrid.
+      Establish the name-based filter bridge. Incorporates Fix #1, Fix #3.
+      Steps 1.1–1.6 (pure functions + type fix) are parallel-safe.
+      Steps 1.7–1.13 (prop threading) depend on 1.1–1.6.
+      Step 1.14 (filter loop rewrite) must wait for wave-2 step 2.1 to complete.
+    steps:
+      # PARALLEL GROUP A: pure functions and type definitions (no shared state)
+      - id: '1.1'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_lib/garment-transforms.ts
+        description: >
+          Export FilterColor type at the top of the file (after imports):
+            export type FilterColor = { id: string; name: string; hex: string; swatchTextColor: string }
+          This is a structural subtype of Color omitting the family field.
+          Satisfies all usages in FilterSwatch and FavoritesColorSection.
+
+      - id: '1.2'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_lib/garment-transforms.ts
+        description: >
+          Add extractUniqueColors(normalizedCatalog: NormalizedGarmentCatalog[]): FilterColor[].
+          Algorithm: iterate all items and their colors, deduplicate by name.toLowerCase().trim()
+          keeping first CatalogColor.id encountered per unique name.
+          Compute swatchTextColor via luminance formula (same as mock data generator).
+          Use color.hex1 ?? '#888888' as hex.
+          Return FilterColor[] sorted alphabetically by name.
+
+      - id: '1.3'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_lib/garment-transforms.ts
+        description: >
+          Add buildStyleToColorNamesMap(normalizedCatalog: NormalizedGarmentCatalog[]): Map<string, Set<string>>.
+          Key: styleNumber (string). Value: Set of lowercased+trimmed color names for that style.
+          Built from: new Map(normalizedCatalog.map(n => [n.styleNumber, new Set(n.colors.map(c => c.name.toLowerCase().trim()))]))
+
+      # Fix #3: Update FavoritesColorSection to accept FilterColor[] (parallel-safe)
+      - id: '1.4'
+        action: edit_file
+        file: src/features/garments/components/FavoritesColorSection.tsx
+        description: >
+          Change FavoritesColorSectionProps to accept FilterColor[] instead of Color[].
+          Import FilterColor from garment-transforms.ts.
+          Update: favorites: FilterColor[], allColors: FilterColor[], and any other Color[] props.
+          Prerequisite check: confirm color.family is not accessed anywhere in this component body.
+          If color.family IS found, document it before removing — it is out of scope for this issue.
+
+      # PARALLEL GROUP B: ColorFilterGrid prop change (depends on 1.1 for FilterColor type)
+      - id: '1.5'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx
+        description: >
+          Remove module-level: const catalogColors = getColorsMutable()
+          Remove the getColorsMutable import.
+          Add colors: FilterColor[] to ColorFilterGridProps type.
+          Import FilterColor from garment-transforms.ts.
+          Replace all references to the removed catalogColors local with the colors prop.
+          Update FilterSwatch sub-component prop type from Color to FilterColor if typed here.
+        depends_on: ['1.1']
+
+      # SEQUENTIAL GROUP: prop threading (depends on 1.1, 1.2, 1.3, 1.4, 1.5)
+      - id: '1.6'
+        action: edit_file
+        file: src/app/(dashboard)/garments/page.tsx
+        description: >
+          After the getNormalizedCatalog() call, derive:
+            const catalogColors = extractUniqueColors(normalizedCatalog)
+          Import extractUniqueColors from garment-transforms.ts.
+          Pass catalogColors as prop to GarmentCatalogClient.
+          Pass initialFavoriteColorIds={[]} as placeholder prop (Wave 3 will supply real data).
+        depends_on: ['1.2', '1.5']
+
+      - id: '1.7'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx
+        description: >
+          Add catalogColors: FilterColor[] and initialFavoriteColorIds: string[] to component props type.
+          Import FilterColor from garment-transforms.ts.
+          Import buildStyleToColorNamesMap from garment-transforms.ts.
+          Add styleToColorNamesMap derived memo:
+            useMemo(() => buildStyleToColorNamesMap(normalizedCatalog ?? []), [normalizedCatalog])
+          Pass catalogColors down to GarmentCatalogToolbar as prop.
+        depends_on: ['1.3', '1.6']
+
+      # Fix #1: GarmentCatalogToolbar must receive catalogColors prop
+      - id: '1.8'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/GarmentCatalogToolbar.tsx
+        description: >
+          Add catalogColors: FilterColor[] to component props type.
+          Import FilterColor from garment-transforms.ts.
+          Find the internal getColorsMutable() call (line ~124) used to resolve Color objects
+          for active filter pills in the selectedColors useMemo.
+          Replace getColorById(id, getColorsMutable()) with catalogColors.find(c => c.id === id).
+          Remove getColorsMutable import. Remove getColorById import if no longer used elsewhere.
+          Pass catalogColors down to ColorFilterGrid as the colors prop.
+        depends_on: ['1.1', '1.7']
+
+      # Filter loop rewrite — MUST wait for wave-2 step 2.1 (selectedColorIds are real UUIDs post-2a)
+      - id: '1.9'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx
+        description: >
+          Add selectedColorNames derived memo in GarmentCatalogClient:
+            useMemo(() => {
+              if (selectedColorIds.length === 0) return null
+              const selectedIdSet = new Set(selectedColorIds)
+              return new Set(catalogColors.filter(c => selectedIdSet.has(c.id)).map(c => c.name.toLowerCase().trim()))
+            }, [selectedColorIds, catalogColors])
+          In the filteredGarments filter loop, REMOVE:
+            if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) continue
+          ADD:
+            if (selectedColorNames) {
+              const garmentColorNames = styleToColorNamesMap.get(g.sku)
+              if (!garmentColorNames || !garmentColorNames.some(n => selectedColorNames.has(n))) continue
+            }
+          Remove the now-unused colorFilterSet variable and any old ID-based color filter logic.
+        depends_on: ['1.7', 'wave-2/2.1']
+
+      - id: '1.10'
+        action: verify
+        command: npm test
+        description: All existing tests pass after prop threading changes.
+
+      - id: '1.11'
+        action: verify
+        command: npx tsc --noEmit
+        description: No TypeScript errors after prop chain and type changes.
+
+    commit: 'feat(garments): thread real catalog colors to ColorFilterGrid + name-based filter (#618)'
+
+  - id: wave-2
+    name: 'Color Filter UX'
+    parallel: true
+    description: >
+      Make color filter selection instant by replacing URL param state with useState.
+      Switch ColorFilterGrid container from flex-wrap to CSS grid.
+      Both changes are fully self-contained. Wave 2a must complete before Wave 1e (step 1.9).
+    steps:
+      # Step 2.1 is the gating dependency for wave-1 step 1.9
+      - id: '2.1'
+        action: edit_file
+        file: src/features/garments/hooks/useColorFilter.ts
+        description: >
+          Replace entire file body. Remove all imports of useSearchParams, useRouter, usePathname.
+          Remove updateColorsParam callback and router.replace() call.
+          New implementation (complete replacement):
+            'use client'
+            import { useState, useCallback } from 'react'
+            export function useColorFilter() {
+              const [selectedColorIds, setSelectedColorIds] = useState<string[]>([])
+              const toggleColor = useCallback((colorId: string) => {
+                setSelectedColorIds(prev =>
+                  prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+                )
+              }, [])
+              const clearColors = useCallback(() => setSelectedColorIds([]), [])
+              return { selectedColorIds, toggleColor, clearColors }
+            }
+          Public interface (selectedColorIds, toggleColor, clearColors) is unchanged —
+          no callsite changes needed in GarmentCatalogClient.
+
+      # Step 2.2 is parallel-safe (pure CSS + minor hook arg change)
+      - id: '2.2'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx
+        description: >
+          Change container div className from 'flex flex-wrap gap-0.5' to
+          'grid grid-cols-5 md:grid-cols-6 gap-0.5'.
+          Update the useGridKeyboardNav column count argument from its current value
+          (likely 34) to 5 (matches mobile grid-cols-5;
+          minor keyboard nav imprecision at desktop 6-col is acceptable).
+
+      - id: '2.3'
+        action: verify
+        command: npm test
+        description: All tests pass after hook rewrite and CSS change.
+
+      - id: '2.4'
+        action: verify
+        command: npx tsc --noEmit
+        description: No TypeScript errors.
+
+    commit: 'feat(garments): color filter useState + grid grid-cols-5 layout (#618)'
+
+  - id: wave-3
+    name: 'Persistent Shop-Level Color Favorites'
+    parallel: false
+    description: >
+      Replace the favoriteVersion counter hack and in-memory mock mutations with real DB
+      persistence via server actions. Shop color favorites survive page reloads.
+      Requires wave-0 (table exists) and wave-1 + wave-2 (real UUIDs flow through system).
+    steps:
+      - id: '3.1'
+        action: edit_file
+        file: src/app/(dashboard)/garments/actions.ts
+        description: >
+          Add toggleColorFavorite server action following the toggleStyleFavorite pattern exactly.
+          Signature: toggleColorFavorite(colorId: string, scopeType: 'shop'|'brand' = 'shop', scopeId?: string)
+          Returns: Promise<{ success: true; isFavorite: boolean } | { success: false; error: string }>
+          Steps inside:
+            1. uuidSchema.safeParse(colorId) — return { success: false, error: 'Invalid color ID' } if invalid
+            2. verifySession() — return { success: false, error: 'Unauthorized' } if null
+            3. Resolve resolvedScopeId: 'shop' → session.shopId; 'brand' see step 3.3
+            4. SELECT current is_favorite from catalog_color_preferences
+               WHERE scope_type=$scopeType AND scope_id=$resolvedScopeId AND color_id=$colorId
+            5. const next = !(current ?? false)
+            6. Upsert with onConflictDoUpdate targeting (scope_type, scope_id, color_id) unique key
+               Set is_favorite=next, updated_at=now()
+            7. actionsLogger.info({ colorId, scopeType, isFavorite: next }, 'toggled color favorite')
+            8. Return { success: true, isFavorite: next }
+          For Wave 3 (shop scope only): if scopeType === 'brand' and scopeId is undefined,
+          return { success: false, error: 'Brand scope requires scopeId' }.
+          Brand UUID resolution is handled in step 3.3 (wave-4 extension).
+
+      - id: '3.2'
+        action: edit_file
+        file: src/app/(dashboard)/garments/actions.ts
+        description: >
+          Add getColorFavorites server action (shop scope only).
+          Signature: getColorFavorites(scopeType: 'shop', scopeId: string): Promise<string[]>
+          Steps:
+            1. verifySession() — return [] (do NOT throw) if session is null
+            2. SELECT color_id FROM catalog_color_preferences
+               WHERE scope_type=$scopeType AND scope_id=$scopeId AND is_favorite=true
+            3. Return string[] (array of color UUID strings)
+
+      - id: '3.3'
+        action: edit_file
+        file: src/app/(dashboard)/garments/actions.ts
+        description: >
+          Add getBrandColorFavorites server action. Implements Fix #2 from breadboard-reflection.
+          Signature: getBrandColorFavorites(brandName: string): Promise<string[]>
+          Steps:
+            1. verifySession() — return [] if session is null
+            2. SELECT id FROM catalog_brands WHERE canonical_name=$brandName LIMIT 1
+            3. If no brand found: actionsLogger.warn({ brandName }, 'brand not found for color favorites fetch'), return []
+            4. SELECT color_id FROM catalog_color_preferences
+               WHERE scope_type='brand' AND scope_id=$brandId AND is_favorite=true
+            5. Return string[] (array of color UUID strings)
+
+      - id: '3.4'
+        action: edit_file
+        file: src/app/(dashboard)/garments/page.tsx
+        description: >
+          Add getColorFavorites('shop', session.shopId) to the existing Promise.all fetch.
+          Wrap in .catch(() => [] as string[]) for graceful degradation.
+          Replace the initialFavoriteColorIds={[]} placeholder (added in step 1.6)
+          with initialFavoriteColorIds={favoriteColorIds} using the real fetched data.
+
+      - id: '3.5'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx
+        description: >
+          REMOVE from component:
+            - const [favoriteVersion, setFavoriteVersion] = useState(0)
+            - const globalFavoriteColorIds = useMemo(() => resolveEffectiveFavorites(...), [favoriteVersion])
+            - getColorsMutable() import (if not already removed in wave-1)
+            - getCustomersMutable() import (confirm it is no longer used elsewhere before removing)
+            - getBrandPreferencesMutable() import
+            - resolveEffectiveFavorites import
+            - All setFavoriteVersion((v) => v + 1) calls (onOpenChange handler, onGarmentClick handler)
+          ADD:
+            - const [favoriteColorIds, setFavoriteColorIds] = useState<string[]>(initialFavoriteColorIds)
+            - handleToggleColorFavorite callback (optimistic + rollback pattern):
+              setFavoriteColorIds optimistic toggle → await toggleColorFavorite(colorId, 'shop') →
+              on success: no-op → on failure: rollback setFavoriteColorIds + toast.error
+          Wire handleToggleColorFavorite to FavoritesColorSection onToggle prop.
+          Pass favoriteColorIds to GarmentCatalogToolbar as the favoriteColorIds prop.
+
+      - id: '3.6'
+        action: verify
+        command: npm test
+        description: All tests pass after server action additions and client wiring.
+
+      - id: '3.7'
+        action: verify
+        command: npx tsc --noEmit
+        description: No TypeScript errors.
+
+    commit: 'feat(garments): persistent shop-level color favorites via server actions (#618)'
+
+  - id: wave-4
+    name: 'Persistent Brand-Level Color Favorites'
+    parallel: false
+    description: >
+      Remove version counter and getColorsMutable() from BrandDetailDrawer.
+      Thread colors prop. Lazy-load brand favorites on drawer open.
+      Wire toggleColorFavorite with brand scope (UUID resolution server-side).
+      Requires wave-3 (server actions exist) and wave-1 (catalogColors prop established).
+    steps:
+      - id: '4.1'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx
+        description: >
+          Pass colors={catalogColors} prop to BrandDetailDrawer in the component render.
+          The catalogColors prop is already available in GarmentCatalogClient from wave-1.
+
+      - id: '4.2'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/BrandDetailDrawer.tsx
+        description: >
+          Add colors: FilterColor[] to component props type.
+          Import FilterColor from garment-transforms.ts.
+          Remove: const catalogColors = getColorsMutable() (module-level)
+          Remove: getColorsMutable import
+          Replace all internal references to the removed catalogColors local with the colors prop.
+
+      - id: '4.3'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/BrandDetailDrawer.tsx
+        description: >
+          REMOVE: const [version, setVersion] = useState(0)
+          REMOVE: all setVersion((v) => v + 1) calls from all handler functions
+          ADD: const [brandFavoriteColorIds, setBrandFavoriteColorIds] = useState<string[]>([])
+          ADD useEffect to load brand favorites on drawer open:
+            useEffect(() => {
+              if (!open || !brandName) return
+              let cancelled = false
+              startTransition(async () => {
+                try {
+                  const ids = await getBrandColorFavorites(brandName)
+                  if (!cancelled) setBrandFavoriteColorIds(ids)
+                } catch (err) {
+                  if (!cancelled) {
+                    actionsLogger.warn({ brandName, err }, 'failed to load brand color favorites')
+                    setBrandFavoriteColorIds([])
+                  }
+                }
+              })
+              return () => { cancelled = true }
+            }, [open, brandName])
+          Import startTransition from react. Import getBrandColorFavorites from actions.ts.
+          Import actionsLogger from shared/lib/logger.
+
+      - id: '4.4'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/BrandDetailDrawer.tsx
+        description: >
+          Rewrite handleToggleFavorite callback:
+            const handleToggleFavorite = useCallback(async (colorId: string) => {
+              setBrandFavoriteColorIds(prev =>
+                prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+              )
+              const result = await toggleColorFavorite(colorId, 'brand', brandName)
+              if (!result.success) {
+                setBrandFavoriteColorIds(prev =>
+                  prev.includes(colorId) ? prev.filter(id => id !== colorId) : [...prev, colorId]
+                )
+                toast.error('Could not update brand color — try again')
+              }
+            }, [brandName])
+          Import toggleColorFavorite from actions.ts.
+
+      - id: '4.5'
+        action: edit_file
+        file: src/app/(dashboard)/garments/actions.ts
+        description: >
+          Extend toggleColorFavorite to handle brand scope correctly.
+          When scopeType === 'brand' and scopeId (brandName string) is provided:
+            SELECT id FROM catalog_brands WHERE canonical_name=$scopeId LIMIT 1
+          If no brand row found: return { success: false, error: 'Brand not found' }
+          Use the resolved brand UUID as resolvedScopeId for the catalog_color_preferences upsert.
+          The scopeId parameter for 'brand' scope semantically receives the canonical brand name
+          (not a UUID). Add an inline comment clarifying this semantic distinction.
+          Note: the null brand guard (returning error before upsert) implements the guard
+          documented in breadboard-reflection Fix #2.
+
+      - id: '4.6'
+        action: edit_file
+        file: src/app/(dashboard)/garments/_components/BrandDetailDrawer.tsx
+        description: >
+          Audit and remove any remaining references to getBrandPreferencesMutable(),
+          getColorsMutable(), or resolveEffectiveFavorites from the component.
+          For RemovalConfirmationDialog handlers (handleRemoveAll, handleRemoveLevelOnly,
+          handleRemoveSelected) that previously mutated the in-memory brandPreferences array:
+          if full inheritance persistence is not implemented in this wave (per shaping Out of Scope),
+          stub with toast.info('Coming soon') and add:
+          // TODO(#618-followup): full inheritance system persistence
+
+      - id: '4.7'
+        action: verify
+        command: npm test
+        description: All tests pass after BrandDetailDrawer changes.
+
+      - id: '4.8'
+        action: verify
+        command: npx tsc --noEmit
+        description: No TypeScript errors.
+
+      - id: '4.9'
+        action: verify
+        command: "rg 'getColorsMutable' src/app/\\(dashboard\\)/garments/ src/features/garments/"
+        description: >
+          No output expected — confirms getColorsMutable() is fully removed
+          from all garment feature files.
+
+      - id: '4.10'
+        action: verify
+        command: "rg 'favoriteVersion' src/app/\\(dashboard\\)/garments/"
+        description: >
+          No output expected — confirms favoriteVersion counter is fully removed.
+
+      - id: '4.11'
+        action: verify
+        command: "rg 'useRouter|useSearchParams|usePathname' src/features/garments/hooks/useColorFilter.ts"
+        description: >
+          No output expected — confirms useColorFilter has no router imports.
+
+    commit: 'feat(garments): persistent brand-level color favorites in BrandDetailDrawer (#618)'
+
+  - id: final-verification
+    name: 'Final Verification'
+    parallel: false
+    description: End-to-end build and smoke test after all waves are complete.
+    steps:
+      - id: 'final.1'
+        action: run_command
+        command: npm run build
+        description: Production build must succeed with no type errors or ESLint violations.
+
+      - id: 'final.2'
+        action: run_command
+        command: npm test
+        description: All test suites pass.
+
+      - id: 'final.3'
+        action: run_command
+        command: npx tsc --noEmit
+        description: Clean TypeScript check.
+
+      - id: 'final.4'
+        action: verify
+        command: "rg 'getColorsMutable' src/app/\\(dashboard\\)/garments/ src/features/garments/"
+        description: Zero results — getColorsMutable fully removed from garments feature.
+
+      - id: 'final.5'
+        action: verify
+        command: "rg 'favoriteVersion' src/app/\\(dashboard\\)/garments/"
+        description: Zero results — favoriteVersion counter fully removed.
+
+      - id: 'final.6'
+        action: verify
+        command: "rg 'router\\.replace|useSearchParams|useRouter' src/features/garments/hooks/useColorFilter.ts"
+        description: Zero results — useColorFilter uses only useState.
+
+key_invariants:
+  - 'ColorFilterGrid never calls getColorsMutable() — all color data flows from props'
+  - 'GarmentCatalogToolbar never calls getColorsMutable() — uses catalogColors prop for pill lookup'
+  - 'BrandDetailDrawer never mutates in-memory mock arrays — all mutations go through server actions'
+  - 'useColorFilter never calls router.replace() — color selection is local state only'
+  - 'Filter matching is name-based — ID comparison against g.availableColors is removed'
+  - 'catalog_color_preferences is the single source of truth for color favorites at any scope'
+  - 'catalog_inventory has no application reads in this issue — schema only'
+  - 'Brand UUID resolution always happens server-side — clients pass brandName string, not UUIDs'
+  - 'Optimistic updates always capture previous state before mutation and roll back on failure'
+  - 'Server actions follow: validate UUID → verify session → read → compute → upsert → log → return typed result'
+
+files_modified:
+  - src/db/schema/catalog-normalized.ts
+  - src/db/schema/index.ts
+  - supabase/migrations/0015_catalog_color_preferences.sql
+  - src/app/(dashboard)/garments/_lib/garment-transforms.ts
+  - src/features/garments/components/FavoritesColorSection.tsx
+  - src/app/(dashboard)/garments/_components/ColorFilterGrid.tsx
+  - src/app/(dashboard)/garments/page.tsx
+  - src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx
+  - src/app/(dashboard)/garments/_components/GarmentCatalogToolbar.tsx
+  - src/features/garments/hooks/useColorFilter.ts
+  - src/app/(dashboard)/garments/actions.ts
+  - src/app/(dashboard)/garments/_components/BrandDetailDrawer.tsx
+
+files_read_only:
+  - src/infrastructure/repositories/_providers/supabase/catalog.ts
+  - src/infrastructure/repositories/colors.ts
+
+tech_debt_noted:
+  - 'GarmentCatalogClient owns ~12 state/memo items across 5 data domains. Refactor into useGarmentCatalog composition hook is future work.'
+  - 'RemovalConfirmationDialog handlers in BrandDetailDrawer may be stubbed. Mark with TODO(#618-followup).'
+  - 'catalog_inventory is schema-only. S&S data sync is explicitly deferred.'
+  - 'GarmentCatalog.availableColors still uses mock slug IDs. Unification with real catalog_colors UUIDs is out of scope.'

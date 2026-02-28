@@ -17,7 +17,7 @@ deduplicated as (
         style_name as product_name,
         brand_name,
         -- Take the first non-null GTIN across all SKUs for this style
-        max(gtin) as gtin,
+        max(gtin) as gtin
     from pricing
     group by 1, 2, 3, 4
 ),
@@ -29,7 +29,7 @@ final as (
         style_id,
         product_name,
         brand_name,
-        gtin,
+        gtin
     from deduplicated
 )
 

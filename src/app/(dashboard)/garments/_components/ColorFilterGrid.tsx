@@ -5,25 +5,24 @@ import { Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
-import { getColorsMutable } from '@infra/repositories/colors'
-import type { Color } from '@domain/entities/color'
+import type { FilterColorGroup } from '@features/garments/types'
 import { useGridKeyboardNav } from '@shared/hooks/useGridKeyboardNav'
 
-const catalogColors = getColorsMutable()
-
 type ColorFilterGridProps = {
-  selectedColorIds: string[]
-  onToggleColor: (colorId: string) => void
-  favoriteColorIds: string[]
+  colorGroups: FilterColorGroup[]
+  selectedColorGroups: string[]
+  onToggleColorGroup: (colorGroupName: string) => void
+  /** When provided (brand filter active), only show groups whose names are in this set. */
+  availableColorGroups?: Set<string>
 }
 
-function FilterSwatch({
-  color,
+function GroupSwatch({
+  group,
   isSelected,
   onToggle,
   tabIndex,
 }: {
-  color: Color
+  group: FilterColorGroup
   isSelected: boolean
   onToggle: () => void
   tabIndex: number
@@ -35,7 +34,7 @@ function FilterSwatch({
           type="button"
           role="checkbox"
           aria-checked={isSelected}
-          aria-label={`Filter by ${color.name}`}
+          aria-label={`Filter by ${group.colorGroupName}`}
           tabIndex={tabIndex}
           onClick={onToggle}
           onKeyDown={(e) => {
@@ -45,75 +44,80 @@ function FilterSwatch({
             }
           }}
           className={cn(
-            'relative flex h-8 w-8 min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) md:min-h-0 md:min-w-0 flex-shrink-0 items-center justify-center rounded-sm transition-all',
+            'relative flex h-10 w-10 min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) md:min-h-0 md:min-w-0 flex-shrink-0 items-center justify-center rounded-sm transition-all',
             'cursor-pointer hover:scale-105 hover:ring-1 hover:ring-foreground/30',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'motion-reduce:transition-none',
             isSelected && 'ring-2 ring-action scale-110'
           )}
-          style={{ backgroundColor: color.hex }}
+          style={{ backgroundColor: group.hex }}
         >
           {isSelected ? (
-            <Check size={14} style={{ color: color.swatchTextColor }} aria-hidden="true" />
+            <Check size={16} style={{ color: group.swatchTextColor }} aria-hidden="true" />
           ) : (
             <span
               className="pointer-events-none select-none text-center leading-tight"
-              style={swatchTextStyle(color.swatchTextColor)}
+              style={swatchTextStyle(group.swatchTextColor)}
             >
-              {color.name}
+              {group.colorGroupName}
             </span>
           )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={6}>
-        {color.name}
+        {group.colorGroupName}
       </TooltipContent>
     </Tooltip>
   )
 }
 
 export function ColorFilterGrid({
-  selectedColorIds,
-  onToggleColor,
-  favoriteColorIds,
+  colorGroups,
+  selectedColorGroups,
+  onToggleColorGroup,
+  availableColorGroups,
 }: ColorFilterGridProps) {
   const gridRef = useRef<HTMLDivElement>(null)
 
-  const selectedSet = useMemo(() => new Set(selectedColorIds), [selectedColorIds])
+  const selectedSet = useMemo(() => new Set(selectedColorGroups), [selectedColorGroups])
 
-  // Favorites first, then remaining by catalog order
-  const sortedColors = useMemo(() => {
-    const favoriteSet = new Set(favoriteColorIds)
-    const favorites: Color[] = []
-    const rest: Color[] = []
+  // Filter by brand scope when a brand is selected in the drawer
+  const scopedGroups = useMemo(() => {
+    if (!availableColorGroups) return colorGroups
+    return colorGroups.filter((g) => availableColorGroups.has(g.colorGroupName))
+  }, [colorGroups, availableColorGroups])
 
-    for (const color of catalogColors) {
-      if (favoriteSet.has(color.id)) {
-        favorites.push(color)
+  // Selected groups float to the top
+  const sortedGroups = useMemo(() => {
+    const selected: FilterColorGroup[] = []
+    const rest: FilterColorGroup[] = []
+    for (const group of scopedGroups) {
+      if (selectedSet.has(group.colorGroupName)) {
+        selected.push(group)
       } else {
-        rest.push(color)
+        rest.push(group)
       }
     }
+    return [...selected, ...rest]
+  }, [scopedGroups, selectedSet])
 
-    return [...favorites, ...rest]
-  }, [favoriteColorIds])
-
-  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 34)
+  // swatch width: h-10 w-10 = 40px + gap-px (1px) ≈ 41px per cell
+  const handleKeyDown = useGridKeyboardNav(gridRef, '[role="checkbox"]', 41)
 
   return (
     <div
       ref={gridRef}
-      className="flex flex-wrap gap-0.5"
+      className="flex flex-wrap gap-px"
       role="group"
-      aria-label="Filter by color"
+      aria-label="Filter by color group"
       onKeyDown={handleKeyDown}
     >
-      {sortedColors.map((color, i) => (
-        <FilterSwatch
-          key={color.id}
-          color={color}
-          isSelected={selectedSet.has(color.id)}
-          onToggle={() => onToggleColor(color.id)}
+      {sortedGroups.map((group, i) => (
+        <GroupSwatch
+          key={group.colorGroupName}
+          group={group}
+          isSelected={selectedSet.has(group.colorGroupName)}
+          onToggle={() => onToggleColorGroup(group.colorGroupName)}
           tabIndex={i === 0 ? 0 : -1}
         />
       ))}

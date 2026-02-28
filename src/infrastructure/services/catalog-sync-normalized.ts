@@ -42,9 +42,6 @@ export function buildStyleUpsertValue(
   category: GarmentCategory
   subcategory: string | null
   gtin: string | null
-  piecePrice: number | null
-  dozenPrice: number | null
-  casePrice: number | null
   lastSyncedAt: Date
   updatedAt: Date
 } {
@@ -63,9 +60,6 @@ export function buildStyleUpsertValue(
     category: canonicalCategoryToGarmentCategory([baseCategory]),
     subcategory,
     gtin: style.gtin,
-    piecePrice: style.pricing.piecePrice ?? null,
-    dozenPrice: style.pricing.dozenPrice ?? null,
-    casePrice: style.pricing.casePrice ?? null,
     lastSyncedAt: new Date(),
     updatedAt: new Date(),
   }
@@ -80,6 +74,8 @@ export function buildColorUpsertValue(
   name: string
   hex1: string | null
   hex2: string | null
+  colorFamilyName: string | null
+  colorCode: string | null
   updatedAt: Date
 } {
   return {
@@ -87,6 +83,8 @@ export function buildColorUpsertValue(
     name: color.name,
     hex1: color.hex1,
     hex2: color.hex2,
+    colorFamilyName: color.colorFamilyName || null,
+    colorCode: color.colorCode || null,
     updatedAt: new Date(),
   }
 }

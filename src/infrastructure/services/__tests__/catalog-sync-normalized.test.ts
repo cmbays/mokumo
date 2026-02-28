@@ -80,7 +80,10 @@ describe('buildStyleUpsertValue', () => {
     expect(val.brandId).toBe(brandId)
     expect(val.category).toBe('t-shirts')
     expect(val.subcategory).toBe('Premium')
-    expect(val.piecePrice).toBe(4.25)
+    // Pricing fields must not appear in the upsert value — they belong in raw.ss_activewear_products
+    expect(val).not.toHaveProperty('piecePrice')
+    expect(val).not.toHaveProperty('dozenPrice')
+    expect(val).not.toHaveProperty('casePrice')
   })
 })
 

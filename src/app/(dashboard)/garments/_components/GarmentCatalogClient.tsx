@@ -1,24 +1,41 @@
 'use client'
 
-import { useState, useMemo, useSyncExternalStore, useCallback, useEffect } from 'react'
+import {
+  useState,
+  useMemo,
+  useSyncExternalStore,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+} from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Package, ChevronLeft, ChevronRight } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@shared/ui/primitives/button'
 import { GarmentCatalogToolbar } from './GarmentCatalogToolbar'
 import { GarmentCard } from './GarmentCard'
 import { GarmentTableRow } from './GarmentTableRow'
 import { GarmentDetailDrawer } from './GarmentDetailDrawer'
 import { BrandDetailDrawer } from './BrandDetailDrawer'
-import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
-import { getColorsMutable } from '@infra/repositories/colors'
-import { getCustomersMutable } from '@infra/repositories/customers'
-import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
+import { toggleStyleEnabled, toggleStyleFavorite, toggleColorFavorite } from '../actions'
+import {
+  buildSkuToStyleIdMap,
+  buildSkuToFrontImageUrl,
+  buildSkuToNormalizedColors,
+  buildStyleToColorGroupNamesMap,
+  hydrateCatalogPreferences,
+} from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
+import { logger } from '@shared/lib/logger'
+import type { FilterColor, FilterColorGroup } from '@features/garments/types'
+import { sortColorGroupsByFavorites } from '@features/garments/utils/favorites-sort'
+
+const clientLogger = logger.child({ domain: 'garments' })
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -36,6 +53,14 @@ type GarmentCatalogClientProps = {
   initialCustomers: Customer[]
   /** Normalized catalog data with color images — used to power ImageTypeCarousel in the detail drawer. Optional: drawer falls back to GarmentImage when absent. */
   normalizedCatalog?: NormalizedGarmentCatalog[]
+  /** Deduplicated color group list for the filter grid (~80 groups), computed server-side. */
+  colorGroups: FilterColorGroup[]
+  /** Full individual color list — used by BrandDetailDrawer favorites section. */
+  catalogColors: FilterColor[]
+  /** Shop-scoped favorite color IDs from catalog_color_preferences, fetched server-side. */
+  initialFavoriteColorIds: string[]
+  /** Shop-scoped favorite colorGroupNames from catalog_color_group_preferences, fetched server-side. */
+  initialFavoriteColorGroupNames: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -47,40 +72,89 @@ export function GarmentCatalogClient({
   initialJobs,
   initialCustomers,
   normalizedCatalog,
+  colorGroups,
+  catalogColors,
+  initialFavoriteColorIds,
+  initialFavoriteColorGroupNames,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  // URL state
-  const category = searchParams.get('category') ?? 'all'
+  // URL state — only search + brand; these are rarely changed rapidly so server round-trips are ok
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
-  const view = searchParams.get('view') ?? 'grid'
 
-  // Color filter from extracted hook (fix #7)
-  const { selectedColorIds, toggleColor, clearColors } = useColorFilter()
+  // Local UI state — NOT in URL to avoid server re-renders on every tab/view click
+  const [category, setCategory] = useState('all')
+  const [view, setView] = useState<'grid' | 'table'>('grid')
 
-  // Version counter — forces favorite recomputation after mock data mutations
-  // (e.g., brand drawer toggles isFavorite on colors). Phase 3 replaces with API fetch.
-  const [favoriteVersion, setFavoriteVersion] = useState(0)
+  // Color group filter
+  const { selectedColorGroups, toggleColorGroup, clearColorGroups } = useColorFilter()
 
-  // Resolved global favorites — single source of truth passed as props (fix #4)
-  const globalFavoriteColorIds = useMemo(
-    () =>
-      resolveEffectiveFavorites(
-        'global',
-        undefined,
-        getColorsMutable(),
-        getCustomersMutable(),
-        getBrandPreferencesMutable()
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [favoriteVersion]
+  // Shop color favorites — seeded from SSR fetch, updated optimistically by toggleColorFavorite
+  const [favoriteColorIds, setFavoriteColorIds] = useState<string[]>(initialFavoriteColorIds)
+
+  // Shop color-group favorites — seeded from SSR fetch, used to pre-sort ColorFilterGrid
+  const [favoriteColorGroupNames] = useState<Set<string>>(
+    () => new Set(initialFavoriteColorGroupNames)
   )
 
-  // Local state for mock data mutations
-  const [catalog, setCatalog] = useState<GarmentCatalog[]>(initialCatalog)
+  // Pre-sort color groups so favorited swatches appear first in the filter grid
+  const sortedColorGroups = useMemo(
+    () => sortColorGroupsByFavorites(colorGroups, favoriteColorGroupNames),
+    [colorGroups, favoriteColorGroupNames]
+  )
+
+  // SKU → catalog_styles UUID lookup — used by toggle server actions
+  const skuToStyleId = useMemo(() => buildSkuToStyleIdMap(normalizedCatalog), [normalizedCatalog])
+
+  // SKU → first front image URL — real S&S CDN URLs from catalog_images
+  const skuToFrontImageUrl = useMemo(
+    () => buildSkuToFrontImageUrl(normalizedCatalog),
+    [normalizedCatalog]
+  )
+
+  // SKU → CatalogColor[] — feeds ColorSwatchStrip on each card with real S&S hex swatches
+  const skuToNormalizedColors = useMemo(
+    () => buildSkuToNormalizedColors(normalizedCatalog),
+    [normalizedCatalog]
+  )
+
+  // styleNumber → Set<colorGroupName> — for group-based filter matching
+  const styleToColorGroupNamesMap = useMemo(
+    () => buildStyleToColorGroupNamesMap(normalizedCatalog),
+    [normalizedCatalog]
+  )
+
+  // When a brand filter is active, compute the set of color group names for that brand.
+  // Passed to ColorFilterGrid so tabs + swatches scope to the brand.
+  const brandAvailableColorGroups = useMemo(() => {
+    if (!brand || !normalizedCatalog) return undefined
+    const groups = new Set<string>()
+    for (const style of normalizedCatalog) {
+      if (style.brand === brand) {
+        for (const color of style.colors) {
+          if (color.colorGroupName) groups.add(color.colorGroupName)
+        }
+      }
+    }
+    return groups.size > 0 ? groups : undefined
+  }, [brand, normalizedCatalog])
+
+  // Catalog state — seeded with isEnabled/isFavorite from normalizedCatalog (source of truth)
+  const [catalog, setCatalog] = useState<GarmentCatalog[]>(() =>
+    hydrateCatalogPreferences(initialCatalog, normalizedCatalog)
+  )
+
+  // Ref always pointing to latest catalog — lets async handlers snapshot/rollback
+  // without closing over stale state or adding catalog to useCallback deps.
+  // useLayoutEffect (not render-time assignment) keeps the React Compiler lint rule happy
+  // while still guaranteeing the ref is current before any event handler fires.
+  const catalogRef = useRef(catalog)
+  useLayoutEffect(() => {
+    catalogRef.current = catalog
+  })
 
   // Price visibility from localStorage (useSyncExternalStore avoids setState-in-effect)
   const subscribeToPriceStore = useCallback((onStoreChange: () => void) => {
@@ -104,10 +178,10 @@ export function GarmentCatalogClient({
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
-  // Normalized colors for selected garment — matched by externalId (= S&S style number = GarmentCatalog.sku)
+  // Normalized colors for selected garment — matched by styleNumber (= catalog_archived.sku)
   const selectedNormalizedColors = useMemo(() => {
     if (!normalizedCatalog || !selectedGarment) return undefined
-    const match = normalizedCatalog.find((n) => n.externalId === selectedGarment.sku)
+    const match = normalizedCatalog.find((n) => n.styleNumber === selectedGarment.sku)
     return match?.colors
   }, [normalizedCatalog, selectedGarment])
 
@@ -120,74 +194,75 @@ export function GarmentCatalogClient({
     setSelectedBrandName(brandName)
   }, [])
 
-  // Pagination
+  // Pagination — page resets to 0 when any filter changes.
+  // "Adjust state during render" pattern (React docs) avoids the useEffect+setState
+  // double-render and the react-compiler "setState in effect" lint error.
   const [page, setPage] = useState(0)
+  const [lastFilterKey, setLastFilterKey] = useState('')
+  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}`
+  if (lastFilterKey !== currentFilterKey) {
+    setLastFilterKey(currentFilterKey)
+    setPage(0)
+  }
 
-  // Filter garments (N23: getFilteredGarmentsByColors)
-  const filteredGarments = useMemo(() => {
-    const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
+  // Single pass over the catalog — builds filteredGarments and categoryHits together.
+  // categoryHits applies all filters except category (faceted search pattern) so the
+  // toolbar can hide tabs with zero inventory without collapsing the active tab.
+  // selectedColorGroups → Set<string> for group-based filter matching
+  const selectedGroupSet = useMemo(
+    () => (selectedColorGroups.length > 0 ? new Set(selectedColorGroups) : null),
+    [selectedColorGroups]
+  )
 
-    return catalog.filter((g) => {
-      // Category filter
-      if (category !== 'all' && g.baseCategory !== category) return false
+  const { filteredGarments, categoryHits } = useMemo(() => {
+    const q = searchQuery ? searchQuery.toLowerCase() : null
+    const hits: Record<string, number> = {}
+    const filtered: GarmentCatalog[] = []
+
+    for (const g of catalog) {
+      // Always hide disabled garments — toggle removed in favor of Favorites page
+      if (!g.isEnabled) continue
 
       // Search filter
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
+      if (q) {
         const matches =
           g.name.toLowerCase().includes(q) ||
           g.brand.toLowerCase().includes(q) ||
           g.sku.toLowerCase().includes(q)
-        if (!matches) return false
+        if (!matches) continue
       }
-
       // Brand filter
-      if (brand && g.brand !== brand) return false
-
-      // Color filter — garment has ANY matching colorId in its palette
-      if (colorFilterSet) {
-        const hasMatchingColor = g.availableColors.some((colorId) => colorFilterSet.has(colorId))
-        if (!hasMatchingColor) return false
+      if (brand && g.brand !== brand) continue
+      // Color group filter — match styles with at least one color in the selected groups
+      if (selectedGroupSet) {
+        const garmentColorGroups = styleToColorGroupNamesMap.get(g.sku)
+        if (!garmentColorGroups || ![...garmentColorGroups].some((g) => selectedGroupSet.has(g)))
+          continue
       }
 
-      return true
-    })
-  }, [catalog, category, searchQuery, brand, selectedColorIds])
+      // Passes all non-category filters → count toward categoryHits
+      hits[g.baseCategory] = (hits[g.baseCategory] ?? 0) + 1
 
-  // Per-category hit counts ignoring the category filter (faceted search pattern) —
-  // used to hide empty tabs from the toolbar without affecting the active category filter.
-  const categoryHits = useMemo(() => {
-    const colorFilterSet = selectedColorIds.length > 0 ? new Set(selectedColorIds) : null
-    const counts: Record<string, number> = {}
-    catalog.forEach((g) => {
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
-        if (
-          !g.name.toLowerCase().includes(q) &&
-          !g.brand.toLowerCase().includes(q) &&
-          !g.sku.toLowerCase().includes(q)
-        )
-          return
-      }
-      if (brand && g.brand !== brand) return
-      if (colorFilterSet && !g.availableColors.some((id) => colorFilterSet.has(id))) return
-      counts[g.baseCategory] = (counts[g.baseCategory] ?? 0) + 1
-    })
-    return counts
-  }, [catalog, searchQuery, brand, selectedColorIds])
+      // Category filter (only affects filteredGarments, not hits)
+      if (category === 'all' || g.baseCategory === category) filtered.push(g)
+    }
 
-  // Reset to first page whenever any filter changes
-  const colorFilterKey = selectedColorIds.join(',')
-  useEffect(() => {
-    setPage(0)
-  }, [category, searchQuery, brand, colorFilterKey])
+    // Sort favorites first so starred garments surface to the top of the grid
+    filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
+
+    return { filteredGarments: filtered, categoryHits: hits }
+  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleToColorGroupNamesMap])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
   const visibleGarments = filteredGarments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
-  // Extract unique brands for filter dropdown
-  const brands = useMemo(() => [...new Set(catalog.map((g) => g.brand))].sort(), [catalog])
+  // Extract unique brands for filter dropdown — only from enabled garments so disabled-brand
+  // names don't ghost in the dropdown after being hidden from the grid
+  const brands = useMemo(
+    () => [...new Set(catalog.filter((g) => g.isEnabled).map((g) => g.brand))].sort(),
+    [catalog]
+  )
 
   // Linked jobs for drawer
   const linkedJobs = useMemo(() => {
@@ -204,49 +279,121 @@ export function GarmentCatalogClient({
       })
   }, [selectedGarmentId, initialJobs, initialCustomers])
 
-  // Handlers
-  function handleToggleEnabled(garmentId: string) {
-    setCatalog((prev) =>
-      prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
-    )
-  }
+  // Handlers — optimistic update then server action; rollback + toast on failure.
+  // prevGarment captures only the affected item so concurrent in-flight updates aren't clobbered.
 
-  function handleToggleFavorite(garmentId: string) {
-    setCatalog((prev) =>
-      prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
-    )
-  }
+  const handleToggleEnabled = useCallback(
+    async (garmentId: string) => {
+      const garment = catalogRef.current.find((g) => g.id === garmentId)
+      if (!garment) return
+      const styleId = skuToStyleId.get(garment.sku)
+      const prevGarment = garment
 
-  // Fix #11: handleClearAll for empty state CTA
+      setCatalog((prev) =>
+        prev.map((g) => (g.id === garmentId ? { ...g, isEnabled: !g.isEnabled } : g))
+      )
+
+      if (!styleId) {
+        clientLogger.warn(
+          'No catalog_styles entry — enabled toggle is local-only and will not persist',
+          { sku: garment.sku }
+        )
+        toast.warning("This garment hasn't been synced yet — toggle won't be saved")
+        return
+      }
+
+      const result = await toggleStyleEnabled(styleId)
+      if (!result.success) {
+        setCatalog((prev) => prev.map((g) => (g.id === garmentId ? prevGarment : g)))
+        toast.error("Couldn't update style — try again")
+      }
+    },
+    [skuToStyleId]
+  )
+
+  const handleToggleFavorite = useCallback(
+    async (garmentId: string) => {
+      const garment = catalogRef.current.find((g) => g.id === garmentId)
+      if (!garment) return
+      const styleId = skuToStyleId.get(garment.sku)
+      const prevGarment = garment
+
+      setCatalog((prev) =>
+        prev.map((g) => (g.id === garmentId ? { ...g, isFavorite: !g.isFavorite } : g))
+      )
+
+      if (!styleId) {
+        clientLogger.warn(
+          'No catalog_styles entry — favorite toggle is local-only and will not persist',
+          { sku: garment.sku }
+        )
+        toast.warning("This garment hasn't been synced yet — toggle won't be saved")
+        return
+      }
+
+      const result = await toggleStyleFavorite(styleId)
+      if (!result.success) {
+        setCatalog((prev) => prev.map((g) => (g.id === garmentId ? prevGarment : g)))
+        toast.error("Couldn't update favorite — try again")
+      }
+    },
+    [skuToStyleId]
+  )
+
+  // Prefixed _ — handler is built but not yet wired to ColorFilterGrid UI (Phase 2 of #626)
+  const _handleToggleColorFavorite = useCallback(async (colorId: string) => {
+    // Optimistic update
+    setFavoriteColorIds((prev) =>
+      prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
+    )
+    const result = await toggleColorFavorite(colorId, 'shop')
+    if (!result.success) {
+      // Rollback
+      setFavoriteColorIds((prev) =>
+        prev.includes(colorId) ? prev.filter((id) => id !== colorId) : [...prev, colorId]
+      )
+      toast.error("Couldn't update color favorite — try again")
+    }
+  }, [])
+
+  // handleClearAll for empty state CTA — clears URL params + resets local category state
   const handleClearAll = useCallback(() => {
     router.replace(pathname, { scroll: false })
+    setCategory('all')
   }, [router, pathname])
 
   return (
     <>
       <GarmentCatalogToolbar
+        colorGroups={sortedColorGroups}
         brands={brands}
-        selectedColorIds={selectedColorIds}
-        onToggleColor={toggleColor}
-        onClearColors={clearColors}
+        selectedColorGroups={selectedColorGroups}
+        onToggleColorGroup={toggleColorGroup}
+        onClearColorGroups={clearColorGroups}
         garmentCount={filteredGarments.length}
-        favoriteColorIds={globalFavoriteColorIds}
         onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
+        category={category}
+        onCategoryChange={setCategory}
+        view={view}
+        onViewChange={setView}
+        availableColorGroups={brandAvailableColorGroups}
       />
 
       {/* Grid View */}
       {view === 'grid' ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {visibleGarments.map((garment) => (
             <GarmentCard
               key={garment.id}
               garment={garment}
               showPrice={showPrice}
-              favoriteColorIds={globalFavoriteColorIds}
+              favoriteColorIds={favoriteColorIds}
               onToggleFavorite={handleToggleFavorite}
               onBrandClick={handleBrandClick}
               onClick={setSelectedGarmentId}
+              frontImageUrl={skuToFrontImageUrl.get(garment.sku)}
+              normalizedColors={skuToNormalizedColors.get(garment.sku)}
             />
           ))}
         </div>
@@ -354,6 +501,7 @@ export function GarmentCatalogClient({
           onToggleFavorite={handleToggleFavorite}
           onBrandClick={handleBrandClick}
           normalizedColors={selectedNormalizedColors}
+          frontImageUrl={skuToFrontImageUrl.get(selectedGarment.sku)}
         />
       )}
 
@@ -363,17 +511,13 @@ export function GarmentCatalogClient({
           brandName={selectedBrandName}
           open={true}
           onOpenChange={(open) => {
-            if (!open) {
-              setSelectedBrandName(null)
-              // Refresh favorites in case brand drawer mutated color preferences
-              setFavoriteVersion((v) => v + 1)
-            }
+            if (!open) setSelectedBrandName(null)
           }}
           onGarmentClick={(garmentId) => {
             setSelectedBrandName(null)
-            setFavoriteVersion((v) => v + 1)
             setSelectedGarmentId(garmentId)
           }}
+          colors={catalogColors}
         />
       )}
     </>

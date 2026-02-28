@@ -1,6 +1,10 @@
 name: dbt Run
 
 on:
+  # Daily refresh — keeps marts tables current
+  schedule:
+    - cron: '0 6 * * *'
+
   # Manual trigger from GitHub UI
   workflow_dispatch:
     inputs:
@@ -24,6 +28,8 @@ on:
     secrets:
       SUPABASE_DB_HOST:
         required: true
+      SUPABASE_DB_USER:
+        required: true
       SUPABASE_DB_PASSWORD:
         required: true
 
@@ -32,7 +38,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Direct connection (port 5432), NOT PgBouncer transaction mode (6543)
+      # Session-mode pooler (port 5432) — direct connection is IPv6-only on this project,
+      # which GitHub Actions Azure runners cannot reach. Session mode is dbt-compatible
+      # (full session state preserved). NOT transaction mode (port 6543) — breaks dbt.
       DBT_PG_HOST: ${{ secrets.SUPABASE_DB_HOST }}
       DBT_PG_PORT: '5432'
       DBT_PG_USER: ${{ secrets.SUPABASE_DB_USER }}
@@ -65,21 +73,43 @@ jobs:
         working-directory: dbt
         run: uv run dbt deps
 
+      - name: Resolve host to IPv4 and set PGHOSTADDR (Azure runners lack IPv6 routing)
+        run: |
+          echo "All DNS addresses for host:"
+          python3 -c "import socket,os; [print('  '+r[0].name+': '+r[4][0]) for r in socket.getaddrinfo(os.environ['DBT_PG_HOST'],5432)]" 2>&1 || echo "  (getaddrinfo failed)"
+          IPV4=$(python3 -c "import socket,os; print(socket.getaddrinfo(os.environ['DBT_PG_HOST'],5432,socket.AF_INET)[0][4][0])" 2>/dev/null || true)
+          if [ -z "$IPV4" ]; then
+            echo "::error::Host has no IPv4 address. GitHub Actions Azure runners have no IPv6 routing. Use the Supabase session-mode pooler or enable the Supabase IPv4 add-on."
+            exit 1
+          fi
+          echo "Setting PGHOSTADDR=$IPV4"
+          echo "PGHOSTADDR=$IPV4" >> "$GITHUB_ENV"
+
       - name: Verify dbt connection
         working-directory: dbt
         run: uv run dbt debug --target "$DBT_TARGET"
 
+      - name: Seed reference data
+        working-directory: dbt
+        run: uv run dbt seed --target "$DBT_TARGET"
+
       - name: Run dbt models
         working-directory: dbt
-        run: uv run dbt run --target "$DBT_TARGET"
+        # Excludes stg_ss_activewear__pricing and 4 downstream models until the
+        # S&S sync pipeline (issue #165) populates raw.ss_activewear_products.
+        # Remove the --exclude flag once the sync is live.
+        run: uv run dbt run --exclude source:ss_activewear+ --target "$DBT_TARGET"
 
       - name: Run dbt tests
         working-directory: dbt
-        run: uv run dbt test --target "$DBT_TARGET"
+        # Mirror the --exclude from dbt run — don't test models that weren't built.
+        run: uv run dbt test --exclude source:ss_activewear+ --target "$DBT_TARGET"
 
       - name: Run dbt snapshots
         working-directory: dbt
-        run: uv run dbt snapshot --target "$DBT_TARGET"
+        # snp_supplier_pricing depends on int_supplier_pricing__conformed which
+        # is excluded until the S&S sync pipeline (issue #165) is live.
+        run: uv run dbt snapshot --exclude snp_supplier_pricing --target "$DBT_TARGET"
 
       - name: Cache manifest for Slim CI
         if: success()

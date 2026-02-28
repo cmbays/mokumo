@@ -69,6 +69,8 @@ const ssProductSchema = z
     description: z.string().optional().default(''),
     colorName: z.string(),
     colorCode: z.string().optional().default(''),
+    // S&S returns "colorFamily" (not "colorFamilyName") — the DB column is named color_family_name
+    colorFamily: z.string().optional(),
     // S&S hex codes omit the # prefix (e.g. "FF0000"). Empty string = no hex.
     color1: z.string().optional().default(''),
     color2: z.string().optional().default(''),
@@ -216,6 +218,9 @@ export function productsToCanonicalStyle(
     hex1: normalizeHex(p.color1),
     hex2: normalizeHex(p.color2),
     images: buildImages(p),
+    // S&S field is "colorFamily"; our DB column is "color_family_name"
+    colorFamilyName: p.colorFamily?.trim() || null,
+    colorCode: p.colorCode?.trim() || null,
   }))
 
   const sizes: CanonicalSize[] = Array.from(sizeMap.values()).sort(
@@ -491,7 +496,7 @@ export class SSActivewearAdapter implements SupplierAdapter {
         supplier: this.supplierName,
         checkedAt: new Date(),
         latencyMs: Date.now() - start,
-        message: err instanceof Error ? err.message : 'Unknown error',
+        message: Error.isError(err) ? err.message : 'Unknown error',
       }
     }
   }

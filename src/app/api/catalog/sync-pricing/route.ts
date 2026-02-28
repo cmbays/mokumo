@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { syncRawPricingFromSupplier } from '@infra/services/pricing-sync.service'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { logger } from '@shared/lib/logger'
+import { checkAdminSyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
 
 const syncLogger = logger.child({ domain: 'pricing-sync-endpoint' })
 
@@ -21,6 +22,15 @@ const requestBodySchema = z
  */
 export async function POST(request: Request): Promise<Response> {
   try {
+    const ip = getClientIp(request)
+    const { limited } = await checkAdminSyncRateLimit(ip)
+    if (limited) {
+      return Response.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
+    }
+
     const auth = validateAdminSecret(request)
     if (!auth.valid) {
       return Response.json({ error: auth.error }, { status: auth.status })

@@ -99,7 +99,7 @@ export async function syncRawPricingFromSupplier(
         errors++
         syncLogger.error('Failed to sync pricing for style', {
           styleId,
-          error: error instanceof Error ? error.message : String(error),
+          error: Error.isError(error) ? error.message : String(error),
         })
       }
     }

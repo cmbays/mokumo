@@ -4,11 +4,22 @@ import { Heart, Check } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import { cn } from '@shared/lib/cn'
 import { swatchTextStyle } from '@shared/lib/swatch'
-import type { Color } from '@domain/entities/color'
+/**
+ * Minimal color shape required for swatch rendering.
+ * Both FilterColor (catalog) and Color (domain) satisfy this type — components
+ * that only render swatches should accept SwatchColor, not FilterColor, so that
+ * callers are not forced to provide fields they don't have (e.g. colorFamilyName).
+ */
+type SwatchColor = {
+  id: string
+  name: string
+  hex: string
+  swatchTextColor: string
+}
 
 type FavoritesColorSectionProps = {
-  favorites: Color[]
-  allColors: Color[]
+  favorites: SwatchColor[]
+  allColors: SwatchColor[]
   onToggle: (colorId: string) => void
   readOnly?: boolean
   showBadges?: boolean
@@ -22,7 +33,7 @@ export function ColorSwatch({
   readOnly,
   badge,
 }: {
-  color: Color
+  color: SwatchColor
   isFavorite: boolean
   onClick: () => void
   readOnly?: boolean

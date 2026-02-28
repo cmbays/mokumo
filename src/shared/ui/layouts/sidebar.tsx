@@ -18,9 +18,10 @@ const SIDEBAR_MAIN_ORDER = [
   '/screens',
   '/customers',
   '/garments',
+  '/garments/favorites',
 ]
 
-const SIDEBAR_SETTINGS_ORDER = ['/settings/pricing', '/settings/colors']
+const SIDEBAR_SETTINGS_ORDER = ['/settings/pricing']
 
 function getNavItem(href: string): NavItem {
   const item = ALL_NAV.get(href)
@@ -34,7 +35,6 @@ const settingsNavItems = SIDEBAR_SETTINGS_ORDER.map((href) => {
   const item = getNavItem(href)
   // Sidebar shows short labels under Settings header
   if (item.label === 'Pricing Settings') return { ...item, label: 'Pricing' }
-  if (item.label === 'Color Settings') return { ...item, label: 'Colors' }
   return item
 })
 
@@ -46,7 +46,7 @@ export function Sidebar() {
         <span className="text-sm font-semibold tracking-tight">Screen Print Pro</span>
       </div>
       <nav className="flex flex-1 flex-col px-2 py-3">
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 space-y-0.5">
           {mainNavItems.map((item) => (
             <SidebarNavLink key={item.href} {...item} />
           ))}

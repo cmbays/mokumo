@@ -16,7 +16,7 @@ import {
   Printer,
   Shirt,
   Settings,
-  Palette,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -26,6 +26,8 @@ export type NavItem = {
   icon: LucideIcon
   iconColor?: string
   activePrefix?: string
+  /** Render visually indented as a sub-item in the sidebar (e.g. Favorites under Garments) */
+  indent?: boolean
 }
 
 /** Primary navigation — shown in Sidebar + BottomTabBar */
@@ -47,6 +49,12 @@ export const SECONDARY_NAV: NavItem[] = [
   { label: 'Invoices', href: '/invoices', icon: Receipt, iconColor: 'text-success' },
   { label: 'Screens', href: '/screens', icon: Printer, iconColor: 'text-action' },
   { label: 'Garments', href: '/garments', icon: Shirt },
+  {
+    label: 'Favorites',
+    href: '/garments/favorites',
+    icon: Star,
+    iconColor: 'text-warning',
+    indent: true,
+  },
   { label: 'Pricing Settings', href: '/settings/pricing', icon: Settings },
-  { label: 'Color Settings', href: '/settings/colors', icon: Palette },
 ]

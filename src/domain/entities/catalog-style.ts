@@ -30,6 +30,9 @@ export const catalogColorSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .nullable(),
   images: z.array(catalogImageSchema),
+  colorFamilyName: z.string().nullable().optional(),
+  colorGroupName: z.string().nullable().optional(),
+  colorCode: z.string().nullable().optional(),
 })
 
 export type CatalogColor = z.infer<typeof catalogColorSchema>
@@ -54,7 +57,6 @@ export const normalizedGarmentCatalogSchema = z.object({
   description: z.string().nullable(),
   category: garmentCategoryEnum,
   subcategory: z.string().nullable(),
-  piecePrice: z.number().nonnegative().nullable(),
   colors: z.array(catalogColorSchema),
   sizes: z.array(catalogSizeSchema),
   /** Resolved from catalog_style_preferences — defaults: enabled=true, favorite=false */

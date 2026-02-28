@@ -57,7 +57,6 @@ describe('normalizedGarmentCatalogSchema', () => {
       description: '',
       category: 't-shirts',
       subcategory: null,
-      piecePrice: 4.25,
       colors: [],
       sizes: [],
       isEnabled: true,

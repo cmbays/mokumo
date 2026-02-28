@@ -2,6 +2,7 @@ import 'server-only'
 import { syncCatalogFromSupplier } from '@infra/services/catalog-sync.service'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { logger } from '@shared/lib/logger'
+import { checkAdminSyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
 
 const syncLogger = logger.child({ domain: 'catalog-sync-endpoint' })
 
@@ -12,6 +13,15 @@ const syncLogger = logger.child({ domain: 'catalog-sync-endpoint' })
  */
 export async function POST(request: Request): Promise<Response> {
   try {
+    const ip = getClientIp(request)
+    const { limited } = await checkAdminSyncRateLimit(ip)
+    if (limited) {
+      return Response.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
+    }
+
     const auth = validateAdminSecret(request)
     if (!auth.valid) {
       return Response.json({ error: auth.error }, { status: auth.status })

@@ -31,7 +31,7 @@ price_groups as (
         max(piece_price) as piece_price,
         max(dozen_price) as dozen_price,
         max(case_price) as case_price,
-        max(case_qty) as case_qty,
+        max(case_qty) as case_qty
     from pricing
     group by 1, 2, 3, 4, 5, 6
 ),
@@ -54,7 +54,7 @@ unpivoted as (
         'piece' as tier_name,
         1 as min_qty,
         11 as max_qty,
-        piece_price as unit_price,
+        piece_price as unit_price
     from price_groups
     where piece_price is not null
 
@@ -73,11 +73,11 @@ unpivoted as (
         12 as min_qty,
         case
             when case_qty is not null then case_qty - 1
-            else null
         end as max_qty,
-        dozen_price as unit_price,
+        dozen_price as unit_price
     from price_groups
-    where dozen_price is not null
+    where
+        dozen_price is not null
         and (case_qty is null or case_qty > 12)
 
     union all
@@ -93,9 +93,10 @@ unpivoted as (
         'case' as tier_name,
         case_qty as min_qty,
         cast(null as integer) as max_qty,
-        case_price as unit_price,
+        case_price as unit_price
     from price_groups
-    where case_price is not null
+    where
+        case_price is not null
         and case_qty is not null
 ),
 
@@ -117,7 +118,7 @@ final as (
         tier_name,
         min_qty,
         max_qty,
-        unit_price,
+        unit_price
     from unpivoted
 )
 

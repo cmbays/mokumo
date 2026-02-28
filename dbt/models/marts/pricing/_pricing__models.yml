@@ -94,11 +94,11 @@ models:
         data_tests:
           - unique
           - not_null
-      - name: year
+      - name: year_number
         description: Four-digit year.
         data_tests:
           - not_null
-      - name: quarter
+      - name: quarter_number
         description: Quarter number (1-4).
         data_tests:
           - not_null

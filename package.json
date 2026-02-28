@@ -2,6 +2,9 @@
   "name": "screen-print-pro",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -24,11 +27,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "dbt:run": "cd dbt && uv run dbt run",
-    "dbt:test": "cd dbt && uv run dbt test",
-    "dbt:deps": "cd dbt && uv run dbt deps",
-    "dbt:debug": "cd dbt && uv run dbt debug",
-    "dbt:build": "cd dbt && uv run dbt build"
+    "dbt:run": "cd dbt && uv run dbt run --profiles-dir profiles",
+    "dbt:test": "cd dbt && uv run dbt test --profiles-dir profiles",
+    "dbt:deps": "cd dbt && uv run dbt deps --profiles-dir profiles",
+    "dbt:debug": "cd dbt && uv run dbt debug --profiles-dir profiles",
+    "dbt:build": "cd dbt && uv run dbt build --profiles-dir profiles"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -77,8 +80,11 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/big.js": "^6.2.2",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/picomatch": "^4.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -88,6 +94,7 @@
     "eslint-config-next": "16.1.6",
     "eslint-plugin-import": "^2.32.0",
     "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1",
     "shadcn": "^3.8.4",
