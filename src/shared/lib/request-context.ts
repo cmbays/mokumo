@@ -52,6 +52,12 @@ export const requestContext = {
  * request context. Generates a unique `requestId` per request and makes it
  * available to all logger calls in the handler's async call tree.
  *
+ * **Scope:** this HOF only populates `requestId`. The optional `userId` and
+ * `shopId` fields on `RequestContext` are intentionally not populated here —
+ * resolving auth requires `verifySession()` inside the handler, after the
+ * context is already established. Use `requestContext.run()` directly in
+ * handlers that need user-scoped log correlation.
+ *
  * @example
  * ```typescript
  * export const GET = withRequestContext(async (request: NextRequest) => {

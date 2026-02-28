@@ -98,12 +98,36 @@ function logFormatted(level: LogLevel, message: string, context: LogContext): vo
   }
 }
 
+/**
+ * Safely invoke `_contextGetter` and return the ambient context.
+ *
+ * Uses a direct `console.error` write (not the logger itself) on failure to
+ * avoid infinite recursion through `emit()`. A throwing getter must never
+ * swallow the log entry that triggered the emit call.
+ */
+function getAmbientContext(): LogContext {
+  try {
+    return _contextGetter()
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'Log context getter threw — ambient context fields missing from this entry',
+        timestamp: new Date().toISOString(),
+        err: err instanceof Error ? err.message : String(err),
+      })
+    )
+    return {}
+  }
+}
+
 function emit(level: LogLevel, message: string, context: LogContext): void {
   if (!shouldLog(level)) return
 
   // Merge ambient request context at lowest priority so bound context and
   // per-call fields always win. On the client _contextGetter returns {}.
-  const merged = { ..._contextGetter(), ...context }
+  const merged = { ...getAmbientContext(), ...context }
 
   if (isServer) {
     logJson(level, message, merged)

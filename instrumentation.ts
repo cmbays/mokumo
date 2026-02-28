@@ -11,6 +11,14 @@ export async function register() {
 
     // Register ALS request context with logger — must happen before requests are served.
     // Importing this module is sufficient; it installs the context getter as a side effect.
-    await import('@shared/lib/request-context')
+    // Re-throw on failure so Next.js startup fails loudly: a silent import failure would
+    // leave the feature non-functional with no indication in logs or metrics.
+    try {
+      await import('@shared/lib/request-context')
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[instrumentation] Failed to register AsyncLocalStorage request context:', err)
+      throw err
+    }
   }
 }

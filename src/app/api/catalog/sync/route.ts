@@ -32,7 +32,10 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
 
     return Response.json({ synced, timestamp: new Date().toISOString() }, { status: 200 })
   } catch (error) {
-    syncLogger.error('Catalog sync failed', { error })
+    syncLogger.error('Catalog sync failed', {
+      error: Error.isError(error) ? error.message : String(error),
+      errorName: Error.isError(error) ? error.name : 'unknown',
+    })
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 })

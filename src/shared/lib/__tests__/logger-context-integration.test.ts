@@ -98,4 +98,30 @@ describe('setLogContextGetter()', () => {
     expect(firstEntry.requestId).toBe('first')
     expect(secondEntry.requestId).toBe('second')
   })
+
+  it('still emits the log entry when the context getter throws', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    setLogContextGetter(() => {
+      throw new Error('getter blew up')
+    })
+
+    // The original log message must not be swallowed even though the getter threw
+    logger.info('survived getter failure', { safeField: 'present' })
+
+    // The original log entry was written (ambient context missing, but message preserved)
+    expect(consoleSpy).toHaveBeenCalledOnce()
+    const entry = JSON.parse(consoleSpy.mock.calls[0][0] as string)
+    expect(entry.message).toBe('survived getter failure')
+    expect(entry.safeField).toBe('present')
+    // requestId is absent because getter failed, but that is acceptable
+    expect(entry.requestId).toBeUndefined()
+
+    // The getter failure itself was reported directly to console.error
+    expect(errorSpy).toHaveBeenCalledOnce()
+    const errorOutput = JSON.parse(errorSpy.mock.calls[0][0] as string)
+    expect(errorOutput.message).toContain('Log context getter threw')
+
+    errorSpy.mockRestore()
+  })
 })

@@ -160,4 +160,12 @@ describe('withRequestContext()', () => {
     const body = await response.json()
     expect(body).toEqual({ message: 'hello' })
   })
+
+  it('propagates handler rejections without swallowing them', async () => {
+    const handler = withRequestContext(async (_request: Request) => {
+      throw new Error('handler exploded')
+    })
+
+    await expect(handler(new Request('http://localhost/test'))).rejects.toThrow('handler exploded')
+  })
 })
