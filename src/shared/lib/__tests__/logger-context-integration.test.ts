@@ -6,17 +6,21 @@ import { logger, setLogContextGetter } from '../logger'
 
 describe('setLogContextGetter()', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     // Reset to no-op getter before each test
     setLogContextGetter(() => ({}))
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
     consoleSpy.mockRestore()
-    vi.spyOn(console, 'error').mockRestore()
-    vi.spyOn(console, 'warn').mockRestore()
+    consoleErrorSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
     // Reset to no-op so other test suites are unaffected
     setLogContextGetter(() => ({}))
   })
@@ -67,23 +71,17 @@ describe('setLogContextGetter()', () => {
   it('works for all log levels', () => {
     setLogContextGetter(() => ({ requestId: 'multi-level' }))
 
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
     logger.info('info line')
     logger.error('error line')
     logger.warn('warn line')
 
     const infoEntry = JSON.parse(consoleSpy.mock.calls[0][0] as string)
-    const errorEntry = JSON.parse(errorSpy.mock.calls[0][0] as string)
-    const warnEntry = JSON.parse(warnSpy.mock.calls[0][0] as string)
+    const errorEntry = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string)
+    const warnEntry = JSON.parse(consoleWarnSpy.mock.calls[0][0] as string)
 
     expect(infoEntry.requestId).toBe('multi-level')
     expect(errorEntry.requestId).toBe('multi-level')
     expect(warnEntry.requestId).toBe('multi-level')
-
-    errorSpy.mockRestore()
-    warnSpy.mockRestore()
   })
 
   it('switching getters takes effect immediately on the next log call', () => {
@@ -100,8 +98,6 @@ describe('setLogContextGetter()', () => {
   })
 
   it('still emits the log entry when the context getter throws', () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
     setLogContextGetter(() => {
       throw new Error('getter blew up')
     })
@@ -118,10 +114,8 @@ describe('setLogContextGetter()', () => {
     expect(entry.requestId).toBeUndefined()
 
     // The getter failure itself was reported directly to console.error
-    expect(errorSpy).toHaveBeenCalledOnce()
-    const errorOutput = JSON.parse(errorSpy.mock.calls[0][0] as string)
+    expect(consoleErrorSpy).toHaveBeenCalledOnce()
+    const errorOutput = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string)
     expect(errorOutput.message).toContain('Log context getter threw')
-
-    errorSpy.mockRestore()
   })
 })
