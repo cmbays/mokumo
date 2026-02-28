@@ -64,8 +64,13 @@ export type ConfigureData = {
     isEnabled: boolean | null
   }
   styles: StyleSummary[]
+  /** Total number of styles for this brand. May exceed styles.length when truncated to STYLES_LIMIT. */
+  totalStyleCount: number
   colorGroups: ColorGroupSummary[]
 }
+
+/** Max styles returned per brand. Caps the thumbnail inArray query for performance. */
+const STYLES_LIMIT = 50
 
 // ─── getBrandPreferencesSummary ───────────────────────────────────────────────
 
@@ -174,9 +179,9 @@ export async function getBrandConfigureData(
   if (!session) return null
 
   try {
-    // Batch 1: brand info, brand prefs, styles, and color groups are all independent —
-    // run in parallel to avoid 4 sequential round-trips.
-    const [brandRows, prefRows, styleRows, colorGroupRows] = await Promise.all([
+    // Batch 1: brand info, brand prefs, styles (limited), color groups, and total style count —
+    // all independent of each other, run in parallel to avoid 5 sequential round-trips.
+    const [brandRows, prefRows, styleRows, colorGroupRows, styleCountRows] = await Promise.all([
       db
         .select({ id: catalogBrands.id, name: catalogBrands.canonicalName })
         .from(catalogBrands)
@@ -198,6 +203,8 @@ export async function getBrandConfigureData(
         )
         .limit(1),
 
+      // Limited to STYLES_LIMIT — caps the thumbnail inArray in batch 2 for performance.
+      // Favorites are sorted first so the most useful styles appear even when truncated.
       db
         .select({
           id: catalogStyles.id,
@@ -216,7 +223,8 @@ export async function getBrandConfigureData(
           )
         )
         .where(eq(catalogStyles.brandId, brandId))
-        .orderBy(catalogStyles.styleNumber),
+        .orderBy(catalogStyles.styleNumber)
+        .limit(STYLES_LIMIT),
 
       db
         .select({
@@ -235,6 +243,9 @@ export async function getBrandConfigureData(
         )
         .where(eq(catalogColorGroups.brandId, brandId))
         .orderBy(catalogColorGroups.colorGroupName),
+
+      // Total style count — runs in parallel so the UI can show "50 of 234 styles"
+      db.select({ cnt: count() }).from(catalogStyles).where(eq(catalogStyles.brandId, brandId)),
     ])
 
     if (!brandRows[0]) return null
@@ -288,6 +299,8 @@ export async function getBrandConfigureData(
         .map((r) => [r.colorGroupName, r.hex])
     )
 
+    const totalStyleCount = styleCountRows[0]?.cnt ?? 0
+
     return {
       brand: {
         id: brandRows[0].id,
@@ -295,6 +308,7 @@ export async function getBrandConfigureData(
         isFavorite: prefRows[0]?.isFavorite ?? null,
         isEnabled: prefRows[0]?.isEnabled ?? null,
       },
+      totalStyleCount,
       styles: styleRows.map((s) => ({
         id: s.id,
         name: s.name,

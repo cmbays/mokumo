@@ -333,7 +333,9 @@ export function GarmentFavoritesClient({
               {/* Style grid */}
               <section>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Styles ({brandData.styles.length})
+                  {brandData.totalStyleCount > brandData.styles.length
+                    ? `Styles (${brandData.styles.length} of ${brandData.totalStyleCount})`
+                    : `Styles (${brandData.styles.length})`}
                 </p>
                 {brandData.styles.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No styles for this brand.</p>

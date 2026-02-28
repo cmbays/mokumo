@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { LogOut } from 'lucide-react'
 import {
   Breadcrumb,
@@ -11,9 +12,11 @@ import { signOut } from '@shared/actions/auth'
 
 type TopbarProps = {
   breadcrumbs?: BreadcrumbSegment[]
+  /** Optional page-level actions rendered between the breadcrumb and the sign-out button. */
+  actions?: ReactNode
 }
 
-export function Topbar({ breadcrumbs }: TopbarProps) {
+export function Topbar({ breadcrumbs, actions }: TopbarProps) {
   return (
     <header className="-mx-6 -mt-6 mb-6 flex h-14 items-center border-b border-border px-6">
       <Breadcrumb>
@@ -36,16 +39,19 @@ export function Topbar({ breadcrumbs }: TopbarProps) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <form action={signOut} className="ml-auto">
-        <button
-          type="submit"
-          className="inline-flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          title="Sign out"
-        >
-          <LogOut size={16} />
-          <span>Sign out</span>
-        </button>
-      </form>
+      <div className="ml-auto flex items-center gap-3">
+        {actions}
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            title="Sign out"
+          >
+            <LogOut size={16} />
+            <span>Sign out</span>
+          </button>
+        </form>
+      </div>
     </header>
   )
 }
