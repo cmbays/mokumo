@@ -71,7 +71,9 @@ export async function getBrandPreferencesSummary(shopId: string): Promise<BrandS
   if (!session) return []
 
   try {
-    // Step 1: brands with explicit preference records for this shop
+    // Step 1: ALL brands, left-joined with any existing pref record for this shop.
+    // Using LEFT JOIN so brands without preferences still appear — lets the user
+    // navigate to configure any brand, not just ones already configured.
     const brandPrefs = await db
       .select({
         brandId: catalogBrands.id,
@@ -79,16 +81,16 @@ export async function getBrandPreferencesSummary(shopId: string): Promise<BrandS
         isBrandFavorite: catalogBrandPreferences.isFavorite,
         isBrandEnabled: catalogBrandPreferences.isEnabled,
       })
-      .from(catalogBrandPreferences)
-      .innerJoin(catalogBrands, eq(catalogBrandPreferences.brandId, catalogBrands.id))
-      .where(
+      .from(catalogBrands)
+      .leftJoin(
+        catalogBrandPreferences,
         and(
+          eq(catalogBrandPreferences.brandId, catalogBrands.id),
           eq(catalogBrandPreferences.scopeType, 'shop'),
           eq(catalogBrandPreferences.scopeId, shopId)
         )
       )
-
-    if (brandPrefs.length === 0) return []
+      .orderBy(catalogBrands.canonicalName)
 
     const brandIds = brandPrefs.map((b) => b.brandId)
 

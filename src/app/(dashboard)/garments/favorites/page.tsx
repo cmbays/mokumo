@@ -25,7 +25,7 @@ export default async function GarmentFavoritesPage() {
 
         {brands.length === 0 ? (
           <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-elevated px-6 py-12 text-center">
-            <p className="text-sm text-muted-foreground">No favorites configured yet.</p>
+            <p className="text-sm text-muted-foreground">Unable to load brand catalog.</p>
             <Link
               href="/garments"
               className="text-sm text-action transition-colors hover:underline"
