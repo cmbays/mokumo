@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { ImageOff } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import type { CatalogImage } from '@domain/entities/catalog-style'
 
@@ -25,12 +26,28 @@ type ImageTypeCarouselProps = {
 }
 
 export function ImageTypeCarousel({ images, alt, className }: ImageTypeCarouselProps) {
-  const [activeType, setActiveType] = useState<ImageType>('front')
-
   const imageMap = new Map(images.map((img) => [img.imageType, img.url]))
-  const activeUrl = imageMap.get(activeType) ?? imageMap.get('front')
 
-  if (!activeUrl) return null
+  // Prefer 'front'; fall back to first available type rather than always 'front'.
+  // This prevents a blank carousel when a style has images but not a 'front' entry
+  // (e.g. Bayside styles that only have 'on-model-front' or 'swatch' in catalog_images).
+  const [activeType, setActiveType] = useState<ImageType>(() =>
+    imageMap.has('front') ? 'front' : (images[0]?.imageType ?? 'front')
+  )
+
+  // Fall back to first image in array when the active type is missing from the map
+  const activeUrl = imageMap.get(activeType) ?? images[0]?.url
+
+  if (!activeUrl) {
+    return (
+      <div className={cn('group relative', className)}>
+        <div className="relative w-full aspect-square bg-surface rounded-md flex flex-col items-center justify-center gap-2">
+          <ImageOff className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          <span className="text-xs text-muted-foreground">No image available</span>
+        </div>
+      </div>
+    )
+  }
 
   const availableStrip = STRIP_TYPES.filter((t) => imageMap.has(t))
 
@@ -65,7 +82,7 @@ export function ImageTypeCarousel({ images, alt, className }: ImageTypeCarouselP
                 setActiveType(type)
               }}
               className={cn(
-                'px-2 py-1.5 min-h-(--mobile-touch-target) md:min-h-0 md:py-0.5 text-xs rounded border transition-colors motion-reduce:transition-none',
+                'px-2 py-1.5 min-h-(--mobile-touch-target) md:min-h-0 md:py-0.5 text-xs rounded border transition-colors motion-reduce:transition-none active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/50',
                 activeType === type
                   ? 'border-action text-action bg-action/10'

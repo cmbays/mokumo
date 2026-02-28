@@ -243,22 +243,46 @@ export function buildStyleToColorNamesMap(
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a lookup map from S&S style number to a front image URL.
+ * Preference order for the card's representative image.
+ * 'front' flat-lay is best for print visualization; the remaining types act as
+ * graceful fallbacks for brands (e.g. Bayside, Threadfast) whose catalog_images
+ * rows have no 'front' entry.
+ */
+const CARD_IMAGE_PREFERENCE = [
+  'front',
+  'on-model-front',
+  'back',
+  'side',
+  'direct-side',
+  'on-model-back',
+  'on-model-side',
+  'swatch',
+] as const satisfies Array<import('@domain/entities/catalog-style').CatalogImage['imageType']>
+
+/**
+ * Builds a lookup map from S&S style number to a card-representative image URL.
+ *
+ * Scans colors for each image type in CARD_IMAGE_PREFERENCE order so that:
+ *  - Brands with 'front' flat-lay photos (Bella+Canvas etc.) use them as before.
+ *  - Brands with only on-model or other types show a real photo instead of
+ *    falling back to the GarmentMockup SVG.
  *
  * Uses stored URLs from catalog_images, populated by run-image-sync.ts.
- * Returns no entry for styles that have no synced images yet.
+ * Returns no entry only when the style has no synced images at all.
  */
 export function buildSkuToFrontImageUrl(
   normalizedCatalog: NormalizedGarmentCatalog[] | undefined
 ): Map<string, string> {
   if (!normalizedCatalog) return new Map()
   const map = new Map<string, string>()
-  for (const n of normalizedCatalog) {
-    for (const color of n.colors) {
-      const front = color.images.find((i) => i.imageType === 'front')
-      if (front) {
-        map.set(n.styleNumber, front.url)
-        break
+  styleLoop: for (const n of normalizedCatalog) {
+    for (const preferredType of CARD_IMAGE_PREFERENCE) {
+      for (const color of n.colors) {
+        const img = color.images.find((i) => i.imageType === preferredType)
+        if (img) {
+          map.set(n.styleNumber, img.url)
+          continue styleLoop
+        }
       }
     }
   }
