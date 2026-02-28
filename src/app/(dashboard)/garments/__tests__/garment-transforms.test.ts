@@ -1,15 +1,27 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildSkuToStyleIdMap,
-  buildSkuToFrontImageUrl,
-  hydrateCatalogPreferences,
-} from '../_lib/garment-transforms'
+import { buildSupplementMaps, hydrateCatalogPreferences } from '../_lib/garment-transforms'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { GarmentCatalog } from '@domain/entities/garment'
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
+
+// Derive the row type from buildSupplementMaps without importing across
+// architecture boundaries (avoids @infra/repositories/_providers/* imports
+// from outside src/infrastructure/).
+type SupplementRow = Parameters<typeof buildSupplementMaps>[0][number]
+
+function makeRow(
+  overrides: Partial<SupplementRow> & Pick<SupplementRow, 'styleNumber' | 'id' | 'name'>
+): SupplementRow {
+  return {
+    hex1: null,
+    colorFamilyName: null,
+    colorGroupName: null,
+    ...overrides,
+  }
+}
 
 function makeNormalized(
   overrides: Partial<NormalizedGarmentCatalog> = {}
@@ -34,160 +46,191 @@ function makeNormalized(
 }
 
 // ---------------------------------------------------------------------------
-// buildSkuToFrontImageUrl
+// buildSupplementMaps
 // ---------------------------------------------------------------------------
 
-describe('buildSkuToFrontImageUrl', () => {
-  it('returns empty map for undefined input', () => {
-    expect(buildSkuToFrontImageUrl(undefined).size).toBe(0)
+describe('buildSupplementMaps', () => {
+  it('returns empty structures for empty input', () => {
+    const result = buildSupplementMaps([])
+    expect(result.styleSwatches).toEqual({})
+    expect(result.styleColorGroups).toEqual({})
+    expect(result.colorGroups).toEqual([])
+    expect(result.catalogColors).toEqual([])
   })
 
-  it('returns empty map for empty array', () => {
-    expect(buildSkuToFrontImageUrl([]).size).toBe(0)
+  it('populates styleSwatches with name + hex1 per styleNumber', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'BC3001', id: 'c1', name: 'Black', hex1: '#000000' }),
+      makeRow({ styleNumber: 'BC3001', id: 'c2', name: 'White', hex1: '#FFFFFF' }),
+      makeRow({ styleNumber: 'G500', id: 'c3', name: 'Navy', hex1: '#001F5B' }),
+    ])
+    expect(result.styleSwatches['BC3001']).toHaveLength(2)
+    expect(result.styleSwatches['BC3001'][0]).toEqual({ name: 'Black', hex1: '#000000' })
+    expect(result.styleSwatches['BC3001'][1]).toEqual({ name: 'White', hex1: '#FFFFFF' })
+    expect(result.styleSwatches['G500']).toHaveLength(1)
+    expect(result.styleSwatches['G500'][0]).toEqual({ name: 'Navy', hex1: '#001F5B' })
   })
 
-  it('uses stored front image URL when catalog_images is populated', () => {
-    const normalized = [
-      makeNormalized({
+  it('includes null hex1 in styleSwatches', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'BC3001', id: 'c1', name: 'Heather Grey' }),
+    ])
+    expect(result.styleSwatches['BC3001'][0]).toEqual({ name: 'Heather Grey', hex1: null })
+  })
+
+  it('excludes ZZZ-prefixed colorGroupNames from styleColorGroups and colorGroups', () => {
+    const result = buildSupplementMaps([
+      makeRow({
         styleNumber: 'BC3001',
-        externalId: '3901',
-        colors: [
-          {
-            id: 'c1',
-            styleId: 'uuid-001',
-            name: 'White',
-            hex1: '#FFFFFF',
-            hex2: null,
-            images: [
-              {
-                imageType: 'back',
-                url: 'https://www.ssactivewear.com/images/style/3901/3901_bm.jpg',
-              },
-              {
-                imageType: 'front',
-                url: 'https://www.ssactivewear.com/images/style/3901/3901_fm.jpg',
-              },
-            ],
-          },
-        ],
+        id: 'c1',
+        name: 'Multi',
+        colorGroupName: 'ZZZ - Multi Color',
       }),
-    ]
-    const map = buildSkuToFrontImageUrl(normalized)
-    expect(map.get('BC3001')).toBe('https://www.ssactivewear.com/images/style/3901/3901_fm.jpg')
+      makeRow({ styleNumber: 'BC3001', id: 'c2', name: 'Black', colorGroupName: 'Neutral' }),
+    ])
+    expect(result.styleColorGroups['BC3001']).toEqual(['Neutral'])
+    expect(result.colorGroups.map((g) => g.colorGroupName)).not.toContain('ZZZ - Multi Color')
   })
 
-  it('returns no entry when colors array is empty', () => {
-    const normalized = [makeNormalized({ styleNumber: 'BC3001', colors: [] })]
-    const map = buildSkuToFrontImageUrl(normalized)
-    expect(map.has('BC3001')).toBe(false)
-  })
-
-  it('falls back to first available image type when no front image exists', () => {
-    // Bayside-style: only 'back' and 'swatch' images in catalog_images
-    const backUrl = 'https://cdn.ssactivewear.com/Images/Color/1_b.jpg'
-    const normalized = [
-      makeNormalized({
+  it('excludes colorGroupNames containing "DO NOT USE" from styleColorGroups and colorGroups', () => {
+    const result = buildSupplementMaps([
+      makeRow({
         styleNumber: 'BC3001',
-        colors: [
-          {
-            id: 'c1',
-            styleId: 'uuid-001',
-            name: 'Black',
-            hex1: '#000000',
-            hex2: null,
-            images: [
-              { imageType: 'back', url: backUrl },
-              {
-                imageType: 'swatch',
-                url: 'https://cdn.ssactivewear.com/Images/Color/1_sw.jpg',
-              },
-            ],
-          },
-        ],
+        id: 'c1',
+        name: 'Old Red',
+        colorGroupName: 'DO NOT USE - Red',
       }),
-    ]
-    const map = buildSkuToFrontImageUrl(normalized)
-    // 'back' is next in preference order after 'front' and 'on-model-front'
-    expect(map.get('BC3001')).toBe(backUrl)
+      makeRow({ styleNumber: 'BC3001', id: 'c2', name: 'Red', colorGroupName: 'Red' }),
+    ])
+    expect(result.styleColorGroups['BC3001']).toEqual(['Red'])
+    expect(result.colorGroups.map((g) => g.colorGroupName)).not.toContain('DO NOT USE - Red')
   })
 
-  it('prefers on-model-front over back when no front image exists', () => {
-    const onModelUrl = 'https://cdn.ssactivewear.com/Images/Color/1_omf.jpg'
-    const normalized = [
-      makeNormalized({
-        styleNumber: 'BC3001',
-        colors: [
-          {
-            id: 'c1',
-            styleId: 'uuid-001',
-            name: 'Black',
-            hex1: '#000000',
-            hex2: null,
-            images: [
-              { imageType: 'back', url: 'https://cdn.ssactivewear.com/Images/Color/1_b.jpg' },
-              { imageType: 'on-model-front', url: onModelUrl },
-            ],
-          },
-        ],
+  it('deduplicates colorGroupNames within a single style', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'BC3001', id: 'c1', name: 'Black 1', colorGroupName: 'Neutral' }),
+      makeRow({ styleNumber: 'BC3001', id: 'c2', name: 'Black 2', colorGroupName: 'Neutral' }),
+    ])
+    expect(result.styleColorGroups['BC3001']).toHaveLength(1)
+    expect(result.styleColorGroups['BC3001'][0]).toBe('Neutral')
+  })
+
+  it('separates styleColorGroups per styleNumber', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'BC3001', id: 'c1', name: 'Red', colorGroupName: 'Red' }),
+      makeRow({ styleNumber: 'G500', id: 'c2', name: 'Blue', colorGroupName: 'Blue' }),
+    ])
+    expect(result.styleColorGroups['BC3001']).toEqual(['Red'])
+    expect(result.styleColorGroups['G500']).toEqual(['Blue'])
+  })
+
+  it('computes weighted RGB average hex for colorGroups', () => {
+    // #FF0000 (255,0,0) and #0000FF (0,0,255)
+    // R avg = Math.round(255/2) = 128 = 0x80; G avg = 0; B avg = Math.round(255/2) = 128 = 0x80
+    const result = buildSupplementMaps([
+      makeRow({
+        styleNumber: 'A',
+        id: 'c1',
+        name: 'Red',
+        hex1: '#FF0000',
+        colorGroupName: 'Purple',
+        colorFamilyName: 'Purple',
       }),
-    ]
-    const map = buildSkuToFrontImageUrl(normalized)
-    expect(map.get('BC3001')).toBe(onModelUrl)
-  })
-
-  it('returns no entry when style has no images at all', () => {
-    const normalized = [
-      makeNormalized({
-        styleNumber: 'BC3001',
-        colors: [
-          {
-            id: 'c1',
-            styleId: 'uuid-001',
-            name: 'Black',
-            hex1: '#000000',
-            hex2: null,
-            images: [],
-          },
-        ],
+      makeRow({
+        styleNumber: 'A',
+        id: 'c2',
+        name: 'Blue',
+        hex1: '#0000FF',
+        colorGroupName: 'Purple',
+        colorFamilyName: 'Purple',
       }),
-    ]
-    const map = buildSkuToFrontImageUrl(normalized)
-    expect(map.has('BC3001')).toBe(false)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// buildSkuToStyleIdMap
-// ---------------------------------------------------------------------------
-
-describe('buildSkuToStyleIdMap', () => {
-  it('returns empty map for undefined input', () => {
-    const map = buildSkuToStyleIdMap(undefined)
-    expect(map.size).toBe(0)
+    ])
+    const purple = result.colorGroups.find((g) => g.colorGroupName === 'Purple')!
+    expect(purple).toBeDefined()
+    // Math.round(127.5) = 128 = 0x80; B avg = Math.round(127.5) = 128 = 0x80
+    expect(purple.hex).toBe('#800080')
   })
 
-  it('returns empty map for empty array', () => {
-    const map = buildSkuToStyleIdMap([])
-    expect(map.size).toBe(0)
+  it('uses #888888 fallback hex for colorGroups with no valid hex1 values', () => {
+    const result = buildSupplementMaps([
+      makeRow({
+        styleNumber: 'A',
+        id: 'c1',
+        name: 'Unknown',
+        hex1: null,
+        colorGroupName: 'Mystery',
+        colorFamilyName: 'Other',
+      }),
+    ])
+    const group = result.colorGroups.find((g) => g.colorGroupName === 'Mystery')!
+    expect(group.hex).toBe('#888888')
   })
 
-  it('maps styleNumber to id', () => {
-    const normalized = [
-      makeNormalized({ id: 'uuid-001', styleNumber: 'BC3001' }),
-      makeNormalized({ id: 'uuid-002', styleNumber: 'G500' }),
-    ]
-    const map = buildSkuToStyleIdMap(normalized)
-    expect(map.get('BC3001')).toBe('uuid-001')
-    expect(map.get('G500')).toBe('uuid-002')
+  it('sorts colorGroups alphabetically by colorFamilyName then colorGroupName', () => {
+    const result = buildSupplementMaps([
+      makeRow({
+        styleNumber: 'A',
+        id: 'c1',
+        name: 'Red',
+        colorGroupName: 'Red',
+        colorFamilyName: 'Red',
+      }),
+      makeRow({
+        styleNumber: 'A',
+        id: 'c2',
+        name: 'Navy',
+        colorGroupName: 'Navy',
+        colorFamilyName: 'Blue',
+      }),
+      makeRow({
+        styleNumber: 'A',
+        id: 'c3',
+        name: 'Cyan',
+        colorGroupName: 'Cyan',
+        colorFamilyName: 'Blue',
+      }),
+    ])
+    const names = result.colorGroups.map((g) => g.colorGroupName)
+    // Blue family before Red; within Blue: Cyan before Navy
+    expect(names).toEqual(['Cyan', 'Navy', 'Red'])
   })
 
-  it('last entry wins when styleNumber duplicated', () => {
-    const normalized = [
-      makeNormalized({ id: 'uuid-001', styleNumber: 'BC3001' }),
-      makeNormalized({ id: 'uuid-999', styleNumber: 'BC3001' }),
-    ]
-    const map = buildSkuToStyleIdMap(normalized)
-    expect(map.get('BC3001')).toBe('uuid-999')
+  it('deduplicates catalogColors by normalized name (case-insensitive, first occurrence wins)', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'BC3001', id: 'c1', name: 'Black', hex1: '#000000' }),
+      makeRow({ styleNumber: 'G500', id: 'c2', name: 'black', hex1: '#111111' }),
+    ])
+    expect(result.catalogColors).toHaveLength(1)
+    expect(result.catalogColors[0].name).toBe('Black')
+  })
+
+  it('applies normalizeColorName — strips S&S measurement suffixes for catalogColors deduplication', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'SS1001', id: 'c1', name: 'Black - 28I', hex1: '#000000' }),
+      makeRow({ styleNumber: 'SS1001', id: 'c2', name: 'Black - 30I, 50W', hex1: '#000000' }),
+    ])
+    expect(result.catalogColors).toHaveLength(1)
+    expect(result.catalogColors[0].name).toBe('Black')
+  })
+
+  it('catalogColors includes swatchTextColor computed from hex', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'A', id: 'c1', name: 'White', hex1: '#FFFFFF' }),
+      makeRow({ styleNumber: 'A', id: 'c2', name: 'Black', hex1: '#000000' }),
+    ])
+    const white = result.catalogColors.find((c) => c.name === 'White')!
+    const black = result.catalogColors.find((c) => c.name === 'Black')!
+    expect(white.swatchTextColor).toBe('#000000') // light bg → dark text
+    expect(black.swatchTextColor).toBe('#FFFFFF') // dark bg → light text
+  })
+
+  it('catalogColors sorted alphabetically by name', () => {
+    const result = buildSupplementMaps([
+      makeRow({ styleNumber: 'A', id: 'c1', name: 'White' }),
+      makeRow({ styleNumber: 'A', id: 'c2', name: 'Black' }),
+      makeRow({ styleNumber: 'A', id: 'c3', name: 'Navy' }),
+    ])
+    expect(result.catalogColors.map((c) => c.name)).toEqual(['Black', 'Navy', 'White'])
   })
 })
 

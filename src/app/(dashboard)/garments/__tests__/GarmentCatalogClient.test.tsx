@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest'
 import { GarmentCatalogClient } from '../_components/GarmentCatalogClient'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { CatalogStyleMetadata } from '@domain/entities/catalog-style'
 
 // ---------------------------------------------------------------------------
 // Module mocks — use vi.hoisted so refs are available when vi.mock factories run
@@ -14,12 +14,14 @@ import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 const {
   mockToggleStyleEnabled,
   mockToggleStyleFavorite,
+  mockFetchStyleDetail,
   mockToastError,
   mockToastWarning,
   mockGet,
 } = vi.hoisted(() => ({
   mockToggleStyleEnabled: vi.fn(),
   mockToggleStyleFavorite: vi.fn(),
+  mockFetchStyleDetail: vi.fn(),
   mockToastError: vi.fn(),
   mockToastWarning: vi.fn(),
   mockGet: vi.fn(),
@@ -29,6 +31,8 @@ const {
 vi.mock('../actions', () => ({
   toggleStyleEnabled: mockToggleStyleEnabled,
   toggleStyleFavorite: mockToggleStyleFavorite,
+  fetchStyleDetail: mockFetchStyleDetail,
+  toggleColorFavorite: vi.fn().mockResolvedValue({ success: true, isFavorite: false }),
 }))
 
 // sonner toast
@@ -112,28 +116,18 @@ function makeGarment(overrides: Partial<GarmentCatalog> = {}): GarmentCatalog {
     availableColors: [],
     isEnabled: true,
     isFavorite: false,
-    // add any other required fields the Drizzle schema defines
     ...overrides,
   } as GarmentCatalog
 }
 
-function makeNormalized(
-  overrides: Partial<NormalizedGarmentCatalog> = {}
-): NormalizedGarmentCatalog {
+function makeStyleMeta(overrides: Partial<CatalogStyleMetadata> = {}): CatalogStyleMetadata {
   return {
     id: STYLE_UUID_A,
-    source: 'ss',
-    externalId: '12345',
     brand: 'Bella+Canvas',
     styleNumber: 'BC3001',
-    name: 'Unisex Jersey Tee',
-    description: null,
-    category: 't-shirts',
-    subcategory: null,
-    colors: [],
-    sizes: [],
     isEnabled: true,
     isFavorite: false,
+    cardImageUrl: null,
     ...overrides,
   }
 }
@@ -155,6 +149,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     vi.clearAllMocks()
     mockToggleStyleEnabled.mockResolvedValue({ success: true, isEnabled: false })
     mockToggleStyleFavorite.mockResolvedValue({ success: true, isFavorite: true })
+    mockFetchStyleDetail.mockResolvedValue([])
     setupSearchParams({})
   })
 
@@ -162,14 +157,16 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     it('calls toggleStyleEnabled with the correct catalog_styles UUID', async () => {
       const user = userEvent.setup()
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
+      const styleMetas = [makeStyleMeta({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
-          normalizedCatalog={normalized}
+          styleMetas={styleMetas}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -191,9 +188,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       const user = userEvent.setup()
       const garmentA = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Tee A', isEnabled: true })
       const garmentB = makeGarment({ id: 'g2', sku: 'G500', name: 'Tee B', isEnabled: true })
-      const normalized = [
-        makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' }),
-        makeNormalized({ id: STYLE_UUID_B, styleNumber: 'G500' }),
+      const styleMetas = [
+        makeStyleMeta({ id: STYLE_UUID_A, styleNumber: 'BC3001' }),
+        makeStyleMeta({ id: STYLE_UUID_B, styleNumber: 'G500' }),
       ]
 
       render(
@@ -201,7 +198,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garmentA, garmentB]}
           initialJobs={[]}
           initialCustomers={[]}
-          normalizedCatalog={normalized}
+          styleMetas={styleMetas}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -225,14 +224,16 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       mockToggleStyleEnabled.mockResolvedValueOnce({ success: false, error: 'DB error' })
 
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
+      const styleMetas = [makeStyleMeta({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
-          normalizedCatalog={normalized}
+          styleMetas={styleMetas}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -252,7 +253,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       expect(screen.getByRole('switch', { name: /disable unisex tee/i })).toBeInTheDocument()
     })
 
-    it('does not call toggleStyleEnabled when normalizedCatalog is absent', async () => {
+    it('does not call toggleStyleEnabled when styleMetas has no entry for the garment SKU', async () => {
       const user = userEvent.setup()
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
 
@@ -261,11 +262,13 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
+          styleMetas={[]} // no style metadata → skuToStyleId map empty
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
-          // no normalizedCatalog
         />
       )
 
@@ -289,14 +292,16 @@ describe('GarmentCatalogClient — toggle persistence', () => {
         name: 'Unisex Tee',
         isFavorite: false,
       })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
+      const styleMetas = [makeStyleMeta({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
-          normalizedCatalog={normalized}
+          styleMetas={styleMetas}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -325,14 +330,16 @@ describe('GarmentCatalogClient — toggle persistence', () => {
         name: 'Unisex Tee',
         isFavorite: false,
       })
-      const normalized = [makeNormalized({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
+      const styleMetas = [makeStyleMeta({ id: STYLE_UUID_A, styleNumber: 'BC3001' })]
 
       render(
         <GarmentCatalogClient
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
-          normalizedCatalog={normalized}
+          styleMetas={styleMetas}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -348,7 +355,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
       })
     })
 
-    it('does not call toggleStyleFavorite when normalizedCatalog is absent', async () => {
+    it('does not call toggleStyleFavorite when styleMetas has no entry for the garment SKU', async () => {
       const user = userEvent.setup()
       const garment = makeGarment({
         id: 'g1',
@@ -362,6 +369,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
+          styleMetas={[]} // no style metadata → skuToStyleId map empty
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -379,17 +389,19 @@ describe('GarmentCatalogClient — toggle persistence', () => {
   })
 
   describe('initial state hydration', () => {
-    it('seeds catalog isEnabled from normalizedCatalog, not legacy initialCatalog', () => {
-      // Legacy catalog says isEnabled=true, but normalizedCatalog says false
+    it('seeds catalog isEnabled from styleMetas, not legacy initialCatalog', () => {
+      // Legacy catalog says isEnabled=true, but styleMetas says false
       const garment = makeGarment({ id: 'g1', sku: 'BC3001', name: 'Unisex Tee', isEnabled: true })
-      const normalized = [makeNormalized({ styleNumber: 'BC3001', isEnabled: false })]
+      const styleMetas = [makeStyleMeta({ styleNumber: 'BC3001', isEnabled: false })]
 
       render(
         <GarmentCatalogClient
           initialCatalog={[garment]}
           initialJobs={[]}
           initialCustomers={[]}
-          normalizedCatalog={normalized}
+          styleMetas={styleMetas}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}
@@ -397,7 +409,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
         />
       )
 
-      // When isEnabled=false and showDisabled is off, the garment is filtered out
+      // When isEnabled=false the garment is filtered from the grid/table
       expect(screen.queryByRole('switch', { name: /unisex tee/i })).not.toBeInTheDocument()
     })
   })
@@ -418,6 +430,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           initialCatalog={[enabled, disabled]}
           initialJobs={[]}
           initialCustomers={[]}
+          styleMetas={[]}
+          styleSwatches={{}}
+          styleColorGroups={{}}
           colorGroups={[]}
           catalogColors={[]}
           initialFavoriteColorIds={[]}

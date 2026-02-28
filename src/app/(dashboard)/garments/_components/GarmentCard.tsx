@@ -11,7 +11,7 @@ import { formatCurrency } from '@domain/lib/money'
 import { getColorById } from '@domain/rules/garment.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { CatalogColor, NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { Color } from '@domain/entities/color'
 
 type GarmentCardProps = {
@@ -24,8 +24,8 @@ type GarmentCardProps = {
   onClick: (garmentId: string) => void
   /** Real front image URL from catalog_images — passed by parent via buildSkuToFrontImageUrl. */
   frontImageUrl?: string
-  /** Real S&S colors from normalizedCatalog — feeds ColorSwatchStrip. Falls back when absent or empty. */
-  normalizedColors?: CatalogColor[]
+  /** Slim swatch data from Tier 1 supplement — name + hex1 per color. Falls back when absent or empty. */
+  normalizedColors?: Array<{ name: string; hex1: string | null }>
 }
 
 function isNormalized(g: GarmentCatalog | NormalizedGarmentCatalog): g is NormalizedGarmentCatalog {
@@ -63,7 +63,7 @@ export function GarmentCard({
   // fallback paths (e.g., a style with zero colors synced from run-image-sync).
   const swatchColors =
     normalizedColors && normalizedColors.length > 0
-      ? normalizedColors.map((c) => ({ name: c.name, hex1: c.hex1 }))
+      ? normalizedColors
       : isNormalized(garment)
         ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
         : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))

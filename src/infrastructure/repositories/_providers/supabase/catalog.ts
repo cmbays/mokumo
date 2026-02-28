@@ -1,6 +1,12 @@
 import 'server-only'
+import { z } from 'zod'
+import { unstable_cache } from 'next/cache'
 import { sql, eq, and } from 'drizzle-orm'
-import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type {
+  NormalizedGarmentCatalog,
+  CatalogStyleMetadata,
+  CatalogColor,
+} from '@domain/entities/catalog-style'
 import { catalogImageSchema, catalogSizeSchema } from '@domain/entities/catalog-style'
 import { garmentCategoryEnum } from '@domain/entities/garment'
 import { logger } from '@shared/lib/logger'
@@ -238,6 +244,275 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
     return []
   }
   return _fetchNormalizedCatalog(session.shopId)
+}
+
+// ---------------------------------------------------------------------------
+// Tier 1: getCatalogStylesSlim — cacheable slim metadata (no colors, no images)
+// ---------------------------------------------------------------------------
+
+/**
+ * Inner fetch for slim style metadata. Receives shopId explicitly.
+ *
+ * Query design — 6 columns only (the fields GarmentCatalogClient actually uses):
+ *   id, brand, style_number, is_enabled, is_favorite, card_image_url.
+ *   No name/description/category — those are already on GarmentCatalog and are
+ *   Tier 2 drawer data. Stripping them keeps the payload ~1.2 MB (under 2 MB cache limit).
+ *
+ *   LATERAL subquery finds the best card image per style using CARD_IMAGE_PREFERENCE order.
+ *   Uses the covering index on catalog_images(color_id, image_type) INCLUDE (url) from
+ *   migration 0019 for index-only scans per color lookup.
+ */
+async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMetadata[]> {
+  const { db } = await import('@shared/lib/supabase/db')
+
+  let rows: unknown[]
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        cs.id,
+        cb.canonical_name AS brand_canonical,
+        cs.style_number,
+        (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
+        csp.is_favorite,
+        card_img.url AS card_image_url
+      FROM catalog_styles cs
+      JOIN catalog_brands cb ON cb.id = cs.brand_id
+      LEFT JOIN catalog_style_preferences csp
+        ON csp.style_id = cs.id
+        AND csp.scope_type = 'shop'
+        AND csp.scope_id = ${shopId}
+      LEFT JOIN catalog_brand_preferences cbp
+        ON cbp.brand_id = cs.brand_id
+        AND cbp.scope_type = 'shop'
+        AND cbp.scope_id = ${shopId}
+      LEFT JOIN LATERAL (
+        SELECT ci.url
+        FROM catalog_colors cc
+        JOIN catalog_images ci ON ci.color_id = cc.id
+        WHERE cc.style_id = cs.id
+        ORDER BY
+          CASE ci.image_type
+            WHEN 'front'          THEN 1
+            WHEN 'on-model-front' THEN 2
+            WHEN 'back'           THEN 3
+            WHEN 'side'           THEN 4
+            WHEN 'direct-side'    THEN 5
+            WHEN 'on-model-back'  THEN 6
+            WHEN 'on-model-side'  THEN 7
+            WHEN 'swatch'         THEN 8
+            ELSE 9
+          END
+        LIMIT 1
+      ) card_img ON true
+      ORDER BY cs.style_number ASC
+    `)
+    rows = result as unknown[]
+  } catch (err) {
+    repoLogger.error('getCatalogStylesSlim db.execute failed', { err, shopId })
+    throw err
+  }
+
+  repoLogger.info('Fetched slim catalog styles', { count: rows.length })
+
+  const parsed: CatalogStyleMetadata[] = []
+  for (const row of rows) {
+    const r = row as {
+      id: string
+      brand_canonical: string
+      style_number: string
+      is_enabled: boolean | null
+      is_favorite: boolean | null
+      card_image_url: string | null
+    }
+    parsed.push({
+      id: r.id,
+      brand: r.brand_canonical,
+      styleNumber: r.style_number,
+      isEnabled: r.is_enabled ?? true,
+      isFavorite: r.is_favorite ?? false,
+      cardImageUrl: r.card_image_url,
+    })
+  }
+  return parsed
+}
+
+/**
+ * Fetch slim style metadata for all catalog styles, keyed per shop for preference resolution.
+ *
+ * Cached per shopId for 60 seconds. Tags: ['catalog', 'catalog-slim'].
+ * Revalidated by the same revalidateTag('catalog') calls as the full catalog.
+ */
+export async function getCatalogStylesSlim(): Promise<CatalogStyleMetadata[]> {
+  const session = await verifySession()
+  if (!session) {
+    repoLogger.warn('getCatalogStylesSlim called without authenticated session')
+    return []
+  }
+  const { shopId } = session
+  return unstable_cache(() => _fetchCatalogStylesSlim(shopId), ['catalog-slim', shopId], {
+    revalidate: 60,
+    tags: ['catalog', 'catalog-slim'],
+  })()
+}
+
+// ---------------------------------------------------------------------------
+// Tier 1 supplement: getCatalogColorSupplement — color filter + swatch data
+// ---------------------------------------------------------------------------
+
+/**
+ * Internal row type for the color supplement query.
+ * Returned by getCatalogColorSupplement for processing in buildSupplementMaps.
+ */
+export type CatalogColorSupplementRow = {
+  styleNumber: string
+  id: string
+  name: string
+  hex1: string | null
+  colorFamilyName: string | null
+  colorGroupName: string | null
+}
+
+/**
+ * Fetch slim color data for all styles — used to build color filter UI + swatch strips.
+ *
+ * Returns per-color rows with (styleNumber, id, name, hex1, colorFamilyName, colorGroupName).
+ * No images — avoids the 17 MB image payload. Not cached (query is fast: ~50-100 ms,
+ * single-pass on catalog_colors with index on style_id).
+ *
+ * Security: requires an authenticated session. Returns [] if unauthenticated.
+ * Color data is not shop-scoped (no preferences); auth is required to prevent anonymous reads.
+ */
+export async function getCatalogColorSupplement(): Promise<CatalogColorSupplementRow[]> {
+  const session = await verifySession()
+  if (!session) {
+    repoLogger.warn('getCatalogColorSupplement called without authenticated session')
+    return []
+  }
+
+  const { db } = await import('@shared/lib/supabase/db')
+
+  let rows: unknown[]
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        cs.style_number,
+        cc.id          AS color_id,
+        cc.name        AS color_name,
+        cc.hex1,
+        cc.color_family_name,
+        cc.color_group_name
+      FROM catalog_colors cc
+      JOIN catalog_styles cs ON cs.id = cc.style_id
+      ORDER BY cs.style_number, cc.name
+    `)
+    rows = result as unknown[]
+  } catch (err) {
+    repoLogger.error('getCatalogColorSupplement db.execute failed', { err })
+    throw err
+  }
+
+  repoLogger.info('Fetched color supplement', { count: rows.length })
+
+  return (
+    rows as Array<{
+      style_number: string
+      color_id: string
+      color_name: string
+      hex1: string | null
+      color_family_name: string | null
+      color_group_name: string | null
+    }>
+  ).map((r) => ({
+    styleNumber: r.style_number,
+    id: r.color_id,
+    name: r.color_name,
+    hex1: r.hex1,
+    colorFamilyName: r.color_family_name,
+    colorGroupName: r.color_group_name,
+  }))
+}
+
+// ---------------------------------------------------------------------------
+// Tier 2: getCatalogStyleDetail — full color + image data for a single style
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch full color + image data for a single catalog style (Tier 2, lazy).
+ *
+ * Called on drawer open — returns CatalogColor[] with full images for the
+ * ImageTypeCarousel and color selector. Uses the covering index on
+ * catalog_images(color_id, image_type) INCLUDE (url) from migration 0019.
+ *
+ * Expected latency: ~10-50 ms (6 avg colors per style, index-only scans).
+ *
+ * Security: styleId is validated as UUID. Caller (Server Action) must verify session.
+ */
+const styleIdSchema = z.string().uuid()
+
+export async function getCatalogStyleDetail(styleId: string): Promise<CatalogColor[]> {
+  if (!styleIdSchema.safeParse(styleId).success) return []
+  const { db } = await import('@shared/lib/supabase/db')
+
+  let rows: unknown[]
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        cc.id,
+        cc.name,
+        cc.hex1,
+        cc.hex2,
+        cc.color_family_name,
+        cc.color_group_name,
+        COALESCE(
+          JSON_AGG(
+            JSONB_BUILD_OBJECT('imageType', ci.image_type, 'url', ci.url)
+            ORDER BY ci.image_type
+          ) FILTER (WHERE ci.id IS NOT NULL),
+          '[]'::json
+        ) AS images
+      FROM catalog_colors cc
+      LEFT JOIN catalog_images ci ON ci.color_id = cc.id
+      WHERE cc.style_id = ${styleId}
+      GROUP BY cc.id, cc.name, cc.hex1, cc.hex2, cc.color_family_name, cc.color_group_name
+      ORDER BY cc.name
+    `)
+    rows = result as unknown[]
+  } catch (err) {
+    repoLogger.error('getCatalogStyleDetail db.execute failed', { err, styleId })
+    throw err
+  }
+
+  const parsed: CatalogColor[] = []
+  for (const row of rows) {
+    const r = row as {
+      id: string
+      name: string
+      hex1: string | null
+      hex2: string | null
+      color_family_name: string | null
+      color_group_name: string | null
+      images: unknown
+    }
+    const imagesResult = catalogImageSchema.array().safeParse(r.images)
+    if (!imagesResult.success) {
+      repoLogger.warn('getCatalogStyleDetail: catalogImageSchema parse failed', {
+        styleId,
+        colorId: r.id,
+        error: imagesResult.error.message,
+      })
+    }
+    parsed.push({
+      id: r.id,
+      styleId,
+      name: r.name,
+      hex1: r.hex1,
+      hex2: r.hex2,
+      colorFamilyName: r.color_family_name,
+      colorGroupName: r.color_group_name,
+      images: imagesResult.success ? imagesResult.data : [],
+    })
+  }
+  return parsed
 }
 
 /**

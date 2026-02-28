@@ -1,5 +1,5 @@
 import { hexToRgb } from '@domain/rules/color.rules'
-import type { CatalogColor, NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
+import type { CatalogColorSupplementRow } from '@infra/repositories/garments'
 import type { FilterColor, FilterColorGroup } from '@features/garments/types'
 
 export type { FilterColor, FilterColorGroup }
@@ -43,125 +43,100 @@ function computeSwatchTextColor(hex: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// extractUniqueColors
+// buildSupplementMaps
 // ---------------------------------------------------------------------------
 
-/**
- * Extracts a deduplicated list of FilterColor objects from the normalized catalog.
- *
- * Deduplication is by lowercased, trimmed color name — the first CatalogColor.id
- * encountered for each unique name becomes the canonical FilterColor.id.
- * hex uses hex1 from catalog_colors (the primary swatch color).
- * Returns alphabetically sorted by name.
- */
-export function extractUniqueColors(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): FilterColor[] {
-  if (!normalizedCatalog) return []
-  const seen = new Map<string, FilterColor>()
+type SupplementMaps = {
+  /** styleNumber → [{name, hex1}] — for GarmentCard swatch strip */
+  styleSwatches: Record<string, Array<{ name: string; hex1: string | null }>>
+  /** styleNumber → colorGroupName[] — for color group filter matching */
+  styleColorGroups: Record<string, string[]>
+  /** Deduplicated color groups with weighted-average hex — for filter grid UI */
+  colorGroups: FilterColorGroup[]
+  /** Deduplicated catalog colors — for BrandDetailDrawer favorites section */
+  catalogColors: FilterColor[]
+}
 
-  for (const style of normalizedCatalog) {
-    for (const color of style.colors) {
-      const canonicalName = normalizeColorName(color.name)
-      const key = canonicalName.toLowerCase().trim()
-      if (seen.has(key)) continue
-      const hex = color.hex1 ?? '#888888'
-      // colorFamilyName is taken from the first occurrence of each canonical name.
-      // S&S curates family names consistently per color name, so this is stable.
-      seen.set(key, {
-        id: color.id,
+/**
+ * Build all four client-side lookup structures from the color supplement rows.
+ *
+ * Replaces the individual extractUniqueColors / extractColorGroups /
+ * buildStyleToColorGroupNamesMap / buildSkuToNormalizedColors functions —
+ * one pass over the 30,614 supplement rows builds everything needed for initial render.
+ *
+ * Color group filtering (excludes S&S internal codes):
+ * - ZZZ prefix  — catch-alls (ZZZ - Multi Color, ZZZ - No Match)
+ * - DO NOT USE  — deprecated S&S colorways
+ *
+ * Color group representative hex uses weighted RGB average across all member rows —
+ * same approach as the previous extractColorGroups implementation for robustness
+ * against outlier hex values in supplier data.
+ */
+export function buildSupplementMaps(rows: CatalogColorSupplementRow[]): SupplementMaps {
+  const styleSwatches: Record<string, Array<{ name: string; hex1: string | null }>> = {}
+  const colorGroupSets: Record<string, Set<string>> = {}
+  const rgbSums = new Map<string, { r: number; g: number; b: number; total: number }>()
+  const groupMeta = new Map<string, { colorFamilyName: string | null }>()
+  const seenColors = new Map<string, FilterColor>()
+
+  for (const row of rows) {
+    // Swatch strip (name + hex1 per color per style)
+    if (!styleSwatches[row.styleNumber]) {
+      styleSwatches[row.styleNumber] = []
+    }
+    styleSwatches[row.styleNumber].push({ name: row.name, hex1: row.hex1 })
+
+    // Valid color group: non-null, not ZZZ catch-all, not DO NOT USE deprecated
+    const isValidGroup =
+      row.colorGroupName &&
+      !row.colorGroupName.startsWith('ZZZ') &&
+      !row.colorGroupName.includes('DO NOT USE')
+
+    if (isValidGroup && row.colorGroupName) {
+      // styleColorGroups — Set per style for deduplication, converted to [] at end
+      if (!colorGroupSets[row.styleNumber]) {
+        colorGroupSets[row.styleNumber] = new Set()
+      }
+      colorGroupSets[row.styleNumber].add(row.colorGroupName)
+
+      // Weighted RGB sum for color group representative hex
+      if (!groupMeta.has(row.colorGroupName)) {
+        groupMeta.set(row.colorGroupName, { colorFamilyName: row.colorFamilyName ?? null })
+      }
+      const raw = row.hex1?.replace('#', '')
+      if (raw && raw.length === 6) {
+        const r = parseInt(raw.slice(0, 2), 16)
+        const g = parseInt(raw.slice(2, 4), 16)
+        const b = parseInt(raw.slice(4, 6), 16)
+        if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+          const sums = rgbSums.get(row.colorGroupName) ?? { r: 0, g: 0, b: 0, total: 0 }
+          sums.r += r
+          sums.g += g
+          sums.b += b
+          sums.total += 1
+          rgbSums.set(row.colorGroupName, sums)
+        }
+      }
+    }
+
+    // Deduplicated catalog colors (for BrandDetailDrawer)
+    const canonicalName = normalizeColorName(row.name)
+    const key = canonicalName.toLowerCase().trim()
+    if (!seenColors.has(key)) {
+      const hex = row.hex1 ?? '#888888'
+      seenColors.set(key, {
+        id: row.id,
         name: canonicalName,
         hex,
         swatchTextColor: computeSwatchTextColor(hex),
-        colorFamilyName: color.colorFamilyName ?? null,
-        colorGroupName: color.colorGroupName ?? null,
+        colorFamilyName: row.colorFamilyName ?? null,
+        colorGroupName: row.colorGroupName ?? null,
       })
     }
   }
 
-  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
-}
-
-// ---------------------------------------------------------------------------
-// extractColorFamilies
-// ---------------------------------------------------------------------------
-
-/**
- * Extracts a sorted, deduplicated list of color family names from the normalized catalog.
- *
- * Accepts NormalizedGarmentCatalog[] (not FilterColor[]) to avoid deduplication
- * artifacts — the first occurrence of a canonical color name in extractUniqueColors()
- * may have colorFamilyName === null for pre-migration rows. Iterating all style
- * colors ensures the complete family set is captured regardless of dedup order.
- *
- * Returns alphabetically sorted array. Null/empty family names are excluded.
- */
-export function extractColorFamilies(catalog: NormalizedGarmentCatalog[]): string[] {
-  const families = new Set<string>()
-  for (const style of catalog) {
-    for (const color of style.colors) {
-      if (color.colorFamilyName) families.add(color.colorFamilyName)
-    }
-  }
-  return [...families].sort()
-}
-
-// ---------------------------------------------------------------------------
-// extractColorGroups
-// ---------------------------------------------------------------------------
-
-/**
- * Extracts a deduplicated list of FilterColorGroup objects from the normalized catalog.
- *
- * Deduplication is by colorGroupName. The representative hex is the weighted RGB average
- * across all color rows in the group. This is more robust than picking the modal (most
- * frequent exact hex string) because supplier data often has a handful of incorrect hex
- * values that may happen to be the plurality — e.g. dark brown entries under "Texas Orange".
- * The weighted average spreads influence across the many correct-but-slightly-different
- * entries, drowning out small clusters of bad data.
- *
- * Excluded groups:
- * - ZZZ prefix — S&S internal catch-all codes (ZZZ - Multi Color, ZZZ - No Match)
- * - DO NOT USE suffix — S&S deprecated colorways
- *
- * Sorted by colorFamily then colorGroupName so the family tabs produce natural groupings.
- */
-export function extractColorGroups(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): FilterColorGroup[] {
-  if (!normalizedCatalog) return []
-
-  // Pass 1: accumulate weighted RGB sums per group
-  const rgbSums = new Map<string, { r: number; g: number; b: number; total: number }>()
-  const groupMeta = new Map<string, { colorFamilyName: string | null }>()
-
-  for (const style of normalizedCatalog) {
-    for (const color of style.colors) {
-      if (!color.colorGroupName) continue
-      // Exclude S&S internal codes: catch-alls (ZZZ prefix) and deprecated colorways (DO NOT USE suffix)
-      if (color.colorGroupName.startsWith('ZZZ') || color.colorGroupName.includes('DO NOT USE'))
-        continue
-      const key = color.colorGroupName
-      if (!groupMeta.has(key)) {
-        groupMeta.set(key, { colorFamilyName: color.colorFamilyName ?? null })
-      }
-      const raw = color.hex1?.replace('#', '')
-      if (!raw || raw.length !== 6) continue
-      const r = parseInt(raw.slice(0, 2), 16)
-      const g = parseInt(raw.slice(2, 4), 16)
-      const b = parseInt(raw.slice(4, 6), 16)
-      if (isNaN(r) || isNaN(g) || isNaN(b)) continue
-      const sums = rgbSums.get(key) ?? { r: 0, g: 0, b: 0, total: 0 }
-      sums.r += r
-      sums.g += g
-      sums.b += b
-      sums.total += 1
-      rgbSums.set(key, sums)
-    }
-  }
-
-  // Pass 2: compute average hex per group
-  const result: FilterColorGroup[] = []
+  // Compute weighted-average hex per color group
+  const colorGroupsResult: FilterColorGroup[] = []
   for (const [groupName, meta] of groupMeta) {
     const sums = rgbSums.get(groupName)
     let hex = '#888888'
@@ -177,7 +152,7 @@ export function extractColorGroups(
         .padStart(2, '0')
       hex = `#${r}${g}${b}`
     }
-    result.push({
+    colorGroupsResult.push({
       colorGroupName: groupName,
       colorFamilyName: meta.colorFamilyName,
       hex,
@@ -185,144 +160,18 @@ export function extractColorGroups(
     })
   }
 
-  return result.sort(
-    (a, b) =>
-      (a.colorFamilyName ?? 'ZZZ').localeCompare(b.colorFamilyName ?? 'ZZZ') ||
-      a.colorGroupName.localeCompare(b.colorGroupName)
-  )
-}
-
-// ---------------------------------------------------------------------------
-// buildStyleToColorGroupNamesMap
-// ---------------------------------------------------------------------------
-
-/**
- * Builds a lookup map from styleNumber to the Set of colorGroupName values for that style.
- * Used by the garment filter loop for group-based filtering.
- * Only includes non-null colorGroupName values.
- */
-export function buildStyleToColorGroupNamesMap(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): Map<string, Set<string>> {
-  if (!normalizedCatalog) return new Map()
-  return new Map(
-    normalizedCatalog.map((style) => [
-      style.styleNumber,
-      new Set(
-        style.colors
-          .map((c) => c.colorGroupName)
-          .filter((g): g is string => g != null && g.length > 0)
-      ),
-    ])
-  )
-}
-
-// ---------------------------------------------------------------------------
-// buildStyleToColorNamesMap
-// ---------------------------------------------------------------------------
-
-/**
- * Builds a lookup map from styleNumber to the Set of lowercased color names for that style.
- * Used by the garment filter loop as a name-based bridge between catalog_colors UUIDs
- * and the legacy GarmentCatalog.availableColors slug IDs.
- */
-export function buildStyleToColorNamesMap(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): Map<string, Set<string>> {
-  if (!normalizedCatalog) return new Map()
-  return new Map(
-    normalizedCatalog.map((style) => [
-      style.styleNumber,
-      new Set(style.colors.map((c) => normalizeColorName(c.name).toLowerCase().trim())),
-    ])
-  )
-}
-
-// ---------------------------------------------------------------------------
-// buildSkuToFrontImageUrl
-// ---------------------------------------------------------------------------
-
-/**
- * Preference order for the card's representative image.
- * 'front' flat-lay is best for print visualization; the remaining types act as
- * graceful fallbacks for brands (e.g. Bayside, Threadfast) whose catalog_images
- * rows have no 'front' entry.
- */
-const CARD_IMAGE_PREFERENCE = [
-  'front',
-  'on-model-front',
-  'back',
-  'side',
-  'direct-side',
-  'on-model-back',
-  'on-model-side',
-  'swatch',
-] as const satisfies Array<import('@domain/entities/catalog-style').CatalogImage['imageType']>
-
-/**
- * Builds a lookup map from S&S style number to a card-representative image URL.
- *
- * Scans colors for each image type in CARD_IMAGE_PREFERENCE order so that:
- *  - Brands with 'front' flat-lay photos (Bella+Canvas etc.) use them as before.
- *  - Brands with only on-model or other types show a real photo instead of
- *    falling back to the GarmentMockup SVG.
- *
- * Uses stored URLs from catalog_images, populated by run-image-sync.ts.
- * Returns no entry only when the style has no synced images at all.
- */
-export function buildSkuToFrontImageUrl(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): Map<string, string> {
-  if (!normalizedCatalog) return new Map()
-  const map = new Map<string, string>()
-  styleLoop: for (const n of normalizedCatalog) {
-    for (const preferredType of CARD_IMAGE_PREFERENCE) {
-      for (const color of n.colors) {
-        const img = color.images.find((i) => i.imageType === preferredType)
-        if (img) {
-          map.set(n.styleNumber, img.url)
-          continue styleLoop
-        }
-      }
-    }
+  return {
+    styleSwatches,
+    styleColorGroups: Object.fromEntries(
+      Object.entries(colorGroupSets).map(([k, v]) => [k, [...v]])
+    ),
+    colorGroups: colorGroupsResult.sort(
+      (a, b) =>
+        (a.colorFamilyName ?? 'ZZZ').localeCompare(b.colorFamilyName ?? 'ZZZ') ||
+        a.colorGroupName.localeCompare(b.colorGroupName)
+    ),
+    catalogColors: [...seenColors.values()].sort((a, b) => a.name.localeCompare(b.name)),
   }
-  return map
-}
-
-// ---------------------------------------------------------------------------
-// buildSkuToStyleIdMap
-// ---------------------------------------------------------------------------
-
-/**
- * Builds a lookup map from S&S style number to the catalog_styles UUID.
- *
- * The server actions toggleStyleEnabled / toggleStyleFavorite require the
- * catalog_styles primary key (UUID), but the legacy GarmentCatalog rows are
- * keyed by the S&S style number string (catalog_archived.sku = catalog_styles.style_number).
- */
-export function buildSkuToStyleIdMap(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): Map<string, string> {
-  if (!normalizedCatalog) return new Map()
-  // catalog_archived.sku matches catalog_styles.style_number, not externalId (supplierId)
-  return new Map(normalizedCatalog.map((n) => [n.styleNumber, n.id]))
-}
-
-// ---------------------------------------------------------------------------
-// buildSkuToNormalizedColors
-// ---------------------------------------------------------------------------
-
-/**
- * Builds a lookup map from S&S style number to its CatalogColor array.
- *
- * Passed to GarmentCard so the color strip can render real S&S hex swatches
- * even though GarmentCatalog.availableColors is empty in supabase-catalog mode.
- */
-export function buildSkuToNormalizedColors(
-  normalizedCatalog: NormalizedGarmentCatalog[] | undefined
-): Map<string, CatalogColor[]> {
-  if (!normalizedCatalog) return new Map()
-  return new Map(normalizedCatalog.map((n) => [n.styleNumber, n.colors]))
 }
 
 // ---------------------------------------------------------------------------
@@ -330,21 +179,24 @@ export function buildSkuToNormalizedColors(
 // ---------------------------------------------------------------------------
 
 /**
- * Merges isEnabled / isFavorite values from the normalized catalog
- * (catalog_style_preferences JOIN) into the legacy GarmentCatalog rows.
+ * Merges isEnabled / isFavorite values from style preference sources (NormalizedGarmentCatalog
+ * or CatalogStyleMetadata) into legacy GarmentCatalog rows.
  *
- * The normalized catalog is the source of truth because it reflects the actual
- * preference rows in the DB.  The legacy catalog table has its own is_enabled /
+ * The normalized catalog / slim metadata is the source of truth because it reflects
+ * the actual preference rows in the DB. The legacy catalog table has its own is_enabled /
  * is_favorite columns that are not updated by the preference server actions.
  *
- * Garments with no matching entry in normalizedCatalog keep their existing values.
+ * Garments with no matching entry in prefSources keep their existing values.
  */
 export function hydrateCatalogPreferences<
   T extends { sku: string; isEnabled: boolean; isFavorite: boolean },
->(catalog: T[], normalizedCatalog: NormalizedGarmentCatalog[] | undefined): T[] {
-  if (!normalizedCatalog) return catalog
+>(
+  catalog: T[],
+  prefSources: Array<{ styleNumber: string; isEnabled: boolean; isFavorite: boolean }> | undefined
+): T[] {
+  if (!prefSources) return catalog
   const prefsBySku = new Map(
-    normalizedCatalog.map((n) => [
+    prefSources.map((n) => [
       // catalog_archived.sku matches catalog_styles.style_number, not externalId (supplierId)
       n.styleNumber,
       { isEnabled: n.isEnabled, isFavorite: n.isFavorite },
