@@ -1,4 +1,5 @@
 import 'server-only'
+import { z } from 'zod'
 import { unstable_cache } from 'next/cache'
 import { sql, eq, and } from 'drizzle-orm'
 import type {
@@ -412,14 +413,16 @@ export async function getCatalogColorSupplement(): Promise<CatalogColorSupplemen
 
   repoLogger.info('Fetched color supplement', { count: rows.length })
 
-  return (rows as Array<{
-    style_number: string
-    color_id: string
-    color_name: string
-    hex1: string | null
-    color_family_name: string | null
-    color_group_name: string | null
-  }>).map((r) => ({
+  return (
+    rows as Array<{
+      style_number: string
+      color_id: string
+      color_name: string
+      hex1: string | null
+      color_family_name: string | null
+      color_group_name: string | null
+    }>
+  ).map((r) => ({
     styleNumber: r.style_number,
     id: r.color_id,
     name: r.color_name,
@@ -444,7 +447,10 @@ export async function getCatalogColorSupplement(): Promise<CatalogColorSupplemen
  *
  * Security: styleId is validated as UUID. Caller (Server Action) must verify session.
  */
+const styleIdSchema = z.string().uuid()
+
 export async function getCatalogStyleDetail(styleId: string): Promise<CatalogColor[]> {
+  if (!styleIdSchema.safeParse(styleId).success) return []
   const { db } = await import('@shared/lib/supabase/db')
 
   let rows: unknown[]

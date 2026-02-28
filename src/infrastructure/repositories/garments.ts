@@ -151,3 +151,7 @@ export async function getCatalogStyleDetail(
 // Phase 1 mutable export - for development only, always returns mock data
 // Client components should import from garments-phase1.ts instead
 export { getGarmentCatalogMutable }
+
+// Re-exported so app-layer files can import from '@infra/repositories/garments'
+// without importing directly from the _providers/* subdirectory (architecture rule).
+export type { CatalogColorSupplementRow } from './_providers/supabase/catalog'

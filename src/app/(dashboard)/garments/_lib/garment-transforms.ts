@@ -1,5 +1,5 @@
 import { hexToRgb } from '@domain/rules/color.rules'
-import type { CatalogColorSupplementRow } from '@infra/repositories/_providers/supabase/catalog'
+import type { CatalogColorSupplementRow } from '@infra/repositories/garments'
 import type { FilterColor, FilterColorGroup } from '@features/garments/types'
 
 export type { FilterColor, FilterColorGroup }
