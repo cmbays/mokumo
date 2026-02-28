@@ -29,13 +29,14 @@ import { MoveLaneDialog } from '../../_components/MoveLaneDialog'
 
 import type { Job, Lane, JobNoteType } from '@domain/entities/job'
 import type { InvoiceStatus } from '@domain/entities/invoice'
+import type { GarmentCategory } from '@domain/entities/garment'
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 type MockupData = {
-  garmentCategory: string
+  garmentCategory: GarmentCategory
   artworkPlacements: ArtworkPlacement[]
 } | null
 
@@ -269,19 +270,11 @@ export function JobDetail({
           <div className="rounded-lg border border-border bg-card p-4">
             <h3 className="mb-3 text-sm font-semibold text-foreground">What We&apos;re Printing</h3>
             <GarmentMockupModal
-              garmentCategory={
-                mockupData.garmentCategory as Parameters<
-                  typeof GarmentMockupCard
-                >[0]['garmentCategory']
-              }
+              garmentCategory={mockupData.garmentCategory}
               artworkPlacements={mockupData.artworkPlacements}
             >
               <GarmentMockupCard
-                garmentCategory={
-                  mockupData.garmentCategory as Parameters<
-                    typeof GarmentMockupCard
-                  >[0]['garmentCategory']
-                }
+                garmentCategory={mockupData.garmentCategory}
                 artworkPlacements={mockupData.artworkPlacements}
                 size="md"
               />

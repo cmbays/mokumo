@@ -50,7 +50,6 @@ import type { ScratchNote } from '@domain/entities/scratch-note'
 import { getCustomersMutable } from '@infra/repositories/customers'
 import { getInvoicesMutable } from '@infra/repositories/invoices'
 import { getGarmentCatalogMutable } from '@infra/repositories/garments-phase1'
-import { getColorsMutable } from '@infra/repositories/colors'
 import { getArtworksMutable } from '@infra/repositories/artworks'
 
 // ---------------------------------------------------------------------------
@@ -152,11 +151,10 @@ function ProductionBoardInner({
     const customers = getCustomersMutable()
     const invoices = getInvoicesMutable()
     const garmentCatalog = getGarmentCatalogMutable()
-    const colors = getColorsMutable()
     const artworks = getArtworksMutable()
     return initialJobs
       .filter((j) => !j.isArchived)
-      .map((job) => projectJobToCard(job, customers, invoices, garmentCatalog, colors, artworks))
+      .map((job) => projectJobToCard(job, customers, invoices, garmentCatalog, artworks))
   })
   const [quoteCardState, setQuoteCardState] = useState<QuoteCard[]>(() => [...initialQuoteCards])
   const [scratchNoteCards, setScratchNoteCards] = useState<ScratchNoteCardType[]>(() =>

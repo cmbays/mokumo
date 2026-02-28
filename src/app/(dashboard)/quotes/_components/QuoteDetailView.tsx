@@ -172,7 +172,7 @@ export function QuoteDetailView({
           const firstArtwork = firstDetail?.artworkId
             ? artworkMap.get(firstDetail.artworkId)
             : undefined
-          if (!firstGarment || !firstColor) return null
+          if (!firstGarment) return null
           return (
             <GarmentMockupCard
               size="lg"

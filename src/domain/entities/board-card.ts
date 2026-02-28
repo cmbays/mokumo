@@ -79,10 +79,6 @@ export const jobCardSchema = z.object({
   blockReason: z.string().max(500).optional(),
   orderTotal: z.number().positive(),
   garmentCategory: garmentCategoryEnum.optional(),
-  garmentColorHex: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/)
-    .optional(),
   primaryArtworkUrl: z.string().optional(),
 })
 

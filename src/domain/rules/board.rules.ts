@@ -6,7 +6,6 @@ import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import type { Invoice } from '@domain/entities/invoice'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { Color } from '@domain/entities/color'
 import type { Artwork } from '@domain/entities/artwork'
 import { computeTaskProgress } from '@domain/rules/job.rules'
 
@@ -63,7 +62,6 @@ export function projectJobToCard(
   customers: Customer[],
   invoices: Invoice[],
   garmentCatalog: GarmentCatalog[],
-  colors: Color[],
   artworks: Artwork[]
 ): JobCard {
   const customer = customers.find((c) => c.id === job.customerId)
@@ -100,11 +98,6 @@ export function projectJobToCard(
       const garmentId = job.garmentDetails[0]?.garmentId
       const garment = garmentCatalog.find((g) => g.id === garmentId)
       return garment?.baseCategory
-    })(),
-    garmentColorHex: (() => {
-      const colorId = job.garmentDetails[0]?.colorId
-      const color = colors.find((c) => c.id === colorId)
-      return color?.hex
     })(),
     primaryArtworkUrl: (() => {
       const artworkId = job.artworkIds?.[0]
