@@ -25,7 +25,7 @@ export default function LoginPage() {
       }
     } catch (err: unknown) {
       // Re-throw Next.js redirect errors so navigation isn't blocked
-      if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
+      if (Error.isError(err) && err.message.includes('NEXT_REDIRECT')) {
         throw err
       }
       setError('An unexpected error occurred. Please try again.')

@@ -36,7 +36,7 @@ export class UpstashCacheStore implements CacheStore {
     } catch (err) {
       cacheLogger.warn('Cache GET failed, treating as miss', {
         key,
-        error: err instanceof Error ? err.message : String(err),
+        error: Error.isError(err) ? err.message : String(err),
       })
       return null
     }
@@ -51,7 +51,7 @@ export class UpstashCacheStore implements CacheStore {
       cacheLogger.warn('Cache SET failed', {
         key,
         ttlSeconds,
-        error: err instanceof Error ? err.message : String(err),
+        error: Error.isError(err) ? err.message : String(err),
       })
     }
   }
@@ -62,7 +62,7 @@ export class UpstashCacheStore implements CacheStore {
     } catch (err) {
       cacheLogger.warn('Cache DEL failed', {
         key,
-        error: err instanceof Error ? err.message : String(err),
+        error: Error.isError(err) ? err.message : String(err),
       })
     }
   }
