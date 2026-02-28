@@ -12,67 +12,14 @@ import { existsSync } from 'fs'
 import { z } from 'zod'
 import { sql } from 'drizzle-orm'
 import { collectColorGroupPairs } from './color-group-utils'
+import {
+  ssProductSchema,
+  type SSProduct,
+  buildImages,
+  mapSSProductToColorValue,
+} from './image-sync-utils'
 
 if (existsSync('.env.local')) dotenv.config({ path: '.env.local', override: false })
-
-const SS_IMAGE_BASE = 'https://www.ssactivewear.com'
-
-const ssProductSchema = z
-  .object({
-    sku: z.string(),
-    styleID: z.union([z.number(), z.string()]).transform(String),
-    colorName: z.string(),
-    colorCode: z.string().optional().default(''),
-    // S&S returns "colorFamily" (not "colorFamilyName") — the DB column is named color_family_name
-    colorFamily: z.string().optional(),
-    colorGroupName: z.string().optional(),
-    color1: z.string().optional().default(''),
-    color2: z.string().optional().default(''),
-    colorFrontImage: z.string().optional().default(''),
-    colorBackImage: z.string().optional().default(''),
-    colorSideImage: z.string().optional().default(''),
-    colorDirectSideImage: z.string().optional().default(''),
-    colorOnModelFrontImage: z.string().optional().default(''),
-    colorOnModelBackImage: z.string().optional().default(''),
-    colorOnModelSideImage: z.string().optional().default(''),
-    colorSwatchImage: z.string().optional().default(''),
-  })
-  .passthrough()
-
-type SSProduct = z.infer<typeof ssProductSchema>
-
-function resolveImageUrl(path: string): string | null {
-  if (!path) return null
-  if (path.startsWith('http')) return path
-  return `${SS_IMAGE_BASE}${path.startsWith('/') ? '' : '/'}${path}`
-}
-
-/** Normalize S&S hex to #RRGGBB. Returns null for invalid/non-color values like "DROPPED". */
-function normalizeHex(raw: string): string | null {
-  const hex = raw.trim()
-  if (!hex) return null
-  const withHash = hex.startsWith('#') ? hex : `#${hex}`
-  return /^#[0-9a-fA-F]{6}$/.test(withHash) ? withHash : null
-}
-
-const imageFields: Array<{ field: keyof SSProduct; type: string }> = [
-  { field: 'colorFrontImage', type: 'front' },
-  { field: 'colorBackImage', type: 'back' },
-  { field: 'colorSideImage', type: 'side' },
-  { field: 'colorDirectSideImage', type: 'direct-side' },
-  { field: 'colorOnModelFrontImage', type: 'on-model-front' },
-  { field: 'colorOnModelBackImage', type: 'on-model-back' },
-  { field: 'colorOnModelSideImage', type: 'on-model-side' },
-  { field: 'colorSwatchImage', type: 'swatch' },
-]
-
-function buildImages(product: SSProduct): Array<{ type: string; url: string }> {
-  return imageFields.flatMap(({ field, type }) => {
-    const raw = product[field] as string
-    const url = resolveImageUrl(raw)
-    return url ? [{ type, url }] : []
-  })
-}
 
 void (async () => {
   const username = process.env.SS_USERNAME ?? process.env.SS_ACCOUNT_NUMBER
@@ -163,17 +110,9 @@ void (async () => {
         const colorMap = styleMap.get(externalId)!
         if (colorMap.size === 0) continue
 
-        const colorValues = Array.from(colorMap.values()).map((p) => ({
-          styleId: styleUuid,
-          name: p.colorName,
-          hex1: normalizeHex(p.color1),
-          hex2: normalizeHex(p.color2),
-          // S&S field is "colorFamily"; falsy coercion handles empty strings S&S may return
-          colorFamilyName: p.colorFamily?.trim() || null,
-          colorGroupName: p.colorGroupName?.trim() || null,
-          colorCode: p.colorCode?.trim() || null,
-          updatedAt: new Date(),
-        }))
+        const colorValues = Array.from(colorMap.values()).map((p) =>
+          mapSSProductToColorValue(p, styleUuid)
+        )
 
         const colorRows = await db
           .insert(catalogColors)
