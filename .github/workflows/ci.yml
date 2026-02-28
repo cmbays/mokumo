@@ -169,7 +169,7 @@ jobs:
       # ── dbt build --empty state:modified+ (dry run — validates SQL, zero rows) ──
       - name: Restore production manifest
         if: steps.changes.outputs.dbt_models == 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: dbt/prod-manifest
           key: dbt-prod-manifest-never-exact-match
@@ -262,7 +262,7 @@ jobs:
 
       - name: Restore production manifest
         if: steps.changes.outputs.dbt_models == 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: dbt/prod-manifest
           key: dbt-prod-manifest-never-exact-match
