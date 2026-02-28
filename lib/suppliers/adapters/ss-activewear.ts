@@ -496,7 +496,7 @@ export class SSActivewearAdapter implements SupplierAdapter {
         supplier: this.supplierName,
         checkedAt: new Date(),
         latencyMs: Date.now() - start,
-        message: err instanceof Error ? err.message : 'Unknown error',
+        message: Error.isError(err) ? err.message : 'Unknown error',
       }
     }
   }

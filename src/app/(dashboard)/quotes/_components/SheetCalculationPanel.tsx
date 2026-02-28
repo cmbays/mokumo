@@ -114,8 +114,7 @@ export function SheetCalculationPanel({
       setCanvasLayout(layouts)
       setActiveSheetIndex(0)
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Sheet calculation failed unexpectedly'
+      const message = Error.isError(error) ? error.message : 'Sheet calculation failed unexpectedly'
       setCalcError(message)
       setSheetCalculation(null)
       setCanvasLayout(null)
