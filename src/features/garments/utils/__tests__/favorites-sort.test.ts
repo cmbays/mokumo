@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { sortColorGroupsByFavorites } from '../favorites-sort'
 import type { FilterColorGroup } from '@features/garments/types'
 
-const makeGroup = (colorGroupName: string, colorFamilyName: string | null = 'Blues'): FilterColorGroup => ({
+const makeGroup = (
+  colorGroupName: string,
+  colorFamilyName: string | null = 'Blues'
+): FilterColorGroup => ({
   colorGroupName,
   colorFamilyName,
   hex: '#000000',

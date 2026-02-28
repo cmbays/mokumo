@@ -14,7 +14,7 @@ depends_on:
 
 # Screen Print Pro — App Flow
 
-> **See also**: `docs/APP_IA.md` — the *why* behind this inventory. Governing principles for where features go, how settings vs nav is decided, interaction patterns, and feature placement criteria. Read APP_IA before placing a new feature in the nav or Settings.
+> **See also**: `docs/APP_IA.md` — the _why_ behind this inventory. Governing principles for where features go, how settings vs nav is decided, interaction patterns, and feature placement criteria. Read APP_IA before placing a new feature in the nav or Settings.
 
 ---
 

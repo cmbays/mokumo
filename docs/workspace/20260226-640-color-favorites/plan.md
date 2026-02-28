@@ -20,13 +20,13 @@ created: 2026-02-27
 
 ## Wave Summary
 
-| Wave | Sessions | Mode | Slice | Deliverable |
-|------|---------|------|-------|-------------|
-| 0 | 1 | serial | foundation | 3 new DB tables + migration + backfill |
-| 1 | 1 | serial | V1 | Nav + Summary page + Configure brand controls |
-| 2 | 1 | serial | V2 | Style grid on Configure page |
-| 3 | 2 | **parallel** | V3 | Color group grid (3A) + sync pipeline upsert (3B) |
-| 4 | 1 | serial | V4 | Garments page surfacing (ColorFilterGrid pre-sort + style split) |
+| Wave | Sessions | Mode         | Slice      | Deliverable                                                      |
+| ---- | -------- | ------------ | ---------- | ---------------------------------------------------------------- |
+| 0    | 1        | serial       | foundation | 3 new DB tables + migration + backfill                           |
+| 1    | 1        | serial       | V1         | Nav + Summary page + Configure brand controls                    |
+| 2    | 1        | serial       | V2         | Style grid on Configure page                                     |
+| 3    | 2        | **parallel** | V3         | Color group grid (3A) + sync pipeline upsert (3B)                |
+| 4    | 1        | serial       | V4         | Garments page surfacing (ColorFilterGrid pre-sort + style split) |
 
 ---
 
@@ -35,6 +35,7 @@ created: 2026-02-27
 ### Task 0.1: Drizzle schema + migration + backfill
 
 **Files:**
+
 - `src/db/schema/catalog-normalized.ts` — add 3 new Drizzle table definitions
 - Generated migration file in `supabase/migrations/`
 
@@ -43,12 +44,15 @@ created: 2026-02-27
 1. Open `src/db/schema/catalog-normalized.ts`. Study the existing `catalogStylePreferences` table — all new tables follow this exact pattern.
 
 2. Add `catalogColorGroups`:
+
    ```ts
    export const catalogColorGroups = pgTable(
      'catalog_color_groups',
      {
        id: uuid('id').primaryKey().defaultRandom(),
-       brandId: uuid('brand_id').notNull().references(() => catalogBrands.id, { onDelete: 'cascade' }),
+       brandId: uuid('brand_id')
+         .notNull()
+         .references(() => catalogBrands.id, { onDelete: 'cascade' }),
        colorGroupName: varchar('color_group_name', { length: 100 }).notNull(),
        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
        updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -61,6 +65,7 @@ created: 2026-02-27
    ```
 
 3. Add `catalogColorGroupPreferences`:
+
    ```ts
    export const catalogColorGroupPreferences = pgTable(
      'catalog_color_group_preferences',
@@ -68,20 +73,26 @@ created: 2026-02-27
        id: uuid('id').primaryKey().defaultRandom(),
        scopeType: varchar('scope_type', { length: 20 }).notNull().default('shop'),
        scopeId: uuid('scope_id').notNull(),
-       colorGroupId: uuid('color_group_id').notNull()
+       colorGroupId: uuid('color_group_id')
+         .notNull()
          .references(() => catalogColorGroups.id, { onDelete: 'cascade' }),
        isFavorite: boolean('is_favorite'),
        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
        updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
      },
      (t) => [
-       uniqueIndex('catalog_color_group_prefs_scope_group_key').on(t.scopeType, t.scopeId, t.colorGroupId),
+       uniqueIndex('catalog_color_group_prefs_scope_group_key').on(
+         t.scopeType,
+         t.scopeId,
+         t.colorGroupId
+       ),
        index('idx_catalog_color_group_prefs_scope').on(t.scopeType, t.scopeId),
      ]
    )
    ```
 
 4. Add `catalogBrandPreferences`:
+
    ```ts
    export const catalogBrandPreferences = pgTable(
      'catalog_brand_preferences',
@@ -89,7 +100,8 @@ created: 2026-02-27
        id: uuid('id').primaryKey().defaultRandom(),
        scopeType: varchar('scope_type', { length: 20 }).notNull().default('shop'),
        scopeId: uuid('scope_id').notNull(),
-       brandId: uuid('brand_id').notNull()
+       brandId: uuid('brand_id')
+         .notNull()
          .references(() => catalogBrands.id, { onDelete: 'cascade' }),
        isEnabled: boolean('is_enabled'),
        isFavorite: boolean('is_favorite'),
@@ -106,6 +118,7 @@ created: 2026-02-27
 5. Run `npm run db:generate` — this produces the migration SQL.
 
 6. Open the generated migration file. Add the backfill statement after the `CREATE TABLE catalog_color_groups` DDL:
+
    ```sql
    INSERT INTO catalog_color_groups (id, brand_id, color_group_name)
    SELECT gen_random_uuid(), cs.brand_id, cc.color_group_name
@@ -131,6 +144,7 @@ created: 2026-02-27
 **Dependencies:** Wave 0 merged
 
 **Files:**
+
 - `src/shared/navigation/sidebar.tsx` (or constants file — find via `grep -r SIDEBAR_MAIN` or `grep -r garments` in the sidebar)
 - `src/app/(dashboard)/garments/favorites/page.tsx` — RSC summary page
 - `src/app/(dashboard)/garments/favorites/_components/BrandSummaryRow.tsx`
@@ -180,6 +194,7 @@ created: 2026-02-27
 **Dependencies:** Wave 1 merged
 
 **Files:**
+
 - `src/app/(dashboard)/garments/favorites/configure/_components/FavoritesConfigureClient.tsx` — extend with StyleGrid
 - `src/app/(dashboard)/garments/favorites/configure/_components/StyleGrid.tsx` — new component
 - `src/app/(dashboard)/garments/favorites/actions.ts` — extend `getBrandConfigureData`
@@ -209,6 +224,7 @@ created: 2026-02-27
 **Dependencies:** Wave 2 merged
 
 **Files:**
+
 - `src/app/(dashboard)/garments/favorites/configure/_components/FavoritesConfigureClient.tsx`
 - `src/app/(dashboard)/garments/favorites/configure/_components/ColorGroupGrid.tsx` — new component
 - `src/app/(dashboard)/garments/favorites/actions.ts` — extend `getBrandConfigureData` + add `toggleColorGroupFavorite`
@@ -232,6 +248,7 @@ created: 2026-02-27
 **Dependencies:** Wave 0 merged (catalog_color_groups table exists)
 
 **Files:**
+
 - `scripts/run-image-sync.ts` (or `src/scripts/run-image-sync.ts` — find via glob)
 
 **Steps:**
@@ -257,6 +274,7 @@ created: 2026-02-27
 **Dependencies:** Wave 3 merged (both sessions)
 
 **Files:**
+
 - `src/app/(dashboard)/garments/page.tsx` — add `getColorGroupFavorites` call
 - `src/app/(dashboard)/garments/_components/GarmentCatalogClient.tsx` — add useMemos + split render
 - `src/app/(dashboard)/garments/favorites/actions.ts` — implement `getColorGroupFavorites`
@@ -273,6 +291,7 @@ created: 2026-02-27
 3. **`GarmentCatalogClient.tsx` — three additions:**
 
    **a. State (S1):**
+
    ```ts
    const [favoriteColorGroupNames] = useState(
      () => new Set(props.initialFavoriteColorGroupNames ?? [])
@@ -280,6 +299,7 @@ created: 2026-02-27
    ```
 
    **b. `sortColorGroups` useMemo (N3) — extract to `favorites-sort.ts` for testing:**
+
    ```ts
    // favorites-sort.ts
    export function sortColorGroupsByFavorites(
@@ -293,9 +313,11 @@ created: 2026-02-27
      })
    }
    ```
+
    Pass `sortColorGroupsByFavorites(colorGroups, favoriteColorGroupNames)` to `ColorFilterGrid` instead of `colorGroups`.
 
    **c. `sortCatalogByFavorites` useMemo (N4) — also extract to `favorites-sort.ts`:**
+
    ```ts
    export function partitionByFavorite<T extends { isFavorite?: boolean }>(
      items: T[]
@@ -310,6 +332,7 @@ created: 2026-02-27
      )
    }
    ```
+
    Partition `filteredCatalog` styles. Render:
    - If `favorites.length > 0`: `<p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">Your Favorites</p>` + favorites grid
    - Then: others grid (no label, or omit if favorites are empty — preserve existing single-list rendering)
@@ -324,11 +347,11 @@ created: 2026-02-27
 
 Each session writes notes to `docs/workspace/20260226-640-color-favorites/` with a unique filename:
 
-| Session | Notes file |
-|---------|-----------|
-| 0.1 | `db-schema-notes.md` |
-| 1.1 | `v1-brand-notes.md` |
-| 2.1 | `v2-style-notes.md` |
-| 3.1 | `v3a-color-group-notes.md` |
-| 3.2 | `v3b-sync-notes.md` |
-| 4.1 | `v4-surfacing-notes.md` |
+| Session | Notes file                 |
+| ------- | -------------------------- |
+| 0.1     | `db-schema-notes.md`       |
+| 1.1     | `v1-brand-notes.md`        |
+| 2.1     | `v2-style-notes.md`        |
+| 3.1     | `v3a-color-group-notes.md` |
+| 3.2     | `v3b-sync-notes.md`        |
+| 4.1     | `v4-surfacing-notes.md`    |

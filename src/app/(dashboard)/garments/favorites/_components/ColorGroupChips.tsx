@@ -27,9 +27,7 @@ export function ColorGroupChips({ colorGroups, onToggle }: Props) {
   const rest = colorGroups.filter((cg) => !cg.isFavorite)
 
   if (colorGroups.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground">No color groups for this brand.</p>
-    )
+    return <p className="text-xs text-muted-foreground">No color groups for this brand.</p>
   }
 
   return (

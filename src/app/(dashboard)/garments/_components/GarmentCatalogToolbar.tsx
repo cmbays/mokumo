@@ -282,7 +282,6 @@ export function GarmentCatalogToolbar({
               Prices
             </Label>
           </div>
-
         </div>
       </div>
 

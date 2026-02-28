@@ -22,15 +22,15 @@ Identify the concrete tables and columns needed to store brand preferences and g
 
 ## Questions
 
-| #      | Question |
-| ------ | -------- |
-| **Q1** | What values does `colorGroupName` currently take in `catalog_colors`? Are they stable / canonical? |
-| **Q2** | Are `colorGroupName` values unique per brand, or can the same name appear across brands with different meaning? |
-| **Q3** | Does the existing S&S sync pipeline populate `colorGroupName` reliably? What is the null rate? |
-| **Q4** | What does `catalog_style_preferences` look like? Can the same `(scope_type, scope_id, entity)` pattern be reused verbatim? |
-| **Q5** | What tables exist that could serve as a FK target for a `catalog_color_groups` first-class entity? |
+| #      | Question                                                                                                                                                                                        |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Q1** | What values does `colorGroupName` currently take in `catalog_colors`? Are they stable / canonical?                                                                                              |
+| **Q2** | Are `colorGroupName` values unique per brand, or can the same name appear across brands with different meaning?                                                                                 |
+| **Q3** | Does the existing S&S sync pipeline populate `colorGroupName` reliably? What is the null rate?                                                                                                  |
+| **Q4** | What does `catalog_style_preferences` look like? Can the same `(scope_type, scope_id, entity)` pattern be reused verbatim?                                                                      |
+| **Q5** | What tables exist that could serve as a FK target for a `catalog_color_groups` first-class entity?                                                                                              |
 | **Q6** | If we introduce `catalog_color_groups(id, brand_id, color_group_name)`, how does it get populated — migration from existing `catalog_colors.color_group_name` values, or via the sync pipeline? |
-| **Q7** | For the brand preferences table, what FK target exists for `brand_id`? (`catalog_brands.id`) |
+| **Q7** | For the brand preferences table, what FK target exists for `brand_id`? (`catalog_brands.id`)                                                                                                    |
 
 ## Investigation
 
@@ -154,7 +154,9 @@ export const catalogColorGroups = pgTable(
   'catalog_color_groups',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    brandId: uuid('brand_id').notNull().references(() => catalogBrands.id, { onDelete: 'cascade' }),
+    brandId: uuid('brand_id')
+      .notNull()
+      .references(() => catalogBrands.id, { onDelete: 'cascade' }),
     colorGroupName: varchar('color_group_name', { length: 100 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -185,7 +187,11 @@ export const catalogColorGroupPreferences = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('catalog_color_group_prefs_scope_group_key').on(t.scopeType, t.scopeId, t.colorGroupId),
+    uniqueIndex('catalog_color_group_prefs_scope_group_key').on(
+      t.scopeType,
+      t.scopeId,
+      t.colorGroupId
+    ),
     index('idx_catalog_color_group_prefs_scope').on(t.scopeType, t.scopeId),
   ]
 )
@@ -219,17 +225,18 @@ export const catalogBrandPreferences = pgTable(
 
 ## Summary of Findings
 
-| Question | Finding |
-|----------|---------|
-| Q1–Q2: colorGroupName stability | Stable S&S strings; same name spans brands; per-brand favoriting = `(brand_id, colorGroupName)` key |
-| Q3: Null rate | Pre-sync rows will have null colorGroupName; acceptable — those colors can't participate in group preferences |
-| Q4: Style preferences pattern | Clean `(scope_type, scope_id, entity_id)` pattern — use verbatim in new tables |
-| Q5–Q6: First-class vs string key | DM-B selected (first-class `catalog_color_groups`); requires migration + sync pipeline step |
-| Q7: Brand FK target | `catalog_brands.id` — clean, already exists |
+| Question                         | Finding                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Q1–Q2: colorGroupName stability  | Stable S&S strings; same name spans brands; per-brand favoriting = `(brand_id, colorGroupName)` key           |
+| Q3: Null rate                    | Pre-sync rows will have null colorGroupName; acceptable — those colors can't participate in group preferences |
+| Q4: Style preferences pattern    | Clean `(scope_type, scope_id, entity_id)` pattern — use verbatim in new tables                                |
+| Q5–Q6: First-class vs string key | DM-B selected (first-class `catalog_color_groups`); requires migration + sync pipeline step                   |
+| Q7: Brand FK target              | `catalog_brands.id` — clean, already exists                                                                   |
 
 ## Acceptance
 
 Spike is complete. We can now describe:
+
 1. All three new tables with column definitions
 2. The population strategy for `catalog_color_groups` (migration + sync pipeline upsert)
 3. How the existing `(scope_type, scope_id)` pattern extends to all new tables

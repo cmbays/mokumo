@@ -135,7 +135,12 @@ export function GarmentFavoritesClient({
 
     setBrandData((prev) =>
       prev
-        ? { ...prev, styles: prev.styles.map((s) => (s.id === styleId ? { ...s, isFavorite: nextValue } : s)) }
+        ? {
+            ...prev,
+            styles: prev.styles.map((s) =>
+              s.id === styleId ? { ...s, isFavorite: nextValue } : s
+            ),
+          }
         : prev
     )
     // Update expanded modal state too
@@ -152,7 +157,9 @@ export function GarmentFavoritesClient({
     const result = await toggleStyleFavorite(styleId)
     if (!result.success) {
       setBrandData(original)
-      setExpandedStyle((prev) => (prev?.id === styleId ? { ...prev, isFavorite: style.isFavorite } : prev))
+      setExpandedStyle((prev) =>
+        prev?.id === styleId ? { ...prev, isFavorite: style.isFavorite } : prev
+      )
       setBrands((prev) =>
         prev.map((b) =>
           b.brandId === selectedBrandId
@@ -173,7 +180,10 @@ export function GarmentFavoritesClient({
 
     setBrandData((prev) =>
       prev
-        ? { ...prev, styles: prev.styles.map((s) => (s.id === styleId ? { ...s, isEnabled: nextValue } : s)) }
+        ? {
+            ...prev,
+            styles: prev.styles.map((s) => (s.id === styleId ? { ...s, isEnabled: nextValue } : s)),
+          }
         : prev
     )
     setExpandedStyle((prev) => (prev?.id === styleId ? { ...prev, isEnabled: nextValue } : prev))
@@ -181,7 +191,9 @@ export function GarmentFavoritesClient({
     const result = await setStyleEnabled(styleId, nextValue)
     if (!result.success) {
       setBrandData(original)
-      setExpandedStyle((prev) => (prev?.id === styleId ? { ...prev, isEnabled: style.isEnabled } : prev))
+      setExpandedStyle((prev) =>
+        prev?.id === styleId ? { ...prev, isEnabled: style.isEnabled } : prev
+      )
       toast.error("Couldn't update style visibility — try again")
     }
   }
@@ -289,7 +301,9 @@ export function GarmentFavoritesClient({
                 <button
                   type="button"
                   onClick={() => selectedBrandId && handleToggleBrandFavorite(selectedBrandId)}
-                  title={isBrandFavorited ? 'Remove brand from favorites' : 'Add brand to favorites'}
+                  title={
+                    isBrandFavorited ? 'Remove brand from favorites' : 'Add brand to favorites'
+                  }
                   className="transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action rounded"
                 >
                   <Star
@@ -305,9 +319,12 @@ export function GarmentFavoritesClient({
                 <div className="ml-auto flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
                     {brandData.colorGroups.filter((cg) => cg.isFavorite).length}{' '}
-                    {brandData.colorGroups.filter((cg) => cg.isFavorite).length === 1 ? 'color' : 'colors'}{' '}
+                    {brandData.colorGroups.filter((cg) => cg.isFavorite).length === 1
+                      ? 'color'
+                      : 'colors'}{' '}
                     · {brandData.styles.filter((s) => s.isFavorite).length}{' '}
-                    {brandData.styles.filter((s) => s.isFavorite).length === 1 ? 'style' : 'styles'} saved
+                    {brandData.styles.filter((s) => s.isFavorite).length === 1 ? 'style' : 'styles'}{' '}
+                    saved
                   </span>
                   <button
                     type="button"

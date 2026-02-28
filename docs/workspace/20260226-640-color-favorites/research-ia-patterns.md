@@ -14,28 +14,28 @@ Across every major B2B SaaS product studied, the same organizing principle emerg
 
 > **Main navigation = things you do every day. Settings = how those things are configured.**
 
-More precisely: the sidebar contains *operational objects and workflows* — the entities you create, manage, and act on as part of running the business. Settings contains *administrative configuration* — parameters that govern how the system behaves, but which rarely change once established.
+More precisely: the sidebar contains _operational objects and workflows_ — the entities you create, manage, and act on as part of running the business. Settings contains _administrative configuration_ — parameters that govern how the system behaves, but which rarely change once established.
 
-Shopify Admin articulates this most cleanly in its own documentation: "The Settings section is where you manage the core configurations of your online store," while the main sidebar contains "core aspects of your business, including orders, products, and customers." The implication is explicit — Settings is for *store configuration*, the sidebar is for *business operations*.
+Shopify Admin articulates this most cleanly in its own documentation: "The Settings section is where you manage the core configurations of your online store," while the main sidebar contains "core aspects of your business, including orders, products, and customers." The implication is explicit — Settings is for _store configuration_, the sidebar is for _business operations_.
 
-Linear operationalizes this as *operational actions* vs *configuration*. From the Linear docs: "Operational actions manipulate data (creating issues, changing status, applying labels)… Configuration establishes team-specific rules and structures in Settings, determining which operational features and workflows teams use." The sidebar is where you work; Settings is where you decide how work gets organized.
+Linear operationalizes this as _operational actions_ vs _configuration_. From the Linear docs: "Operational actions manipulate data (creating issues, changing status, applying labels)… Configuration establishes team-specific rules and structures in Settings, determining which operational features and workflows teams use." The sidebar is where you work; Settings is where you decide how work gets organized.
 
-HubSpot's navigation redesign (documented in their product blog) was guided by "efficiency first, then findability" — meaning high-frequency usage patterns should dictate what gets top-level placement. Their research involved qualitative interviews, click tests, surveys, treejack studies, diary studies, card sorts, and unmoderated usability testing — extensive work to establish what users do *daily* vs what they access episodically.
+HubSpot's navigation redesign (documented in their product blog) was guided by "efficiency first, then findability" — meaning high-frequency usage patterns should dictate what gets top-level placement. Their research involved qualitative interviews, click tests, surveys, treejack studies, diary studies, card sorts, and unmoderated usability testing — extensive work to establish what users do _daily_ vs what they access episodically.
 
 ### Frequency of Use as the Primary Filter
 
 The clearest test for nav placement is use frequency:
 
-| Placement | Criterion | Examples |
-|-----------|-----------|---------|
-| Main nav (sidebar) | Used daily or on every session | Orders, customers, products, schedule, analytics |
-| Settings | Configured once or rarely changed | Payment methods, team members, integrations, shop info, notification rules |
+| Placement          | Criterion                         | Examples                                                                   |
+| ------------------ | --------------------------------- | -------------------------------------------------------------------------- |
+| Main nav (sidebar) | Used daily or on every session    | Orders, customers, products, schedule, analytics                           |
+| Settings           | Configured once or rarely changed | Payment methods, team members, integrations, shop info, notification rules |
 
 Shopify Admin's left sidebar contains: **Home, Orders, Products, Customers, Analytics, Marketing, Discounts, Apps**. Settings (separate section at the bottom) covers: general store info, payments, shipping, taxes, notifications, domain, account. The 8-item sidebar maps exactly to the set of daily operational tasks. Settings is for infrastructure that underpins those tasks but isn't itself a daily destination.
 
 ### The Preferences / Favorites Edge Case
 
-"Preferences" and "favorites" represent a special case: they are *user-specific configuration* that influences *daily operational behavior*. The key question is: does the user access this feature as part of their daily flow, or only when setting up/adjusting?
+"Preferences" and "favorites" represent a special case: they are _user-specific configuration_ that influences _daily operational behavior_. The key question is: does the user access this feature as part of their daily flow, or only when setting up/adjusting?
 
 Linear's approach is instructive. It allows sidebar personalization (hiding items, pinning projects/initiatives/documents) directly from the sidebar itself — the customization is accessed contextually via right-click, not via a separate Settings page. The distinction: items the user frequently accesses become pinnable and surfaceable in-context. Bulk configuration lives in Settings.
 
@@ -63,21 +63,21 @@ HubSpot redesigned global navigation to support contextual access — users arri
 
 **Reconstructed navigation sections** (from support documentation categories and user descriptions):
 
-| Section | What it does |
-|---------|-------------|
-| **Today / Dashboard** | "A Today screen where orders and tasks assigned to you for the day are easily viewable" — landing view |
-| **Quotes** | Create estimates, attach artwork, send for approval |
-| **Invoices** | Assign due dates, tasks, work orders, shipping labels, track goods to order |
-| **Schedule / Calendar** | Visual production calendar, capacity overview, press assignments |
-| **Customers** | Customer records, past orders, customer portal access |
-| **Products / Catalogs** | Connect to SanMar, S&S Activewear, AlphaBroder catalogs; also custom products |
-| **Purchase Orders** | Create and manage POs to vendors, track receiving |
-| **Storefronts** | Printavo Merch + InkSoft stores (added later as an extension) |
-| **Settings** | Subscription, payments, users, integrations, QuickBooks, EasyPost, automation rules |
+| Section                 | What it does                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Today / Dashboard**   | "A Today screen where orders and tasks assigned to you for the day are easily viewable" — landing view |
+| **Quotes**              | Create estimates, attach artwork, send for approval                                                    |
+| **Invoices**            | Assign due dates, tasks, work orders, shipping labels, track goods to order                            |
+| **Schedule / Calendar** | Visual production calendar, capacity overview, press assignments                                       |
+| **Customers**           | Customer records, past orders, customer portal access                                                  |
+| **Products / Catalogs** | Connect to SanMar, S&S Activewear, AlphaBroder catalogs; also custom products                          |
+| **Purchase Orders**     | Create and manage POs to vendors, track receiving                                                      |
+| **Storefronts**         | Printavo Merch + InkSoft stores (added later as an extension)                                          |
+| **Settings**            | Subscription, payments, users, integrations, QuickBooks, EasyPost, automation rules                    |
 
 **Garment / product catalog handling:**
 
-Printavo's catalog feature is *transactional*, not *browsing-first*. The primary flow is: while creating a quote, you type a style code (e.g., "PC61 Black") and the system pulls pricing from S&S, SanMar, or AlphaBroder. The catalog is a lookup tool within the quoting workflow, not a standalone catalog-browsing experience.
+Printavo's catalog feature is _transactional_, not _browsing-first_. The primary flow is: while creating a quote, you type a style code (e.g., "PC61 Black") and the system pulls pricing from S&S, SanMar, or AlphaBroder. The catalog is a lookup tool within the quoting workflow, not a standalone catalog-browsing experience.
 
 Printavo introduced "Global Catalogs" — allowing shops to centrally manage which catalogs are active across the account and connect with account-specific pricing. This is configured in `My Account > Product Catalog` and is clearly a settings-area feature.
 
@@ -86,6 +86,7 @@ There is **no concept of shop favorites, preferred styles, or curated catalogs**
 **Automation and workflow:** Printavo has custom automation rules (triggers + actions), scheduling, task assignment, and payment collection. These are its strongest operational features.
 
 **What Printavo lacks** (relevant to Screen Print Pro's scope):
+
 - No catalog-browsing experience with visual filtering
 - No favorites/preferred styles concept
 - No color family browsing
@@ -98,15 +99,15 @@ There is **no concept of shop favorites, preferred styles, or curated catalogs**
 
 **Navigation sections** (from help documentation):
 
-| Section | What it does |
-|---------|-------------|
-| **Stores** | Create and manage online stores for teams/schools/corporate clients |
-| **Products** | Catalog of all products in the store; add/edit/remove |
-| **Store Art** | Upload and manage art assets |
-| **Proposals** | Customized quotes and invoices |
-| **Production** | Assign tasks, custom workflows, measure productivity |
-| **Purchasing** | Inventory tracking, supplier links |
-| **Store Settings** | Per-store configuration |
+| Section            | What it does                                                        |
+| ------------------ | ------------------------------------------------------------------- |
+| **Stores**         | Create and manage online stores for teams/schools/corporate clients |
+| **Products**       | Catalog of all products in the store; add/edit/remove               |
+| **Store Art**      | Upload and manage art assets                                        |
+| **Proposals**      | Customized quotes and invoices                                      |
+| **Production**     | Assign tasks, custom workflows, measure productivity                |
+| **Purchasing**     | Inventory tracking, supplier links                                  |
+| **Store Settings** | Per-store configuration                                             |
 
 **Garment / product catalog handling:**
 
@@ -123,6 +124,7 @@ The "Managing Product Catalog" section documents how shops manage their own cura
 **Product focus:** All-in-one — combines eCommerce, production management, artwork approvals, and supplier catalogs in a single subscription (contrasted with InkSoft's multi-product model).
 
 **Feature scope:**
+
 - Quotes and orders
 - eCommerce / online stores
 - Artwork approvals and mockup generation
@@ -143,6 +145,7 @@ DecoNetwork's "Supplier Catalogs" provide "accurate products, pricing, colors, a
 **Product focus:** Cloud-based, multi-decoration shop management (screen printing, DTG, DTF, embroidery, promo products).
 
 **Key features:**
+
 - Order management
 - Production management with drag-and-drop scheduler
 - Inventory management
@@ -157,6 +160,7 @@ YoPrint added **real-time vendor stock and pricing** as a significant feature up
 **Product focus:** Print shop and sign shop management with custom pricing templates.
 
 **Notable features:**
+
 - Customizable pricing templates for all product types
 - Integration with vendor catalogs for product selection during quoting
 - Online proofing (artwork approval)
@@ -168,20 +172,21 @@ ShopVox's garment handling is catalog-lookup-in-quoting (same model as Printavo)
 
 ### Feature Gaps and Competitive Opportunities
 
-Screen Print Pro's color family filtering and visual garment browsing (current work in the #632 epic) represents a **differentiated capability** that competitors do not appear to offer. Across Printavo, InkSoft, DecoNetwork, YoPrint, and ShopVox, garment selection is uniformly a *style-code lookup* within the quoting workflow — not a *visual catalog browsing* experience.
+Screen Print Pro's color family filtering and visual garment browsing (current work in the #632 epic) represents a **differentiated capability** that competitors do not appear to offer. Across Printavo, InkSoft, DecoNetwork, YoPrint, and ShopVox, garment selection is uniformly a _style-code lookup_ within the quoting workflow — not a _visual catalog browsing_ experience.
 
 **Features competitors have that Screen Print Pro should plan to build:**
 
-| Feature | Competitors with it | Priority Signal |
-|---------|--------------------|----|
-| Real-time vendor stock/pricing | YoPrint, DecoNetwork | High — prevents quoting unavailable garments |
-| Artwork/mockup generation | DecoNetwork, InkSoft, GraphicsFlow | Medium — roadmap item |
-| Online customer portal | Printavo, InkSoft, YoPrint | High — customer approval workflow |
-| Purchase order management | Printavo, DecoNetwork, ShopVox | Medium — garment sourcing completion |
-| Online stores / merch | InkSoft, DecoNetwork | Medium — downstream revenue for clients |
-| Multi-decoration support | DecoNetwork, YoPrint | Low — screen print focus is correct for now |
+| Feature                        | Competitors with it                | Priority Signal                              |
+| ------------------------------ | ---------------------------------- | -------------------------------------------- |
+| Real-time vendor stock/pricing | YoPrint, DecoNetwork               | High — prevents quoting unavailable garments |
+| Artwork/mockup generation      | DecoNetwork, InkSoft, GraphicsFlow | Medium — roadmap item                        |
+| Online customer portal         | Printavo, InkSoft, YoPrint         | High — customer approval workflow            |
+| Purchase order management      | Printavo, DecoNetwork, ShopVox     | Medium — garment sourcing completion         |
+| Online stores / merch          | InkSoft, DecoNetwork               | Medium — downstream revenue for clients      |
+| Multi-decoration support       | DecoNetwork, YoPrint               | Low — screen print focus is correct for now  |
 
 **Features Screen Print Pro has that competitors lack:**
+
 - Visual color family taxonomy and browsing
 - Curated shop-scoped garment catalog (is_enabled / is_favorite per style)
 - Dense swatch grid with color filtering (hue-bucket tabs)
@@ -197,6 +202,7 @@ S&S Activewear (ssactivewear.com) is the primary supplier integration in Screen 
 **Catalog navigation structure:**
 
 S&S organizes by product category (T-Shirts, Polos, Sweatshirts, Activewear, Outerwear, Caps, Bags, Accessories, etc.) with multi-dimensional filtering:
+
 - Brand
 - Size
 - Color
@@ -209,16 +215,17 @@ The "categories" landing page (`ssactivewear.com/categories`) is the primary bro
 
 **Account section (My Account):**
 
-| Account feature | What it does |
-|----------------|-------------|
-| Order History | View and re-access past orders |
-| Order Tracking | Track shipments |
-| Invoices | Access invoice records |
-| Payment Methods | Manage saved payment |
-| Manage Shipping Addresses | Configure delivery locations |
-| Account Statement | View account balance/history |
+| Account feature           | What it does                   |
+| ------------------------- | ------------------------------ |
+| Order History             | View and re-access past orders |
+| Order Tracking            | Track shipments                |
+| Invoices                  | Access invoice records         |
+| Payment Methods           | Manage saved payment           |
+| Manage Shipping Addresses | Configure delivery locations   |
+| Account Statement         | View account balance/history   |
 
 S&S added several enhancements in recent platform updates including:
+
 - **Product Comparisons** — compare items across categories
 - **Extended Sessions** — users no longer logged out after 2 hours (a long-requested dealer feature)
 - **Mobile optimization** — improved browsing on mobile devices
@@ -235,11 +242,13 @@ SanMar (`sanmar.com`) is a major premium supplier (Port Authority, Sport-Tek, Ni
 **Catalog navigation:**
 
 SanMar organizes by product type with a top-level category structure:
+
 - T-Shirts, Polos, Sweatshirts, Caps, Activewear, Outerwear, Woven Shirts, Bottoms, Workwear, Bags, Accessories, Personal Protection
 
 Dealers can browse by product category, color groups, new arrivals, and sale status. A dedicated **Product Navigators** section (`sanmar.com/resources/productmaterials/productnavigators`) provides curated product guides.
 
 **Account features (My SanMar):**
+
 - Order History
 - Online returns
 - Address management (role-based)
@@ -285,16 +294,17 @@ Based on the research, the governing principle is:
 
 More precisely:
 
-| Main nav (sidebar) | Settings |
-|-------------------|---------|
-| Objects you act on daily | Parameters you configure once |
-| Workflows with high frequency | Rules that govern workflows |
-| Places you navigate to by intent | Pages you visit to adjust behavior |
-| Revenue-generating activities | Infrastructure for those activities |
+| Main nav (sidebar)               | Settings                            |
+| -------------------------------- | ----------------------------------- |
+| Objects you act on daily         | Parameters you configure once       |
+| Workflows with high frequency    | Rules that govern workflows         |
+| Places you navigate to by intent | Pages you visit to adjust behavior  |
+| Revenue-generating activities    | Infrastructure for those activities |
 
 Applied to Screen Print Pro:
 
 **Main nav (sidebar) candidates:**
+
 - Dashboard / Today
 - Jobs (the full quote → invoice lifecycle)
 - Schedule / Calendar
@@ -304,6 +314,7 @@ Applied to Screen Print Pro:
 - Reports / Analytics
 
 **Settings candidates:**
+
 - Shop profile (name, address, logo)
 - Pricing defaults (markup rules, setup fees)
 - Users and permissions
@@ -337,19 +348,13 @@ This mirrors the Shopify pattern: pinning a sales channel is done from within th
 In priority order based on what competitors have and what fills genuine gaps:
 
 **Near-term (Waves already in motion):**
+
 1. Color family filter with favorites (current work) — differentiator, no competitor has it
 2. Shop catalog curation (`is_enabled` per style) — addresses the distributor gap identified above
 
-**Medium-term (in the garments vertical):**
-3. **Real-time stock availability** — YoPrint has this; prevents quoting unavailable garments. Requires polling S&S/SanMar inventory endpoint at quote time.
-4. **Purchase order generation from job** — Printavo and DecoNetwork have this; completes the garment sourcing loop within one tool
-5. **"House catalog" / curated view** — formalize the shop's preferred style list as a navigable first-class view
-6. **Color by style/variant** — showing available colors for a selected style inline in quoting (current S&S API returns this)
+**Medium-term (in the garments vertical):** 3. **Real-time stock availability** — YoPrint has this; prevents quoting unavailable garments. Requires polling S&S/SanMar inventory endpoint at quote time. 4. **Purchase order generation from job** — Printavo and DecoNetwork have this; completes the garment sourcing loop within one tool 5. **"House catalog" / curated view** — formalize the shop's preferred style list as a navigable first-class view 6. **Color by style/variant** — showing available colors for a selected style inline in quoting (current S&S API returns this)
 
-**Longer-term:**
-7. **Custom product upload** — shops carry styles not in S&S/SanMar (local vendor specials, custom blanks)
-8. **Receiving / check-in flow** — mark received garments against POs; Printavo and DecoNetwork both have this
-9. **SanMar integration** — second supplier source; SanMar has different brand coverage (Nike, The North Face, etc.)
+**Longer-term:** 7. **Custom product upload** — shops carry styles not in S&S/SanMar (local vendor specials, custom blanks) 8. **Receiving / check-in flow** — mark received garments against POs; Printavo and DecoNetwork both have this 9. **SanMar integration** — second supplier source; SanMar has different brand coverage (Nike, The North Face, etc.)
 
 ### Recommended Nav Taxonomy for Screen Print Pro
 
@@ -357,28 +362,28 @@ Based on all research above:
 
 **Primary sidebar items** (operational, daily-use):
 
-| Item | Rationale |
-|------|-----------|
-| Dashboard | Landing state — blocked jobs, recent activity, in-progress |
-| Jobs | Core entity — the full quote → approval → production → invoice lifecycle |
-| Schedule | Production calendar; high-frequency destination for production staff |
-| Customers | CRM records; accessed when creating/reviewing jobs |
-| Garments | Catalog browsing + shop curation; accessed during quoting and planning |
-| Screen Room | Screen inventory, burn status; accessed by screen room operator daily |
-| Reports | Analytics; accessed weekly/monthly by owner |
+| Item        | Rationale                                                                |
+| ----------- | ------------------------------------------------------------------------ |
+| Dashboard   | Landing state — blocked jobs, recent activity, in-progress               |
+| Jobs        | Core entity — the full quote → approval → production → invoice lifecycle |
+| Schedule    | Production calendar; high-frequency destination for production staff     |
+| Customers   | CRM records; accessed when creating/reviewing jobs                       |
+| Garments    | Catalog browsing + shop curation; accessed during quoting and planning   |
+| Screen Room | Screen inventory, burn status; accessed by screen room operator daily    |
+| Reports     | Analytics; accessed weekly/monthly by owner                              |
 
 **Settings (configuration, episodic access):**
 
-| Section | Contents |
-|---------|---------|
-| Shop | Name, address, logo, timezone, defaults |
-| Pricing | Markup rules, setup fees, tax rates |
-| Catalog Sources | Supplier API credentials (S&S, SanMar), sync settings |
-| Decoration Methods | Print types, pricing grids |
-| Users | Team members, roles, permissions |
-| Integrations | QuickBooks, Zapier, etc. |
-| Notifications | Alert rules, email templates |
-| Billing | Subscription management |
+| Section            | Contents                                              |
+| ------------------ | ----------------------------------------------------- |
+| Shop               | Name, address, logo, timezone, defaults               |
+| Pricing            | Markup rules, setup fees, tax rates                   |
+| Catalog Sources    | Supplier API credentials (S&S, SanMar), sync settings |
+| Decoration Methods | Print types, pricing grids                            |
+| Users              | Team members, roles, permissions                      |
+| Integrations       | QuickBooks, Zapier, etc.                              |
+| Notifications      | Alert rules, email templates                          |
+| Billing            | Subscription management                               |
 
 **Navigation item count:** 7 sidebar items (Dashboard, Jobs, Schedule, Customers, Garments, Screen Room, Reports) plus Settings at bottom — within the 5–7 cognitive limit, with Settings as a secondary slot consistent with Shopify Admin's pattern.
 

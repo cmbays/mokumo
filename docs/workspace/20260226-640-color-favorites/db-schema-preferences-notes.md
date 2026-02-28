@@ -9,19 +9,23 @@ pipeline: 20260226-640-color-favorites
 ## Architecture Decisions
 
 ### Migration numbering conflict resolved
+
 Manual migration `0017_add_color_group_name.sql` (from PR #634) was never tracked by Drizzle-kit, so Drizzle generated its next migration as `0017_red_talkback.sql`. Resolved by renaming Drizzle's migration to `0018_red_talkback.sql` and updating `meta/_journal.json` + `meta/0018_snapshot.json`.
 
 **Rule going forward**: Any manual migration added outside `npm run db:generate` must be registered by either (a) running `npm run db:generate` immediately after to advance Drizzle's counter, or (b) manually updating `meta/_journal.json`.
 
 ### Drizzle migration tracking vs Supabase tracking
+
 The local Supabase migration tracking table (`supabase_migrations.schema_migrations`) had 0016 and 0017 not registered, even though the tables existed in the DB. Used `npx supabase migration repair --local --status applied 0016` / `reverted` / `applied` to reconcile.
 
 **Final state**: All migrations 0000–0018 applied and tracked locally.
 
 ### Tristate boolean columns (isEnabled, isFavorite)
+
 All preference tables use nullable boolean columns: `NULL = unset`, `true = explicitly on`, `false = explicitly off`. This is intentional — it distinguishes "user has never expressed a preference" from "user has explicitly turned this off." The tests guard against accidental `.notNull()` being added.
 
 ### catalog_color_groups backfill
+
 The backfill SQL runs at migration time to populate `catalog_color_groups` from existing `catalog_colors` data. `ON CONFLICT DO NOTHING` makes it idempotent. After the image sync pipeline runs for future brands, new rows will be added via the sync upsert.
 
 ## Key Implementation Tradeoffs

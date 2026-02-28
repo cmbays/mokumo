@@ -264,10 +264,7 @@ export async function getBrandConfigureData(
             .from(catalogColors)
             .innerJoin(
               catalogImages,
-              and(
-                eq(catalogImages.colorId, catalogColors.id),
-                eq(catalogImages.imageType, 'front')
-              )
+              and(eq(catalogImages.colorId, catalogColors.id), eq(catalogImages.imageType, 'front'))
             )
             .where(inArray(catalogColors.styleId, styleIds))
             .groupBy(catalogColors.styleId)
@@ -571,9 +568,7 @@ export async function setStyleEnabled(
  *
  * Safe degradation: returns [] on auth failure or DB error.
  */
-export async function getFavoritedBrandsSummary(
-  shopId: string
-): Promise<BrandFavoriteSummary[]> {
+export async function getFavoritedBrandsSummary(shopId: string): Promise<BrandFavoriteSummary[]> {
   const session = await verifySession()
   if (!session) return []
 
@@ -679,10 +674,7 @@ export async function getFavoritedBrandsSummary(
         .from(catalogColors)
         .innerJoin(
           catalogImages,
-          and(
-            eq(catalogImages.colorId, catalogColors.id),
-            eq(catalogImages.imageType, 'front')
-          )
+          and(eq(catalogImages.colorId, catalogColors.id), eq(catalogImages.imageType, 'front'))
         )
         .where(inArray(catalogColors.styleId, allStyleIds))
         .groupBy(catalogColors.styleId)

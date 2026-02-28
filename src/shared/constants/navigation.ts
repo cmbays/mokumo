@@ -49,6 +49,12 @@ export const SECONDARY_NAV: NavItem[] = [
   { label: 'Invoices', href: '/invoices', icon: Receipt, iconColor: 'text-success' },
   { label: 'Screens', href: '/screens', icon: Printer, iconColor: 'text-action' },
   { label: 'Garments', href: '/garments', icon: Shirt },
-  { label: 'Favorites', href: '/garments/favorites', icon: Star, iconColor: 'text-warning', indent: true },
+  {
+    label: 'Favorites',
+    href: '/garments/favorites',
+    icon: Star,
+    iconColor: 'text-warning',
+    indent: true,
+  },
   { label: 'Pricing Settings', href: '/settings/pricing', icon: Settings },
 ]

@@ -18,9 +18,9 @@ describe('collectColorGroupPairs', () => {
     const colorValues = [
       { styleId: STYLE_1, colorGroupName: 'Navy' },
       { styleId: STYLE_1, colorGroupName: 'Black' },
-      { styleId: STYLE_2, colorGroupName: 'Navy' },       // duplicate — same brand + group
+      { styleId: STYLE_2, colorGroupName: 'Navy' }, // duplicate — same brand + group
       { styleId: STYLE_2, colorGroupName: 'Royal Blue' },
-      { styleId: STYLE_3, colorGroupName: 'Navy' },       // same group name, different brand — NOT duplicate
+      { styleId: STYLE_3, colorGroupName: 'Navy' }, // same group name, different brand — NOT duplicate
     ]
 
     const result = collectColorGroupPairs(colorValues, brandMap)

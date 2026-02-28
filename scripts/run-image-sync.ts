@@ -128,7 +128,11 @@ void (async () => {
 
   // Load all catalog_styles rows to map externalId → UUID and UUID → brandId
   const styleRows = await db
-    .select({ id: catalogStyles.id, externalId: catalogStyles.externalId, brandId: catalogStyles.brandId })
+    .select({
+      id: catalogStyles.id,
+      externalId: catalogStyles.externalId,
+      brandId: catalogStyles.brandId,
+    })
     .from(catalogStyles)
   const styleIdByExternalId = new Map(styleRows.map((r) => [r.externalId, r.id]))
   const brandIdByStyleId = new Map(styleRows.map((r) => [r.id, r.brandId]))

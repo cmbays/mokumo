@@ -47,15 +47,16 @@ export function MobileBrandPicker({
         <span className="flex-1 text-left font-medium">
           {selected?.brandName ?? 'Select a brand'}
         </span>
-        {selected && (selected.favoritedStyleCount > 0 || selected.favoritedColorGroupCount > 0) && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Shirt className="h-3 w-3 shrink-0" />
-            {selected.favoritedStyleCount}
-            <span className="text-border">|</span>
-            <Palette className="h-3 w-3 shrink-0" />
-            {selected.favoritedColorGroupCount}
-          </span>
-        )}
+        {selected &&
+          (selected.favoritedStyleCount > 0 || selected.favoritedColorGroupCount > 0) && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Shirt className="h-3 w-3 shrink-0" />
+              {selected.favoritedStyleCount}
+              <span className="text-border">|</span>
+              <Palette className="h-3 w-3 shrink-0" />
+              {selected.favoritedColorGroupCount}
+            </span>
+          )}
         <ChevronDown
           className={cn(
             'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform',

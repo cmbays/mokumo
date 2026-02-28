@@ -10,7 +10,7 @@ created: 2026-02-27
 ## Context
 
 Designed during the #640 color favorites mockup session. The core insight:
-before any code is written, a developer should be able to *see* exactly what
+before any code is written, a developer should be able to _see_ exactly what
 they're building through progressive fidelity (L1 UI mockup → L2 component
 mockup), then formalize it through breadboarding and implementation planning.
 The `/vertical-planner` skill packages this as a repeatable compound workflow.
@@ -45,9 +45,11 @@ Build (per wave, TDD-first)
 ## What Needs to Be Built
 
 ### 1. Update `/shaping` skill
+
 **File**: `.claude/skills/shaping/skill.md`
 
 Add a section on **Excalidraw in Shaping**:
+
 - After identifying candidate shapes (A, B, C...), open Excalidraw and diagram
   each shape visually — show how the UI/flow looks for each option
 - File: `docs/workspace/{pipeline-id}/shaping-diagram.excalidraw`
@@ -58,6 +60,7 @@ Add a section on **Excalidraw in Shaping**:
   `excalidraw-canvas start`, open a fresh Claude session.
 
 Add a **Handoff to Mockup** section at the bottom:
+
 - After shape is selected, L1 mockup is the next stage
 - The parts table from the selected shape is the input to the mockup
 - Ref: `docs/workspace/{pipeline-id}/shaping.md` Selected Shape parts table
@@ -65,6 +68,7 @@ Add a **Handoff to Mockup** section at the bottom:
 ---
 
 ### 2. Create `/mockup` stage skill
+
 **File**: `.claude/skills/mockup/skill.md` (NEW)
 
 This formalizes the two-level mockup stage that currently has no skill document.
@@ -72,17 +76,19 @@ This formalizes the two-level mockup stage that currently has no skill document.
 **Contents**:
 
 #### L1 — Interaction Model Mockup
+
 - **Tool choice**: Next.js `/mockup/` route OR Paper
   - `/mockup/` route: for multi-state interactive flows (click-through, state
     transitions, filters, scope switching). Zero build cost, gitignored.
   - Paper: for primarily visual design questions (layout, color, hierarchy,
     component placement). Use conservatively — 100 MCP calls/week budget.
-  - Decision rule: "Is the open question about *how it works* or *how it looks*?"
+  - Decision rule: "Is the open question about _how it works_ or _how it looks_?"
     Works → mockup route. Looks → Paper.
 - **Gate**: "I can click through the interaction and describe what happens at
   every state. The interaction model is validated."
 
 #### L2 — Component Mockup
+
 - **Tool**: Next.js `/mockup/` route, importing real components
 - Import actual components from `src/features/` and `src/shared/`
 - Feed them mock data that matches the production data shape
@@ -92,6 +98,7 @@ This formalizes the two-level mockup stage that currently has no skill document.
   connections between surfaces are visible."
 
 #### Conventions
+
 - All mockup routes live under `src/app/(dashboard)/mockup/` (gitignored)
 - Mockup routes carry a banner: "MOCKUP ROUTE — dev only, never committed"
 - Never add mockup flags to production pages — exploration is always in
@@ -102,11 +109,13 @@ This formalizes the two-level mockup stage that currently has no skill document.
 ---
 
 ### 3. Create `/vertical-planner` compound skill
+
 **File**: `.claude/skills/vertical-planner/skill.md` (NEW)
 
 The orchestrator. Thin but explicit about stages and gates.
 
 **Structure**:
+
 - Intro: what this skill does (runs the full pre-build ritual)
 - Pipeline diagram (same as above)
 - Stage definitions: one section per stage, containing:
@@ -120,19 +129,20 @@ The orchestrator. Thin but explicit about stages and gates.
 
 **Stage gates** (explicit):
 
-| Gate | What must be true |
-|------|------------------|
-| Discovery → Shaping | scope.md written, user interview complete |
-| Shaping → L1 Mockup | Shape selected, all DPs resolved, parts table done, Excalidraw diagram committed |
-| L1 → L2 Mockup | Interaction model described for all states |
-| L2 → Breadboard | Component connections visible, data shapes confirmed |
-| Breadboard → BB Reflection | All R have affordances, all U have data sources |
-| BB Reflection → Impl Planning | No blocking smells |
-| Impl Planning → Build | Manifest approved, TDD scaffolding written per slice |
+| Gate                          | What must be true                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| Discovery → Shaping           | scope.md written, user interview complete                                        |
+| Shaping → L1 Mockup           | Shape selected, all DPs resolved, parts table done, Excalidraw diagram committed |
+| L1 → L2 Mockup                | Interaction model described for all states                                       |
+| L2 → Breadboard               | Component connections visible, data shapes confirmed                             |
+| Breadboard → BB Reflection    | All R have affordances, all U have data sources                                  |
+| BB Reflection → Impl Planning | No blocking smells                                                               |
+| Impl Planning → Build         | Manifest approved, TDD scaffolding written per slice                             |
 
 ---
 
 ### 4. Update `CLAUDE.md`
+
 **File**: `CLAUDE.md`
 
 Update the **Pre-Build Ritual** section (currently 4-step):
@@ -155,6 +165,7 @@ Replace with:
 ```
 
 Also update the **Skills table** to add:
+
 - `/mockup` — new entry
 - `/vertical-planner` — new entry (replaces manually invoking sub-skills)
 
@@ -162,12 +173,12 @@ Also update the **Skills table** to add:
 
 ## File Summary
 
-| Action | File |
-|--------|------|
+| Action | File                                                                        |
+| ------ | --------------------------------------------------------------------------- |
 | Update | `.claude/skills/shaping/skill.md` — add Excalidraw section + mockup handoff |
-| Create | `.claude/skills/mockup/skill.md` — L1/L2 mockup stage documentation |
-| Create | `.claude/skills/vertical-planner/skill.md` — compound orchestrator |
-| Update | `CLAUDE.md` — Pre-Build Ritual + Skills table |
+| Create | `.claude/skills/mockup/skill.md` — L1/L2 mockup stage documentation         |
+| Create | `.claude/skills/vertical-planner/skill.md` — compound orchestrator          |
+| Update | `CLAUDE.md` — Pre-Build Ritual + Skills table                               |
 
 ---
 

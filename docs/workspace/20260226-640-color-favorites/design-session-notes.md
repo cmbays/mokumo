@@ -17,9 +17,9 @@ key open questions and produced visual artifacts. Use this + `interview-notes.md
 
 Two interactive mockup pages built at `src/app/(dashboard)/mockup/` (gitignored, dev-only):
 
-| File | Route | Purpose |
-|------|-------|---------|
-| `src/app/(dashboard)/mockup/brands/page.tsx` | `/mockup/brands` | Summary view — cross-brand, read-only |
+| File                                                   | Route                      | Purpose                                  |
+| ------------------------------------------------------ | -------------------------- | ---------------------------------------- |
+| `src/app/(dashboard)/mockup/brands/page.tsx`           | `/mockup/brands`           | Summary view — cross-brand, read-only    |
 | `src/app/(dashboard)/mockup/brands/configure/page.tsx` | `/mockup/brands/configure` | Configure view — single brand, full edit |
 
 Both render inside the real dashboard shell with real design tokens.
@@ -32,10 +32,10 @@ These supplement D1–D6 in `interview-notes.md`.
 
 ### D7: Two distinct UX modes — Summary and Configure
 
-| Mode | View | Access | Interactions |
-|------|------|--------|-------------|
-| **Summary** | All favorited brands, each with their saved colors + styles | Default landing for garment favorites | Read-only. "Configure →" link per brand. |
-| **Configure** | Single brand: Colors tab + Styles tab | Via "Configure →" from summary, or "Add brand" dropdown | Full write — star/unstar colors and styles |
+| Mode          | View                                                        | Access                                                  | Interactions                               |
+| ------------- | ----------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------ |
+| **Summary**   | All favorited brands, each with their saved colors + styles | Default landing for garment favorites                   | Read-only. "Configure →" link per brand.   |
+| **Configure** | Single brand: Colors tab + Styles tab                       | Via "Configure →" from summary, or "Add brand" dropdown | Full write — star/unstar colors and styles |
 
 Navigation: Summary → "Configure →" → single-brand Configure. Configure → "← Garment Favorites" → Summary.
 
@@ -160,37 +160,37 @@ All colors
 
 ## Open Questions — Resolved in Design Session
 
-| # | Question | Resolution |
-|---|----------|-----------|
-| OQ1 | UI treatment for favorites | Two-page model (Summary + Configure). Summary shows saved items; Configure has two-section layout (favorites / all). |
-| OQ5 | Favoriting = ordering/filtering or hard-hide? | Ordering/prominence only. Non-favorited brands still accessible via "Add brand". |
+| #   | Question                                      | Resolution                                                                                                           |
+| --- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| OQ1 | UI treatment for favorites                    | Two-page model (Summary + Configure). Summary shows saved items; Configure has two-section layout (favorites / all). |
+| OQ5 | Favoriting = ordering/filtering or hard-hide? | Ordering/prominence only. Non-favorited brands still accessible via "Add brand".                                     |
 
 ---
 
 ## Open Questions — Still Open for Shaping
 
-| # | Question | Priority |
-|---|----------|----------|
-| OQ2 | How to set customer preferences from Garments page — where is customer context activated? | High — needed for breadboarding |
-| OQ3 | Multi-brand summary view + customer context — does a selected customer filter/override the summary? | High |
-| OQ4 | No customer preferences set → fall through to shop favorites entirely? | Medium |
-| OQ6 | URL structure: `/garments/favorites` vs `/garments?view=favorites` vs new nav entry? | Medium |
-| OQ7 | "Garment Favorites" — where does it live in the sidebar nav? New item, or under Garments dropdown? | Medium |
-| OQ8 | Empty state: first-time user with no brands favorited — what does the Summary page show? | Low |
+| #   | Question                                                                                            | Priority                        |
+| --- | --------------------------------------------------------------------------------------------------- | ------------------------------- |
+| OQ2 | How to set customer preferences from Garments page — where is customer context activated?           | High — needed for breadboarding |
+| OQ3 | Multi-brand summary view + customer context — does a selected customer filter/override the summary? | High                            |
+| OQ4 | No customer preferences set → fall through to shop favorites entirely?                              | Medium                          |
+| OQ6 | URL structure: `/garments/favorites` vs `/garments?view=favorites` vs new nav entry?                | Medium                          |
+| OQ7 | "Garment Favorites" — where does it live in the sidebar nav? New item, or under Garments dropdown?  | Medium                          |
+| OQ8 | Empty state: first-time user with no brands favorited — what does the Summary page show?            | Low                             |
 
 ---
 
 ## Data Model Constraints (confirmed from interview + codebase)
 
-| Constraint | Source |
-|------------|--------|
-| `catalogColorPreferences` stores by `color_id` — not colorGroupName | Codebase finding |
-| New abstraction needed: group-level color preferences (brand-scoped) | D4 + D11 |
-| `catalogStylePreferences` already has brand-scope — may be reusable | Codebase finding |
-| No `catalogBrandPreferences` table yet | Codebase finding |
-| Customer-scoped preferences: no table yet | OQ2-4 deferred |
-| Wave 3 `ColorFilterGrid` operates at colorGroupName — must align | D4 |
-| Unfavorite/disable never wipes data (soft-delete principle) | D9 + D10 |
+| Constraint                                                           | Source           |
+| -------------------------------------------------------------------- | ---------------- |
+| `catalogColorPreferences` stores by `color_id` — not colorGroupName  | Codebase finding |
+| New abstraction needed: group-level color preferences (brand-scoped) | D4 + D11         |
+| `catalogStylePreferences` already has brand-scope — may be reusable  | Codebase finding |
+| No `catalogBrandPreferences` table yet                               | Codebase finding |
+| Customer-scoped preferences: no table yet                            | OQ2-4 deferred   |
+| Wave 3 `ColorFilterGrid` operates at colorGroupName — must align     | D4               |
+| Unfavorite/disable never wipes data (soft-delete principle)          | D9 + D10         |
 
 ---
 
@@ -210,11 +210,13 @@ These carry forward to all garment-related surfaces (quote picker, customer page
 ## Input for Shaping Session
 
 The shaping session should use:
+
 1. `interview-notes.md` — source quotes + D1–D6
 2. This file (`design-session-notes.md`) — D7–D16, user journeys, open questions
 3. Mockup at `http://localhost:3001/mockup/brands` (dev server) as visual reference
 
 Key shape questions to resolve in shaping:
+
 - Data model: what tables/columns are needed for brand + color group + style preferences?
 - Customer scope: how does OQ2/OQ3 get solved (customer selector on Garments page)?
 - Navigation: does this become a new page, a sub-view of Garments, or a settings area?

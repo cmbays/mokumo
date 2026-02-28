@@ -251,14 +251,7 @@ export function GarmentCatalogClient({
     filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [
-    catalog,
-    category,
-    searchQuery,
-    brand,
-    selectedGroupSet,
-    styleToColorGroupNamesMap,
-  ])
+  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleToColorGroupNamesMap])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)

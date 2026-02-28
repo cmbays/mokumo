@@ -247,7 +247,10 @@ export const catalogColorGroups = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('catalog_color_groups_brand_id_color_group_name_key').on(t.brandId, t.colorGroupName),
+    uniqueIndex('catalog_color_groups_brand_id_color_group_name_key').on(
+      t.brandId,
+      t.colorGroupName
+    ),
     index('idx_catalog_color_groups_brand_id').on(t.brandId),
   ]
 )
