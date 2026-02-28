@@ -1,4 +1,5 @@
 import 'server-only'
+import { z } from 'zod'
 
 // Auth classification: PUBLIC — product catalog; no PII or financial data.
 // Phase 2: May be exposed to unauthenticated customer-facing quote requests.
@@ -112,7 +113,9 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
  * Fetch slim style metadata (Tier 1) — no colors, no images, with precomputed cardImageUrl.
  * Cached 60s per shopId. Only available in supabase-catalog mode. Returns [] otherwise.
  */
-export async function getCatalogStylesSlim(): Promise<import('@domain/entities/catalog-style').CatalogStyleMetadata[]> {
+export async function getCatalogStylesSlim(): Promise<
+  import('@domain/entities/catalog-style').CatalogStyleMetadata[]
+> {
   if (getActiveProvider() !== 'supabase-catalog') return []
   const mod = await loadSupabaseCatalogModule()
   return mod.getCatalogStylesSlim()
@@ -122,7 +125,9 @@ export async function getCatalogStylesSlim(): Promise<import('@domain/entities/c
  * Fetch slim color supplement (Tier 1 supplement) — name/hex1/colorGroupName per color, no images.
  * Not cached. Only available in supabase-catalog mode. Returns [] otherwise.
  */
-export async function getCatalogColorSupplement(): Promise<import('@infra/repositories/_providers/supabase/catalog').CatalogColorSupplementRow[]> {
+export async function getCatalogColorSupplement(): Promise<
+  import('@infra/repositories/_providers/supabase/catalog').CatalogColorSupplementRow[]
+> {
   if (getActiveProvider() !== 'supabase-catalog') return []
   const mod = await loadSupabaseCatalogModule()
   return mod.getCatalogColorSupplement()
@@ -132,7 +137,12 @@ export async function getCatalogColorSupplement(): Promise<import('@infra/reposi
  * Fetch full color + image data for a single style (Tier 2, lazy on drawer open).
  * Only available in supabase-catalog mode. Returns [] otherwise.
  */
-export async function getCatalogStyleDetail(styleId: string): Promise<import('@domain/entities/catalog-style').CatalogColor[]> {
+const styleIdSchema = z.string().min(1).max(100)
+
+export async function getCatalogStyleDetail(
+  styleId: string
+): Promise<import('@domain/entities/catalog-style').CatalogColor[]> {
+  if (!styleIdSchema.safeParse(styleId).success) return []
   if (getActiveProvider() !== 'supabase-catalog') return []
   const mod = await loadSupabaseCatalogModule()
   return mod.getCatalogStyleDetail(styleId)

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildSupplementMaps,
-  hydrateCatalogPreferences,
-} from '../_lib/garment-transforms'
+import { buildSupplementMaps, hydrateCatalogPreferences } from '../_lib/garment-transforms'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import type { GarmentCatalog } from '@domain/entities/garment'
 

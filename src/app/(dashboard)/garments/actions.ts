@@ -336,7 +336,12 @@ export async function fetchStyleDetail(
   if (!session) return []
 
   const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
-  return getCatalogStyleDetail(styleId)
+  try {
+    return await getCatalogStyleDetail(styleId)
+  } catch (err) {
+    actionsLogger.error('fetchStyleDetail failed', { styleId, err })
+    return []
+  }
 }
 
 // ---------------------------------------------------------------------------

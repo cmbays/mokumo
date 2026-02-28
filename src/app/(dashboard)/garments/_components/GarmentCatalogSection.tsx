@@ -83,8 +83,12 @@ export async function GarmentCatalogSection({
         : Promise.resolve([] as string[]),
     ])
 
-  const { styleSwatches, styleColorGroups, colorGroups: colorGroupsRaw, catalogColors } =
-    buildSupplementMaps(supplementRows)
+  const {
+    styleSwatches,
+    styleColorGroups,
+    colorGroups: colorGroupsRaw,
+    catalogColors,
+  } = buildSupplementMaps(supplementRows)
 
   // Pre-sort colorGroups so favorites appear first in the filter tabs
   const favoriteSet = new Set(initialFavoriteColorGroupNames)

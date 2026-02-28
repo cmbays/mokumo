@@ -19,7 +19,12 @@ import { GarmentDetailDrawer } from './GarmentDetailDrawer'
 import { BrandDetailDrawer } from './BrandDetailDrawer'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
-import { toggleStyleEnabled, toggleStyleFavorite, toggleColorFavorite, fetchStyleDetail } from '../actions'
+import {
+  toggleStyleEnabled,
+  toggleStyleFavorite,
+  toggleColorFavorite,
+  fetchStyleDetail,
+} from '../actions'
 import { hydrateCatalogPreferences } from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { CatalogStyleMetadata, CatalogColor } from '@domain/entities/catalog-style'
@@ -125,8 +130,7 @@ export function GarmentCatalogClient({
 
   // styleNumber → Set<colorGroupName> — for color group filter matching
   const styleColorGroupsMap = useMemo(
-    () =>
-      new Map(Object.entries(styleColorGroups).map(([k, v]) => [k, new Set(v)])),
+    () => new Map(Object.entries(styleColorGroups).map(([k, v]) => [k, new Set(v)])),
     [styleColorGroups]
   )
 
@@ -214,10 +218,17 @@ export function GarmentCatalogClient({
         return
       }
 
-      const colors = await fetchStyleDetail(styleId)
-      styleDetailsCacheRef.current.set(garment.sku, colors)
-      setDrawerColors(colors)
-      setIsLoadingColors(false)
+      try {
+        const colors = await fetchStyleDetail(styleId)
+        styleDetailsCacheRef.current.set(garment.sku, colors)
+        setDrawerColors(colors)
+      } catch (err) {
+        clientLogger.error('fetchStyleDetail failed', { styleId, err })
+        toast.error("Couldn't load color details — try again")
+        setDrawerColors(undefined)
+      } finally {
+        setIsLoadingColors(false)
+      }
     },
     [skuToStyleId]
   )

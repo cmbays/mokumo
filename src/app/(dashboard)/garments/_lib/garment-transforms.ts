@@ -141,9 +141,15 @@ export function buildSupplementMaps(rows: CatalogColorSupplementRow[]): Suppleme
     const sums = rgbSums.get(groupName)
     let hex = '#888888'
     if (sums && sums.total > 0) {
-      const r = Math.round(sums.r / sums.total).toString(16).padStart(2, '0')
-      const g = Math.round(sums.g / sums.total).toString(16).padStart(2, '0')
-      const b = Math.round(sums.b / sums.total).toString(16).padStart(2, '0')
+      const r = Math.round(sums.r / sums.total)
+        .toString(16)
+        .padStart(2, '0')
+      const g = Math.round(sums.g / sums.total)
+        .toString(16)
+        .padStart(2, '0')
+      const b = Math.round(sums.b / sums.total)
+        .toString(16)
+        .padStart(2, '0')
       hex = `#${r}${g}${b}`
     }
     colorGroupsResult.push({
