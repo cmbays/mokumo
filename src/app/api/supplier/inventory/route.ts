@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Supplier API unavailable' }, { status: err.status })
     }
     routeLogger.error('Unhandled error in supplier route', {
-      error: err instanceof Error ? err.message : String(err),
-      errorName: err instanceof Error ? err.name : 'unknown',
+      error: Error.isError(err) ? err.message : String(err),
+      errorName: Error.isError(err) ? err.name : 'unknown',
     })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

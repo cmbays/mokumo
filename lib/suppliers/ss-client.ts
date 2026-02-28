@@ -232,8 +232,8 @@ export async function ssGet(
   } catch (fetchErr) {
     ssLogger.error('S&S API unreachable', {
       segment,
-      error: fetchErr instanceof Error ? fetchErr.message : String(fetchErr),
-      errorName: fetchErr instanceof Error ? fetchErr.name : 'unknown',
+      error: Error.isError(fetchErr) ? fetchErr.message : String(fetchErr),
+      errorName: Error.isError(fetchErr) ? fetchErr.name : 'unknown',
     })
     throw new SSClientError(502, 'Supplier API unreachable')
   }
