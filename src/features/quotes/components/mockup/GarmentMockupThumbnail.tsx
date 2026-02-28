@@ -8,7 +8,7 @@ import type { MockupView } from '@domain/entities/mockup-template'
 
 type GarmentMockupThumbnailProps = {
   garmentCategory: GarmentCategory
-  colorHex: string
+  imageUrl?: string
   artworkPlacements?: ArtworkPlacement[]
   view?: MockupView
   className?: string
@@ -20,7 +20,7 @@ type GarmentMockupThumbnailProps = {
  */
 export const GarmentMockupThumbnail = memo(function GarmentMockupThumbnail({
   garmentCategory,
-  colorHex,
+  imageUrl,
   artworkPlacements,
   view = 'front',
   className,
@@ -28,7 +28,7 @@ export const GarmentMockupThumbnail = memo(function GarmentMockupThumbnail({
   return (
     <GarmentMockup
       garmentCategory={garmentCategory}
-      colorHex={colorHex}
+      imageUrl={imageUrl}
       artworkPlacements={artworkPlacements}
       view={view}
       size="xs"

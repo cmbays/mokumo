@@ -34,7 +34,7 @@ export function JobBoardCard({ card }: JobBoardCardProps) {
     </Link>
   )
 
-  const hasMockup = !!card.garmentCategory && !!card.garmentColorHex
+  const hasMockup = !!card.garmentCategory
   const hasTooltip = card.tasks.length > 0 || isBlocked || hasMockup
 
   if (!hasTooltip) return linked
@@ -47,7 +47,6 @@ export function JobBoardCard({ card }: JobBoardCardProps) {
           {hasMockup && (
             <GarmentMockup
               garmentCategory={card.garmentCategory!}
-              colorHex={card.garmentColorHex!}
               artworkPlacements={
                 card.primaryArtworkUrl
                   ? [{ artworkUrl: card.primaryArtworkUrl, position: 'front-chest' }]

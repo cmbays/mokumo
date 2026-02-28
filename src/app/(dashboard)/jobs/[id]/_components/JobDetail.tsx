@@ -14,7 +14,6 @@ import { buildBreadcrumbs, CRUMBS } from '@shared/lib/breadcrumbs'
 import {
   GarmentMockupCard,
   GarmentMockupModal,
-  MockupFilterProvider,
 } from '@features/quotes/components/mockup'
 import type { ArtworkPlacement } from '@features/quotes/components/mockup'
 
@@ -37,9 +36,7 @@ import type { InvoiceStatus } from '@domain/entities/invoice'
 
 type MockupData = {
   garmentCategory: string
-  colorHex: string
   artworkPlacements: ArtworkPlacement[]
-  colors: string[]
 } | null
 
 type JobDetailProps = {
@@ -267,9 +264,6 @@ export function JobDetail({
           />
         </div>
 
-        {/* Per-page MockupFilterProvider */}
-        {mockupData && <MockupFilterProvider colors={mockupData.colors} />}
-
         {/* What We're Printing */}
         {mockupData && (
           <div className="rounded-lg border border-border bg-card p-4">
@@ -280,7 +274,6 @@ export function JobDetail({
                   typeof GarmentMockupCard
                 >[0]['garmentCategory']
               }
-              colorHex={mockupData.colorHex}
               artworkPlacements={mockupData.artworkPlacements}
             >
               <GarmentMockupCard
@@ -289,7 +282,6 @@ export function JobDetail({
                     typeof GarmentMockupCard
                   >[0]['garmentCategory']
                 }
-                colorHex={mockupData.colorHex}
                 artworkPlacements={mockupData.artworkPlacements}
                 size="md"
               />

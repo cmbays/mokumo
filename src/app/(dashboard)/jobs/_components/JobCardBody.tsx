@@ -65,10 +65,9 @@ export function JobCardBody({ card }: JobCardBodyProps) {
     <>
       {/* Header: mockup + customer name + assignee + service icon */}
       <div className="flex items-start justify-between gap-2">
-        {card.garmentCategory && card.garmentColorHex && (
+        {card.garmentCategory && (
           <GarmentMockupModal
             garmentCategory={card.garmentCategory}
-            colorHex={card.garmentColorHex}
             artworkPlacements={
               card.primaryArtworkUrl
                 ? [
@@ -82,7 +81,6 @@ export function JobCardBody({ card }: JobCardBodyProps) {
           >
             <GarmentMockupThumbnail
               garmentCategory={card.garmentCategory}
-              colorHex={card.garmentColorHex}
               artworkPlacements={
                 card.primaryArtworkUrl
                   ? [

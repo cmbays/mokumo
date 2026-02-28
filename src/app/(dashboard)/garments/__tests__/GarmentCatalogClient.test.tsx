@@ -68,9 +68,9 @@ vi.mock('../_components/GarmentDetailDrawer', () => ({
 vi.mock('../_components/BrandDetailDrawer', () => ({
   BrandDetailDrawer: () => null,
 }))
-// GarmentCard imports a mockup component — stub it out so grid view renders cleanly
-vi.mock('@features/quotes/components/mockup', () => ({
-  GarmentMockup: () => <div data-testid="mockup" />,
+// GarmentCard renders GarmentImage — stub it out so grid view renders cleanly
+vi.mock('@shared/ui/organisms/GarmentImage', () => ({
+  GarmentImage: () => null,
 }))
 
 // ---------------------------------------------------------------------------
