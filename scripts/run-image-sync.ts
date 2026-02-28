@@ -108,8 +108,8 @@ void (async () => {
       }
 
       try {
-        const colorMap = styleMap.get(externalId)!
-        if (colorMap.size === 0) continue
+        const colorMap = styleMap.get(externalId)
+        if (!colorMap || colorMap.size === 0) continue
 
         const colorValues = Array.from(colorMap.values()).map((p) =>
           mapSSProductToColorValue(p, styleUuid)

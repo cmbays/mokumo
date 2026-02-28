@@ -85,7 +85,7 @@ export type CatalogImageType = (typeof IMAGE_FIELDS)[number]['type']
 /** Extracts all non-empty image records from a single product row. */
 export function buildImages(product: SSProduct): Array<{ type: CatalogImageType; url: string }> {
   return IMAGE_FIELDS.flatMap(({ field, type }) => {
-    const url = resolveImageUrl(product[field] as string)
+    const url = resolveImageUrl(product[field])
     return url ? [{ type, url }] : []
   })
 }
