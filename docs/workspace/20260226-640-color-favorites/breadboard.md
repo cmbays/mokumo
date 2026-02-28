@@ -64,15 +64,16 @@ Designed from **Selected Shape B** — Standalone "Garment Favorites" nav entry.
 
 | # | Place | Component | Affordance | Phase | Control | Wires Out | Returns To |
 |---|-------|-----------|------------|-------|---------|-----------|------------|
-| N1 | P1 | garments/page.tsx | `getColorGroupFavorites(shopId)` | P2 | call | — | → N2 |
-| N2 | P1 | GarmentCatalogClient | `favoriteColorGroupNames` — `Set<string>` init | P1 | observe | → S1 | — |
-| N3 | P1 | GarmentCatalogClient | `sortedColorGroups` useMemo (favorites first, then alphabetical) | P1 | useMemo | — | → U2 |
-| N4 | P1 | GarmentCatalogClient | `sortedCatalog` useMemo (isFavorite=true styles first) | P1 | useMemo | — | → U3, U4 |
+| N1 | P1 | garments/page.tsx | `getColorGroupFavorites(shopId)` | P2 | call | — | → S1 |
+| N3 | P1 | GarmentCatalogClient | `sortColorGroups()` — favorites first, then alphabetical | P1 | useMemo | — | → U2 |
+| N4 | P1 | GarmentCatalogClient | `sortCatalogByFavorites()` — isFavorite=true styles first | P1 | useMemo | — | → U3, U4 |
 
 **Phase notes:**
-- N1 (P2): Reads `catalog_color_group_preferences` (new table from V3). Until V3, this affordance is a stub that returns `[]`.
+- N1 (P2): Reads `catalog_color_group_preferences` (new table from V3). Until V3, this affordance is a stub that returns `[]`. Result flows directly to S1 (prop passed to GarmentCatalogClient → `useState` init).
 - N3 (P1): Pure client-side sort using S1. No server dependency. Can be built in V4 with live S1 data.
 - N4 (P1): Sorts using existing `isFavorite` flag already populated in `catalog` state via `hydrateCatalogPreferences()`. No new data load needed for style surfacing — flag is already there.
+
+**Removed:** N2 (`favoriteColorGroupNames init`) — this was the React `useState` initialization from a server prop, which is an implementation mechanism, not a separately actionable affordance. The data flow N1 → S1 captures it. N2 did not appear as a node in the diagram (diagram correctly showed N1 → S1 directly).
 
 ### P2 — Favorites Summary (pure RSC — no client component)
 
@@ -86,12 +87,12 @@ Designed from **Selected Shape B** — Standalone "Garment Favorites" nav entry.
 
 | # | Place | Component | Affordance | Phase | Control | Wires Out | Returns To |
 |---|-------|-----------|------------|-------|---------|-----------|------------|
-| N6 | P3 | configure/page.tsx | `getBrandConfigureData(shopId, brandId)` | P2 | call | → S2 | — |
-| N7 | P3 | FavoritesConfigureClient | `configureState` useState init from props | P1 | write | → S2 | — |
-| N8 | P3 | FavoritesConfigureClient | `handleToggleBrandFavorite(value)` | P1→P2 | call | → N12 | → S2 |
-| N9 | P3 | FavoritesConfigureClient | `handleToggleBrandEnabled(value)` | P1→P2 | call | → N13 | → S2 |
-| N10 | P3 | FavoritesConfigureClient | `handleToggleStyleFavorite(styleId)` | P1→P2 | call | → N14 | → S2 |
-| N11 | P3 | FavoritesConfigureClient | `handleToggleColorGroupFavorite(colorGroupId)` | P1→P2 | call | → N15 | → S2 |
+| N6 | P3 | configure/page.tsx | `getBrandConfigureData(shopId, brandId)` | P2 | call | — | → N7 |
+| N7 | P3 | FavoritesConfigureClient | `initConfigureState()` — useState init from RSC props | P1 | call | → S2 | — |
+| N8 | P3 | FavoritesConfigureClient | `handleToggleBrandFavorite(value)` | P1→P2 | call | → N12, → S2 | — |
+| N9 | P3 | FavoritesConfigureClient | `handleToggleBrandEnabled(value)` | P1→P2 | call | → N13, → S2 | — |
+| N10 | P3 | FavoritesConfigureClient | `handleToggleStyleFavorite(styleId)` | P1→P2 | call | → N14, → S2 | — |
+| N11 | P3 | FavoritesConfigureClient | `handleToggleColorGroupFavorite(colorGroupId)` | P1→P2 | call | → N15, → S2 | — |
 
 **Optimistic update pattern** (same as existing `handleToggleFavorite` in GarmentCatalogClient):
 1. Handler reads `configureRef.current` (stale-closure-safe)
@@ -143,12 +144,13 @@ flowchart TB
     U3["U3: Favorited styles section"]
     U4["U4: Non-favorited styles section"]
     N1["N1: getColorGroupFavorites()"]
-    N3["N3: sortedColorGroups useMemo"]
-    N4["N4: sortedCatalog useMemo"]
+    N3["N3: sortColorGroups()"]
+    N4["N4: sortCatalogByFavorites()"]
     S1["S1: favoriteColorGroupNames"]
 
-    N1 --> S1
+    N1 -.-> S1
     S1 --> N3
+    S1 --> N4
     N3 -.-> U2
     N4 -.-> U3
     N4 -.-> U4
@@ -179,14 +181,14 @@ flowchart TB
     U16["U16: Color group swatches with stars"]
     U17["U17: Color group star"]
     N6["N6: getBrandConfigureData()"]
-    N7["N7: configureState init"]
+    N7["N7: initConfigureState()"]
     N8["N8: handleToggleBrandFavorite()"]
     N9["N9: handleToggleBrandEnabled()"]
     N10["N10: handleToggleStyleFavorite()"]
     N11["N11: handleToggleColorGroupFavorite()"]
     S2["S2: configureState"]
 
-    N6 --> S2
+    N6 -.-> N7
     N7 --> S2
     S2 -.-> U12
     S2 -.-> U13
@@ -196,6 +198,10 @@ flowchart TB
     U13 --> N9
     U15 --> N10
     U17 --> N11
+    N8 --> S2
+    N9 --> S2
+    N10 --> S2
+    N11 --> S2
   end
 
   subgraph P4["P4: Backend"]
@@ -283,7 +289,7 @@ flowchart TB
 | U10–U13 | Configure header + brand star + brand enable toggle |
 | N5 | `getBrandPreferencesSummary()` |
 | N6 | `getBrandConfigureData()` (brand section only) |
-| N7 | `configureState` init |
+| N7 | `initConfigureState()` |
 | N8, N9 | `handleToggleBrandFavorite`, `handleToggleBrandEnabled` |
 | N12, N13 | `toggleBrandFavorite`, `toggleBrandEnabled` server actions |
 | N17, N18 | Sidebar constant changes |
@@ -363,8 +369,8 @@ flowchart TB
 | U2 | ColorFilterGrid — receives pre-sorted colorGroups (modification) |
 | U3, U4 | Favorited / non-favorited style sections (new split rendering) |
 | N1 | `getColorGroupFavorites(shopId)` |
-| N3 | `sortedColorGroups` useMemo |
-| N4 | `sortedCatalog` useMemo |
+| N3 | `sortColorGroups()` |
+| N4 | `sortCatalogByFavorites()` |
 | S1 | `favoriteColorGroupNames` Set |
 
 **Demo:** "Shop has starred Navy, Black for Gildan via V3. Browse /garments → Navy and Black swatches appear first in ColorFilterGrid. Gildan PC61 and G500 (starred in V2) float above non-starred styles in the style grid."
