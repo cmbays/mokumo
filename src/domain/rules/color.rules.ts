@@ -14,4 +14,3 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
     b: parseInt(hex.slice(5, 7), 16),
   }
 }
-

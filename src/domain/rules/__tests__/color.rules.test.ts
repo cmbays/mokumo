@@ -35,4 +35,3 @@ describe('hexToRgb', () => {
     expect(hexToRgb('FF0000')).toEqual({ r: 0, g: 0, b: 0 })
   })
 })
-

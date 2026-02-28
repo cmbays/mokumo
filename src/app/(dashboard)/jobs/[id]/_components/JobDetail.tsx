@@ -11,10 +11,7 @@ import { BottomActionBar } from '@shared/ui/layouts/bottom-action-bar'
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs, CRUMBS } from '@shared/lib/breadcrumbs'
 
-import {
-  GarmentMockupCard,
-  GarmentMockupModal,
-} from '@features/quotes/components/mockup'
+import { GarmentMockupCard, GarmentMockupModal } from '@features/quotes/components/mockup'
 import type { ArtworkPlacement } from '@features/quotes/components/mockup'
 
 import { JobHeader } from '../../_components/JobHeader'

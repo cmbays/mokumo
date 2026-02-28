@@ -5,15 +5,7 @@ import { vi, describe, it, expect } from 'vitest'
 import { GarmentImage } from '../GarmentImage'
 
 vi.mock('next/image', () => ({
-  default: ({
-    src,
-    alt,
-    onError,
-  }: {
-    src: string
-    alt: string
-    onError?: () => void
-  }) => (
+  default: ({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} data-testid="garment-photo" onError={onError} />
   ),
