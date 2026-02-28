@@ -23,9 +23,11 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 
-# env
-.env
-.env*.local
+# env — all .env* files; allow only documented example/template files
+.env*
+!.env.example
+!.env.sample
+!.env.template
 
 # Claude Code
 .claude/*
@@ -44,9 +46,24 @@ tmp/
 # Design mockup route — dev-only, never committed, never deployed
 src/app/(dashboard)/mockup/
 
-# secrets
+# secrets — private keys and certificates
 **/*.pem
 **/*.key
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+**/*.jks
+**/*.keystore
+
+# secrets — credential and token files
+credentials.json
+service-account*.json
+service_account*.json
+secrets.json
+secret.json
+.npmrc
+.netrc
 
 
 # debug
@@ -91,3 +108,14 @@ dbt/dbt_packages/
 dbt/logs/
 dbt/profiles/profiles.yml
 dbt/profiles/.user.yml
+
+# Playwright test artifacts (regenerated on each run)
+playwright-report/
+test-results/
+tests/e2e/screenshots/
+
+# Excalidraw desktop app logs
+excalidraw.log
+
+# Claude Code internal worktree-tracking state
+.claire/
