@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
+vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 
 // ---------------------------------------------------------------------------
 // Hoist mocks so they're available when vi.mock factories are evaluated
