@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { eq, and, count, inArray, min, isNotNull, or, isNull } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
@@ -421,6 +422,7 @@ export async function toggleBrandEnabled(
       shopIdPrefix: session.shopId.slice(0, 8),
     })
 
+    revalidateTag('catalog', {})
     return { success: true }
   } catch (err) {
     actionsLogger.error('toggleBrandEnabled failed', { brandId, err })
@@ -553,6 +555,7 @@ export async function setStyleEnabled(
       shopIdPrefix: session.shopId.slice(0, 8),
     })
 
+    revalidateTag('catalog', {})
     return { success: true }
   } catch (err) {
     actionsLogger.error('setStyleEnabled failed', { styleId, err })

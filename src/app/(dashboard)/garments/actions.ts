@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
@@ -88,6 +89,7 @@ export async function toggleStyleEnabled(
       isEnabled: next,
     })
 
+    revalidateTag('catalog', {})
     return { success: true, isEnabled: next }
   } catch (err) {
     actionsLogger.error('toggleStyleEnabled write failed', { styleId, err })
@@ -167,6 +169,7 @@ export async function toggleStyleFavorite(
       isFavorite: next,
     })
 
+    revalidateTag('catalog', {})
     return { success: true, isFavorite: next }
   } catch (err) {
     actionsLogger.error('toggleStyleFavorite write failed', { styleId, err })

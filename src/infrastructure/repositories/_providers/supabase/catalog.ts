@@ -1,4 +1,5 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import { sql, eq, and } from 'drizzle-orm'
 import type { NormalizedGarmentCatalog } from '@domain/entities/catalog-style'
 import { catalogImageSchema, catalogSizeSchema } from '@domain/entities/catalog-style'
@@ -82,20 +83,10 @@ export function parseNormalizedCatalogRow(row: {
 }
 
 /**
- * Fetch all normalized catalog styles with their colors, images, and sizes.
- *
- * Left-joins catalog_style_preferences scoped to the authenticated shop
- * (scope_type='shop', scope_id=$shopId) to resolve isEnabled/isFavorite with defaults.
- *
- * Security: requires an authenticated session. Returns [] if unauthenticated.
+ * Inner fetch — receives shopId explicitly so unstable_cache can key on it.
+ * Different shops never share a cache entry (data-leak prevention).
  */
-export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
-  const session = await verifySession()
-  if (!session) {
-    repoLogger.warn('getNormalizedCatalog called without authenticated session')
-    return []
-  }
-
+async function _fetchNormalizedCatalog(shopId: string): Promise<NormalizedGarmentCatalog[]> {
   const { db } = await import('@shared/lib/supabase/db')
 
   // Use a raw SQL query for the joined result with JSON aggregation.
@@ -159,17 +150,17 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
       LEFT JOIN catalog_style_preferences csp
         ON csp.style_id = cs.id
         AND csp.scope_type = 'shop'
-        AND csp.scope_id = ${session.shopId}
+        AND csp.scope_id = ${shopId}
       LEFT JOIN catalog_brand_preferences cbp
         ON cbp.brand_id = cs.brand_id
         AND cbp.scope_type = 'shop'
-        AND cbp.scope_id = ${session.shopId}
+        AND cbp.scope_id = ${shopId}
       GROUP BY cs.id, cb.canonical_name, csp.is_enabled, csp.is_favorite, cbp.is_enabled
       ORDER BY cs.name ASC
     `)
     rows = result as unknown[]
   } catch (err) {
-    repoLogger.error('getNormalizedCatalog db.execute failed', { err, shopId: session.shopId })
+    repoLogger.error('getNormalizedCatalog db.execute failed', { err, shopId })
     throw err
   }
 
@@ -187,6 +178,30 @@ export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]
     }
   }
   return parsed
+}
+
+const _fetchNormCatalogCached = unstable_cache(
+  _fetchNormalizedCatalog,
+  ['normalized-catalog'],
+  { revalidate: 300, tags: ['catalog'] }
+)
+
+/**
+ * Fetch all normalized catalog styles with their colors, images, and sizes.
+ *
+ * Left-joins catalog_style_preferences scoped to the authenticated shop
+ * (scope_type='shop', scope_id=$shopId) to resolve isEnabled/isFavorite with defaults.
+ *
+ * Security: requires an authenticated session. Returns [] if unauthenticated.
+ * Cached per shopId for 5 minutes — invalidated by revalidateTag('catalog') on mutations.
+ */
+export async function getNormalizedCatalog(): Promise<NormalizedGarmentCatalog[]> {
+  const session = await verifySession()
+  if (!session) {
+    repoLogger.warn('getNormalizedCatalog called without authenticated session')
+    return []
+  }
+  return _fetchNormCatalogCached(session.shopId)
 }
 
 /**

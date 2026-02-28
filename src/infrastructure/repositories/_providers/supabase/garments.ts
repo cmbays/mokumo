@@ -1,4 +1,5 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
@@ -12,15 +13,23 @@ const supabaseLogger = logger.child({ domain: 'supabase-garments' })
 /** Validator for supplier style IDs (non-UUID, numeric strings like "3001") */
 const supplierIdSchema = z.string().min(1).max(50)
 
+const _fetchGarmentCatalogCached = unstable_cache(
+  async (): Promise<GarmentCatalog[]> => {
+    const rows = await db.select().from(catalog).where(eq(catalog.isEnabled, true))
+    return rows.map((row) => garmentCatalogSchema.parse(row))
+  },
+  ['garment-catalog'],
+  { revalidate: 3600, tags: ['catalog'] }
+)
+
 /**
  * Fetch the full catalog from Supabase PostgreSQL.
  * Returns only enabled garments. Results are validated against the schema.
+ * Cached globally for 1 hour — the catalog table is populated by sync scripts, not user mutations.
  */
 export async function getGarmentCatalog(): Promise<GarmentCatalog[]> {
   try {
-    const rows = await db.select().from(catalog).where(eq(catalog.isEnabled, true))
-    // Parse each row through Zod schema to ensure data integrity
-    return rows.map((row) => garmentCatalogSchema.parse(row))
+    return await _fetchGarmentCatalogCached()
   } catch (error) {
     supabaseLogger.error('Failed to fetch garment catalog from Supabase', { error })
     throw error
