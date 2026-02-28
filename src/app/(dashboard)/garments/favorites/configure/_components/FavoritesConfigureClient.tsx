@@ -7,7 +7,9 @@ import { Switch } from '@shared/ui/primitives/switch'
 import { Label } from '@shared/ui/primitives/label'
 import { cn } from '@shared/lib/cn'
 import { toggleBrandFavorite, toggleBrandEnabled } from '../../actions'
+import { toggleStyleFavorite } from '../../../actions'
 import type { ConfigureData } from '../../actions'
+import { StyleGrid } from './StyleGrid'
 
 type Props = {
   initialData: ConfigureData
@@ -55,6 +57,26 @@ export function FavoritesConfigureClient({ initialData }: Props) {
     }
   }
 
+  async function handleToggleStyleFavorite(styleId: string) {
+    const original = configureState
+    const style = configureState.styles.find((s) => s.id === styleId)
+    if (!style) return
+    const nextValue = !style.isFavorite
+
+    // Optimistic update — flip just the matching style's isFavorite
+    setConfigureState((prev) => ({
+      ...prev,
+      styles: prev.styles.map((s) => (s.id === styleId ? { ...s, isFavorite: nextValue } : s)),
+    }))
+
+    // toggleStyleFavorite reads current DB state and negates — matches our optimistic flip
+    const result = await toggleStyleFavorite(styleId)
+    if (!result.success) {
+      setConfigureState(original)
+      toast.error("Couldn't update style favorite — try again")
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8 p-6">
       {/* Brand controls */}
@@ -95,12 +117,12 @@ export function FavoritesConfigureClient({ initialData }: Props) {
         </div>
       </section>
 
-      {/* Style section — stub (Wave 2) */}
+      {/* Style section */}
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-elevated p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Styles
         </h2>
-        <p className="text-sm text-muted-foreground">Style favorites coming soon.</p>
+        <StyleGrid styles={configureState.styles} onToggle={handleToggleStyleFavorite} />
       </section>
 
       {/* Color group section — stub (Wave 3) */}

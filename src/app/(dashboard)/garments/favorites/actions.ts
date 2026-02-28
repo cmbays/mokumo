@@ -1,11 +1,13 @@
 'use server'
 
 import { z } from 'zod'
-import { eq, and, count, inArray } from 'drizzle-orm'
+import { eq, and, count, inArray, min } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import {
   catalogBrands,
   catalogStyles,
+  catalogColors,
+  catalogImages,
   catalogBrandPreferences,
   catalogStylePreferences,
   catalogColorGroups,
@@ -183,6 +185,49 @@ export async function getBrandConfigureData(
       )
       .limit(1)
 
+    // Step 3: styles with their shop-scope favorite preference
+    const styleRows = await db
+      .select({
+        id: catalogStyles.id,
+        name: catalogStyles.name,
+        styleNumber: catalogStyles.styleNumber,
+        isFavorite: catalogStylePreferences.isFavorite,
+      })
+      .from(catalogStyles)
+      .leftJoin(
+        catalogStylePreferences,
+        and(
+          eq(catalogStylePreferences.scopeType, 'shop'),
+          eq(catalogStylePreferences.scopeId, shopId),
+          eq(catalogStylePreferences.styleId, catalogStyles.id)
+        )
+      )
+      .where(eq(catalogStyles.brandId, brandId))
+      .orderBy(catalogStyles.styleNumber)
+
+    // Step 4: one front thumbnail URL per style (lexicographically first across colors)
+    let thumbnailMap = new Map<string, string>()
+    if (styleRows.length > 0) {
+      const styleIds = styleRows.map((s) => s.id)
+      const thumbRows = await db
+        .select({
+          styleId: catalogColors.styleId,
+          url: min(catalogImages.url),
+        })
+        .from(catalogColors)
+        .innerJoin(
+          catalogImages,
+          and(
+            eq(catalogImages.colorId, catalogColors.id),
+            eq(catalogImages.imageType, 'front')
+          )
+        )
+        .where(inArray(catalogColors.styleId, styleIds))
+        .groupBy(catalogColors.styleId)
+
+      thumbnailMap = new Map(thumbRows.map((r) => [r.styleId, r.url ?? '']))
+    }
+
     return {
       brand: {
         id: brandRows[0].id,
@@ -190,7 +235,13 @@ export async function getBrandConfigureData(
         isFavorite: prefRows[0]?.isFavorite ?? null,
         isEnabled: prefRows[0]?.isEnabled ?? null,
       },
-      styles: [],
+      styles: styleRows.map((s) => ({
+        id: s.id,
+        name: s.name,
+        styleNumber: s.styleNumber,
+        thumbnailUrl: thumbnailMap.get(s.id) ?? null,
+        isFavorite: s.isFavorite ?? false,
+      })),
       colorGroups: [],
     }
   } catch (err) {
