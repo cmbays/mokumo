@@ -48,6 +48,18 @@ describe('SupabaseInventoryRepository (Wave 2 stub)', () => {
       expect(result).toBeInstanceOf(Map)
       expect(result.size).toBe(0)
     })
+
+    it('returns an empty Map when all styleIds are invalid — DAL validation', async () => {
+      const result = await repo.getForStyles(['not-a-uuid', '', 'also-bad'])
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(0)
+    })
+
+    it('returns an empty Map for mixed valid and invalid styleIds — stub filters invalid', async () => {
+      const result = await repo.getForStyles([VALID_UUID, 'not-a-uuid'])
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(0)
+    })
   })
 
   describe('getForColor', () => {

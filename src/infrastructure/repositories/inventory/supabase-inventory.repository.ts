@@ -27,8 +27,19 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
   /**
    * Batch version of getForStyle — used for catalog-level inventory filtering.
    * Returns a Map keyed by styleId for efficient lookup.
+   * Styles with no inventory data are absent from the map (not present with empty levels).
+   * An empty input array returns an empty map without a DB round-trip.
    */
   async getForStyles(styleIds: string[]): Promise<Map<string, StyleInventory>> {
+    if (styleIds.length === 0) return new Map()
+    const validIds = styleIds.filter((id) => uuidSchema.safeParse(id).success)
+    if (validIds.length < styleIds.length) {
+      log.warn('getForStyles called with invalid styleIds', {
+        invalidCount: styleIds.length - validIds.length,
+        totalCount: styleIds.length,
+      })
+    }
+    if (validIds.length === 0) return new Map()
     // TODO: catalog_inventory table schema arrives with Wave 2 (#670) —
     // swap stub for real Drizzle queries
     return new Map()
