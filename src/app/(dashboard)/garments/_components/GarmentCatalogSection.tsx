@@ -23,7 +23,6 @@ import 'server-only'
  */
 import { logger } from '@shared/lib/logger'
 import { getCatalogStylesSlim, getCatalogColorSupplement } from '@infra/repositories/garments'
-import { getStylesInventory } from '@infra/repositories/inventory'
 import { buildSupplementMaps } from '../_lib/garment-transforms'
 import { GarmentCatalogClient } from './GarmentCatalogClient'
 import type { GarmentCatalog } from '@domain/entities/garment'
@@ -102,14 +101,23 @@ export async function GarmentCatalogSection({
   // Inventory data for the "show in-stock only" filter toggle.
   // Runs after styleMetas resolves (which is cached at 60s, so ~1ms on warm loads).
   // Returns the set of catalog_styles UUIDs that have totalQuantity > 0.
+  //
+  // Dynamic import: @infra/repositories/inventory creates a SupabaseInventoryRepository
+  // at module evaluation time (const repo = new Repo()), which eagerly reads DATABASE_URL.
+  // Top-level import would throw during Next.js build-time config collection when DATABASE_URL
+  // is absent. Dynamic import defers module evaluation to request time (same pattern used for
+  // actions/session below).
   const styleIds = styleMetas.map((m) => m.id)
+  const emptyMap = new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
   const inventoryMap =
     styleIds.length > 0
-      ? await getStylesInventory(styleIds).catch((err: unknown) => {
-          sectionLogger.error('getStylesInventory failed — in-stock filter unavailable', { err })
-          return new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
-        })
-      : new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
+      ? await import('@infra/repositories/inventory')
+          .then(({ getStylesInventory }) => getStylesInventory(styleIds))
+          .catch((err: unknown) => {
+            sectionLogger.error('getStylesInventory failed — in-stock filter unavailable', { err })
+            return emptyMap
+          })
+      : emptyMap
   const inStockStyleIds = [...inventoryMap.entries()]
     .filter(([, inv]) => inv.totalQuantity > 0)
     .map(([id]) => id)
