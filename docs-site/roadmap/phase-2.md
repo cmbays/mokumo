@@ -83,9 +83,16 @@ Projects are ordered by dependency — earlier projects unblock later ones. With
 | # | Project | Status | Blocked By | Description |
 |---|---------|--------|-----------|-------------|
 | P11 | **Dashboard & Analytics** | Planned | P9, P10 | Real metrics, KPIs, production insights |
-| P12 | **Screen Room** | Planned | P9 | Real screen tracking linked to jobs |
+| P12 | **Screen Room** | Planned | P9 | Real screen tracking linked to jobs (unique — validate before investing) |
 | P13 | **Shop Settings & Integrations** | Planned | P1 | Business config, API credentials, notification preferences |
-| P14 | **Customer Portal** | Planned | P6, P10 | Customer-facing artwork approval, job status, invoice payment |
+| P14 | **Customer Portal** | Planned | P6, P10 | Customer-facing artwork approval, job status, invoice payment, custom domain |
+| P15 | **Supplier Integrations** | Planned | P2, P13 | S&S order placement, SanMar via PromoStandards, multi-supplier catalog |
+
+### Phase 3+ (Future)
+
+| # | Project | Status | Blocked By | Description |
+|---|---------|--------|-----------|-------------|
+| P16 | **Online Stores** | Future | P6, P14 | Shop-managed storefronts, customer self-service, orders → production pipeline |
 
 ---
 
@@ -104,9 +111,10 @@ P1 (Infrastructure) ────────────────────
                                     └── P9 (Jobs) ─────────┤
                                             └── P10 (Invoicing)
                                                     ├── P11 (Dashboard)
-                                                    └── P14 (Portal)
+                                                    └── P14 (Portal) ──── P16 (Stores) [Phase 3+]
                                 P9 ─── P12 (Screen Room)
                             P1 ─── P13 (Settings)
+                        P2 + P13 ─── P15 (Supplier Integrations)
 ```
 
 ---

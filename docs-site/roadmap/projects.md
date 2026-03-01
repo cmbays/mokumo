@@ -116,23 +116,32 @@ Configurable pricing per service type. Quantity breaks, setup fees, margin indic
 
 **Status**: Planned | **Priority**: Tier 1 | **Blocks**: P6 (enriches quoting)
 
-Customer-associated artwork storage with metadata for quoting and production.
+Customer-associated artwork storage with metadata, approval workflows, and automated mockup generation. Artwork is stored per-customer and reusable across quotes.
 
 ### Milestones
 
 | Milestone | Status | Key Deliverables |
 |-----------|--------|-----------------|
-| M0: Research | Planned | Artwork management patterns in print software, file format needs |
+| M0: Research | Planned | Artwork management patterns, file formats, approval UX patterns |
 | M1: Storage & Schema | Planned | File upload pipeline, artwork metadata table, customer association |
 | M2: Library UI | Planned | Browse, search, tag, preview artwork per customer |
 | M3: Quote Integration | Planned | Select artwork when building quote, auto-derive color count |
+| M4: Approval Workflow | Planned | Per-artwork approval, revision tracking, partial production start |
+| M5: Mockup Generation | Planned | Automated artwork placement on garment templates from catalog data |
 
 ### Research Needs
 
 - [ ] File formats: AI, EPS, PDF, PNG, PSD — what do shops actually receive?
 - [ ] Metadata: color count, print-ready status, dimensions, version tracking
-- [ ] How do competitors handle artwork approval workflows?
+- [x] How do competitors handle artwork approval workflows? → YoPrint: per-artwork granularity (approve/reject individual files within one order). DecoNetwork: auto-generates mockups from catalog data + template placement zones.
 - [ ] Storage sizing: typical artwork file sizes, expected volume per shop
+- [ ] Mockup generation: compositing artwork onto garment templates from S&S catalog. Canvas-based server-side rendering vs. pre-positioned placement zones?
+- [ ] Per-artwork approval UX: when one file is rejected, can production start on approved locations? How does partial approval flow into job creation?
+
+### Key Decisions (Pending)
+
+- **Approval granularity**: Per-artwork within an order — approve front design, reject back design independently. Allows partial production start on approved locations.
+- **Mockup generation**: Automated placement of artwork on supplier garment images. Technical approach TBD (server-side canvas compositing, template zones, or AI-assisted placement).
 
 ---
 
@@ -174,14 +183,35 @@ Simplified quoting for customer-supplied transfers. Minimal configuration.
 
 **Status**: Planned | **Priority**: Tier 2 | **Blocked By**: P6
 
-Quote-to-job conversion, task tracking, production board with real persistence, notes system.
+Quote-to-job conversion, task tracking, production board with real persistence, notes system. Batch production support. Multiple production views (board, calendar, timeline).
+
+### Milestones
+
+| Milestone | Status | Key Deliverables |
+|-----------|--------|-----------------|
+| M0: Research | Planned | Competitor production workflows, batch patterns, scheduling approaches |
+| M1: Schema & API | Planned | Job entity, task templates, status transitions, server actions |
+| M2: Board & Views | Planned | Kanban board with persistence, calendar view, basic job detail |
+| M3: Batch Production | Planned | Combine multiple orders into single press runs by design/ink color |
+| M4: Shop Floor | Planned | Barcode scanning for status updates, TV board display mode |
+| M5: Timeline View | Planned | Gantt-style timeline for deadline planning and capacity visibility |
 
 ### Research Needs
 
-- [ ] How do competitors handle the quote → job transition?
-- [ ] Task template patterns — canonical vs. custom tasks
-- [ ] Notification patterns for production state changes
-- [ ] Scheduling and capacity planning approaches
+- [x] How do competitors handle the quote → job transition? → Printavo: quote and invoice are the same entity at different statuses. YoPrint: separate entities with data inheritance. DecoNetwork: quote approval auto-converts to production-ready order.
+- [ ] Task template patterns — canonical vs. custom tasks per service type
+- [x] Notification patterns for production state changes → Printavo: automations trigger on status change (SMS, email, payment request). YoPrint: real-time push + in-app notifications.
+- [x] Scheduling and capacity approaches → YoPrint: Gantt + calendar + list (3 views). Printavo: calendar + Power Scheduler (Gantt for press capacity with time-in-minutes). DecoNetwork: drag-and-drop calendar only.
+- [ ] Batch production: how to group orders by design + ink color for combined press runs? Data model implications (batch entity linking multiple jobs)?
+- [ ] Barcode scanning: implementation approach for shop floor status updates (PWA camera scanning vs. handheld scanner integration)
+- [ ] TV board display: read-only board mode with auto-refresh cycle for shop floor screens
+
+### Design Considerations
+
+- **Batch production**: Real production reality — shops batch by design and ink color to minimize screen changes. First customer's orders tend to come grouped already, but architecture must not prevent batching. Design the data model to support it even if the UI comes later.
+- **Multiple production views**: Board (kanban) for quick status scanning, Calendar for deadline planning, Timeline (Gantt) for capacity visibility. Board first (pilot), Calendar second, Timeline as Layer 5.
+- **Barcode scanning**: Solves the "shop floor worker who doesn't sit at a computer" problem. Scan job ticket → advance status. Eliminates forgotten status updates. Connects to TV board refresh — scan is the input, board update is the output.
+- **TV board display**: Full-screen read-only board mode for shop floor monitors. Auto-refreshes on a cycle or event-driven via barcode scans. Phase 1 mockup had this concept; Phase 2 makes it real.
 
 ---
 
@@ -193,10 +223,15 @@ Invoice generation, tax handling, payment recording, reminders.
 
 ### Research Needs
 
-- [ ] State-based tax calculation: build vs. buy (TaxJar, Avalara, Tax API)
+- [ ] State-based tax calculation: build vs. buy (TaxJar, Avalara, Tax API) → InkSoft uses TaxJar. Phase 2 recommendation: simple rate lookup table. Evaluate TaxJar for Phase 3 if multi-state selling becomes relevant.
 - [ ] Tax exemption handling for B2B customers (resale certificates)
-- [ ] Payment integration options (Stripe, Square, manual recording)
-- [ ] Invoice PDF generation and email delivery
+- [x] Payment integration options → Printavo: forced Payrix (major backlash). InkSoft: Stripe + PayPal. YoPrint: Stripe, Square, PayPal, Authorize.net. DecoNetwork: DecoPay (Stripe-powered). **Our approach**: Manual payment recording for Phase 2 pilot. Stripe integration as a fast-follow.
+- [ ] Invoice PDF generation and email delivery → Depends on H3 (Email) and H4 (PDF Generation)
+
+### Design Considerations
+
+- **Printavo's quote = invoice model**: Quotes and invoices are the same entity at different statuses. Eliminates conversion step. Trade-off: less clean entity separation, harder to model quote-revision-history separately from invoice-payment-history. Evaluate during M0 research.
+- **Payment processing**: Manual recording first (track payments against invoices, no gateway). Stripe integration as a fast-follow — no proprietary lock-in. Never force shops onto a single processor (Printavo's Payrix migration was their most criticized decision).
 
 ---
 
@@ -213,6 +248,14 @@ Real metrics replacing mock data. Production KPIs, revenue tracking, customer in
 **Status**: Planned | **Priority**: Tier 3 | **Blocked By**: P9
 
 Real screen tracking linked to production jobs. Burn status, reclaim workflow, inventory.
+
+> **Caution**: No competitor has this — it's a unique differentiator but also unproven territory. The UX must not be burdensome. If tracking screens requires more data entry than it saves in operational clarity, it fails. Design for minimal friction: scan-to-track, auto-link to jobs, default mesh/emulsion from templates. Validate with the shop owner before investing deeply.
+
+### Research Needs
+
+- [ ] How much time does screen tracking actually save vs. current process (memory + whiteboard)?
+- [ ] Minimum viable tracking: just burn status + job link? Or full lifecycle (coat → expose → wash → reclaim)?
+- [ ] Shop owner interview: would they actually use this daily, or is it a "nice to have"?
 
 ---
 
@@ -234,14 +277,99 @@ Business configuration, API credential management (bring-your-own-token), notifi
 
 **Status**: Planned | **Priority**: Tier 3 | **Blocked By**: P6, P10
 
-Customer-facing portal for artwork approval, job status viewing, and invoice payment.
+Customer-facing portal for artwork approval, job status viewing, invoice payment, and order history. Brandable with shop's own domain.
 
 ### Research Needs
 
-- [ ] How do Printavo, InkSoft handle customer portals?
+- [x] How do Printavo, InkSoft handle customer portals? → Printavo: URL-based read-only invoice view (no persistent login, no order history). YoPrint: full portal with login, custom domain on Pro, per-artwork approval, payment, shipment tracking. InkSoft: online stores + customer portal for reorders.
 - [ ] Auth model: same Supabase instance with roles, or separate project?
 - [ ] What data is exposed to customers vs. internal-only?
-- [ ] Artwork approval workflow (comment, revise, approve)
+- [x] Artwork approval workflow → YoPrint model: per-artwork granularity (approve/reject individual files). Revision history stored. Mobile-optimized approval flow.
+
+### Key Decisions (Pending)
+
+- **Custom domain**: Allow shops to brand the portal as their own (e.g., `portal.4inkshop.com`). YoPrint does this on Pro tier. High trust signal for shop's customers.
+- **Per-artwork approval**: Approve/reject individual artwork files within an order. Rejected artwork goes back for revision while approved pieces can proceed to production.
+- **Persistent login vs. link-based**: YoPrint uses persistent login with full order history. Printavo uses per-invoice URLs. Persistent login is more valuable for repeat customers.
+
+---
+
+## P15: Supplier Integrations
+
+**Status**: Planned | **Priority**: Tier 3 | **Blocked By**: P2, P13
+
+Deeper S&S integration (order placement, tracking, invoices), SanMar via PromoStandards, and multi-supplier catalog management.
+
+### Milestones
+
+| Milestone | Status | Key Deliverables |
+|-----------|--------|-----------------|
+| M0: Research | Partially Done | S&S API surface mapped, SanMar SOAP evaluated, PromoStandards assessed |
+| M1: S&S Order Placement | Planned | `POST /v2/orders/` integration — order blanks from job detail page |
+| M2: S&S Tracking | Planned | Shipment tracking, delivery estimates, order status in job timeline |
+| M3: SanMar Integration | Planned | SanMar catalog via PromoStandards SOAP, pricing, inventory |
+| M4: Multi-Supplier UX | Planned | Source-scoped catalog, preferred supplier per shop, GTIN cross-referencing |
+
+### Research Findings (from March 2026 research)
+
+**S&S — Untapped API surface**:
+- `POST /v2/orders/` — full wholesale order placement (shipping, multi-warehouse, partial fulfillment)
+- `GET /v2/trackingdata/` — shipment tracking for placed orders
+- `GET /v2/daysintransit/` — delivery estimates by carrier/ZIP
+- `GET /v2/invoices/` — S&S billing history
+- `customerPrice` field — shop's negotiated rate (the number that matters for margins)
+- `expectedInventory` — restock ETAs for out-of-stock items
+- alphabroder merger: 100+ brands now accessible through existing S&S credentials (no code changes)
+
+**SanMar — Integration path**:
+- SOAP-first (no native REST). Three options: PSRESTful proxy ($100/year), PromoStandards SOAP directly ($0), SanMar native SOAP ($0)
+- **Preferred approach**: PromoStandards SOAP directly — avoids annual fee, covers 500+ suppliers, aligns with industry standard
+- Data model structurally identical to S&S (same pricing tiers, per-warehouse inventory)
+- Key gap: no `colorFamily` equivalent — GTIN is the only reliable cross-supplier key
+
+**PromoStandards**:
+- Industry SOAP/XML standard, 8 services (Product, Inventory, Pricing, Orders, Tracking, Invoices, etc.)
+- Both S&S and SanMar support the full suite
+- Implementing PromoStandards adapter unlocks many suppliers without per-supplier code
+- Our `SSActivewearAdapter` pattern generalizes cleanly to a `PromoStandardsAdapter`
+
+### Design Considerations
+
+- **Order placement as differentiator**: No competitor uses S&S's order API. Ordering blanks directly from the job detail page turns "tracks what you ordered" into "orders for you."
+- **PromoStandards without annual fee**: Direct SOAP integration requires a SOAP client library + XML mapping, but avoids the $100/year PSRESTful proxy and gives more control. Worth the implementation effort for long-term multi-supplier strategy.
+- **This may become its own vertical** once the pilot loop (P6→P9→P10) proves the core architecture.
+
+> See [Supplier Integration](/engineering/guides/supplier-integration) for the full technical analysis.
+
+---
+
+## P16: Online Stores
+
+**Status**: Future | **Priority**: Phase 3+ | **Blocked By**: P6, P14
+
+Shop-managed storefronts where customers can browse products, customize orders, and purchase — with orders flowing automatically into production.
+
+### Vision
+
+A shop creates a store for a customer (e.g., a school's spirit wear program, a company's uniform store, or a team's merchandise store). The customer manages their store (set products, pricing, open/close dates). Orders placed through the store flow directly into the production pipeline as quotes or jobs.
+
+### Research Findings
+
+- **DecoNetwork**: Up to 500 stores on Premium. Team stores, fundraiser stores, corporate reorder programs. Store orders flow into production calendar automatically.
+- **InkSoft**: Online stores with Online Designer (customers customize products). Stores are quick to clone and launch.
+- **YoPrint**: No online stores (acknowledged gap).
+- **Printavo**: "Merch" feature on Premium ($249/mo) — group/team stores with aggregated orders.
+
+### Scope (Phase 3+)
+
+- Store creation and management for shops
+- Product selection from catalog with shop-set pricing
+- Customer-facing storefront (responsive, brandable)
+- Order aggregation into production pipeline
+- Payment collection through store
+- Store lifecycle (open/close dates, fundraiser goals)
+
+> This is explicitly out of scope for Phase 2. Captured here for roadmap visibility and to ensure the Phase 2 architecture (particularly P6 quoting and P14 customer portal) doesn't preclude it.
 
 ---
 
