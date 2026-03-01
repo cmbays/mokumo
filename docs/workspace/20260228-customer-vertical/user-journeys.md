@@ -33,17 +33,19 @@
    - Build quote with line items
 
 ### Success State
+
 - Customer created in <30 seconds
 - Note captured with context
 - Quote linked to customer
 - Activity timeline shows creation + note
 
 ### Decision Points
-| Moment | Options | System Support |
-|--------|---------|---------------|
-| Duplicate check | "Riverside" similar to existing? | Fuzzy match warning on save |
-| Type tag selection | Multiple tags allowed | Sports-school auto-maps pricing template |
-| Quote immediately vs later | Save & View vs Save | Both paths available |
+
+| Moment                     | Options                          | System Support                           |
+| -------------------------- | -------------------------------- | ---------------------------------------- |
+| Duplicate check            | "Riverside" similar to existing? | Fuzzy match warning on save              |
+| Type tag selection         | Multiple tags allowed            | Sports-school auto-maps pricing template |
+| Quote immediately vs later | Save & View vs Save              | Both paths available                     |
 
 ---
 
@@ -67,6 +69,7 @@
 7. **Add note** — "Called to check on J-1024 status, told them Thursday ship date"
 
 ### Success State
+
 - Customer found and full context visible in <10 seconds
 - Answer provided without leaving customer detail
 - Interaction logged in timeline
@@ -102,14 +105,15 @@ Prospect ──first quote accepted──→ New ──3+ completed orders──
 
 ### Auto-Progression Rules
 
-| From | To | Trigger |
-|------|----|---------|
-| Prospect | New | First quote accepted or first job created |
-| New | Repeat | 3+ completed orders |
-| Repeat | Contract | Manual only (requires business agreement) |
-| Any | Churned (health) | No order in 4x average interval or 180 days |
+| From     | To               | Trigger                                     |
+| -------- | ---------------- | ------------------------------------------- |
+| Prospect | New              | First quote accepted or first job created   |
+| New      | Repeat           | 3+ completed orders                         |
+| Repeat   | Contract         | Manual only (requires business agreement)   |
+| Any      | Churned (health) | No order in 4x average interval or 180 days |
 
 ### Success State
+
 - Lifecycle progresses naturally with minimal manual intervention
 - Each transition logged in activity timeline
 - Financial terms evolve with relationship
@@ -138,6 +142,7 @@ Prospect ──first quote accepted──→ New ──3+ completed orders──
 6. **Create quote** — click "New Quote", customer auto-selected, can reference previous order details
 
 ### Success State
+
 - Shop owner reaches out BEFORE customer contacts them
 - Previous order context available for quick reordering
 - Revenue captured that might have been lost to a competitor
@@ -168,6 +173,7 @@ Prospect ──first quote accepted──→ New ──3+ completed orders──
    - Options: proceed anyway, or hold until payment received
 
 ### Success State
+
 - Credit risk visible at a glance
 - System prevents exceeding credit limits (with override option)
 - Collection activity tracked in timeline
@@ -202,6 +208,7 @@ Prospect ──first quote accepted──→ New ──3+ completed orders──
    - Activity logged: "Oklahoma certificate renewed through Mar 2028"
 
 ### Success State
+
 - Tax correctly applied per shipping destination state
 - Expiring certificates flagged proactively
 - Certificate documents stored and accessible
@@ -233,6 +240,7 @@ Prospect ──first quote accepted──→ New ──3+ completed orders──
    - No tax (Texas certificate on file)
 
 ### Success State
+
 - Quote built in <2 minutes using customer context
 - Correct pricing automatically applied
 - Previous order patterns surface as suggestions, not requirements
@@ -269,6 +277,7 @@ Prospect ──first quote accepted──→ New ──3+ completed orders──
    - Consistently orders around seasonal transitions (fall, spring)
 
 ### Success State
+
 - Complete relationship history in one scrollable view
 - Linked entities for drill-down
 - Pattern recognition for meeting preparation
@@ -299,16 +308,17 @@ Scoped data: only this customer's records
 
 ### Schema Requirements (Build NOW)
 
-| Requirement | Schema Element | Status |
-|-------------|---------------|--------|
-| Contact-level auth | `contacts.portal_access: boolean` | To be added |
-| Contact login | `contacts.portal_email`, `contacts.portal_password_hash` | To be added |
-| Scoped queries | All queries filterable by `customer_id` | Built into repository pattern |
-| Approval workflow | `proof_approvals` table with status, comments, contact_id | To be designed |
-| Payment recording | `payments` table with external_ref for Stripe/PayPal | Exists in invoice schema |
-| Message threads | `messages` table with order context | To be designed |
+| Requirement        | Schema Element                                            | Status                        |
+| ------------------ | --------------------------------------------------------- | ----------------------------- |
+| Contact-level auth | `contacts.portal_access: boolean`                         | To be added                   |
+| Contact login      | `contacts.portal_email`, `contacts.portal_password_hash`  | To be added                   |
+| Scoped queries     | All queries filterable by `customer_id`                   | Built into repository pattern |
+| Approval workflow  | `proof_approvals` table with status, comments, contact_id | To be designed                |
+| Payment recording  | `payments` table with external_ref for Stripe/PayPal      | Exists in invoice schema      |
+| Message threads    | `messages` table with order context                       | To be designed                |
 
 ### Validation Criteria
+
 - Every entity that a customer might view has a `customer_id` FK
 - Contact-level permission flags exist (can_approve_proofs, can_place_orders, etc.)
 - No schema decision blocks portal implementation later
@@ -317,14 +327,14 @@ Scoped data: only this customer's records
 
 ## Journey Map Summary
 
-| # | Journey | Primary Action | Key Feature Areas |
-|---|---------|---------------|-------------------|
-| 1 | New customer from phone call | Create + note + quote | CRUD, Activity, Quoting |
-| 2 | Returning customer lookup | Search + review | Search, Detail, Timeline |
-| 3 | Lifecycle progression | Auto/manual stage changes | Lifecycle, Health |
-| 4 | Seasonal proactive outreach | Pattern detection + outreach | Seasonality, Analytics |
-| 5 | Financial review | Balance/credit check | Financial, Credit |
-| 6 | Multi-state tax compliance | Per-state exemption | Tax, Compliance |
-| 7 | Preferences in quoting | Favorites surface in forms | Preferences, Garments |
-| 8 | Timeline deep dive | Interaction history review | Activity Timeline |
-| 9 | Portal foundation | Schema validation | Portal, Auth |
+| #   | Journey                      | Primary Action               | Key Feature Areas        |
+| --- | ---------------------------- | ---------------------------- | ------------------------ |
+| 1   | New customer from phone call | Create + note + quote        | CRUD, Activity, Quoting  |
+| 2   | Returning customer lookup    | Search + review              | Search, Detail, Timeline |
+| 3   | Lifecycle progression        | Auto/manual stage changes    | Lifecycle, Health        |
+| 4   | Seasonal proactive outreach  | Pattern detection + outreach | Seasonality, Analytics   |
+| 5   | Financial review             | Balance/credit check         | Financial, Credit        |
+| 6   | Multi-state tax compliance   | Per-state exemption          | Tax, Compliance          |
+| 7   | Preferences in quoting       | Favorites surface in forms   | Preferences, Garments    |
+| 8   | Timeline deep dive           | Interaction history review   | Activity Timeline        |
+| 9   | Portal foundation            | Schema validation            | Portal, Auth             |
