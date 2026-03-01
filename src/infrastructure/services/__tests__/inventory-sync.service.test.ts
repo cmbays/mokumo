@@ -217,6 +217,7 @@ describe('syncInventoryFromSupplier', () => {
     setupNonSSAdapter()
     const result = await syncInventoryFromSupplier()
     expect(result).toEqual({ synced: 0, rawInserted: 0, errors: 0 })
+    expect(mockDelete).not.toHaveBeenCalled()
   })
 
   it('returns zeros and warns when S&S returns 0 items', async () => {
@@ -225,6 +226,7 @@ describe('syncInventoryFromSupplier', () => {
     const result = await syncInventoryFromSupplier()
     expect(result).toEqual({ synced: 0, rawInserted: 0, errors: 0 })
     expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockDelete).not.toHaveBeenCalled()
   })
 
   it('inserts raw rows and upserts catalog rows for matched SKUs', async () => {
@@ -262,6 +264,23 @@ describe('syncInventoryFromSupplier', () => {
     const result = await syncInventoryFromSupplier()
     expect(result.errors).toBe(1)
     expect(result.rawInserted).toBe(0)
+  })
+
+  it('skips the 48h retention delete when there are batch errors', async () => {
+    setupSSAdapter()
+    mockGetRawInventory.mockResolvedValueOnce([
+      {
+        sku: 'SKU-001',
+        skuID: 1,
+        styleID: 'EXT-1',
+        warehouses: [{ warehouseAbbr: 'OH', qty: 50 }],
+      },
+    ])
+    mockTransaction.mockRejectedValueOnce(new Error('DB error'))
+
+    const result = await syncInventoryFromSupplier()
+    expect(result.errors).toBe(1)
+    expect(mockDelete).not.toHaveBeenCalled()
   })
 
   it('runs the 48h retention delete after batch processing', async () => {

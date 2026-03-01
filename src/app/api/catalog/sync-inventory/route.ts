@@ -47,21 +47,21 @@ export const GET = withRequestContext(async (request: Request): Promise<Response
  * Same sync logic as the cron GET; useful for on-demand refreshes in dev/staging.
  */
 export const POST = withRequestContext(async (request: Request): Promise<Response> => {
+  const ip = getClientIp(request)
+  const { limited } = await checkAdminSyncRateLimit(ip)
+  if (limited) {
+    return Response.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': '60' } }
+    )
+  }
+
+  const auth = validateAdminSecret(request)
+  if (!auth.valid) {
+    return Response.json({ error: auth.error }, { status: auth.status })
+  }
+
   try {
-    const ip = getClientIp(request)
-    const { limited } = await checkAdminSyncRateLimit(ip)
-    if (limited) {
-      return Response.json(
-        { error: 'Too many requests' },
-        { status: 429, headers: { 'Retry-After': '60' } }
-      )
-    }
-
-    const auth = validateAdminSecret(request)
-    if (!auth.valid) {
-      return Response.json({ error: auth.error }, { status: auth.status })
-    }
-
     const result = await syncInventoryFromSupplier()
     return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
   } catch (error) {

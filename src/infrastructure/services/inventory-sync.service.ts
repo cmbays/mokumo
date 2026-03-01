@@ -212,7 +212,9 @@ export async function syncInventoryFromSupplier(): Promise<{
         batchNum,
         batchStart: i,
         batchSize: batch.length,
+        catalogRowsInBatch: catalogValues.length,
         error: Error.isError(error) ? error.message : String(error),
+        errorName: Error.isError(error) ? error.name : 'unknown',
       })
     }
 
@@ -228,10 +230,22 @@ export async function syncInventoryFromSupplier(): Promise<{
     }
   }
 
-  // ─── Step 4: 48h retention delete ─────────────────────────────────────────
-  await db
-    .delete(ssActivewearInventory)
-    .where(lt(ssActivewearInventory.loadedAt, sql`NOW() - INTERVAL '48 hours'`))
+  // ─── Step 4: 48h retention delete — only when all batches succeeded ──────────
+  // Skipping when errors > 0 preserves existing rows that were not replaced,
+  // matching the function's documented contract ("deleted after all batches succeed").
+  if (errors === 0) {
+    await db
+      .delete(ssActivewearInventory)
+      .where(lt(ssActivewearInventory.loadedAt, sql`NOW() - INTERVAL '48 hours'`))
+  } else {
+    syncLogger.warn(
+      'Skipping 48h retention delete — batch errors detected, preserving existing rows',
+      {
+        errors,
+        rawInserted,
+      }
+    )
+  }
 
   syncLogger.info('Inventory sync completed', { synced, rawInserted, errors })
   return { synced, rawInserted, errors }
