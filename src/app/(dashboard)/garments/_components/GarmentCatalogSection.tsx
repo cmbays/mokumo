@@ -23,6 +23,7 @@ import 'server-only'
  */
 import { logger } from '@shared/lib/logger'
 import { getCatalogStylesSlim, getCatalogColorSupplement } from '@infra/repositories/garments'
+import { getStylesInventory } from '@infra/repositories/inventory'
 import { buildSupplementMaps } from '../_lib/garment-transforms'
 import { GarmentCatalogClient } from './GarmentCatalogClient'
 import type { GarmentCatalog } from '@domain/entities/garment'
@@ -98,6 +99,20 @@ export async function GarmentCatalogSection({
     return aFav - bFav
   })
 
+  // Inventory data for the "show in-stock only" filter toggle.
+  // Runs after styleMetas resolves (which is cached at 60s, so ~1ms on warm loads).
+  // Returns the set of catalog_styles UUIDs that have totalQuantity > 0.
+  const styleIds = styleMetas.map((m) => m.id)
+  const inventoryMap = styleIds.length > 0
+    ? await getStylesInventory(styleIds).catch((err: unknown) => {
+        sectionLogger.error('getStylesInventory failed — in-stock filter unavailable', { err })
+        return new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
+      })
+    : new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
+  const inStockStyleIds = [...inventoryMap.entries()]
+    .filter(([, inv]) => inv.totalQuantity > 0)
+    .map(([id]) => id)
+
   return (
     <GarmentCatalogClient
       initialCatalog={initialCatalog}
@@ -110,6 +125,7 @@ export async function GarmentCatalogSection({
       catalogColors={catalogColors}
       initialFavoriteColorIds={initialFavoriteColorIds}
       initialFavoriteColorGroupNames={initialFavoriteColorGroupNames}
+      inStockStyleIds={inStockStyleIds}
     />
   )
 }

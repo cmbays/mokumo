@@ -8,6 +8,9 @@ import {
   catalogStylePreferences,
   catalogColorPreferences,
   catalogBrands,
+  catalogInventory,
+  catalogSizes,
+  catalogStyles,
 } from '@db/schema/catalog-normalized'
 import { verifySession } from '@infra/auth/session'
 import { logger } from '@shared/lib/logger'
@@ -383,5 +386,78 @@ export async function getBrandColorFavorites(brandName: string): Promise<string[
   } catch (err) {
     actionsLogger.error('getBrandColorFavorites failed', { brandName, err })
     return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// fetchColorInventoryByName — size-level inventory for GarmentDetailDrawer
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns inventory quantities keyed by size name for a single catalog color.
+ *
+ * Joins catalog_inventory → catalog_sizes so the caller can match sizes by name
+ * (the legacy garment.availableSizes only has names, not UUIDs).
+ * Graceful: returns [] on auth failure or DB error — the drawer shows no badges.
+ */
+export async function fetchColorInventoryByName(
+  colorId: string
+): Promise<Array<{ sizeName: string; quantity: number }>> {
+  if (!uuidSchema.safeParse(colorId).success) {
+    actionsLogger.warn('fetchColorInventoryByName called with invalid colorId', { colorId })
+    return []
+  }
+  const session = await verifySession()
+  if (!session) return []
+
+  try {
+    const rows = await db
+      .select({
+        sizeName: catalogSizes.name,
+        quantity: catalogInventory.quantity,
+      })
+      .from(catalogInventory)
+      .innerJoin(catalogSizes, eq(catalogInventory.sizeId, catalogSizes.id))
+      .where(eq(catalogInventory.colorId, colorId))
+    return rows
+  } catch (err) {
+    actionsLogger.error('fetchColorInventoryByName failed', { colorId, err })
+    return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// fetchInventoryForSku — style-level low-stock flag for quote builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Looks up a catalog style by its styleNumber (SKU) and returns whether any
+ * size has low stock. Used by the quote builder to surface a non-blocking warning.
+ *
+ * Returns null when: style not in catalog, no inventory data, auth fails, or DB error.
+ * Graceful: null means "unknown" — caller should not show a warning.
+ */
+export async function fetchInventoryForSku(
+  styleNumber: string
+): Promise<{ hasLowStock: boolean } | null> {
+  if (!styleNumber || styleNumber.length > 100) return null
+  const session = await verifySession()
+  if (!session) return null
+
+  try {
+    const styleRows = await db
+      .select({ id: catalogStyles.id })
+      .from(catalogStyles)
+      .where(eq(catalogStyles.styleNumber, styleNumber))
+      .limit(1)
+    if (!styleRows[0]) return null
+
+    const { getStyleInventory } = await import('@infra/repositories/inventory')
+    const inv = await getStyleInventory(styleRows[0].id)
+    if (!inv) return null
+    return { hasLowStock: inv.hasLowStock }
+  } catch (err) {
+    actionsLogger.error('fetchInventoryForSku failed', { styleNumber, err })
+    return null
   }
 }

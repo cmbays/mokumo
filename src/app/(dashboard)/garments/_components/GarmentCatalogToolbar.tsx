@@ -84,9 +84,10 @@ export function GarmentCatalogToolbar({
   const router = useRouter()
   const pathname = usePathname()
 
-  // --- Read URL state (search + brand only — category/view are now local state in parent) ---
+  // --- Read URL state (search + brand + inStock — category/view are now local state in parent) ---
   const query = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
+  const inStock = searchParams.get('inStock') === 'true'
 
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
@@ -145,6 +146,9 @@ export function GarmentCatalogToolbar({
   }
   if (brand) {
     activeFilters.push({ key: 'brand', label: brand, value: brand })
+  }
+  if (inStock) {
+    activeFilters.push({ key: 'inStock', label: 'In stock', value: 'true' })
   }
 
   const hasAnyFilter = activeFilters.length > 0 || selectedColorGroups.length > 0
@@ -265,6 +269,25 @@ export function GarmentCatalogToolbar({
             >
               <List className="size-3.5" />
             </Button>
+          </div>
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-border/50" />
+
+          {/* In-stock Toggle */}
+          <div className="flex items-center gap-1.5">
+            <Switch
+              id="instock-toggle"
+              size="sm"
+              checked={inStock}
+              onCheckedChange={(checked) => updateParam('inStock', checked ? 'true' : null)}
+            />
+            <Label
+              htmlFor="instock-toggle"
+              className="cursor-pointer text-xs text-muted-foreground"
+            >
+              In stock
+            </Label>
           </div>
 
           {/* Divider */}

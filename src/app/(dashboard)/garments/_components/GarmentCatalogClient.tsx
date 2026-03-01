@@ -64,6 +64,8 @@ type GarmentCatalogClientProps = {
   initialFavoriteColorIds: string[]
   /** Shop-scoped favorite colorGroupNames from catalog_color_group_preferences, fetched server-side. */
   initialFavoriteColorGroupNames: string[]
+  /** catalog_styles UUIDs with totalQuantity > 0 — used for the "Show in-stock only" filter. */
+  inStockStyleIds: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -81,14 +83,16 @@ export function GarmentCatalogClient({
   catalogColors,
   initialFavoriteColorIds,
   initialFavoriteColorGroupNames,
+  inStockStyleIds,
 }: GarmentCatalogClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  // URL state — only search + brand; these are rarely changed rapidly so server round-trips are ok
+  // URL state — only search + brand + inStock; these are rarely changed rapidly so server round-trips are ok
   const searchQuery = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
+  const inStock = searchParams.get('inStock') === 'true'
 
   // Local UI state — NOT in URL to avoid server re-renders on every tab/view click
   const [category, setCategory] = useState('all')
@@ -116,6 +120,9 @@ export function GarmentCatalogClient({
     () => new Map(styleMetas.map((m) => [m.styleNumber, m.id])),
     [styleMetas]
   )
+
+  // Set of in-stock style UUIDs — for the "Show in-stock only" filter
+  const inStockStyleIdSet = useMemo(() => new Set(inStockStyleIds), [inStockStyleIds])
 
   // SKU → cardImageUrl — precomputed in SQL, replaces buildSkuToFrontImageUrl
   const skuToCardImageUrl = useMemo(
@@ -247,7 +254,7 @@ export function GarmentCatalogClient({
   // double-render and the react-compiler "setState in effect" lint error.
   const [page, setPage] = useState(0)
   const [lastFilterKey, setLastFilterKey] = useState('')
-  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}`
+  const currentFilterKey = `${category}|${searchQuery}|${brand}|${selectedColorGroups.slice().sort().join(',')}|${inStock}`
   if (lastFilterKey !== currentFilterKey) {
     setLastFilterKey(currentFilterKey)
     setPage(0)
@@ -287,6 +294,11 @@ export function GarmentCatalogClient({
         if (!garmentColorGroups || ![...garmentColorGroups].some((g) => selectedGroupSet.has(g)))
           continue
       }
+      // In-stock filter — only show styles with totalQuantity > 0 in catalog_inventory
+      if (inStock) {
+        const styleId = skuToStyleId.get(g.sku)
+        if (!styleId || !inStockStyleIdSet.has(styleId)) continue
+      }
 
       // Passes all non-category filters → count toward categoryHits
       hits[g.baseCategory] = (hits[g.baseCategory] ?? 0) + 1
@@ -299,7 +311,7 @@ export function GarmentCatalogClient({
     filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleColorGroupsMap])
+  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleColorGroupsMap, inStock, inStockStyleIdSet, skuToStyleId])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
@@ -524,10 +536,14 @@ export function GarmentCatalogClient({
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Package className="size-12 text-muted-foreground/50 mb-4" />
           <p className="text-sm font-medium text-muted-foreground">
-            No garments match your filters
+            {inStock
+              ? 'No in-stock garments match your filters'
+              : 'No garments match your filters'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground/60">
-            Try adjusting your search, category, or color filters
+            {inStock
+              ? 'Turn off the in-stock filter to see all options'
+              : 'Try adjusting your search, category, or color filters'}
           </p>
           <Button variant="ghost" size="sm" className="mt-3" onClick={handleClearAll}>
             Clear all filters

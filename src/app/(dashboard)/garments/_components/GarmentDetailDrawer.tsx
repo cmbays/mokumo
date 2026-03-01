@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Palette, Ruler } from 'lucide-react'
+import { ExternalLink, Palette, Ruler, AlertTriangle, XCircle, Package } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import {
   Sheet,
@@ -20,6 +20,7 @@ import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { FavoritesColorSection } from '@features/garments/components/FavoritesColorSection'
 import { cn } from '@shared/lib/cn'
 import { money, toNumber, formatCurrency } from '@domain/lib/money'
+import { LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
 import { getColorById } from '@domain/rules/garment.rules'
 import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
@@ -81,6 +82,34 @@ export function GarmentDetailDrawer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedColors])
+
+  // Size-level inventory for the selected color — keyed by size name (e.g. "S" → 42).
+  // Null = data not yet loaded or unavailable. Empty map = no inventory rows (show no badges).
+  const [colorInventory, setColorInventory] = useState<Map<string, number> | null>(null)
+
+  // Fetch inventory when the selected normalized color changes.
+  // Only runs in the normalized path (when we have a real catalog colorId UUID).
+  // Graceful: on auth failure or error, leaves colorInventory null → no badges shown.
+  useEffect(() => {
+    if (!selectedCatalogColorId) {
+      setColorInventory(null)
+      return
+    }
+    let cancelled = false
+    import('../actions').then(({ fetchColorInventoryByName }) =>
+      fetchColorInventoryByName(selectedCatalogColorId)
+        .then((rows) => {
+          if (cancelled) return
+          setColorInventory(new Map(rows.map((r) => [r.sizeName, r.quantity])))
+        })
+        .catch(() => {
+          if (!cancelled) setColorInventory(null)
+        })
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [selectedCatalogColorId])
 
   // Version counter — forces re-render after mock data isFavorite mutation
   const [favoriteVersion, setFavoriteVersion] = useState(0)
@@ -320,6 +349,69 @@ export function GarmentDetailDrawer({
                 </>
               )}
             </div>
+
+            {/* Size Availability — shown when normalized color data + inventory are loaded */}
+            {normalizedColors && colorInventory && colorInventory.size > 0 && garment.availableSizes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <Package size={14} aria-hidden="true" />
+                  Availability
+                </h3>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Size availability">
+                  {[...garment.availableSizes]
+                    .sort((a, b) => a.order - b.order)
+                    .map((size) => {
+                      const qty = colorInventory.get(size.name)
+                      const isOutOfStock = qty === 0
+                      // Wave 4: hardcode 1.5× buffer multiplier (shop-configurable in future wave)
+                      const isLowStock =
+                        qty !== undefined && qty > 0 && qty < LOW_STOCK_THRESHOLD * 1.5
+                      return (
+                        <div
+                          key={size.name}
+                          className={cn(
+                            'relative flex min-h-10 min-w-10 items-center justify-center rounded-md border px-2.5 py-1',
+                            isOutOfStock
+                              ? 'border-error/30 bg-error/5 opacity-60'
+                              : isLowStock
+                                ? 'border-warning/30 bg-warning/5'
+                                : 'border-border'
+                          )}
+                          aria-label={
+                            isOutOfStock
+                              ? `${size.name} — out of stock`
+                              : isLowStock
+                                ? `${size.name} — low stock`
+                                : size.name
+                          }
+                        >
+                          <span className="text-sm font-medium text-foreground">{size.name}</span>
+                          {isLowStock && (
+                            <AlertTriangle
+                              size={10}
+                              className="absolute -right-1 -top-1 text-warning"
+                              aria-hidden="true"
+                            />
+                          )}
+                          {isOutOfStock && (
+                            <XCircle
+                              size={10}
+                              className="absolute -right-1 -top-1 text-error"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+                <p className="text-xs text-muted-foreground/60">
+                  <AlertTriangle size={10} className="inline text-warning mr-0.5" aria-hidden="true" />
+                  Low &nbsp;
+                  <XCircle size={10} className="inline text-error mr-0.5" aria-hidden="true" />
+                  Out of stock
+                </p>
+              </div>
+            )}
 
             {/* Size & Pricing table */}
             {showPrice && garment.availableSizes.length > 0 && (
