@@ -4,11 +4,12 @@ import {
   normalizeHex,
   buildImages,
   mapSSProductToColorValue,
+  collectColorGroupPairs,
   ssProductSchema,
   IMAGE_FIELDS,
   SS_IMAGE_BASE,
   type SSProduct,
-} from '../image-sync-utils'
+} from '../products-sync.utils'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -60,7 +61,6 @@ describe('resolveImageUrl', () => {
 
   it('does not double-slash when path already has leading slash', () => {
     const result = resolveImageUrl('/a/b/c.jpg')
-    // The toBe check is sufficient — it would fail if the path produced double-slash
     expect(result).toBe(`${SS_IMAGE_BASE}/a/b/c.jpg`)
   })
 })
@@ -285,16 +285,11 @@ describe('mapSSProductToColorValue', () => {
 
 // ---------------------------------------------------------------------------
 // ssProductSchema — API response shape validation
-// (Regression guard for Undici v7 stricter fetch compliance)
 // ---------------------------------------------------------------------------
 
 describe('ssProductSchema', () => {
   it('parses a valid minimal product row', () => {
-    const input = {
-      sku: 'BC3001BLK-S',
-      styleID: '3001',
-      colorName: 'Black',
-    }
+    const input = { sku: 'BC3001BLK-S', styleID: '3001', colorName: 'Black' }
     const result = ssProductSchema.safeParse(input)
     expect(result.success).toBe(true)
     if (result.success) {
@@ -306,7 +301,7 @@ describe('ssProductSchema', () => {
   it('stringifies numeric styleID', () => {
     const result = ssProductSchema.safeParse({
       sku: 'BC3001BLK-S',
-      styleID: 3001, // number, not string
+      styleID: 3001,
       colorName: 'Black',
     })
     expect(result.success).toBe(true)
@@ -317,11 +312,7 @@ describe('ssProductSchema', () => {
   })
 
   it('defaults missing optional string fields to empty string', () => {
-    const result = ssProductSchema.safeParse({
-      sku: 'X1-S',
-      styleID: '99',
-      colorName: 'White',
-    })
+    const result = ssProductSchema.safeParse({ sku: 'X1-S', styleID: '99', colorName: 'White' })
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.colorFrontImage).toBe('')
@@ -335,28 +326,21 @@ describe('ssProductSchema', () => {
       sku: 'X1-S',
       styleID: '99',
       colorName: 'White',
-      someFutureField: 'extra data', // unknown field
+      someFutureField: 'extra data',
     })
     expect(result.success).toBe(true)
     if (result.success) {
-      // passthrough preserves unknown fields at runtime even though the type doesn't include them
       expect((result.data as Record<string, unknown>).someFutureField).toBe('extra data')
     }
   })
 
   it('fails when required sku is missing', () => {
-    const result = ssProductSchema.safeParse({
-      styleID: '99',
-      colorName: 'White',
-    })
+    const result = ssProductSchema.safeParse({ styleID: '99', colorName: 'White' })
     expect(result.success).toBe(false)
   })
 
   it('fails when required colorName is missing', () => {
-    const result = ssProductSchema.safeParse({
-      sku: 'X1-S',
-      styleID: '99',
-    })
+    const result = ssProductSchema.safeParse({ sku: 'X1-S', styleID: '99' })
     expect(result.success).toBe(false)
   })
 
@@ -387,20 +371,18 @@ describe('ssProductSchema', () => {
         colorCode: 'WHT',
         color1: 'FFFFFF',
         color2: '',
-        // Intentionally omit all image fields to test defaults
       },
     ]
     const result = ssProductSchema.array().safeParse(fixturePayload)
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data).toHaveLength(2)
-      expect(result.data[0].styleID).toBe('3001') // numeric → string
-      expect(result.data[1].colorFrontImage).toBe('') // default applied
+      expect(result.data[0].styleID).toBe('3001')
+      expect(result.data[1].colorFrontImage).toBe('')
     }
   })
 
   it('rejects non-array API response (e.g. error object from S&S)', () => {
-    // Undici v7 regression guard: if S&S returns {"error": "..."} instead of an array
     const result = ssProductSchema.array().safeParse({ error: 'Unauthorized' })
     expect(result.success).toBe(false)
   })
@@ -416,5 +398,76 @@ describe('ssProductSchema', () => {
     if (result.success) {
       expect(result.data).toHaveLength(0)
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// collectColorGroupPairs
+// ---------------------------------------------------------------------------
+
+const BRAND_A = '00000000-0000-4000-8000-000000000001'
+const BRAND_B = '00000000-0000-4000-8000-000000000002'
+const STYLE_1 = 'aaaaaaaa-0000-4000-8000-000000000001' // belongs to BRAND_A
+const STYLE_2 = 'aaaaaaaa-0000-4000-8000-000000000002' // belongs to BRAND_A
+const STYLE_3 = 'aaaaaaaa-0000-4000-8000-000000000003' // belongs to BRAND_B
+
+const brandMap = new Map([
+  [STYLE_1, BRAND_A],
+  [STYLE_2, BRAND_A],
+  [STYLE_3, BRAND_B],
+])
+
+describe('collectColorGroupPairs', () => {
+  it('extracts unique (brandId, colorGroupName) pairs across 2 brands', () => {
+    const colorValues = [
+      { styleId: STYLE_1, colorGroupName: 'Navy' },
+      { styleId: STYLE_1, colorGroupName: 'Black' },
+      { styleId: STYLE_2, colorGroupName: 'Navy' }, // duplicate — same brand + group
+      { styleId: STYLE_2, colorGroupName: 'Royal Blue' },
+      { styleId: STYLE_3, colorGroupName: 'Navy' }, // same group name, different brand — NOT duplicate
+    ]
+    const result = collectColorGroupPairs(colorValues, brandMap)
+    expect(result).toHaveLength(4)
+    expect(result).toContainEqual({ brandId: BRAND_A, colorGroupName: 'Navy' })
+    expect(result).toContainEqual({ brandId: BRAND_A, colorGroupName: 'Black' })
+    expect(result).toContainEqual({ brandId: BRAND_A, colorGroupName: 'Royal Blue' })
+    expect(result).toContainEqual({ brandId: BRAND_B, colorGroupName: 'Navy' })
+  })
+
+  it('filters out null colorGroupName entries', () => {
+    const colorValues = [
+      { styleId: STYLE_1, colorGroupName: 'Navy' },
+      { styleId: STYLE_1, colorGroupName: null },
+      { styleId: STYLE_2, colorGroupName: null },
+    ]
+    const result = collectColorGroupPairs(colorValues, brandMap)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toEqual({ brandId: BRAND_A, colorGroupName: 'Navy' })
+  })
+
+  it('skips styleIds not present in the brand map', () => {
+    const unknownStyleId = 'ffffffff-0000-4000-8000-000000000000'
+    const colorValues = [
+      { styleId: unknownStyleId, colorGroupName: 'Navy' },
+      { styleId: STYLE_1, colorGroupName: 'Black' },
+    ]
+    const result = collectColorGroupPairs(colorValues, brandMap)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toEqual({ brandId: BRAND_A, colorGroupName: 'Black' })
+  })
+
+  it('is idempotent — re-running with same input produces same count', () => {
+    const colorValues = [
+      { styleId: STYLE_1, colorGroupName: 'Navy' },
+      { styleId: STYLE_1, colorGroupName: 'Black' },
+      { styleId: STYLE_3, colorGroupName: 'Navy' },
+    ]
+    const first = collectColorGroupPairs(colorValues, brandMap)
+    const second = collectColorGroupPairs([...colorValues, ...colorValues], brandMap)
+    expect(second).toHaveLength(first.length)
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(collectColorGroupPairs([], brandMap)).toEqual([])
   })
 })
