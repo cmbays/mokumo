@@ -386,6 +386,22 @@ export class SSActivewearAdapter implements SupplierAdapter {
     return z.array(ssProductSchema).parse(raw)
   }
 
+  /**
+   * Batch variant of getRawProducts — fetches products for multiple styles in
+   * a single S&S API call using comma-separated styleIds.
+   *
+   * S&S treats `?styleId=29,9182` as a multi-style filter, returning all SKUs
+   * for the requested styles in one response (confirmed via direct API test).
+   * This reduces the full catalog backfill from ~5,700 calls to ~115 calls.
+   */
+  async getRawProductsBatch(styleIds: string[]): Promise<SSProduct[]> {
+    if (styleIds.length === 0) return []
+    const raw = await ssGet('products', { styleId: styleIds.join(',') }, SS_CACHE_TTL.products, {
+      preserveRawFields: true,
+    })
+    return z.array(ssProductSchema).parse(raw)
+  }
+
   async getStylesBatch(styleIds: string[]): Promise<CanonicalStyle[]> {
     const results = await Promise.all(styleIds.map((id) => this.getStyle(id)))
     return results.filter((s): s is CanonicalStyle => s !== null)

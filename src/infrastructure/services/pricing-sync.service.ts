@@ -5,7 +5,8 @@ import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'pricing-sync' })
 
-const BATCH_SIZE = 10
+/** Number of S&S styleIds to pack into a single /v2/products/ API call. */
+const BATCH_SIZE = 50
 
 /**
  * Sync raw per-SKU pricing data from S&S Activewear into the raw analytics table.
@@ -69,15 +70,27 @@ export async function syncRawPricingFromSupplier(
   for (let i = 0; i < idsToSync.length; i += BATCH_SIZE) {
     const batch = idsToSync.slice(i, i + BATCH_SIZE)
 
-    for (const styleId of batch) {
-      try {
-        const products = await adapter.getRawProducts(styleId)
-        if (products.length === 0) {
+    try {
+      // One API call covers up to BATCH_SIZE styles — the S&S products endpoint
+      // accepts comma-separated styleIds and returns all SKUs for the batch combined.
+      const products = await adapter.getRawProductsBatch(batch)
+
+      // Group the mixed response back into per-style buckets for the sizes upsert.
+      const productsByStyleId = new Map<string, typeof products>()
+      for (const p of products) {
+        const sid = String(p.styleID)
+        if (!productsByStyleId.has(sid)) productsByStyleId.set(sid, [])
+        productsByStyleId.get(sid)!.push(p)
+      }
+
+      for (const styleId of batch) {
+        const styleProducts = productsByStyleId.get(styleId) ?? []
+        if (styleProducts.length === 0) {
           syncLogger.debug('No products found for style', { styleId })
           continue
         }
 
-        const rows = products.map((p) => ({
+        const rows = styleProducts.map((p) => ({
           sku: p.sku,
           styleIdExternal: p.styleID,
           styleName: p.styleName,
@@ -100,7 +113,7 @@ export async function syncRawPricingFromSupplier(
         }))
 
         await db.insert(ssActivewearProducts).values(rows)
-        synced += products.length
+        synced += styleProducts.length
 
         // Upsert catalog_sizes using sizeIndex from the products API response.
         // The catalog sync's searchCatalog() returns empty sizes[]; /v2/products/ is
@@ -108,7 +121,7 @@ export async function syncRawPricingFromSupplier(
         const catalogStyleId = catalogStyleIdByExternalId.get(styleId)
         if (catalogStyleId) {
           const sizeMap = new Map<string, number>() // sizeName → sizeIndex
-          for (const p of products) {
+          for (const p of styleProducts) {
             if (!sizeMap.has(p.sizeName)) {
               sizeMap.set(p.sizeName, p.sizeIndex)
             }
@@ -133,15 +146,17 @@ export async function syncRawPricingFromSupplier(
 
         syncLogger.debug('Synced pricing for style', {
           styleId,
-          productCount: products.length,
-        })
-      } catch (error) {
-        errors++
-        syncLogger.error('Failed to sync pricing for style', {
-          styleId,
-          error: Error.isError(error) ? error.message : String(error),
+          productCount: styleProducts.length,
         })
       }
+    } catch (error) {
+      errors += batch.length
+      syncLogger.error('Failed to sync pricing batch', {
+        batchStart: i,
+        batchSize: batch.length,
+        styleIds: batch,
+        error: Error.isError(error) ? error.message : String(error),
+      })
     }
 
     syncLogger.info('Pricing sync batch progress', {
