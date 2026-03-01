@@ -151,10 +151,22 @@ waves:
              d. Upsert catalog_sizes (already present — just move inside tx)
              e. Insert raw.ss_activewear_products (already present — just move inside tx)
 
-          4. Evaluate catalog_color_groups: run-image-sync.ts writes to catalog_color_groups
-             via collectColorGroupPairs. Check whether catalog_color_groups is actively queried
-             (grep for catalogColorGroups in src/). If it is used, carry the logic forward into
-             the service. If not, defer and note in workspace doc.
+          4. catalog_color_groups MUST be carried forward — it is load-bearing.
+             It powers garment color filtering by brand, color group display in the UI,
+             and the favorites/preferences system (garments/favorites/actions.ts uses it).
+             This is confirmed — do not defer.
+
+             Write pattern:
+             a. In the upfront catalog_styles SELECT, also fetch brandId so you can build
+                brandIdByStyleId = new Map(rows.map(r => [r.id, r.brandId]))
+             b. After each style's db.transaction() commits, call collectColorGroupPairs(
+                colorValues, brandIdByStyleId) — pure in-memory, outside the tx
+             c. Accumulate pairs across the batch, dedup by (brandId, colorGroupName)
+             d. After all styles in the batch, bulk-upsert catalog_color_groups
+                using onConflictDoNothing()
+
+             Move collectColorGroupPairs from scripts/color-group-utils.ts into the service
+             or a private helper at src/infrastructure/services/products-sync-helpers.ts.
 
           5. Update return type to:
              { stylesProcessed: number, colorsUpserted: number, sizesUpserted: number,
@@ -162,11 +174,14 @@ waves:
 
           6. Update src/app/api/catalog/sync-products/route.ts return shape accordingly.
 
-          ### Delete scripts
-          Before deleting, grep for other consumers of each file:
-          - scripts/run-image-sync.ts → delete (absorbed into service)
-          - scripts/image-sync-utils.ts → delete if only used by run-image-sync.ts
-          - scripts/color-group-utils.ts → delete if only used by run-image-sync.ts
+          ### Absorb and delete scripts
+          Move utility functions into the service first, then delete:
+          - scripts/image-sync-utils.ts: move mapSSProductToColorValue, buildImages,
+            resolveImageUrl, normalizeHex into the service (or products-sync-helpers.ts).
+            The ssProductSchema copy in this file is redundant — adapter handles validation.
+          - scripts/color-group-utils.ts: move collectColorGroupPairs into service/helpers.
+          - scripts/run-image-sync.ts: delete after logic fully absorbed above.
+          Grep all three for any other consumers before deleting.
 
           ### Tests to add/update in products-sync.service.test.ts
           - "writes catalog_colors, catalog_images, catalog_sizes, and

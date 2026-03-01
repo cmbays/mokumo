@@ -147,15 +147,26 @@ The color mapping logic comes from `scripts/image-sync-utils.ts` — extract
 
 **Route update:** `sync-products/route.ts` return shape updated to include new count fields.
 
-**Files to delete:**
-- `scripts/run-image-sync.ts`
-- `scripts/image-sync-utils.ts` (if not used elsewhere — grep first)
-- `scripts/color-group-utils.ts` (if not used elsewhere — grep first)
+**`catalog_color_groups` MUST be carried forward — this is not optional.**
+This table is load-bearing: it powers garment color filtering by brand, color group display,
+and the favorites/preferences system (`garments/favorites/actions.ts` consumes it directly).
 
-**Note on `catalog_color_groups`:** `run-image-sync.ts` also writes `catalog_color_groups` via
-`collectColorGroupPairs`. Decide: carry this forward into `products-sync.service.ts`, or defer
-to a separate concern. If the `catalog_color_groups` table is actively used by the
-`ColorFilterGrid`, it must be carried forward.
+Write pattern (mirrors `run-image-sync.ts`):
+1. In the upfront `catalog_styles` SELECT, add `brandId` so that `brandIdByStyleId` can be
+   built alongside `catalogStyleIdByExternalId`.
+2. After each style's transaction commits, collect `(brandId, colorGroupName)` pairs
+   via `collectColorGroupPairs(colorValues, brandIdByStyleId)` — pure in-memory, outside tx.
+3. After all styles in a batch, bulk-upsert `catalog_color_groups` (ON CONFLICT DO NOTHING).
+
+Move `collectColorGroupPairs` from `scripts/color-group-utils.ts` into the service or a
+private helper at `src/infrastructure/services/products-sync-helpers.ts`.
+
+**Files to delete after absorbing their logic:**
+- `scripts/run-image-sync.ts` — fully absorbed
+- `scripts/image-sync-utils.ts` — move `mapSSProductToColorValue`, `buildImages`,
+  `resolveImageUrl`, `normalizeHex` into service (the `ssProductSchema` copy is redundant
+  after the merge — adapter handles validation via `getRawProductsBatch`)
+- `scripts/color-group-utils.ts` — move `collectColorGroupPairs` into service
 
 **Tests to add/update:**
 - `src/infrastructure/services/__tests__/products-sync.service.test.ts`:
