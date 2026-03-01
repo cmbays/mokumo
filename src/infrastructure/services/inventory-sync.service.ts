@@ -80,9 +80,8 @@ export async function syncInventoryFromSupplier(): Promise<{
 }> {
   const { db } = await import('@shared/lib/supabase/db')
   const { ssActivewearInventory, ssActivewearProducts } = await import('@db/schema/raw')
-  const { catalogInventory, catalogStyles, catalogColors, catalogSizes } = await import(
-    '@db/schema/catalog-normalized'
-  )
+  const { catalogInventory, catalogStyles, catalogColors, catalogSizes } =
+    await import('@db/schema/catalog-normalized')
 
   const adapter = getSupplierAdapter()
   if (!(adapter instanceof SSActivewearAdapter)) {

@@ -54,7 +54,13 @@ vi.mock('@shared/lib/supabase/db', () => ({
 
 vi.mock('@db/schema/raw', () => ({
   ssActivewearInventory: { _: 'ss_activewear_inventory_table' },
-  ssActivewearProducts: { sku: 'sku', styleIdExternal: 'style_id_external', colorName: 'color_name', sizeName: 'size_name', loadedAt: '_loaded_at' },
+  ssActivewearProducts: {
+    sku: 'sku',
+    styleIdExternal: 'style_id_external',
+    colorName: 'color_name',
+    sizeName: 'size_name',
+    loadedAt: '_loaded_at',
+  },
 }))
 
 vi.mock('@db/schema/catalog-normalized', () => ({
@@ -148,9 +154,7 @@ describe('buildSkuMapFromRaw', () => {
   const sizeIdMap = new Map([['style-uuid-1:M', 'size-uuid-m']])
 
   it('builds a skuMap entry when all lookups resolve', () => {
-    const raw = [
-      { sku: 'SKU-001', styleIdExternal: 'EXT-1', colorName: 'Red', sizeName: 'M' },
-    ]
+    const raw = [{ sku: 'SKU-001', styleIdExternal: 'EXT-1', colorName: 'Red', sizeName: 'M' }]
     const result = buildSkuMapFromRaw(raw, styleIdMap, colorIdMap, sizeIdMap)
     expect(result.get('SKU-001')).toEqual({ colorId: 'color-uuid-1', sizeId: 'size-uuid-m' })
   })
@@ -172,9 +176,7 @@ describe('buildSkuMapFromRaw', () => {
   })
 
   it('skips sku when sizeId is not in sizeIdMap', () => {
-    const raw = [
-      { sku: 'SKU-001', styleIdExternal: 'EXT-1', colorName: 'Red', sizeName: 'XXL' },
-    ]
+    const raw = [{ sku: 'SKU-001', styleIdExternal: 'EXT-1', colorName: 'Red', sizeName: 'XXL' }]
     const result = buildSkuMapFromRaw(raw, styleIdMap, colorIdMap, sizeIdMap)
     expect(result.has('SKU-001')).toBe(false)
   })
