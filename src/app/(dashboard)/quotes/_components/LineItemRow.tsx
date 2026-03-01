@@ -173,16 +173,16 @@ export function LineItemRow({
     setWarningDismissed(false)
     if (!selectedGarment) return
     let cancelled = false
-    import('@/app/(dashboard)/garments/actions').then(({ fetchInventoryForSku }) =>
-      fetchInventoryForSku(selectedGarment.sku)
-        .then((result) => {
-          if (cancelled) return
-          setHasLowStock(result?.hasLowStock ?? null)
-        })
-        .catch(() => {
-          if (!cancelled) setHasLowStock(null)
-        })
-    )
+    async function loadLowStock() {
+      try {
+        const { fetchInventoryForSku } = await import('@/app/(dashboard)/garments/actions')
+        const result = await fetchInventoryForSku(selectedGarment!.sku)
+        if (!cancelled) setHasLowStock(result?.hasLowStock ?? null)
+      } catch {
+        if (!cancelled) setHasLowStock(null)
+      }
+    }
+    void loadLowStock()
     return () => {
       cancelled = true
     }
@@ -553,10 +553,10 @@ export function LineItemRow({
             <button
               type="button"
               onClick={() => setWarningDismissed(true)}
-              className="shrink-0 rounded-sm p-0.5 text-warning/70 hover:text-warning focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) shrink-0 items-center justify-center rounded-sm text-warning/70 hover:text-warning focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-0 md:min-w-0 md:p-0.5"
               aria-label="Dismiss low-stock warning"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           </div>
         )}

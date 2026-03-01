@@ -21,6 +21,10 @@ import { FavoritesColorSection } from '@features/garments/components/FavoritesCo
 import { cn } from '@shared/lib/cn'
 import { money, toNumber, formatCurrency } from '@domain/lib/money'
 import { LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
+
+// Wave 4: 1.5× buffer on domain threshold for the drawer — makes "low" more visible.
+// Shop-configurable in a future wave; named constant here so it's easy to find and extract.
+const DRAWER_LOW_STOCK_BUFFER = 1.5
 import { getColorById } from '@domain/rules/garment.rules'
 import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
@@ -96,16 +100,16 @@ export function GarmentDetailDrawer({
       return
     }
     let cancelled = false
-    import('../actions').then(({ fetchColorInventoryByName }) =>
-      fetchColorInventoryByName(selectedCatalogColorId)
-        .then((rows) => {
-          if (cancelled) return
-          setColorInventory(new Map(rows.map((r) => [r.sizeName, r.quantity])))
-        })
-        .catch(() => {
-          if (!cancelled) setColorInventory(null)
-        })
-    )
+    async function loadInventory() {
+      try {
+        const { fetchColorInventoryByName } = await import('../actions')
+        const rows = await fetchColorInventoryByName(selectedCatalogColorId!)
+        if (!cancelled) setColorInventory(new Map(rows.map((r) => [r.sizeName, r.quantity])))
+      } catch {
+        if (!cancelled) setColorInventory(null)
+      }
+    }
+    void loadInventory()
     return () => {
       cancelled = true
     }
@@ -370,12 +374,14 @@ export function GarmentDetailDrawer({
                       .map((size) => {
                         const qty = colorInventory.get(size.name)
                         const isOutOfStock = qty === 0
-                        // Wave 4: hardcode 1.5× buffer multiplier (shop-configurable in future wave)
                         const isLowStock =
-                          qty !== undefined && qty > 0 && qty < LOW_STOCK_THRESHOLD * 1.5
+                          qty !== undefined &&
+                          qty > 0 &&
+                          qty < LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
                         return (
                           <div
                             key={size.name}
+                            role="img"
                             className={cn(
                               'relative flex min-h-10 min-w-10 items-center justify-center rounded-md border px-2.5 py-1',
                               isOutOfStock
@@ -395,15 +401,15 @@ export function GarmentDetailDrawer({
                             <span className="text-sm font-medium text-foreground">{size.name}</span>
                             {isLowStock && (
                               <AlertTriangle
-                                size={10}
-                                className="absolute -right-1 -top-1 text-warning"
+                                size={12}
+                                className="absolute -right-1.5 -top-1.5 text-warning"
                                 aria-hidden="true"
                               />
                             )}
                             {isOutOfStock && (
                               <XCircle
-                                size={10}
-                                className="absolute -right-1 -top-1 text-error"
+                                size={12}
+                                className="absolute -right-1.5 -top-1.5 text-error"
                                 aria-hidden="true"
                               />
                             )}
@@ -411,14 +417,14 @@ export function GarmentDetailDrawer({
                         )
                       })}
                   </div>
-                  <p className="text-xs text-muted-foreground/60">
+                  <p className="text-xs text-muted-foreground">
                     <AlertTriangle
-                      size={10}
-                      className="inline text-warning mr-0.5"
+                      size={12}
+                      className="mr-0.5 inline text-warning"
                       aria-hidden="true"
                     />
-                    Low &nbsp;
-                    <XCircle size={10} className="inline text-error mr-0.5" aria-hidden="true" />
+                    Low&nbsp;&nbsp;
+                    <XCircle size={12} className="mr-0.5 inline text-error" aria-hidden="true" />
                     Out of stock
                   </p>
                 </div>
