@@ -75,7 +75,7 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
       return Response.json({ error: auth.error }, { status: auth.status })
     }
 
-    let pipelineOpts: { styleIds?: string[]; offset?: number; limit?: number } | undefined
+    let pipelineOpts: z.infer<typeof requestBodySchema>
     const contentType = request.headers.get('content-type')
     if (contentType?.includes('application/json')) {
       try {
