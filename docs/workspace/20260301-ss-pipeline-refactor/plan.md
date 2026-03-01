@@ -23,12 +23,12 @@ Vitest, Zod.
 
 ## Current State (before this plan)
 
-| Service file | Route | Calls | Writes |
-|---|---|---|---|
-| `catalog-sync.service.ts` | `POST /api/catalog/sync` | `/v2/styles/` | catalog_brands, catalog_styles, catalog_colors, catalog_images, catalog_sizes |
-| `pricing-sync.service.ts` | `POST /api/catalog/sync-pricing` | `/v2/products/` | raw.ss_activewear_products, catalog_sizes (side-effect) |
-| `scripts/run-image-sync.ts` | (manual script) | `/v2/products/` | catalog_colors, catalog_images (richer color data than styles sync) |
-| `inventory-sync.service.ts` | `GET/POST /api/catalog/sync-inventory` | `/v2/inventory/` | raw.ss_activewear_inventory, catalog_inventory |
+| Service file                | Route                                  | Calls            | Writes                                                                        |
+| --------------------------- | -------------------------------------- | ---------------- | ----------------------------------------------------------------------------- |
+| `catalog-sync.service.ts`   | `POST /api/catalog/sync`               | `/v2/styles/`    | catalog_brands, catalog_styles, catalog_colors, catalog_images, catalog_sizes |
+| `pricing-sync.service.ts`   | `POST /api/catalog/sync-pricing`       | `/v2/products/`  | raw.ss_activewear_products, catalog_sizes (side-effect)                       |
+| `scripts/run-image-sync.ts` | (manual script)                        | `/v2/products/`  | catalog_colors, catalog_images (richer color data than styles sync)           |
+| `inventory-sync.service.ts` | `GET/POST /api/catalog/sync-inventory` | `/v2/inventory/` | raw.ss_activewear_inventory, catalog_inventory                                |
 
 **Root cause of "–" bug:** `pricing-sync` and `run-image-sync` both call `/v2/products/` but run
 independently. Any timing gap means `catalog_colors` (written by image sync) and
@@ -46,6 +46,7 @@ inventory sync's 3-table SKU resolution chain breaks silently.
 **Goal:** All files renamed. All import paths updated. Tests pass.
 
 **Files to create (from renamed originals):**
+
 - `src/infrastructure/services/styles-sync.service.ts`
   - Copied from `catalog-sync.service.ts`
   - Rename: `syncCatalogFromSupplier` → `syncStylesFromSupplier`
@@ -64,16 +65,18 @@ inventory sync's 3-table SKU resolution chain breaks silently.
   - Logger domain: `pricing-sync-endpoint` → `products-sync-endpoint`
 
 **Files to delete:**
+
 - `src/infrastructure/services/catalog-sync.service.ts`
 - `src/infrastructure/services/pricing-sync.service.ts`
 - `src/app/api/catalog/sync/route.ts` (and directory)
 - `src/app/api/catalog/sync-pricing/route.ts` (and directory)
 
 **Test files to rename + update imports:**
+
 - `src/infrastructure/services/__tests__/catalog-sync-normalized.test.ts`
   → `src/infrastructure/services/__tests__/styles-sync.service.test.ts`
   (update: mock path `@infra/services/catalog-sync.service` → `styles-sync.service`,
-   function name `syncCatalogFromSupplier` → `syncStylesFromSupplier`)
+  function name `syncCatalogFromSupplier` → `syncStylesFromSupplier`)
 - `src/infrastructure/services/__tests__/pricing-sync.service.test.ts`
   → `src/infrastructure/services/__tests__/products-sync.service.test.ts`
   (update: mock path + function name)
@@ -152,6 +155,7 @@ This table is load-bearing: it powers garment color filtering by brand, color gr
 and the favorites/preferences system (`garments/favorites/actions.ts` consumes it directly).
 
 Write pattern (mirrors `run-image-sync.ts`):
+
 1. In the upfront `catalog_styles` SELECT, add `brandId` so that `brandIdByStyleId` can be
    built alongside `catalogStyleIdByExternalId`.
 2. After each style's transaction commits, collect `(brandId, colorGroupName)` pairs
@@ -162,6 +166,7 @@ Move `collectColorGroupPairs` from `scripts/color-group-utils.ts` into the servi
 private helper at `src/infrastructure/services/products-sync-helpers.ts`.
 
 **Files to delete after absorbing their logic:**
+
 - `scripts/run-image-sync.ts` — fully absorbed
 - `scripts/image-sync-utils.ts` — move `mapSSProductToColorValue`, `buildImages`,
   `resolveImageUrl`, `normalizeHex` into service (the `ssProductSchema` copy is redundant
@@ -169,6 +174,7 @@ private helper at `src/infrastructure/services/products-sync-helpers.ts`.
 - `scripts/color-group-utils.ts` — move `collectColorGroupPairs` into service
 
 **Tests to add/update:**
+
 - `src/infrastructure/services/__tests__/products-sync.service.test.ts`:
   - "writes catalog_colors, catalog_images, catalog_sizes, and raw.ss_activewear_products in one
     transaction per style"
@@ -201,17 +207,20 @@ Update `ssBrandSchema` with newly discovered fields.
 
 **Step 3 — Schema (if new columns):**
 If the brands endpoint returns useful fields not already in `catalog_brands`:
+
 - Run `npm run db:generate` after adding columns to Drizzle schema
 - Apply migration: `npm run db:migrate`
 
 **Step 4 — Create `brands-sync.service.ts`:**
 `src/infrastructure/services/brands-sync.service.ts`:
+
 - Calls `adapter.getRawBrands()` (single call, no pagination — ~100 brands)
 - Upserts into `catalog_brands` by `canonicalName`
 - Returns `{ brandsUpserted, errors }`
 
 **Step 5 — Create `sync-brands/route.ts`:**
 `src/app/api/catalog/sync-brands/route.ts`:
+
 - POST only (admin secret + rate limit)
 - No request body needed
 - Returns `{ brandsUpserted, errors, timestamp }`
@@ -236,6 +245,7 @@ export async function runCatalogPipeline(options?: {
 ```
 
 Execution order:
+
 1. `syncStylesFromSupplier()` → collect styleIds from result
 2. `syncProductsFromSupplier(styleIds, options)` → depends on step 1's UUIDs
 3. `syncBrandsFromSupplier()` → independent of steps 1–2, runs last for enrichment
@@ -244,19 +254,23 @@ Returns aggregate stats + `duration` + `timestamp`.
 
 **Create `sync-pipeline/route.ts`:**
 `src/app/api/catalog/sync-pipeline/route.ts`:
+
 - `POST` — admin secret + rate limit; optional body `{ styleIds?, offset?, limit? }`
 - `GET` — CRON_SECRET auth (Vercel cron target)
 
 **Update `vercel.json`:**
 Add weekly cron (catalog data changes slowly):
+
 ```json
 { "path": "/api/catalog/sync-pipeline", "schedule": "0 2 * * 0" }
 ```
+
 (Sundays at 2am UTC — outside business hours, avoids Monday morning stale data)
 
 **Tests:** `src/infrastructure/services/__tests__/catalog-pipeline.service.test.ts`
 
 **Final acceptance check (epic #701):**
+
 - [ ] `POST /api/catalog/sync-pipeline` chains styles → products → brands
 - [ ] After pipeline run + inventory sync: zero "–" badges for real S&S styles
 - [ ] `scripts/run-image-sync.ts` deleted — no manual post-catalog step needed
@@ -268,9 +282,9 @@ Add weekly cron (catalog data changes slowly):
 
 ## PR Strategy
 
-| Wave | PR title | Closes |
-|---|---|---|
-| 1 | `refactor(catalog): rename sync services and routes to match S&S API naming` | #703 |
-| 2 | `fix(catalog): atomic products sync — eliminates timing-gap "–" bug` | #702, #699 |
-| 3a | `feat(catalog): brands endpoint persistence` | #704 |
-| 3b | `feat(catalog): orchestrated catalog pipeline endpoint` | #705 |
+| Wave | PR title                                                                     | Closes     |
+| ---- | ---------------------------------------------------------------------------- | ---------- |
+| 1    | `refactor(catalog): rename sync services and routes to match S&S API naming` | #703       |
+| 2    | `fix(catalog): atomic products sync — eliminates timing-gap "–" bug`         | #702, #699 |
+| 3a   | `feat(catalog): brands endpoint persistence`                                 | #704       |
+| 3b   | `feat(catalog): orchestrated catalog pipeline endpoint`                      | #705       |

@@ -48,7 +48,13 @@ describe('POST /api/catalog/sync-products', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(validateAdminSecret).mockReturnValue({ valid: true })
-    vi.mocked(syncProductsFromSupplier).mockResolvedValue({ synced: 10, errors: 0, total: 10, colorsUpserted: 0, imagesUpserted: 0 })
+    vi.mocked(syncProductsFromSupplier).mockResolvedValue({
+      synced: 10,
+      errors: 0,
+      total: 10,
+      colorsUpserted: 0,
+      imagesUpserted: 0,
+    })
   })
 
   describe('rate limiting', () => {
@@ -106,7 +112,13 @@ describe('POST /api/catalog/sync-products', () => {
     })
 
     it('returns 200 with sync result on success', async () => {
-      vi.mocked(syncProductsFromSupplier).mockResolvedValue({ synced: 48, errors: 2, total: 50, colorsUpserted: 200, imagesUpserted: 1600 })
+      vi.mocked(syncProductsFromSupplier).mockResolvedValue({
+        synced: 48,
+        errors: 2,
+        total: 50,
+        colorsUpserted: 200,
+        imagesUpserted: 1600,
+      })
 
       const response = await POST(makeRequest())
 
