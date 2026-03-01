@@ -65,3 +65,48 @@ sources:
                     strictly: false
                   config:
                     where: case_price is not null
+
+      - name: ss_activewear_inventory
+        description: >
+          One row per SKU per sync run. Contains the full warehouse breakdown
+          as a JSONB array showing available inventory quantities per S&S
+          distribution center. Populated by the inventory sync cron job.
+          Append-only — dedup via row_number() is handled in the staging model.
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after:
+            count: 2
+            period: hour
+          error_after:
+            count: 4
+            period: hour
+        columns:
+          - name: id
+            description: Auto-incrementing surrogate key (bigint identity).
+          - name: sku
+            description: S&S SKU identifier — unique per color+size combination.
+            data_tests:
+              - not_null
+          - name: sku_id_master
+            description: S&S master SKU ID (numeric). Nullable — may be absent for some SKUs.
+          - name: style_id_external
+            description: S&S style ID (numeric string like "3001").
+            data_tests:
+              - not_null
+          - name: warehouses
+            description: >
+              JSONB array of warehouse availability objects.
+              Each element has warehouseAbbr (string), skuID (integer), qty (integer).
+            data_tests:
+              - not_null
+          - name: _loaded_at
+            description: Timestamp when the row was inserted by the sync job.
+            data_tests:
+              - not_null
+          - name: _source
+            description: Supplier identifier, always 'ss_activewear' for this table.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['ss_activewear']

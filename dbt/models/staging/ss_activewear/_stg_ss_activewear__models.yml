@@ -66,3 +66,46 @@ models:
         description: Timestamp when the row was loaded into the raw table.
       - name: source
         description: Supplier identifier (always 'ss_activewear').
+
+  - name: stg_ss_activewear__inventory
+    description: >
+      Deduplicated per-SKU inventory data from S&S Activewear. Keeps only the
+      most recent sync snapshot per SKU (via row_number partition by sku order
+      by loaded_at desc), then expands the warehouses JSONB array to one row
+      per SKU per warehouse. Includes a total_qty window sum across all
+      warehouses per SKU.
+    columns:
+      - name: sku
+        description: S&S SKU identifier — unique per color+size combination. Post-dedup, one row per sku per warehouse.
+        data_tests:
+          - not_null
+      - name: sku_id_master
+        description: S&S master SKU ID (bigint). Nullable.
+      - name: style_id
+        description: S&S style ID (numeric string).
+        data_tests:
+          - not_null
+      - name: warehouse_abbr
+        description: Short code identifying the S&S distribution center (e.g. "IL", "NV").
+        data_tests:
+          - not_null
+      - name: warehouse_sku_id
+        description: S&S internal SKU ID specific to this warehouse allocation.
+      - name: qty
+        description: Quantity available at this warehouse for this SKU.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                strictly: false
+      - name: total_qty
+        description: >
+          Sum of qty across all warehouses for this SKU (window function).
+          Identical value on every row for the same SKU.
+        data_tests:
+          - not_null
+      - name: loaded_at
+        description: Timestamp of the most recent sync snapshot for this SKU.
+      - name: source
+        description: Supplier identifier (always 'ss_activewear').

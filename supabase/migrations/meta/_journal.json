@@ -64,6 +64,13 @@
       "when": 1772243038884,
       "tag": "0018_red_talkback",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1772327884853,
+      "tag": "0020_raw_ss_activewear_inventory",
+      "breakpoints": true
     }
   ]
 }
