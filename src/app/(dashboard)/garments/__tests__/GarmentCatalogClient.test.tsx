@@ -171,6 +171,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -205,6 +206,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -238,6 +240,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -269,6 +272,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -306,6 +310,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -344,6 +349,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -376,6 +382,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -406,6 +413,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -437,6 +445,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
