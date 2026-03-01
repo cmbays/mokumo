@@ -36,8 +36,7 @@
         {
           "group": "Domain",
           "pages": [
-            "product/domain-glossary",
-            "product/competitive-landscape"
+            "product/domain-glossary"
           ]
         },
         {
@@ -46,6 +45,17 @@
             "product/roadmap",
             "roadmap/phase-2",
             "roadmap/projects"
+          ]
+        },
+        {
+          "group": "Research",
+          "pages": [
+            "research/competitive-analysis",
+            "research/supplier-catalog",
+            "research/quoting-pricing",
+            "research/production-workflow",
+            "research/customer-portal",
+            "research/infrastructure-decisions"
           ]
         }
       ]
@@ -77,7 +87,6 @@
         {
           "group": "Guides",
           "pages": [
-            "engineering/guides/supplier-integration",
             "engineering/guides/app-flow-standard",
             "engineering/guides/ss-api-reference"
           ]

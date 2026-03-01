@@ -339,7 +339,7 @@ Deeper S&S integration (order placement, tracking, invoices), SanMar via PromoSt
 - **PromoStandards without annual fee**: Direct SOAP integration requires a SOAP client library + XML mapping, but avoids the $100/year PSRESTful proxy and gives more control. Worth the implementation effort for long-term multi-supplier strategy.
 - **This may become its own vertical** once the pilot loop (P6→P9→P10) proves the core architecture.
 
-> See [Supplier Integration](/engineering/guides/supplier-integration) for the full technical analysis.
+> See [Supplier & Catalog Research](/research/supplier-catalog) for the full technical analysis.
 
 ---
 
