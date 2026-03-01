@@ -1,8 +1,7 @@
 import 'server-only'
 import { sql, lt, desc } from 'drizzle-orm'
-import { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
 import type { SSRawInventoryItem } from '@lib/suppliers/adapters/ss-activewear'
-import { getSupplierAdapter } from '@lib/suppliers/registry'
+import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'inventory-sync' })
@@ -83,13 +82,7 @@ export async function syncInventoryFromSupplier(): Promise<{
   const { catalogInventory, catalogStyles, catalogColors, catalogSizes } =
     await import('@db/schema/catalog-normalized')
 
-  const adapter = getSupplierAdapter()
-  if (!(adapter instanceof SSActivewearAdapter)) {
-    syncLogger.warn(
-      'Inventory sync requires SSActivewearAdapter; current adapter is not compatible'
-    )
-    return { synced: 0, rawInserted: 0, errors: 0 }
-  }
+  const adapter = getSsActivewearAdapter()
 
   // ─── Step 1: Build SKU map ─────────────────────────────────────────────────
   syncLogger.info('Building SKU map from raw products + catalog tables')
