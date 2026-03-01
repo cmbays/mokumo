@@ -1,18 +1,10 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
 import { getSsActivewearAdapter } from '@lib/suppliers/registry'
+import { resolveImageUrl } from '@infra/services/products-sync.utils'
 import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'brands-sync' })
-
-const SS_IMAGE_BASE = 'https://www.ssactivewear.com'
-
-/** Resolve a S&S relative image path to an absolute URL. */
-function resolveImageUrl(path: string): string | null {
-  if (!path) return null
-  if (path.startsWith('http')) return path
-  return `${SS_IMAGE_BASE}${path.startsWith('/') ? '' : '/'}${path}`
-}
 
 /**
  * Sync brand metadata from S&S /v2/brands/ into catalog_brands.
@@ -20,10 +12,11 @@ function resolveImageUrl(path: string): string | null {
  * Upserts on canonicalName (existing unique constraint). Writes enrichment
  * fields (brandImageUrl, description) that are null until the first sync run.
  * The brands endpoint returns ~100 rows — no pagination needed.
+ * Brands with an empty brandName are skipped (data quality guard).
  *
  * Returns:
  *   brandsUpserted — number of rows written (insert + update)
- *   errors         — 0 on success, 1 if the adapter or DB call throws
+ *   errors         — always 0 on success; throws on adapter/DB failure
  */
 export async function syncBrandsFromSupplier(): Promise<{
   brandsUpserted: number
@@ -44,12 +37,19 @@ export async function syncBrandsFromSupplier(): Promise<{
       return { brandsUpserted: 0, errors: 0 }
     }
 
-    const brandValues = brands.map((b) => ({
-      canonicalName: b.brandName,
-      brandImageUrl: resolveImageUrl(b.brandImage ?? '') ?? null,
-      description: b.description?.trim() || null,
-      updatedAt: new Date(),
-    }))
+    const brandValues = brands
+      .filter((b) => b.brandName.trim().length > 0)
+      .map((b) => ({
+        canonicalName: b.brandName,
+        brandImageUrl: resolveImageUrl(b.brandImage ?? '') ?? null,
+        description: b.description?.trim() || null,
+        updatedAt: new Date(),
+      }))
+
+    if (brandValues.length === 0) {
+      syncLogger.warn('All brands filtered out due to empty brandName')
+      return { brandsUpserted: 0, errors: 0 }
+    }
 
     await db
       .insert(catalogBrands)
@@ -63,8 +63,8 @@ export async function syncBrandsFromSupplier(): Promise<{
         },
       })
 
-    syncLogger.info('Brands sync completed', { brandsUpserted: brands.length })
-    return { brandsUpserted: brands.length, errors: 0 }
+    syncLogger.info('Brands sync completed', { brandsUpserted: brandValues.length })
+    return { brandsUpserted: brandValues.length, errors: 0 }
   } catch (error) {
     syncLogger.error('Brands sync failed', { error })
     throw error

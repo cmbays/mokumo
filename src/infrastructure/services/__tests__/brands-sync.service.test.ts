@@ -38,6 +38,16 @@ vi.mock('@db/schema/catalog-normalized', () => ({
   catalogBrands: { canonicalName: 'canonical_name_col' },
 }))
 
+// resolveImageUrl is imported from products-sync.utils — mock it to test
+// brands-sync.service in isolation without the URL-building logic.
+vi.mock('@infra/services/products-sync.utils', () => ({
+  resolveImageUrl: (path: string) => {
+    if (!path) return null
+    if (path.startsWith('http')) return path
+    return `https://www.ssactivewear.com${path.startsWith('/') ? '' : '/'}${path}`
+  },
+}))
+
 const mockGetRawBrands = vi.fn()
 
 vi.mock('@lib/suppliers/registry', () => ({
@@ -46,7 +56,6 @@ vi.mock('@lib/suppliers/registry', () => ({
   }),
 }))
 
-// Import after mocks
 import { syncBrandsFromSupplier } from '../brands-sync.service'
 
 describe('syncBrandsFromSupplier', () => {
@@ -64,20 +73,25 @@ describe('syncBrandsFromSupplier', () => {
     await syncBrandsFromSupplier()
 
     expect(mockValues).toHaveBeenCalledOnce()
-    const insertedValues = mockValues.mock.calls[0][0] as Array<{
-      canonicalName: string
-      brandImageUrl: string | null
-      description: string | null
-    }>
-    expect(insertedValues).toHaveLength(2)
+    const [insertedValues] = mockValues.mock.calls[0] as [Array<Record<string, unknown>>]
 
     const gildan = insertedValues.find((v) => v.canonicalName === 'Gildan')
-    expect(gildan?.brandImageUrl).toBe('https://www.ssactivewear.com/images/gildan.jpg')
-    expect(gildan?.description).toBe('Value brand')
+    expect(gildan).toEqual(
+      expect.objectContaining({
+        canonicalName: 'Gildan',
+        brandImageUrl: 'https://www.ssactivewear.com/images/gildan.jpg',
+        description: 'Value brand',
+      })
+    )
 
     const nextLevel = insertedValues.find((v) => v.canonicalName === 'Next Level')
-    expect(nextLevel?.brandImageUrl).toBeNull()
-    expect(nextLevel?.description).toBeNull()
+    expect(nextLevel).toEqual(
+      expect.objectContaining({
+        canonicalName: 'Next Level',
+        brandImageUrl: null,
+        description: null,
+      })
+    )
   })
 
   it('returns correct brandsUpserted count', async () => {
@@ -110,7 +124,7 @@ describe('syncBrandsFromSupplier', () => {
 
     await syncBrandsFromSupplier()
 
-    const insertedValues = mockValues.mock.calls[0][0] as Array<{ brandImageUrl: string | null }>
+    const [insertedValues] = mockValues.mock.calls[0] as [Array<Record<string, unknown>>]
     expect(insertedValues[0].brandImageUrl).toBe('https://cdn.example.com/gildan.jpg')
   })
 
@@ -121,7 +135,39 @@ describe('syncBrandsFromSupplier', () => {
 
     await syncBrandsFromSupplier()
 
-    const insertedValues = mockValues.mock.calls[0][0] as Array<{ description: string | null }>
+    const [insertedValues] = mockValues.mock.calls[0] as [Array<Record<string, unknown>>]
     expect(insertedValues[0].description).toBeNull()
+  })
+
+  it('skips brands with empty brandName', async () => {
+    mockGetRawBrands.mockResolvedValue([
+      { brandName: '', brandImage: '', description: '' },
+      { brandName: 'Gildan', brandImage: '', description: '' },
+    ])
+
+    const result = await syncBrandsFromSupplier()
+
+    expect(result.brandsUpserted).toBe(1)
+    const [insertedValues] = mockValues.mock.calls[0] as [Array<Record<string, unknown>>]
+    expect(insertedValues).toHaveLength(1)
+    expect(insertedValues[0].canonicalName).toBe('Gildan')
+  })
+
+  it('skips brands with whitespace-only brandName', async () => {
+    mockGetRawBrands.mockResolvedValue([
+      { brandName: '   ', brandImage: '', description: '' },
+    ])
+
+    const result = await syncBrandsFromSupplier()
+
+    expect(result.brandsUpserted).toBe(0)
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('propagates errors thrown by the adapter', async () => {
+    mockGetRawBrands.mockRejectedValue(new Error('S&S API unreachable'))
+
+    await expect(syncBrandsFromSupplier()).rejects.toThrow('S&S API unreachable')
+    expect(mockInsert).not.toHaveBeenCalled()
   })
 })
