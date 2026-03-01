@@ -42,8 +42,6 @@ type GarmentDetailDrawerProps = {
   linkedJobs: Array<{ id: string; jobNumber: string; customerName: string }>
   onToggleEnabled: (garmentId: string) => void
   onToggleFavorite: (garmentId: string) => void
-  /** Stub for V4 brand drawer wiring — opens brand detail drawer */
-  onBrandClick?: (brandName: string) => void
   /** Phase 1: always 'global'. V4 adds 'brand'/'customer' for context-aware writes */
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
   /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
@@ -62,7 +60,6 @@ export function GarmentDetailDrawer({
   linkedJobs,
   onToggleEnabled,
   onToggleFavorite,
-  onBrandClick,
   favoriteContext = { context: 'global' },
   normalizedColors,
   isLoadingColors = false,
@@ -182,18 +179,7 @@ export function GarmentDetailDrawer({
       <SheetContent side="right" className="w-full md:max-w-md p-0 flex flex-col">
         <SheetHeader className="border-b border-border px-4 py-3">
           <SheetTitle className="text-base">
-            {onBrandClick ? (
-              <button
-                type="button"
-                className="text-action hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                onClick={() => onBrandClick(garment.brand)}
-              >
-                {garment.brand}
-              </button>
-            ) : (
-              <span>{garment.brand}</span>
-            )}{' '}
-            {garment.sku}
+            <span>{garment.brand}</span> {garment.sku}
           </SheetTitle>
           <SheetDescription className="sr-only">Detail view for {garment.name}</SheetDescription>
         </SheetHeader>
