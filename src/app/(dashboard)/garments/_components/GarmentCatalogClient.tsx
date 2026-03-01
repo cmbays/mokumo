@@ -187,8 +187,13 @@ export function GarmentCatalogClient({
     () => true // server snapshot
   )
 
-  // Selected garment for detail drawer
+  // Selected garment for detail drawer.
+  // drawerOpen is decoupled from selectedGarmentId so the Sheet's 300ms exit animation
+  // can play before React unmounts the component. When the user closes the drawer:
+  //   1. drawerOpen → false  (Sheet begins slide-out animation)
+  //   2. 300ms later → selectedGarmentId → null  (component unmounts, state resets)
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
   // Tier 2 lazy state — colors + images + sizes loaded on drawer open, cached per style
@@ -206,6 +211,7 @@ export function GarmentCatalogClient({
       if (!garment) return
 
       setSelectedGarmentId(garmentId)
+      setDrawerOpen(true)
 
       // Serve from client-side cache on repeat opens (same session)
       const cached = styleDetailsCacheRef.current.get(garment.sku)
@@ -555,13 +561,18 @@ export function GarmentCatalogClient({
         </div>
       )}
 
-      {/* Detail Drawer — conditional rendering for state reset */}
+      {/* Detail Drawer — conditional rendering for state reset.
+          drawerOpen controls the Sheet open prop so Radix can play its exit animation (300ms).
+          setSelectedGarmentId(null) fires after the animation completes to unmount + reset. */}
       {selectedGarment && (
         <GarmentDetailDrawer
           garment={selectedGarment}
-          open={true}
+          open={drawerOpen}
           onOpenChange={(open) => {
-            if (!open) setSelectedGarmentId(null)
+            if (!open) {
+              setDrawerOpen(false)
+              setTimeout(() => setSelectedGarmentId(null), 300)
+            }
           }}
           showPrice={showPrice}
           linkedJobs={linkedJobs}

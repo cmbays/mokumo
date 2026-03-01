@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { Search, LayoutGrid, List, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
@@ -87,6 +87,17 @@ export function GarmentCatalogToolbar({
   const brand = searchParams.get('brand') ?? ''
   const inStock = searchParams.get('inStock') === 'true'
 
+  // Local input state — controlled by local value so keystrokes never wait for URL round-trip.
+  // useTransition wraps the router.replace so it's non-blocking (low-priority update).
+  const [inputValue, setInputValue] = useState(query)
+  const [, startTransition] = useTransition()
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Sync local input when the URL query changes externally (e.g. "Clear all" resets params).
+  useEffect(() => {
+    setInputValue(query)
+  }, [query])
+
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -111,6 +122,21 @@ export function GarmentCatalogToolbar({
       router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     },
     [searchParams, router, pathname]
+  )
+
+  // Debounced search handler — local state updates immediately; URL update fires 300ms after typing stops.
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+      setInputValue(value)
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+      searchDebounceRef.current = setTimeout(() => {
+        startTransition(() => {
+          updateParam('q', value || null)
+        })
+      }, 300)
+    },
+    [updateParam]
   )
 
   // clearAll: reset URL params (search/brand) AND reset category local state
@@ -188,15 +214,18 @@ export function GarmentCatalogToolbar({
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by name, brand, or SKU..."
-            value={query}
-            onChange={(e) => updateParam('q', e.target.value || null)}
+            value={inputValue}
+            onChange={handleSearchChange}
             className="h-9 pl-8"
             aria-label="Search garments"
           />
-          {query && (
+          {inputValue && (
             <button
               type="button"
-              onClick={() => updateParam('q', null)}
+              onClick={() => {
+                setInputValue('')
+                updateParam('q', null)
+              }}
               className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Clear search"
             >
