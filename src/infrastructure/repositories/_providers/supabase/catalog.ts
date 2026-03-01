@@ -6,12 +6,13 @@ import type {
   NormalizedGarmentCatalog,
   CatalogStyleMetadata,
   CatalogColor,
+  CatalogSize,
 } from '@domain/entities/catalog-style'
 import { catalogImageSchema, catalogSizeSchema } from '@domain/entities/catalog-style'
 import { garmentCategoryEnum } from '@domain/entities/garment'
 import { logger } from '@shared/lib/logger'
 import { verifySession } from '@infra/auth/session'
-import { catalogStylePreferences } from '@db/schema/catalog-normalized'
+import { catalogStylePreferences, catalogSizes } from '@db/schema/catalog-normalized'
 
 const repoLogger = logger.child({ domain: 'supabase-catalog' })
 
@@ -449,8 +450,10 @@ export async function getCatalogColorSupplement(): Promise<CatalogColorSupplemen
  */
 const styleIdSchema = z.string().uuid()
 
-export async function getCatalogStyleDetail(styleId: string): Promise<CatalogColor[]> {
-  if (!styleIdSchema.safeParse(styleId).success) return []
+export async function getCatalogStyleDetail(
+  styleId: string
+): Promise<{ colors: CatalogColor[]; sizes: CatalogSize[] }> {
+  if (!styleIdSchema.safeParse(styleId).success) return { colors: [], sizes: [] }
   const { db } = await import('@shared/lib/supabase/db')
 
   let rows: unknown[]
@@ -482,7 +485,7 @@ export async function getCatalogStyleDetail(styleId: string): Promise<CatalogCol
     throw err
   }
 
-  const parsed: CatalogColor[] = []
+  const colors: CatalogColor[] = []
   for (const row of rows) {
     const r = row as {
       id: string
@@ -501,7 +504,7 @@ export async function getCatalogStyleDetail(styleId: string): Promise<CatalogCol
         error: imagesResult.error.message,
       })
     }
-    parsed.push({
+    colors.push({
       id: r.id,
       styleId,
       name: r.name,
@@ -512,7 +515,27 @@ export async function getCatalogStyleDetail(styleId: string): Promise<CatalogCol
       images: imagesResult.success ? imagesResult.data : [],
     })
   }
-  return parsed
+
+  const sizeRows = await db
+    .select({
+      id: catalogSizes.id,
+      name: catalogSizes.name,
+      sortOrder: catalogSizes.sortOrder,
+      priceAdjustment: catalogSizes.priceAdjustment,
+    })
+    .from(catalogSizes)
+    .where(eq(catalogSizes.styleId, styleId))
+    .orderBy(catalogSizes.sortOrder)
+
+  const sizesResult = catalogSizeSchema.array().safeParse(sizeRows)
+  if (!sizesResult.success) {
+    repoLogger.warn('getCatalogStyleDetail: catalogSizeSchema parse failed', {
+      styleId,
+      error: sizesResult.error.message,
+    })
+  }
+
+  return { colors, sizes: sizesResult.success ? sizesResult.data : [] }
 }
 
 /**

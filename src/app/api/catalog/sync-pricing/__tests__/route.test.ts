@@ -48,7 +48,7 @@ describe('POST /api/catalog/sync-pricing', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(validateAdminSecret).mockReturnValue({ valid: true })
-    vi.mocked(syncRawPricingFromSupplier).mockResolvedValue({ synced: 10, errors: 0 })
+    vi.mocked(syncRawPricingFromSupplier).mockResolvedValue({ synced: 10, errors: 0, total: 10 })
   })
 
   describe('rate limiting', () => {
@@ -106,13 +106,13 @@ describe('POST /api/catalog/sync-pricing', () => {
     })
 
     it('returns 200 with sync result on success', async () => {
-      vi.mocked(syncRawPricingFromSupplier).mockResolvedValue({ synced: 50, errors: 2 })
+      vi.mocked(syncRawPricingFromSupplier).mockResolvedValue({ synced: 48, errors: 2, total: 50 })
 
       const response = await POST(makeRequest())
 
       expect(response.status).toBe(200)
       const body = await response.json()
-      expect(body.synced).toBe(50)
+      expect(body.synced).toBe(48)
       expect(body.errors).toBe(2)
       expect(body.timestamp).toBeDefined()
     })
@@ -126,7 +126,10 @@ describe('POST /api/catalog/sync-pricing', () => {
       )
 
       expect(response.status).toBe(200)
-      expect(syncRawPricingFromSupplier).toHaveBeenCalledWith(['STYLE-001', 'STYLE-002'])
+      expect(syncRawPricingFromSupplier).toHaveBeenCalledWith(['STYLE-001', 'STYLE-002'], {
+        offset: undefined,
+        limit: undefined,
+      })
     })
 
     it('returns 400 for a malformed request body', async () => {

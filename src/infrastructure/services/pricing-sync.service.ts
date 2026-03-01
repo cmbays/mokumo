@@ -1,14 +1,17 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'pricing-sync' })
 
-const BATCH_SIZE = 10
+/** Number of S&S styleIds to pack into a single /v2/products/ API call. */
+const BATCH_SIZE = 50
 
 /**
  * Sync raw per-SKU pricing data from S&S Activewear into the raw analytics table.
+ * Also upserts catalog_sizes as a side-effect: the /v2/products/ endpoint returns
+ * sizeIndex (sort order), which is not available from the catalog search endpoint.
  *
  * Unlike the catalog sync (which normalizes into the public schema), this writes
  * verbatim S&S product data to `raw.ss_activewear_products` — append-only, with
@@ -20,32 +23,57 @@ const BATCH_SIZE = 10
  *   styles from `catalog_styles` where source = 'ss-activewear'.
  */
 export async function syncRawPricingFromSupplier(
-  styleIds?: string[]
-): Promise<{ synced: number; errors: number }> {
+  styleIds?: string[],
+  options?: { limit?: number; offset?: number }
+): Promise<{ synced: number; errors: number; total: number }> {
   const { db } = await import('@shared/lib/supabase/db')
   const { ssActivewearProducts } = await import('@db/schema/raw')
-  const { catalogStyles } = await import('@db/schema/catalog-normalized')
+  const { catalogStyles, catalogSizes } = await import('@db/schema/catalog-normalized')
 
   const adapter = getSsActivewearAdapter()
 
-  // Resolve style IDs
+  // Resolve style IDs and build externalId → catalog_styles.id map for the sizes upsert.
+  // A single query here avoids per-style DB round-trips inside the loop.
   let idsToSync: string[]
+  let catalogStyleIdByExternalId: Map<string, string>
+
   if (styleIds && styleIds.length > 0) {
     idsToSync = styleIds
+    const rows = await db
+      .select({ externalId: catalogStyles.externalId, id: catalogStyles.id })
+      .from(catalogStyles)
+      .where(
+        and(eq(catalogStyles.source, 'ss-activewear'), inArray(catalogStyles.externalId, styleIds))
+      )
+    catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
   } else {
     const rows = await db
-      .select({ externalId: catalogStyles.externalId })
+      .select({ externalId: catalogStyles.externalId, id: catalogStyles.id })
       .from(catalogStyles)
       .where(eq(catalogStyles.source, 'ss-activewear'))
     idsToSync = rows.map((r) => r.externalId)
+    catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
   }
 
   if (idsToSync.length === 0) {
     syncLogger.info('No styles to sync pricing for')
-    return { synced: 0, errors: 0 }
+    return { synced: 0, errors: 0, total: 0 }
   }
 
-  syncLogger.info('Starting raw pricing sync', { styleCount: idsToSync.length })
+  // Apply optional pagination slice — allows cron to page through catalog in chunks
+  // without enumerating IDs upfront.
+  const total = idsToSync.length
+  const { offset = 0, limit } = options ?? {}
+  if (offset > 0 || limit !== undefined) {
+    idsToSync = idsToSync.slice(offset, limit !== undefined ? offset + limit : undefined)
+  }
+
+  syncLogger.info('Starting raw pricing sync', {
+    styleCount: idsToSync.length,
+    total,
+    offset,
+    limit,
+  })
 
   let synced = 0
   let errors = 0
@@ -53,15 +81,27 @@ export async function syncRawPricingFromSupplier(
   for (let i = 0; i < idsToSync.length; i += BATCH_SIZE) {
     const batch = idsToSync.slice(i, i + BATCH_SIZE)
 
-    for (const styleId of batch) {
-      try {
-        const products = await adapter.getRawProducts(styleId)
-        if (products.length === 0) {
+    try {
+      // One API call covers up to BATCH_SIZE styles — the S&S products endpoint
+      // accepts comma-separated styleIds and returns all SKUs for the batch combined.
+      const products = await adapter.getRawProductsBatch(batch)
+
+      // Group the mixed response back into per-style buckets for the sizes upsert.
+      const productsByStyleId = new Map<string, typeof products>()
+      for (const p of products) {
+        const sid = String(p.styleID)
+        if (!productsByStyleId.has(sid)) productsByStyleId.set(sid, [])
+        productsByStyleId.get(sid)!.push(p)
+      }
+
+      for (const styleId of batch) {
+        const styleProducts = productsByStyleId.get(styleId) ?? []
+        if (styleProducts.length === 0) {
           syncLogger.debug('No products found for style', { styleId })
           continue
         }
 
-        const rows = products.map((p) => ({
+        const rows = styleProducts.map((p) => ({
           sku: p.sku,
           styleIdExternal: p.styleID,
           styleName: p.styleName,
@@ -84,19 +124,50 @@ export async function syncRawPricingFromSupplier(
         }))
 
         await db.insert(ssActivewearProducts).values(rows)
-        synced += products.length
+        synced += styleProducts.length
+
+        // Upsert catalog_sizes using sizeIndex from the products API response.
+        // The catalog sync's searchCatalog() returns empty sizes[]; /v2/products/ is
+        // the only source of per-style size metadata (name + sort order).
+        const catalogStyleId = catalogStyleIdByExternalId.get(styleId)
+        if (catalogStyleId) {
+          const sizeMap = new Map<string, number>() // sizeName → sizeIndex
+          for (const p of styleProducts) {
+            if (!sizeMap.has(p.sizeName)) {
+              sizeMap.set(p.sizeName, p.sizeIndex)
+            }
+          }
+
+          const sizeValues = Array.from(sizeMap.entries()).map(([name, sortOrder]) => ({
+            styleId: catalogStyleId,
+            name,
+            sortOrder,
+            priceAdjustment: 0,
+            updatedAt: new Date(),
+          }))
+
+          await db
+            .insert(catalogSizes)
+            .values(sizeValues)
+            .onConflictDoUpdate({
+              target: [catalogSizes.styleId, catalogSizes.name],
+              set: { sortOrder: sql`excluded.sort_order`, updatedAt: new Date() },
+            })
+        }
 
         syncLogger.debug('Synced pricing for style', {
           styleId,
-          productCount: products.length,
-        })
-      } catch (error) {
-        errors++
-        syncLogger.error('Failed to sync pricing for style', {
-          styleId,
-          error: Error.isError(error) ? error.message : String(error),
+          productCount: styleProducts.length,
         })
       }
+    } catch (error) {
+      errors += batch.length
+      syncLogger.error('Failed to sync pricing batch', {
+        batchStart: i,
+        batchSize: batch.length,
+        styleIds: batch,
+        error: Error.isError(error) ? error.message : String(error),
+      })
     }
 
     syncLogger.info('Pricing sync batch progress', {
@@ -107,6 +178,6 @@ export async function syncRawPricingFromSupplier(
     })
   }
 
-  syncLogger.info('Raw pricing sync completed', { synced, errors })
-  return { synced, errors }
+  syncLogger.info('Raw pricing sync completed', { synced, errors, total })
+  return { synced, errors, total }
 }

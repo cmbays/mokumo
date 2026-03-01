@@ -319,6 +319,31 @@ describe('getRawProducts()', () => {
   })
 })
 
+// ─── getRawProductsBatch() ────────────────────────────────────────────────────
+
+describe('getRawProductsBatch()', () => {
+  it('calls ssGet with comma-joined styleId param', async () => {
+    mockSsGet.mockResolvedValueOnce([redMedium])
+    await adapter.getRawProductsBatch(['29', '9182'])
+    expect(mockSsGet).toHaveBeenCalledWith('products', { styleId: '29,9182' }, expect.any(Number), {
+      preserveRawFields: true,
+    })
+  })
+
+  it('returns combined products for multiple styles in one call', async () => {
+    const secondStyle = { ...redMedium, sku: '6000-BLU-M', styleID: '9182' }
+    mockSsGet.mockResolvedValueOnce([redMedium, secondStyle])
+    const products = await adapter.getRawProductsBatch(['29', '9182'])
+    expect(products).toHaveLength(2)
+  })
+
+  it('returns empty array without calling ssGet for empty input', async () => {
+    const products = await adapter.getRawProductsBatch([])
+    expect(mockSsGet).not.toHaveBeenCalled()
+    expect(products).toEqual([])
+  })
+})
+
 // ─── getStylesBatch() ─────────────────────────────────────────────────────────
 
 describe('getStylesBatch()', () => {

@@ -11,6 +11,10 @@ const syncLogger = logger.child({ domain: 'pricing-sync-endpoint' })
 const requestBodySchema = z
   .object({
     styleIds: z.array(z.string().min(1)).optional(),
+    /** Pagination: skip the first N styles from the full catalog list. */
+    offset: z.number().int().nonnegative().optional(),
+    /** Pagination: process at most N styles (after offset). */
+    limit: z.number().int().positive().max(500).optional(),
   })
   .optional()
 
@@ -39,11 +43,13 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
 
     // Parse optional body — return 400 for malformed input, not 500
     let styleIds: string[] | undefined
+    let paginationOpts: { offset?: number; limit?: number } | undefined
     const contentType = request.headers.get('content-type')
     if (contentType?.includes('application/json')) {
       try {
         const body = requestBodySchema.parse(await request.json())
         styleIds = body?.styleIds
+        paginationOpts = { offset: body?.offset, limit: body?.limit }
       } catch (parseErr) {
         if (parseErr instanceof z.ZodError) {
           return Response.json({ error: 'Invalid request body' }, { status: 400 })
@@ -52,7 +58,7 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
       }
     }
 
-    const result = await syncRawPricingFromSupplier(styleIds)
+    const result = await syncRawPricingFromSupplier(styleIds, paginationOpts)
 
     return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
   } catch (error) {

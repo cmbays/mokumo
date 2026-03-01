@@ -25,7 +25,15 @@ vi.mock('@shared/lib/supabase/db', () => ({
   db: {
     insert: (...args: unknown[]) => {
       mockInsert(...args)
-      return { values: mockValues }
+      return {
+        values: (...vArgs: unknown[]) => {
+          mockValues(...vArgs)
+          // Return an object that supports both:
+          //   await db.insert(t).values(rows)                         (raw products)
+          //   await db.insert(t).values(rows).onConflictDoUpdate(...) (catalog_sizes)
+          return { onConflictDoUpdate: vi.fn().mockResolvedValue(undefined) }
+        },
+      }
     },
     select: (...args: unknown[]) => {
       mockSelect(...args)
@@ -49,7 +57,8 @@ vi.mock('@db/schema/raw', () => ({
 }))
 
 vi.mock('@db/schema/catalog-normalized', () => ({
-  catalogStyles: { externalId: 'external_id', source: 'source' },
+  catalogStyles: { externalId: 'external_id', source: 'source', id: 'id' },
+  catalogSizes: { styleId: 'style_id', name: 'name' },
 }))
 
 // Mock the adapter module — the factory must be self-contained (vi.mock is hoisted)
@@ -63,32 +72,31 @@ import { syncRawPricingFromSupplier } from '../pricing-sync.service'
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
-const mockGetRawProducts = vi.fn()
+const mockGetRawProductsBatch = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockValues.mockResolvedValue(undefined)
 })
 
 function setupSSAdapter() {
   vi.mocked(getSsActivewearAdapter).mockReturnValue({
-    getRawProducts: mockGetRawProducts,
+    getRawProductsBatch: mockGetRawProductsBatch,
   } as unknown as SSActivewearAdapter)
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('syncRawPricingFromSupplier', () => {
-  it('returns { synced: 0, errors: 0 } when no styles to sync', async () => {
+  it('returns { synced: 0, errors: 0, total: 0 } when no styles to sync', async () => {
     setupSSAdapter()
     mockWhere.mockResolvedValueOnce([])
     const result = await syncRawPricingFromSupplier()
-    expect(result).toEqual({ synced: 0, errors: 0 })
+    expect(result).toEqual({ synced: 0, errors: 0, total: 0 })
   })
 
-  it('syncs products for provided styleIds', async () => {
+  it('syncs products for provided styleIds using a single batched API call', async () => {
     setupSSAdapter()
-    mockGetRawProducts.mockResolvedValueOnce([
+    mockGetRawProductsBatch.mockResolvedValueOnce([
       {
         sku: '5000-RED-M',
         styleID: '1234',
@@ -100,6 +108,7 @@ describe('syncRawPricingFromSupplier', () => {
         sizeName: 'M',
         sizeCode: '',
         sizePriceCodeName: 'REG',
+        sizeIndex: 0,
         piecePrice: 2.99,
         dozenPrice: 2.49,
         casePrice: 1.99,
@@ -115,13 +124,47 @@ describe('syncRawPricingFromSupplier', () => {
     const result = await syncRawPricingFromSupplier(['1234'])
     expect(result.synced).toBe(1)
     expect(result.errors).toBe(0)
-    expect(mockGetRawProducts).toHaveBeenCalledWith('1234')
+    // Batch call receives the array, not a single string
+    expect(mockGetRawProductsBatch).toHaveBeenCalledWith(['1234'])
     expect(mockInsert).toHaveBeenCalled()
   })
 
-  it('counts errors but continues on individual style failures', async () => {
+  it('counts batch.length errors when the batch API call fails', async () => {
     setupSSAdapter()
-    mockGetRawProducts.mockRejectedValueOnce(new Error('API timeout')).mockResolvedValueOnce([
+    // First batch of ['1234', '5678'] fails; no second call because both are in one batch
+    mockGetRawProductsBatch.mockRejectedValueOnce(new Error('API timeout'))
+
+    const result = await syncRawPricingFromSupplier(['1234', '5678'])
+    expect(result.synced).toBe(0)
+    expect(result.errors).toBe(2) // entire batch counted as errors
+  })
+
+  it('groups multi-style batch response and syncs each style separately', async () => {
+    setupSSAdapter()
+    // Both styles come back in one response array (mixed)
+    mockGetRawProductsBatch.mockResolvedValueOnce([
+      {
+        sku: '5000-RED-M',
+        styleID: '1234',
+        styleName: 'Tee',
+        brandName: 'Gildan',
+        colorName: 'Red',
+        colorCode: '',
+        colorPriceCodeName: '',
+        sizeName: 'M',
+        sizeCode: '',
+        sizePriceCodeName: '',
+        sizeIndex: 0,
+        piecePrice: 2.99,
+        dozenPrice: null,
+        casePrice: null,
+        caseQty: null,
+        customerPrice: null,
+        mapPrice: null,
+        salePrice: null,
+        saleExpiration: null,
+        gtin: null,
+      },
       {
         sku: '6000-BLU-L',
         styleID: '5678',
@@ -133,6 +176,7 @@ describe('syncRawPricingFromSupplier', () => {
         sizeName: 'L',
         sizeCode: '',
         sizePriceCodeName: '',
+        sizeIndex: 0,
         piecePrice: 5.99,
         dozenPrice: null,
         casePrice: null,
@@ -146,13 +190,16 @@ describe('syncRawPricingFromSupplier', () => {
     ])
 
     const result = await syncRawPricingFromSupplier(['1234', '5678'])
-    expect(result.synced).toBe(1)
-    expect(result.errors).toBe(1)
+    expect(result.synced).toBe(2)
+    expect(result.errors).toBe(0)
+    // Only ONE batch API call for both styles
+    expect(mockGetRawProductsBatch).toHaveBeenCalledTimes(1)
+    expect(mockGetRawProductsBatch).toHaveBeenCalledWith(['1234', '5678'])
   })
 
-  it('skips styles with no products', async () => {
+  it('skips styles with no products in the batch response', async () => {
     setupSSAdapter()
-    mockGetRawProducts.mockResolvedValueOnce([])
+    mockGetRawProductsBatch.mockResolvedValueOnce([])
 
     const result = await syncRawPricingFromSupplier(['1234'])
     expect(result.synced).toBe(0)
