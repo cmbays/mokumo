@@ -74,7 +74,7 @@ _Global search, entity pickers, catalog browsing._
 
 ## Related Documents
 
-- [App Flow](/architecture/app-flow) — screen inventory and routes
-- [App IA](/architecture/app-ia) — information architecture philosophy
+- [App Flow](/engineering/architecture/app-flow) — screen inventory and routes
+- [App IA](/engineering/architecture/app-ia) — information architecture philosophy
 - [User Journeys](/product/user-journeys) — what users accomplish
 - [Design Vision](/product/design-vision) — architectural decisions

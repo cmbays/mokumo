@@ -88,5 +88,5 @@ _New ADRs added as significant decisions are made during Phase 2 build._
 ## Related Documents
 
 - [Product Design](/product/product-design) — scope and constraints
-- [Tech Stack](/architecture/tech-stack) — tool choices and rationale
-- [Architecture](/architecture/architecture) — layer structure
+- [Tech Stack](/engineering/architecture/tech-stack) — tool choices and rationale
+- [Architecture](/engineering/architecture/system-architecture) — layer structure

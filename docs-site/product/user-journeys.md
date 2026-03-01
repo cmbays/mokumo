@@ -150,6 +150,6 @@ Journeys are organized by **capability domain** — the high-level goal the user
 ## Related Documents
 
 - [Product Design](/product/product-design) — scope and constraints
-- [App Flow](/architecture/app-flow) — screen inventory and navigation
+- [App Flow](/engineering/architecture/app-flow) — screen inventory and navigation
 - [Interaction Design](/product/interaction-design) — how interactions wire together
 - [Phase 2 Roadmap](/roadmap/phase-2) — when journeys get built

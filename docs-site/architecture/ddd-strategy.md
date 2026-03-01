@@ -1,1 +1,0 @@
-../../docs/DDD_STRATEGY.md

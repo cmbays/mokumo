@@ -125,6 +125,50 @@ Each project follows a consistent milestone structure:
 
 ---
 
+## Delivery Sequencing: Pilot Then Widen
+
+The "Pilot Then Widen" strategy builds one complete vertical (Screen Print Quoting → Jobs → Invoicing) end-to-end before adding DTF and DTF Press variations. This establishes:
+
+- **Reference implementation** — patterns for entity lifecycle, state transitions, pricing, PDF/email
+- **Shared infrastructure** — activity events, file upload, email, PDF gen — built once, used by all service types
+- **Validated architecture** — proves the service-type polymorphism (ADR-006) works before committing to 3× the code
+
+### Layer Sequence
+
+```
+Layer 0 (Done)     │ Database, Auth, ORM, Cache, Deployment, Analytics, Supplier Adapter
+Layer 1 (Active)   │ Catalog Sync, Inventory, Pricing Data, Customer Management
+Layer 2 (Next)     │ Activity Events, File Upload, Cron (QStash) ← horizontal enablers
+Layer 3 (Pilot)    │ Pricing Matrix → SP Quoting → Jobs → Invoicing (one full loop)
+Layer 4 (Widen)    │ DTF Quoting, DTF Press Quoting, Artwork Library
+Layer 5 (Polish)   │ Dashboard, Screen Room, Settings, Customer Portal
+```
+
+**Key insight**: Layer 2 horizontal enablers are pulled by Layer 3 needs — not built speculatively. Activity events must exist before Jobs. File upload must exist before Artwork Library. Email/PDF must exist before quote sending.
+
+### 70/30 Allocation Rule
+
+- **70%** vertical feature delivery (the pilot loop and widening)
+- **20%** horizontal infrastructure (pulled by the next vertical)
+- **10%** unallocated (bugs, tech debt, unexpected discoveries)
+
+---
+
+## Infrastructure Blind Spots
+
+Identified via codebase audit (2026-03-01). See [Infrastructure](/engineering/architecture/infrastructure) for detailed analysis and recommendations.
+
+| Gap | Severity | Needed By | Recommendation |
+|-----|----------|-----------|---------------|
+| Activity/Event Tracking | Critical | P3 (M3), P9, P11 | `activity_events` table, insert from server actions |
+| File Upload Pipeline | Critical | P5, P14 | Supabase Storage (same SDK, RLS on buckets) |
+| Email Sending | Critical | P6 (M4), P10, P14 | Resend + React Email templates |
+| PDF Generation | Critical | P6 (M4), P10 | `@react-pdf/renderer` (no headless browser) |
+| State Transition Guards | High | P6, P9, P10 | Domain-layer state machines per entity |
+| Cron / Background Jobs | Medium | P2 (M4), P10, P11 | Upstash QStash (HTTP-based, built-in retries) |
+
+---
+
 ## Current Bets
 
 _What we're actively working on right now._
@@ -136,14 +180,16 @@ _What we're actively working on right now._
 
 ## Open Questions
 
-- **Cron alternative**: Vercel free tier limits cron to daily. Inventory needs 15-minute refresh. Options: Upstash QStash, external cron service, Supabase pg_cron.
-- **File storage for artwork**: Supabase Storage vs. Vercel Blob vs. Cloudflare R2. Need to evaluate cost, CDN, and image transformation.
-- **Tax calculation**: Build simple rate lookup, or integrate a tax API (TaxJar, Avalara)? Depends on multi-state selling.
-- **Customer portal auth**: Same Supabase Auth instance with different roles, or separate project?
+- **Cron alternative**: Vercel free tier limits cron to daily. Inventory needs 15-minute refresh. Leaning QStash (see [Infrastructure](/engineering/architecture/infrastructure)).
+- **File storage for artwork**: Supabase Storage vs. Vercel Blob vs. Cloudflare R2. Leaning Supabase Storage (see [Infrastructure](/engineering/architecture/infrastructure)).
+- **Tax calculation**: Build simple rate lookup, or integrate a tax API (TaxJar, Avalara)? Depends on multi-state selling. Phase 2 recommendation: simple lookup table.
+- **Customer portal auth**: Same Supabase Auth instance with different roles, or separate project? Deferred to P14.
+- **Payment processing**: Stripe vs. Square vs. manual recording? Phase 2 recommendation: manual recording only (track payments against invoices, no payment gateway integration yet).
 
 ## Related Documents
 
 - [Product Design](/product/product-design) — scope and constraints
 - [Projects](/roadmap/projects) — detailed per-project breakdowns
 - [User Journeys](/product/user-journeys) — what we're building toward
-- [Changelog](/roadmap/changelog) — what's been shipped
+- [Infrastructure](/engineering/architecture/infrastructure) — infrastructure gaps and recommendations
+- [Changelog](/process/changelog/changelog) — what's been shipped

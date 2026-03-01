@@ -245,8 +245,57 @@ Customer-facing portal for artwork approval, job status viewing, and invoice pay
 
 ---
 
+## Horizontal Enablers (Layer 2)
+
+These are cross-cutting infrastructure capabilities that must be built before their dependent verticals. They are not standalone projects — they're pulled into existence by vertical needs.
+
+### H1: Activity Event System
+
+**Needed by**: P3 (M3: Activity & Notes), P9 (Jobs), P11 (Dashboard)
+
+Lightweight `activity_events` table with polymorphic entity references. Server actions insert events on entity mutations. Simple time-ordered queries for timeline views.
+
+**Build when**: Before P3 M3 (Activity & Notes tab).
+
+### H2: File Upload Pipeline
+
+**Needed by**: P5 (Artwork Library), P14 (Customer Portal)
+
+Supabase Storage integration with RLS on buckets. Upload API route, CDN delivery, basic image transformations (thumbnail, preview).
+
+**Build when**: Before P5 M1 (Storage & Schema).
+
+### H3: Email Infrastructure
+
+**Needed by**: P6 (M4: quote sending), P10 (invoice reminders), P14 (notifications)
+
+Resend integration with React Email templates. Transactional emails (quote PDF attached, invoice link, status notifications).
+
+**Build when**: Before P6 M4 (Polish — PDF generation + email sending).
+
+### H4: PDF Generation
+
+**Needed by**: P6 (M4: quote PDFs), P10 (invoice PDFs)
+
+`@react-pdf/renderer` for server-side PDF generation. Quote and invoice templates using React components. No headless browser needed.
+
+**Build when**: Before P6 M4 (Polish).
+
+### H5: Background Job Runner
+
+**Needed by**: P2 (sub-daily inventory sync), P10 (invoice reminders), P11 (metric aggregation)
+
+Upstash QStash for HTTP-based scheduled jobs with retries. Replaces Vercel cron's daily-only limitation.
+
+**Build when**: When P2 needs sub-daily inventory refresh (M3/M4).
+
+> See [Infrastructure](/engineering/architecture/infrastructure) for detailed analysis, option evaluations, and cost estimates.
+
+---
+
 ## Related Documents
 
 - [Phase 2 Roadmap](/roadmap/phase-2) — dependency graph and strategy
 - [Product Design](/product/product-design) — scope and constraints
 - [User Journeys](/product/user-journeys) — what we're building toward
+- [Infrastructure](/engineering/architecture/infrastructure) — infrastructure gap analysis

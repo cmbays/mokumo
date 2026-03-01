@@ -1,1 +1,0 @@
-../../docs/TECH_STACK.md
