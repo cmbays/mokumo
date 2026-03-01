@@ -19,29 +19,29 @@ latest as (
 
 expanded as (
     select
-        sku,
-        sku_id_master,
-        style_id_external,
-        _loaded_at,
-        _source,
-        warehouse
-    from latest,
-    lateral jsonb_array_elements(warehouses) as warehouse
+        latest.sku,
+        latest.sku_id_master,
+        latest.style_id_external,
+        latest._loaded_at,
+        latest._source,
+        wh.value as wh
+    from latest
+    cross join lateral jsonb_array_elements(latest.warehouses) as wh
 ),
 
 renamed as (
     select
         sku,
         sku_id_master,
-        style_id_external                                   as style_id,
-        (warehouse ->> 'warehouseAbbr')                     as warehouse_abbr,
-        cast((warehouse ->> 'skuID') as bigint)             as warehouse_sku_id,
-        cast((warehouse ->> 'qty') as integer)              as qty,
-        sum(cast((warehouse ->> 'qty') as integer)) over (
+        style_id_external as style_id,
+        _loaded_at as loaded_at,
+        _source as source,
+        cast((wh ->> 'skuID') as bigint) as warehouse_sku_id,
+        cast((wh ->> 'qty') as integer) as qty,
+        (wh ->> 'warehouseAbbr') as warehouse_abbr,
+        sum(cast((wh ->> 'qty') as integer)) over (
             partition by sku
-        )                                                   as total_qty,
-        _loaded_at                                          as loaded_at,
-        _source                                             as source
+        ) as total_qty
     from expanded
 )
 
