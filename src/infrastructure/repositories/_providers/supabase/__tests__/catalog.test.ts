@@ -142,7 +142,8 @@ const SHOP_B = '00000000-0000-4000-8000-cccccccccccc'
 
 // Drizzle query builder mock — returns controllable rows
 const mockLimit = vi.fn()
-const mockWhere = vi.fn(() => ({ limit: mockLimit }))
+const mockOrderBy = vi.fn()
+const mockWhere = vi.fn(() => ({ limit: mockLimit, orderBy: mockOrderBy }))
 const mockSelect = vi.fn(() => ({ from: vi.fn(() => ({ where: mockWhere })) }))
 const mockExecute = vi.fn()
 const mockDb = { select: mockSelect, execute: mockExecute }
@@ -167,6 +168,13 @@ vi.mock('@db/schema/catalog-normalized', () => ({
     styleId: 'styleId',
     isEnabled: 'isEnabled',
     isFavorite: 'isFavorite',
+  },
+  catalogSizes: {
+    id: 'id',
+    styleId: 'styleId',
+    name: 'name',
+    sortOrder: 'sortOrder',
+    priceAdjustment: 'priceAdjustment',
   },
 }))
 
@@ -319,15 +327,15 @@ describe('getCatalogStyleDetail', () => {
     vi.clearAllMocks()
   })
 
-  it('returns [] for non-UUID styleId (Zod validation)', async () => {
+  it('returns { colors: [], sizes: [] } for non-UUID styleId (Zod validation)', async () => {
     const result = await getCatalogStyleDetail('not-a-uuid')
-    expect(result).toEqual([])
+    expect(result).toEqual({ colors: [], sizes: [] })
     expect(mockExecute).not.toHaveBeenCalled()
   })
 
-  it('returns [] for empty string styleId', async () => {
+  it('returns { colors: [], sizes: [] } for empty string styleId', async () => {
     const result = await getCatalogStyleDetail('')
-    expect(result).toEqual([])
+    expect(result).toEqual({ colors: [], sizes: [] })
     expect(mockExecute).not.toHaveBeenCalled()
   })
 
@@ -343,12 +351,14 @@ describe('getCatalogStyleDetail', () => {
         images: [{ imageType: 'front', url: 'https://example.com/front.jpg' }],
       },
     ])
+    mockOrderBy.mockResolvedValueOnce([])
     const result = await getCatalogStyleDetail(VALID_STYLE_UUID)
-    expect(result).toHaveLength(1)
-    expect(result[0].name).toBe('Black')
-    expect(result[0].hex1).toBe('#000000')
-    expect(result[0].images).toHaveLength(1)
-    expect(result[0].images[0].imageType).toBe('front')
+    expect(result.colors).toHaveLength(1)
+    expect(result.colors[0].name).toBe('Black')
+    expect(result.colors[0].hex1).toBe('#000000')
+    expect(result.colors[0].images).toHaveLength(1)
+    expect(result.colors[0].images[0].imageType).toBe('front')
+    expect(result.sizes).toEqual([])
   })
 
   it('returns item with empty images array when image schema parse fails', async () => {
@@ -363,9 +373,10 @@ describe('getCatalogStyleDetail', () => {
         images: [{ badField: 'wrong-shape' }], // invalid → images: []
       },
     ])
+    mockOrderBy.mockResolvedValueOnce([])
     const result = await getCatalogStyleDetail(VALID_STYLE_UUID)
-    expect(result).toHaveLength(1)
-    expect(result[0].images).toEqual([]) // parse failure degrades to empty
+    expect(result.colors).toHaveLength(1)
+    expect(result.colors[0].images).toEqual([]) // parse failure degrades to empty
   })
 
   it('rethrows db errors', async () => {

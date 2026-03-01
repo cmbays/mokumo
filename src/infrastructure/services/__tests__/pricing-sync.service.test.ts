@@ -25,7 +25,15 @@ vi.mock('@shared/lib/supabase/db', () => ({
   db: {
     insert: (...args: unknown[]) => {
       mockInsert(...args)
-      return { values: mockValues }
+      return {
+        values: (...vArgs: unknown[]) => {
+          mockValues(...vArgs)
+          // Return an object that supports both:
+          //   await db.insert(t).values(rows)                         (raw products)
+          //   await db.insert(t).values(rows).onConflictDoUpdate(...) (catalog_sizes)
+          return { onConflictDoUpdate: vi.fn().mockResolvedValue(undefined) }
+        },
+      }
     },
     select: (...args: unknown[]) => {
       mockSelect(...args)
@@ -49,7 +57,8 @@ vi.mock('@db/schema/raw', () => ({
 }))
 
 vi.mock('@db/schema/catalog-normalized', () => ({
-  catalogStyles: { externalId: 'external_id', source: 'source' },
+  catalogStyles: { externalId: 'external_id', source: 'source', id: 'id' },
+  catalogSizes: { styleId: 'style_id', name: 'name' },
 }))
 
 // Mock the adapter module — the factory must be self-contained (vi.mock is hoisted)
@@ -67,7 +76,6 @@ const mockGetRawProducts = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockValues.mockResolvedValue(undefined)
 })
 
 function setupSSAdapter() {

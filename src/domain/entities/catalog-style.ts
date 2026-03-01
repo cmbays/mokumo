@@ -41,7 +41,9 @@ export const catalogSizeSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   sortOrder: z.number().int().nonnegative(),
-  priceAdjustment: z.number(),
+  // z.coerce.number() handles Drizzle's numeric column returning either a JS number
+  // (when mode: 'number' coercion works) or a PostgreSQL numeric string ("0.00").
+  priceAdjustment: z.coerce.number(),
 })
 
 export type CatalogSize = z.infer<typeof catalogSizeSchema>

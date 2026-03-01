@@ -141,9 +141,12 @@ const styleIdSchema = z.string().min(1).max(100)
 
 export async function getCatalogStyleDetail(
   styleId: string
-): Promise<import('@domain/entities/catalog-style').CatalogColor[]> {
-  if (!styleIdSchema.safeParse(styleId).success) return []
-  if (getActiveProvider() !== 'supabase-catalog') return []
+): Promise<{
+  colors: import('@domain/entities/catalog-style').CatalogColor[]
+  sizes: import('@domain/entities/catalog-style').CatalogSize[]
+}> {
+  if (!styleIdSchema.safeParse(styleId).success) return { colors: [], sizes: [] }
+  if (getActiveProvider() !== 'supabase-catalog') return { colors: [], sizes: [] }
   const mod = await loadSupabaseCatalogModule()
   return mod.getCatalogStyleDetail(styleId)
 }

@@ -19,20 +19,23 @@ import { ImageTypeCarousel } from '@shared/ui/organisms/ImageTypeCarousel'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { FavoritesColorSection } from '@features/garments/components/FavoritesColorSection'
 import { cn } from '@shared/lib/cn'
+import { logger } from '@shared/lib/logger'
 import { money, toNumber, formatCurrency } from '@domain/lib/money'
 import { LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
 
-// Wave 4: 1.5× buffer on domain threshold for the drawer — makes "low" more visible.
-// Shop-configurable in a future wave; named constant here so it's easy to find and extract.
-const DRAWER_LOW_STOCK_BUFFER = 1.5
 import { getColorById } from '@domain/rules/garment.rules'
 import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
 import { getCustomersMutable } from '@infra/repositories/customers'
 import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { CatalogColor } from '@domain/entities/catalog-style'
+import type { CatalogColor, CatalogSize } from '@domain/entities/catalog-style'
 import type { Color } from '@domain/entities/color'
+
+// Wave 4: 1.5× buffer on domain threshold for the drawer — makes "low" more visible.
+// Shop-configurable in a future wave; named constant here so it's easy to find and extract.
+const DRAWER_LOW_STOCK_BUFFER = 1.5
+const drawerLogger = logger.child({ domain: 'garment-drawer' })
 
 type GarmentDetailDrawerProps = {
   garment: GarmentCatalog
@@ -46,6 +49,8 @@ type GarmentDetailDrawerProps = {
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
   /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
   normalizedColors?: CatalogColor[]
+  /** Normalized sizes from catalog_sizes — used for availability badges when garment.availableSizes is empty (normalized styles). */
+  normalizedSizes?: CatalogSize[]
   /** True while Tier 2 style detail is loading — shows pulse skeleton in image + colors sections. */
   isLoadingColors?: boolean
   /** Real front image URL from catalog_images — shown in GarmentImage when no normalized colors available. */
@@ -62,6 +67,7 @@ export function GarmentDetailDrawer({
   onToggleFavorite,
   favoriteContext = { context: 'global' },
   normalizedColors,
+  normalizedSizes,
   isLoadingColors = false,
   frontImageUrl,
 }: GarmentDetailDrawerProps) {
@@ -102,7 +108,8 @@ export function GarmentDetailDrawer({
         const { fetchColorInventoryByName } = await import('../actions')
         const rows = await fetchColorInventoryByName(selectedCatalogColorId!)
         if (!cancelled) setColorInventory(new Map(rows.map((r) => [r.sizeName, r.quantity])))
-      } catch {
+      } catch (err) {
+        drawerLogger.warn('fetchColorInventoryByName failed', { colorId: selectedCatalogColorId, err })
         if (!cancelled) setColorInventory(null)
       }
     }
@@ -159,9 +166,10 @@ export function GarmentDetailDrawer({
       // Also select the toggled color for display (U14)
       setSelectedColorId(colorId)
     } else {
-      console.warn(
-        `[GarmentDetailDrawer] Color ${colorId} not found in catalog for garment ${garment.sku} — stale palette reference`
-      )
+      drawerLogger.warn('Color not found in catalog — stale palette reference', {
+        colorId,
+        sku: garment.sku,
+      })
     }
   }
 
@@ -173,6 +181,16 @@ export function GarmentDetailDrawer({
   const selectedNormalizedColor = normalizedColors
     ? (normalizedColors.find((c) => c.id === selectedCatalogColorId) ?? normalizedColors[0] ?? null)
     : null
+
+  // Pre-sorted sizes for the Availability section.
+  // normalizedSizes (CatalogSize, sortOrder) takes priority over legacy garment.availableSizes (GarmentSize, order).
+  const displaySizes = useMemo<Array<{ name: string }>>(
+    () =>
+      normalizedSizes
+        ? [...normalizedSizes].sort((a, b) => a.sortOrder - b.sortOrder)
+        : [...garment.availableSizes].sort((a, b) => a.order - b.order),
+    [normalizedSizes, garment.availableSizes]
+  )
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -344,7 +362,7 @@ export function GarmentDetailDrawer({
             {normalizedColors &&
               colorInventory &&
               colorInventory.size > 0 &&
-              garment.availableSizes.length > 0 && (
+              displaySizes.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     <Package size={14} aria-hidden="true" />
@@ -355,9 +373,7 @@ export function GarmentDetailDrawer({
                     role="group"
                     aria-label="Size availability"
                   >
-                    {[...garment.availableSizes]
-                      .sort((a, b) => a.order - b.order)
-                      .map((size) => {
+                    {displaySizes.map((size) => {
                         const qty = colorInventory.get(size.name)
                         const isOutOfStock = qty === 0
                         const isLowStock =

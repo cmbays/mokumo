@@ -26,7 +26,7 @@ import {
 } from '../actions'
 import { hydrateCatalogPreferences } from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { CatalogStyleMetadata, CatalogColor } from '@domain/entities/catalog-style'
+import type { CatalogStyleMetadata, CatalogColor, CatalogSize } from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
@@ -187,9 +187,12 @@ export function GarmentCatalogClient({
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
-  // Tier 2 lazy state — colors + images loaded on drawer open, cached per style
-  const styleDetailsCacheRef = useRef(new Map<string, CatalogColor[]>())
+  // Tier 2 lazy state — colors + images + sizes loaded on drawer open, cached per style
+  const styleDetailsCacheRef = useRef(
+    new Map<string, { colors: CatalogColor[]; sizes: CatalogSize[] }>()
+  )
   const [drawerColors, setDrawerColors] = useState<CatalogColor[] | undefined>(undefined)
+  const [drawerSizes, setDrawerSizes] = useState<CatalogSize[] | undefined>(undefined)
   const [isLoadingColors, setIsLoadingColors] = useState(false)
 
   // handleSelectGarment — opens drawer and triggers Tier 2 fetch if not cached
@@ -203,13 +206,15 @@ export function GarmentCatalogClient({
       // Serve from client-side cache on repeat opens (same session)
       const cached = styleDetailsCacheRef.current.get(garment.sku)
       if (cached) {
-        setDrawerColors(cached)
+        setDrawerColors(cached.colors)
+        setDrawerSizes(cached.sizes)
         setIsLoadingColors(false)
         return
       }
 
       // No cache: show skeleton while fetching Tier 2
       setDrawerColors(undefined)
+      setDrawerSizes(undefined)
       setIsLoadingColors(true)
 
       const styleId = skuToStyleId.get(garment.sku)
@@ -222,13 +227,15 @@ export function GarmentCatalogClient({
       }
 
       try {
-        const colors = await fetchStyleDetail(styleId)
-        styleDetailsCacheRef.current.set(garment.sku, colors)
-        setDrawerColors(colors)
+        const detail = await fetchStyleDetail(styleId)
+        styleDetailsCacheRef.current.set(garment.sku, detail)
+        setDrawerColors(detail.colors)
+        setDrawerSizes(detail.sizes)
       } catch (err) {
         clientLogger.error('fetchStyleDetail failed', { styleId, err })
         toast.error("Couldn't load color details — try again")
         setDrawerColors(undefined)
+        setDrawerSizes(undefined)
       } finally {
         setIsLoadingColors(false)
       }
@@ -557,6 +564,7 @@ export function GarmentCatalogClient({
           onToggleEnabled={handleToggleEnabled}
           onToggleFavorite={handleToggleFavorite}
           normalizedColors={drawerColors}
+          normalizedSizes={drawerSizes}
           isLoadingColors={isLoadingColors}
           frontImageUrl={skuToCardImageUrl.get(selectedGarment.sku)}
         />
