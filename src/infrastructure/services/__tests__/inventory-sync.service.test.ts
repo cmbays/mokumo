@@ -70,17 +70,12 @@ vi.mock('@db/schema/catalog-normalized', () => ({
   catalogSizes: { id: 'id', styleId: 'style_id', name: 'name' },
 }))
 
-vi.mock('@lib/suppliers/adapters/ss-activewear', () => {
-  class SSActivewearAdapter {}
-  return { SSActivewearAdapter }
-})
-
 vi.mock('@lib/suppliers/registry', () => ({
-  getSupplierAdapter: vi.fn(),
+  getSsActivewearAdapter: vi.fn(),
 }))
 
-import { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
-import { getSupplierAdapter } from '@lib/suppliers/registry'
+import type { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
+import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import {
   computeTotalQty,
   buildSkuMapFromRaw,
@@ -92,19 +87,9 @@ import {
 const mockGetRawInventory = vi.fn()
 
 function setupSSAdapter() {
-  const MockedSSAdapter = SSActivewearAdapter as unknown as new () => InstanceType<
-    typeof SSActivewearAdapter
-  >
-  const adapter = Object.assign(new MockedSSAdapter(), {
+  vi.mocked(getSsActivewearAdapter).mockReturnValue({
     getRawInventory: mockGetRawInventory,
-  })
-  vi.mocked(getSupplierAdapter).mockReturnValue(adapter as ReturnType<typeof getSupplierAdapter>)
-}
-
-function setupNonSSAdapter() {
-  vi.mocked(getSupplierAdapter).mockReturnValue({
-    supplierName: 'mock',
-  } as ReturnType<typeof getSupplierAdapter>)
+  } as unknown as SSActivewearAdapter)
 }
 
 beforeEach(() => {
@@ -213,13 +198,6 @@ describe('buildSkuMapFromRaw', () => {
 // ─── syncInventoryFromSupplier ────────────────────────────────────────────────
 
 describe('syncInventoryFromSupplier', () => {
-  it('returns zeros when adapter is not SSActivewearAdapter', async () => {
-    setupNonSSAdapter()
-    const result = await syncInventoryFromSupplier()
-    expect(result).toEqual({ synced: 0, rawInserted: 0, errors: 0 })
-    expect(mockDelete).not.toHaveBeenCalled()
-  })
-
   it('returns zeros and warns when S&S returns 0 items', async () => {
     setupSSAdapter()
     mockGetRawInventory.mockResolvedValueOnce([])

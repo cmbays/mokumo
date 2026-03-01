@@ -54,7 +54,7 @@ export function getSupplierAdapter(): SupplierAdapter {
  * sync service, which always fetches from S&S regardless of how SUPPLIER_ADAPTER
  * is configured for the app-level garment routing (e.g. 'supabase-catalog').
  */
-export function getSsActivewearAdapter(): SupplierAdapter {
+export function getSsActivewearAdapter(): SSActivewearAdapter {
   const cache = buildCacheStore()
   const fallback = new MockAdapter(cache)
   return new SSActivewearAdapter(cache, fallback)
