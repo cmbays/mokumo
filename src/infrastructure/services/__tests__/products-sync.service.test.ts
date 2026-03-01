@@ -20,18 +20,39 @@ const mockValues = vi.fn()
 const mockSelect = vi.fn()
 const mockFrom = vi.fn()
 const mockWhere = vi.fn()
+const mockReturning = vi.fn().mockResolvedValue([])
 
 vi.mock('@shared/lib/supabase/db', () => ({
   db: {
+    // transaction() calls the callback with a mock tx that supports the same insert chain.
+    // returning() resolves to [] by default — tests that exercise color upserts
+    // can override mockReturning to supply color rows.
+    transaction: async (callback: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        insert: (...args: unknown[]) => {
+          mockInsert(...args)
+          return {
+            values: (...vArgs: unknown[]) => {
+              mockValues(...vArgs)
+              return {
+                onConflictDoUpdate: vi.fn().mockReturnValue({ returning: mockReturning }),
+                onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+              }
+            },
+          }
+        },
+      }
+      return callback(tx)
+    },
     insert: (...args: unknown[]) => {
       mockInsert(...args)
       return {
         values: (...vArgs: unknown[]) => {
           mockValues(...vArgs)
-          // Return an object that supports both:
-          //   await db.insert(t).values(rows)                         (raw products)
-          //   await db.insert(t).values(rows).onConflictDoUpdate(...) (catalog_sizes)
-          return { onConflictDoUpdate: vi.fn().mockResolvedValue(undefined) }
+          return {
+            onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+            onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+          }
         },
       }
     },
@@ -57,8 +78,11 @@ vi.mock('@db/schema/raw', () => ({
 }))
 
 vi.mock('@db/schema/catalog-normalized', () => ({
-  catalogStyles: { externalId: 'external_id', source: 'source', id: 'id' },
+  catalogStyles: { externalId: 'external_id', source: 'source', id: 'id', brandId: 'brand_id' },
   catalogSizes: { styleId: 'style_id', name: 'name' },
+  catalogColors: { styleId: 'style_id', name: 'name', id: 'id' },
+  catalogImages: { colorId: 'color_id', imageType: 'image_type' },
+  catalogColorGroups: { brandId: 'brand_id', colorGroupName: 'color_group_name' },
 }))
 
 // Mock the adapter module — the factory must be self-contained (vi.mock is hoisted)
@@ -76,6 +100,7 @@ const mockGetRawProductsBatch = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockReturning.mockResolvedValue([])
 })
 
 function setupSSAdapter() {
@@ -91,7 +116,7 @@ describe('syncProductsFromSupplier', () => {
     setupSSAdapter()
     mockWhere.mockResolvedValueOnce([])
     const result = await syncProductsFromSupplier()
-    expect(result).toEqual({ synced: 0, errors: 0, total: 0 })
+    expect(result).toEqual({ synced: 0, errors: 0, total: 0, colorsUpserted: 0, imagesUpserted: 0 })
   })
 
   it('syncs products for provided styleIds using a single batched API call', async () => {
@@ -126,6 +151,7 @@ describe('syncProductsFromSupplier', () => {
     expect(result.errors).toBe(0)
     // Batch call receives the array, not a single string
     expect(mockGetRawProductsBatch).toHaveBeenCalledWith(['1234'])
+    // Raw insert is always called (inside the transaction)
     expect(mockInsert).toHaveBeenCalled()
   })
 
@@ -204,6 +230,41 @@ describe('syncProductsFromSupplier', () => {
     const result = await syncProductsFromSupplier(['1234'])
     expect(result.synced).toBe(0)
     expect(result.errors).toBe(0)
+    // No transaction = no insert when there are no products
     expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('returns colorsUpserted and imagesUpserted counters in the result', async () => {
+    setupSSAdapter()
+    mockGetRawProductsBatch.mockResolvedValueOnce([
+      {
+        sku: '5000-RED-M',
+        styleID: '1234',
+        styleName: 'Tee',
+        brandName: 'Gildan',
+        colorName: 'Red',
+        colorCode: '',
+        colorPriceCodeName: '',
+        sizeName: 'M',
+        sizeCode: '',
+        sizePriceCodeName: '',
+        sizeIndex: 0,
+        piecePrice: 2.99,
+        dozenPrice: null,
+        casePrice: null,
+        caseQty: null,
+        customerPrice: null,
+        mapPrice: null,
+        salePrice: null,
+        saleExpiration: null,
+        gtin: null,
+      },
+    ])
+
+    const result = await syncProductsFromSupplier(['1234'])
+    expect(result).toHaveProperty('colorsUpserted')
+    expect(result).toHaveProperty('imagesUpserted')
+    expect(typeof result.colorsUpserted).toBe('number')
+    expect(typeof result.imagesUpserted).toBe('number')
   })
 })

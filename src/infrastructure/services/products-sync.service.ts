@@ -2,22 +2,30 @@ import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { logger } from '@shared/lib/logger'
+import { mapSSProductToColorValue, buildImages, collectColorGroupPairs } from './products-sync.utils'
 
 const syncLogger = logger.child({ domain: 'products-sync' })
 
 /** Number of S&S styleIds to pack into a single /v2/products/ API call. */
 const BATCH_SIZE = 50
 
+/** Maximum (brandId, colorGroupName) pairs to upsert in one INSERT statement. */
+const CG_BATCH_SIZE = 1000
+
 /**
- * Sync raw per-SKU pricing data from S&S Activewear into the raw analytics table.
- * Also upserts catalog_sizes as a side-effect: the /v2/products/ endpoint returns
- * sizeIndex (sort order), which is not available from the catalog search endpoint.
+ * Atomically syncs all per-SKU product data from S&S Activewear for a set of styles.
  *
- * Unlike the catalog sync (which normalizes into the public schema), this writes
- * verbatim S&S product data to `raw.ss_activewear_products` — append-only, with
- * all pricing fields preserved (customerPrice, mapPrice, salePrice, saleExpiration).
+ * One transaction per style wraps all four table writes together:
+ *   1. catalog_colors   — color metadata (hex, family, group)
+ *   2. catalog_images   — image URLs per color
+ *   3. catalog_sizes    — size names + sort order (only available from /v2/products/)
+ *   4. raw.ss_activewear_products — append-only pricing snapshot for dbt
  *
- * dbt staging models handle dedup via `row_number() partition by sku order by _loaded_at desc`.
+ * Color group pairs (catalog_color_groups) are collected outside each transaction
+ * and bulk-upserted after each batch to avoid holding a long-running transaction.
+ *
+ * dbt staging models handle dedup of raw rows via
+ * `row_number() partition by sku order by _loaded_at desc`.
  *
  * @param styleIds - Optional list of S&S style IDs to sync. If omitted, syncs all
  *   styles from `catalog_styles` where source = 'ss-activewear'.
@@ -25,39 +33,61 @@ const BATCH_SIZE = 50
 export async function syncProductsFromSupplier(
   styleIds?: string[],
   options?: { limit?: number; offset?: number }
-): Promise<{ synced: number; errors: number; total: number }> {
+): Promise<{
+  synced: number
+  errors: number
+  total: number
+  colorsUpserted: number
+  imagesUpserted: number
+}> {
   const { db } = await import('@shared/lib/supabase/db')
   const { ssActivewearProducts } = await import('@db/schema/raw')
-  const { catalogStyles, catalogSizes } = await import('@db/schema/catalog-normalized')
+  const { catalogStyles, catalogSizes, catalogColors, catalogImages, catalogColorGroups } =
+    await import('@db/schema/catalog-normalized')
 
   const adapter = getSsActivewearAdapter()
 
-  // Resolve style IDs and build externalId → catalog_styles.id map for the sizes upsert.
-  // A single query here avoids per-style DB round-trips inside the loop.
+  // Upfront SELECT — externalId → catalogStyleId (for linking) + catalogStyleId → brandId
+  // (for color groups). A single query avoids per-style DB round-trips inside the loop.
   let idsToSync: string[]
   let catalogStyleIdByExternalId: Map<string, string>
+  let brandIdByStyleId: Map<string, string>
 
   if (styleIds && styleIds.length > 0) {
     idsToSync = styleIds
     const rows = await db
-      .select({ externalId: catalogStyles.externalId, id: catalogStyles.id })
+      .select({
+        externalId: catalogStyles.externalId,
+        id: catalogStyles.id,
+        brandId: catalogStyles.brandId,
+      })
       .from(catalogStyles)
       .where(
         and(eq(catalogStyles.source, 'ss-activewear'), inArray(catalogStyles.externalId, styleIds))
       )
     catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
+    brandIdByStyleId = new Map(
+      rows.filter((r) => r.brandId != null).map((r) => [r.id, r.brandId!])
+    )
   } else {
     const rows = await db
-      .select({ externalId: catalogStyles.externalId, id: catalogStyles.id })
+      .select({
+        externalId: catalogStyles.externalId,
+        id: catalogStyles.id,
+        brandId: catalogStyles.brandId,
+      })
       .from(catalogStyles)
       .where(eq(catalogStyles.source, 'ss-activewear'))
     idsToSync = rows.map((r) => r.externalId)
     catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
+    brandIdByStyleId = new Map(
+      rows.filter((r) => r.brandId != null).map((r) => [r.id, r.brandId!])
+    )
   }
 
   if (idsToSync.length === 0) {
     syncLogger.info('No styles to sync products for')
-    return { synced: 0, errors: 0, total: 0 }
+    return { synced: 0, errors: 0, total: 0, colorsUpserted: 0, imagesUpserted: 0 }
   }
 
   // Apply optional pagination slice — allows cron to page through catalog in chunks
@@ -77,16 +107,23 @@ export async function syncProductsFromSupplier(
 
   let synced = 0
   let errors = 0
+  let colorsUpserted = 0
+  let imagesUpserted = 0
+
+  // Global dedup set for catalog_color_groups — prevents inserting the same
+  // (brandId, colorGroupName) pair across multiple batches in one sync run.
+  const colorGroupSet = new Set<string>()
 
   for (let i = 0; i < idsToSync.length; i += BATCH_SIZE) {
     const batch = idsToSync.slice(i, i + BATCH_SIZE)
+    const batchColorGroupPairs: Array<{ brandId: string; colorGroupName: string }> = []
 
     try {
       // One API call covers up to BATCH_SIZE styles — the S&S products endpoint
       // accepts comma-separated styleIds and returns all SKUs for the batch combined.
       const products = await adapter.getRawProductsBatch(batch)
 
-      // Group the mixed response back into per-style buckets for the sizes upsert.
+      // Group the mixed response back into per-style buckets.
       const productsByStyleId = new Map<string, typeof products>()
       for (const p of products) {
         const sid = String(p.styleID)
@@ -101,7 +138,40 @@ export async function syncProductsFromSupplier(
           continue
         }
 
-        const rows = styleProducts.map((p) => ({
+        const catalogStyleId = catalogStyleIdByExternalId.get(styleId)
+
+        // Deduplicate by colorName — keep first product per color.
+        // Colors and images are per-color, not per-SKU (multiple sizes share the same color).
+        const colorMap = new Map<string, (typeof styleProducts)[number]>()
+        for (const p of styleProducts) {
+          if (!colorMap.has(p.colorName)) colorMap.set(p.colorName, p)
+        }
+
+        // Color insert values — only when we have a catalog_styles link to attach to.
+        const colorValues = catalogStyleId
+          ? Array.from(colorMap.values()).map((p) => mapSSProductToColorValue(p, catalogStyleId))
+          : []
+
+        // Size upsert values — sizeIndex is only available from /v2/products/ (not /v2/styles/).
+        const sizeValues: Array<{
+          styleId: string
+          name: string
+          sortOrder: number
+          priceAdjustment: number
+          updatedAt: Date
+        }> = []
+        if (catalogStyleId) {
+          const sizeMap = new Map<string, number>() // sizeName → sizeIndex
+          for (const p of styleProducts) {
+            if (!sizeMap.has(p.sizeName)) sizeMap.set(p.sizeName, p.sizeIndex)
+          }
+          for (const [name, sortOrder] of sizeMap.entries()) {
+            sizeValues.push({ styleId: catalogStyleId, name, sortOrder, priceAdjustment: 0, updatedAt: new Date() })
+          }
+        }
+
+        // Raw insert rows — all SKUs, no dedup (append-only for dbt).
+        const rawRows = styleProducts.map((p) => ({
           sku: p.sku,
           styleIdExternal: p.styleID,
           styleName: p.styleName,
@@ -123,51 +193,117 @@ export async function syncProductsFromSupplier(
           gtin: p.gtin ?? null,
         }))
 
-        await db.insert(ssActivewearProducts).values(rows)
-        synced += styleProducts.length
+        try {
+          const { newColorCount, newImageCount } = await db.transaction(async (tx) => {
+            let newColorCount = 0
+            let newImageCount = 0
 
-        // Upsert catalog_sizes using sizeIndex from the products API response.
-        // The catalog sync's searchCatalog() returns empty sizes[]; /v2/products/ is
-        // the only source of per-style size metadata (name + sort order).
-        const catalogStyleId = catalogStyleIdByExternalId.get(styleId)
-        if (catalogStyleId) {
-          const sizeMap = new Map<string, number>() // sizeName → sizeIndex
-          for (const p of styleProducts) {
-            if (!sizeMap.has(p.sizeName)) {
-              sizeMap.set(p.sizeName, p.sizeIndex)
+            if (catalogStyleId && colorValues.length > 0) {
+              // 1. Upsert catalog_colors — returning IDs to link images.
+              const colorRows = await tx
+                .insert(catalogColors)
+                .values(colorValues)
+                .onConflictDoUpdate({
+                  target: [catalogColors.styleId, catalogColors.name],
+                  set: {
+                    hex1: sql`excluded.hex1`,
+                    hex2: sql`excluded.hex2`,
+                    colorFamilyName: sql`excluded.color_family_name`,
+                    colorGroupName: sql`excluded.color_group_name`,
+                    colorCode: sql`excluded.color_code`,
+                    updatedAt: new Date(),
+                  },
+                })
+                .returning({ id: catalogColors.id, name: catalogColors.name })
+
+              newColorCount = colorRows.length
+              const colorIdByName = new Map(colorRows.map((r) => [r.name, r.id]))
+
+              // 2. Upsert catalog_images (keyed by colorId + imageType).
+              const imageValues = Array.from(colorMap.values()).flatMap((p) => {
+                const colorId = colorIdByName.get(p.colorName)
+                if (!colorId) return []
+                return buildImages(p).map((img) => ({
+                  colorId,
+                  imageType: img.type,
+                  url: img.url,
+                  updatedAt: new Date(),
+                }))
+              })
+
+              if (imageValues.length > 0) {
+                await tx
+                  .insert(catalogImages)
+                  .values(imageValues)
+                  .onConflictDoUpdate({
+                    target: [catalogImages.colorId, catalogImages.imageType],
+                    set: { url: sql`excluded.url`, updatedAt: new Date() },
+                  })
+                newImageCount = imageValues.length
+              }
+            }
+
+            // 3. Upsert catalog_sizes (sizeIndex from /v2/products/ is the source of truth).
+            if (sizeValues.length > 0) {
+              await tx
+                .insert(catalogSizes)
+                .values(sizeValues)
+                .onConflictDoUpdate({
+                  target: [catalogSizes.styleId, catalogSizes.name],
+                  set: { sortOrder: sql`excluded.sort_order`, updatedAt: new Date() },
+                })
+            }
+
+            // 4. Insert raw pricing snapshot (all SKUs, append-only).
+            await tx.insert(ssActivewearProducts).values(rawRows)
+
+            return { newColorCount, newImageCount }
+          })
+
+          synced += styleProducts.length
+          colorsUpserted += newColorCount
+          imagesUpserted += newImageCount
+
+          // Collect color group pairs outside the transaction — pure derivation,
+          // bulk-upserted after each batch to avoid holding a long transaction.
+          const newPairs = collectColorGroupPairs(colorValues, brandIdByStyleId)
+          for (const pair of newPairs) {
+            const key = `${pair.brandId}::${pair.colorGroupName}`
+            if (!colorGroupSet.has(key)) {
+              colorGroupSet.add(key)
+              batchColorGroupPairs.push(pair)
             }
           }
 
-          const sizeValues = Array.from(sizeMap.entries()).map(([name, sortOrder]) => ({
-            styleId: catalogStyleId,
-            name,
-            sortOrder,
-            priceAdjustment: 0,
-            updatedAt: new Date(),
-          }))
-
-          await db
-            .insert(catalogSizes)
-            .values(sizeValues)
-            .onConflictDoUpdate({
-              target: [catalogSizes.styleId, catalogSizes.name],
-              set: { sortOrder: sql`excluded.sort_order`, updatedAt: new Date() },
-            })
+          syncLogger.debug('Synced products for style', {
+            styleId,
+            productCount: styleProducts.length,
+            colorCount: newColorCount,
+          })
+        } catch (styleErr) {
+          errors += styleProducts.length
+          syncLogger.error('Failed to sync products for style', {
+            styleId,
+            error: Error.isError(styleErr) ? styleErr.message : String(styleErr),
+          })
         }
-
-        syncLogger.debug('Synced products for style', {
-          styleId,
-          productCount: styleProducts.length,
-        })
       }
-    } catch (error) {
+    } catch (batchErr) {
       errors += batch.length
       syncLogger.error('Failed to sync products batch', {
         batchStart: i,
         batchSize: batch.length,
         styleIds: batch,
-        error: Error.isError(error) ? error.message : String(error),
+        error: Error.isError(batchErr) ? batchErr.message : String(batchErr),
       })
+    }
+
+    // Bulk-upsert all (brandId, colorGroupName) pairs collected this batch.
+    if (batchColorGroupPairs.length > 0) {
+      for (let j = 0; j < batchColorGroupPairs.length; j += CG_BATCH_SIZE) {
+        const chunk = batchColorGroupPairs.slice(j, j + CG_BATCH_SIZE)
+        await db.insert(catalogColorGroups).values(chunk).onConflictDoNothing()
+      }
     }
 
     syncLogger.info('Products sync batch progress', {
@@ -175,9 +311,11 @@ export async function syncProductsFromSupplier(
       total: idsToSync.length,
       synced,
       errors,
+      colorsUpserted,
+      imagesUpserted,
     })
   }
 
-  syncLogger.info('Products sync completed', { synced, errors, total })
-  return { synced, errors, total }
+  syncLogger.info('Products sync completed', { synced, errors, total, colorsUpserted, imagesUpserted })
+  return { synced, errors, total, colorsUpserted, imagesUpserted }
 }
