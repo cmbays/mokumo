@@ -55,7 +55,7 @@ export function GarmentCard({
   // Colors for the swatch strip — priority: normalizedColors (real S&S hex, non-empty)
   // → NormalizedGarmentCatalog.colors → legacy Color entity array.
   // The `length > 0` check ensures an empty normalizedColors array doesn't bypass the
-  // fallback paths (e.g., a style with zero colors synced from run-image-sync).
+  // fallback paths (e.g., a style with zero colors synced from products-sync).
   const swatchColors =
     normalizedColors && normalizedColors.length > 0
       ? normalizedColors
