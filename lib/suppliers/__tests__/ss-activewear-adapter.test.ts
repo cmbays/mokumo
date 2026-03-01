@@ -325,12 +325,9 @@ describe('getRawProductsBatch()', () => {
   it('calls ssGet with comma-joined styleId param', async () => {
     mockSsGet.mockResolvedValueOnce([redMedium])
     await adapter.getRawProductsBatch(['29', '9182'])
-    expect(mockSsGet).toHaveBeenCalledWith(
-      'products',
-      { styleId: '29,9182' },
-      expect.any(Number),
-      { preserveRawFields: true }
-    )
+    expect(mockSsGet).toHaveBeenCalledWith('products', { styleId: '29,9182' }, expect.any(Number), {
+      preserveRawFields: true,
+    })
   })
 
   it('returns combined products for multiple styles in one call', async () => {

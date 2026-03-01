@@ -139,9 +139,7 @@ export async function getCatalogColorSupplement(): Promise<
  */
 const styleIdSchema = z.string().min(1).max(100)
 
-export async function getCatalogStyleDetail(
-  styleId: string
-): Promise<{
+export async function getCatalogStyleDetail(styleId: string): Promise<{
   colors: import('@domain/entities/catalog-style').CatalogColor[]
   sizes: import('@domain/entities/catalog-style').CatalogSize[]
 }> {

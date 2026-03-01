@@ -26,7 +26,11 @@ import {
 } from '../actions'
 import { hydrateCatalogPreferences } from '../_lib/garment-transforms'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { CatalogStyleMetadata, CatalogColor, CatalogSize } from '@domain/entities/catalog-style'
+import type {
+  CatalogStyleMetadata,
+  CatalogColor,
+  CatalogSize,
+} from '@domain/entities/catalog-style'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'

@@ -2,7 +2,15 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Palette, Ruler, AlertTriangle, XCircle, Package, CheckCircle2 } from 'lucide-react'
+import {
+  ExternalLink,
+  Palette,
+  Ruler,
+  AlertTriangle,
+  XCircle,
+  Package,
+  CheckCircle2,
+} from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import {
   Sheet,
@@ -110,7 +118,10 @@ export function GarmentDetailDrawer({
         const rows = await fetchColorInventoryByName(selectedCatalogColorId!)
         if (!cancelled) setColorInventory(new Map(rows.map((r) => [r.sizeName, r.quantity])))
       } catch (err) {
-        drawerLogger.warn('fetchColorInventoryByName failed', { colorId: selectedCatalogColorId, err })
+        drawerLogger.warn('fetchColorInventoryByName failed', {
+          colorId: selectedCatalogColorId,
+          err,
+        })
         if (!cancelled) setColorInventory(null)
       }
     }
@@ -373,7 +384,11 @@ export function GarmentDetailDrawer({
 
                 {/* Skeleton while inventory fetch is in-flight */}
                 {colorInventory === null ? (
-                  <div className="flex flex-wrap gap-1.5" aria-busy="true" aria-label="Loading availability">
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    aria-busy="true"
+                    aria-label="Loading availability"
+                  >
                     {displaySizes.map((size) => (
                       <div
                         key={size.name}
@@ -399,7 +414,8 @@ export function GarmentDetailDrawer({
                           qty !== undefined &&
                           qty > 0 &&
                           qty < LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
-                        const isInStock = qty !== undefined && qty >= LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
+                        const isInStock =
+                          qty !== undefined && qty >= LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
 
                         return (
                           <div

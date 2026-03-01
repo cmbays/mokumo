@@ -43,10 +43,7 @@ export async function syncRawPricingFromSupplier(
       .select({ externalId: catalogStyles.externalId, id: catalogStyles.id })
       .from(catalogStyles)
       .where(
-        and(
-          eq(catalogStyles.source, 'ss-activewear'),
-          inArray(catalogStyles.externalId, styleIds)
-        )
+        and(eq(catalogStyles.source, 'ss-activewear'), inArray(catalogStyles.externalId, styleIds))
       )
     catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
   } else {
@@ -71,7 +68,12 @@ export async function syncRawPricingFromSupplier(
     idsToSync = idsToSync.slice(offset, limit !== undefined ? offset + limit : undefined)
   }
 
-  syncLogger.info('Starting raw pricing sync', { styleCount: idsToSync.length, total, offset, limit })
+  syncLogger.info('Starting raw pricing sync', {
+    styleCount: idsToSync.length,
+    total,
+    offset,
+    limit,
+  })
 
   let synced = 0
   let errors = 0

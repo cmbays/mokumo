@@ -126,10 +126,10 @@ describe('POST /api/catalog/sync-pricing', () => {
       )
 
       expect(response.status).toBe(200)
-      expect(syncRawPricingFromSupplier).toHaveBeenCalledWith(
-        ['STYLE-001', 'STYLE-002'],
-        { offset: undefined, limit: undefined }
-      )
+      expect(syncRawPricingFromSupplier).toHaveBeenCalledWith(['STYLE-001', 'STYLE-002'], {
+        offset: undefined,
+        limit: undefined,
+      })
     })
 
     it('returns 400 for a malformed request body', async () => {
