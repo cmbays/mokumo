@@ -516,7 +516,12 @@ describe('getRawBrands()', () => {
 
   it('returns full SSBrand objects including brandImage and description', async () => {
     mockSsGet.mockResolvedValueOnce([
-      { brandID: '1', brandName: 'Gildan', brandImage: '/images/gildan.jpg', description: 'Value brand' },
+      {
+        brandID: '1',
+        brandName: 'Gildan',
+        brandImage: '/images/gildan.jpg',
+        description: 'Value brand',
+      },
     ])
     const brands = await adapter.getRawBrands()
     expect(brands).toHaveLength(1)

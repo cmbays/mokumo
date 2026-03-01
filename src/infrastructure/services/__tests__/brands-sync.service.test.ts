@@ -66,7 +66,12 @@ describe('syncBrandsFromSupplier', () => {
 
   it('upserts brands returned by adapter.getRawBrands()', async () => {
     mockGetRawBrands.mockResolvedValue([
-      { brandID: '1', brandName: 'Gildan', brandImage: '/images/gildan.jpg', description: 'Value brand' },
+      {
+        brandID: '1',
+        brandName: 'Gildan',
+        brandImage: '/images/gildan.jpg',
+        description: 'Value brand',
+      },
       { brandID: '2', brandName: 'Next Level', brandImage: '', description: '' },
     ])
 
@@ -154,9 +159,7 @@ describe('syncBrandsFromSupplier', () => {
   })
 
   it('skips brands with whitespace-only brandName', async () => {
-    mockGetRawBrands.mockResolvedValue([
-      { brandName: '   ', brandImage: '', description: '' },
-    ])
+    mockGetRawBrands.mockResolvedValue([{ brandName: '   ', brandImage: '', description: '' }])
 
     const result = await syncBrandsFromSupplier()
 
