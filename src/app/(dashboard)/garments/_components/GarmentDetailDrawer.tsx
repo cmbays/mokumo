@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Palette, Ruler, AlertTriangle, XCircle, Package } from 'lucide-react'
+import { ExternalLink, Palette, Ruler, AlertTriangle, XCircle, Package, CheckCircle2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import {
   Sheet,
@@ -22,6 +22,7 @@ import { cn } from '@shared/lib/cn'
 import { logger } from '@shared/lib/logger'
 import { money, toNumber, formatCurrency } from '@domain/lib/money'
 import { LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
+import { sortByAppropriateOrder } from '@domain/lib/size-order'
 
 import { getColorById } from '@domain/rules/garment.rules'
 import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
@@ -184,10 +185,12 @@ export function GarmentDetailDrawer({
 
   // Pre-sorted sizes for the Availability section.
   // normalizedSizes (CatalogSize, sortOrder) takes priority over legacy garment.availableSizes (GarmentSize, order).
+  // sortByAppropriateOrder falls back to canonical apparel order (XS→S→M→…) when all sortOrders are 0,
+  // which happens because S&S sizeIndex field is not reliably populated in /v2/products/ responses.
   const displaySizes = useMemo<Array<{ name: string }>>(
     () =>
       normalizedSizes
-        ? [...normalizedSizes].sort((a, b) => a.sortOrder - b.sortOrder)
+        ? sortByAppropriateOrder(normalizedSizes)
         : [...garment.availableSizes].sort((a, b) => a.order - b.order),
     [normalizedSizes, garment.availableSizes]
   )
@@ -358,49 +361,85 @@ export function GarmentDetailDrawer({
               )}
             </div>
 
-            {/* Size Availability — shown when normalized color data + inventory are loaded */}
-            {normalizedColors &&
-              colorInventory &&
-              colorInventory.size > 0 &&
-              displaySizes.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    <Package size={14} aria-hidden="true" />
-                    Availability
-                  </h3>
-                  <div
-                    className="flex flex-wrap gap-1.5"
-                    role="group"
-                    aria-label="Size availability"
-                  >
-                    {displaySizes.map((size) => {
+            {/* Size Availability — shown whenever we have normalized color data + size list.
+                Does not require inventory data to be loaded: shows a loading skeleton while
+                colorInventory is null, and "–" (no data yet) when inventory hasn't been synced. */}
+            {normalizedColors && displaySizes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <Package size={14} aria-hidden="true" />
+                  Availability
+                </h3>
+
+                {/* Skeleton while inventory fetch is in-flight */}
+                {colorInventory === null ? (
+                  <div className="flex flex-wrap gap-1.5" aria-busy="true" aria-label="Loading availability">
+                    {displaySizes.map((size) => (
+                      <div
+                        key={size.name}
+                        className="flex min-h-10 min-w-10 flex-col items-center justify-center gap-0.5 rounded-md border border-border bg-surface px-2.5 py-1 animate-pulse"
+                      >
+                        <span className="text-sm font-medium text-foreground">{size.name}</span>
+                        <span className="h-3 w-6 rounded bg-surface" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      role="group"
+                      aria-label="Size availability"
+                    >
+                      {displaySizes.map((size) => {
                         const qty = colorInventory.get(size.name)
+                        const noData = qty === undefined
                         const isOutOfStock = qty === 0
                         const isLowStock =
                           qty !== undefined &&
                           qty > 0 &&
                           qty < LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
+                        const isInStock = qty !== undefined && qty >= LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
+
                         return (
                           <div
                             key={size.name}
                             role="img"
                             className={cn(
-                              'relative flex min-h-10 min-w-10 items-center justify-center rounded-md border px-2.5 py-1',
+                              'relative flex min-h-10 min-w-10 flex-col items-center justify-center gap-0.5 rounded-md border px-2.5 py-1',
                               isOutOfStock
                                 ? 'border-error/30 bg-error/5 opacity-60'
                                 : isLowStock
                                   ? 'border-warning/30 bg-warning/5'
-                                  : 'border-border'
+                                  : isInStock
+                                    ? 'border-success/30 bg-success/5'
+                                    : 'border-border'
                             )}
                             aria-label={
-                              isOutOfStock
-                                ? `${size.name} — out of stock`
-                                : isLowStock
-                                  ? `${size.name} — low stock`
-                                  : size.name
+                              noData
+                                ? `${size.name} — no data`
+                                : isOutOfStock
+                                  ? `${size.name} — out of stock`
+                                  : isLowStock
+                                    ? `${size.name} — low stock (${qty})`
+                                    : `${size.name} — in stock (${qty})`
                             }
                           >
                             <span className="text-sm font-medium text-foreground">{size.name}</span>
+                            <span
+                              className={cn(
+                                'text-xs tabular-nums',
+                                isOutOfStock
+                                  ? 'text-error/70'
+                                  : isLowStock
+                                    ? 'text-warning'
+                                    : isInStock
+                                      ? 'text-success'
+                                      : 'text-muted-foreground'
+                              )}
+                            >
+                              {noData ? '–' : qty === 0 ? '0' : qty.toLocaleString()}
+                            </span>
                             {isLowStock && (
                               <AlertTriangle
                                 size={12}
@@ -415,22 +454,37 @@ export function GarmentDetailDrawer({
                                 aria-hidden="true"
                               />
                             )}
+                            {isInStock && (
+                              <CheckCircle2
+                                size={12}
+                                className="absolute -right-1.5 -top-1.5 text-success"
+                                aria-hidden="true"
+                              />
+                            )}
                           </div>
                         )
                       })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    <AlertTriangle
-                      size={12}
-                      className="mr-0.5 inline text-warning"
-                      aria-hidden="true"
-                    />
-                    Low&nbsp;&nbsp;
-                    <XCircle size={12} className="mr-0.5 inline text-error" aria-hidden="true" />
-                    Out of stock
-                  </p>
-                </div>
-              )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      <CheckCircle2
+                        size={12}
+                        className="mr-0.5 inline text-success"
+                        aria-hidden="true"
+                      />
+                      In stock&nbsp;&nbsp;
+                      <AlertTriangle
+                        size={12}
+                        className="mr-0.5 inline text-warning"
+                        aria-hidden="true"
+                      />
+                      Low&nbsp;&nbsp;
+                      <XCircle size={12} className="mr-0.5 inline text-error" aria-hidden="true" />
+                      Out of stock
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Size & Pricing table */}
             {showPrice && garment.availableSizes.length > 0 && (
