@@ -6,7 +6,7 @@
  *
  * Managed by Drizzle for migration generation; read by dbt for analytics pipeline.
  */
-import { pgSchema, bigint, varchar, numeric, timestamp, index } from 'drizzle-orm/pg-core'
+import { pgSchema, bigint, varchar, numeric, timestamp, jsonb, index } from 'drizzle-orm/pg-core'
 
 export const rawSchema = pgSchema('raw')
 
@@ -46,5 +46,30 @@ export const ssActivewearProducts = rawSchema.table(
     index('idx_raw_ss_products_sku').on(t.sku),
     index('idx_raw_ss_products_style_id').on(t.styleIdExternal),
     index('idx_raw_ss_products_loaded_at').on(t.loadedAt),
+  ]
+)
+
+/**
+ * Per-SKU inventory snapshots from S&S Activewear /v2/inventory/ endpoint.
+ *
+ * One row per SKU per sync run. Warehouses stored as JSONB array to keep
+ * volume at ~190k rows/sync vs ~2M if expanded. dbt staging model expands
+ * them via jsonb_array_elements and computes total_qty.
+ */
+export const ssActivewearInventory = rawSchema.table(
+  'ss_activewear_inventory',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    sku: varchar('sku', { length: 50 }).notNull(),
+    skuIdMaster: bigint('sku_id_master', { mode: 'number' }),
+    styleIdExternal: varchar('style_id_external', { length: 100 }).notNull(),
+    warehouses: jsonb('warehouses').notNull(), // Array<{ warehouseAbbr, skuID, qty }>
+    loadedAt: timestamp('_loaded_at', { withTimezone: true }).notNull().defaultNow(),
+    source: varchar('_source', { length: 50 }).notNull().default('ss_activewear'),
+  },
+  (t) => [
+    index('idx_raw_ss_inv_sku_loaded_at').on(t.sku, t.loadedAt),
+    index('idx_raw_ss_inv_style_id').on(t.styleIdExternal),
+    index('idx_raw_ss_inv_loaded_at').on(t.loadedAt),
   ]
 )
