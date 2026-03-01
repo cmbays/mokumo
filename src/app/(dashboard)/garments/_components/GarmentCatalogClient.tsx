@@ -16,7 +16,6 @@ import { GarmentCatalogToolbar } from './GarmentCatalogToolbar'
 import { GarmentCard } from './GarmentCard'
 import { GarmentTableRow } from './GarmentTableRow'
 import { GarmentDetailDrawer } from './GarmentDetailDrawer'
-import { BrandDetailDrawer } from './BrandDetailDrawer'
 import { useColorFilter } from '@features/garments/hooks/useColorFilter'
 import { PRICE_STORAGE_KEY } from '@shared/constants/garment-catalog'
 import {
@@ -31,7 +30,7 @@ import type { CatalogStyleMetadata, CatalogColor } from '@domain/entities/catalo
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
-import type { FilterColor, FilterColorGroup } from '@features/garments/types'
+import type { FilterColorGroup } from '@features/garments/types'
 import { sortColorGroupsByFavorites } from '@features/garments/utils/favorites-sort'
 
 const clientLogger = logger.child({ domain: 'garments' })
@@ -58,8 +57,6 @@ type GarmentCatalogClientProps = {
   styleColorGroups: Record<string, string[]>
   /** Deduplicated color group list for the filter grid (~80 groups), computed server-side. */
   colorGroups: FilterColorGroup[]
-  /** Full individual color list — used by BrandDetailDrawer favorites section. */
-  catalogColors: FilterColor[]
   /** Shop-scoped favorite color IDs from catalog_color_preferences, fetched server-side. */
   initialFavoriteColorIds: string[]
   /** Shop-scoped favorite colorGroupNames from catalog_color_group_preferences, fetched server-side. */
@@ -80,7 +77,6 @@ export function GarmentCatalogClient({
   styleSwatches,
   styleColorGroups,
   colorGroups,
-  catalogColors,
   initialFavoriteColorIds,
   initialFavoriteColorGroupNames,
   inStockStyleIds,
@@ -239,15 +235,6 @@ export function GarmentCatalogClient({
     },
     [skuToStyleId]
   )
-
-  // N25: Brand detail drawer state
-  const [selectedBrandName, setSelectedBrandName] = useState<string | null>(null)
-
-  // N25: openBrandDrawer — opens brand detail drawer, closes garment drawer
-  const handleBrandClick = useCallback((brandName: string) => {
-    setSelectedGarmentId(null)
-    setSelectedBrandName(brandName)
-  }, [])
 
   // Pagination — page resets to 0 when any filter changes.
   // "Adjust state during render" pattern (React docs) avoids the useEffect+setState
@@ -441,7 +428,6 @@ export function GarmentCatalogClient({
         onToggleColorGroup={toggleColorGroup}
         onClearColorGroups={clearColorGroups}
         garmentCount={filteredGarments.length}
-        onBrandClick={handleBrandClick}
         categoryHits={categoryHits}
         category={category}
         onCategoryChange={setCategory}
@@ -460,7 +446,6 @@ export function GarmentCatalogClient({
               showPrice={showPrice}
               favoriteColorIds={favoriteColorIds}
               onToggleFavorite={handleToggleFavorite}
-              onBrandClick={handleBrandClick}
               onClick={handleSelectGarment}
               frontImageUrl={skuToCardImageUrl.get(garment.sku)}
               normalizedColors={styleSwatches[garment.sku]}
@@ -571,28 +556,12 @@ export function GarmentCatalogClient({
           linkedJobs={linkedJobs}
           onToggleEnabled={handleToggleEnabled}
           onToggleFavorite={handleToggleFavorite}
-          onBrandClick={handleBrandClick}
           normalizedColors={drawerColors}
           isLoadingColors={isLoadingColors}
           frontImageUrl={skuToCardImageUrl.get(selectedGarment.sku)}
         />
       )}
 
-      {/* Brand Detail Drawer — conditional rendering for state reset */}
-      {selectedBrandName && (
-        <BrandDetailDrawer
-          brandName={selectedBrandName}
-          open={true}
-          onOpenChange={(open) => {
-            if (!open) setSelectedBrandName(null)
-          }}
-          onGarmentClick={(garmentId) => {
-            setSelectedBrandName(null)
-            void handleSelectGarment(garmentId)
-          }}
-          colors={catalogColors}
-        />
-      )}
     </>
   )
 }

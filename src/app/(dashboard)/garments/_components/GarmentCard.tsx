@@ -19,7 +19,6 @@ type GarmentCardProps = {
   /** Unused by GarmentCard itself — kept for call-site compatibility during migration. @deprecated remove after #627 lands */
   favoriteColorIds?: string[]
   onToggleFavorite: (garmentId: string) => void
-  onBrandClick?: (brandName: string) => void
   onClick: (garmentId: string) => void
   /** Real front image URL from catalog_images — passed by parent via buildSkuToFrontImageUrl. */
   frontImageUrl?: string
@@ -35,7 +34,6 @@ export function GarmentCard({
   garment,
   showPrice,
   onToggleFavorite,
-  onBrandClick,
   onClick,
   frontImageUrl,
   normalizedColors,
@@ -109,20 +107,7 @@ export function GarmentCard({
       <div className="px-2.5 py-2 space-y-0.5">
         {/* Brand + SKU */}
         <p className="truncate text-xs text-muted-foreground">
-          {onBrandClick ? (
-            <button
-              type="button"
-              className="hover:text-action hover:underline focus-visible:outline-none focus-visible:text-action"
-              onClick={(e) => {
-                e.stopPropagation()
-                onBrandClick(garment.brand)
-              }}
-            >
-              {garment.brand}
-            </button>
-          ) : (
-            garment.brand
-          )}{' '}
+          {garment.brand}{' '}
           · {sku}
         </p>
 
