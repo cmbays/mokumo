@@ -24,44 +24,38 @@ vi.mock('@shared/lib/admin-auth', () => ({
   validateAdminSecret: vi.fn(),
 }))
 
-vi.mock('@infra/services/products-sync.service', () => ({
-  syncProductsFromSupplier: vi.fn(),
+vi.mock('@shared/lib/request-context', () => ({
+  withRequestContext: (handler: (req: Request) => Promise<Response>) => handler,
+}))
+
+vi.mock('@infra/services/brands-sync.service', () => ({
+  syncBrandsFromSupplier: vi.fn(),
 }))
 
 import { POST } from '../route'
 import { checkAdminSyncRateLimit } from '@shared/lib/rate-limit'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
-import { syncProductsFromSupplier } from '@infra/services/products-sync.service'
+import { syncBrandsFromSupplier } from '@infra/services/brands-sync.service'
 
-function makeRequest(
-  overrides: { headers?: Record<string, string>; body?: unknown } = {}
-): Request {
-  const { headers = {}, body } = overrides
-  return new Request('http://localhost/api/catalog/sync-products', {
+function makeRequest(overrides: { headers?: Record<string, string> } = {}): Request {
+  return new Request('http://localhost/api/catalog/sync-brands', {
     method: 'POST',
-    headers: { 'x-admin-secret': 'test-secret', ...headers },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    headers: { 'x-admin-secret': 'test-secret', ...overrides.headers },
   })
 }
 
-describe('POST /api/catalog/sync-products', () => {
+describe('POST /api/catalog/sync-brands', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(validateAdminSecret).mockReturnValue({ valid: true })
-    vi.mocked(syncProductsFromSupplier).mockResolvedValue({
-      synced: 10,
-      errors: 0,
-      total: 10,
-      colorsUpserted: 0,
-      imagesUpserted: 0,
-    })
+    vi.mocked(syncBrandsFromSupplier).mockResolvedValue({ brandsUpserted: 10, errors: 0 })
   })
 
   describe('rate limiting', () => {
     it('returns 429 with Retry-After header when the rate limit is exceeded', async () => {
       vi.mocked(checkAdminSyncRateLimit).mockResolvedValue({ limited: true })
 
-      const response = await POST(makeRequest({ headers: { 'x-forwarded-for': '10.0.0.5' } }))
+      const response = await POST(makeRequest({ headers: { 'x-forwarded-for': '10.0.0.1' } }))
 
       expect(response.status).toBe(429)
       expect(response.headers.get('Retry-After')).toBe('60')
@@ -72,9 +66,9 @@ describe('POST /api/catalog/sync-products', () => {
     it('extracts the first IP from x-forwarded-for and passes it to the limiter', async () => {
       vi.mocked(checkAdminSyncRateLimit).mockResolvedValue({ limited: false })
 
-      await POST(makeRequest({ headers: { 'x-forwarded-for': '198.51.100.1, 10.0.0.2' } }))
+      await POST(makeRequest({ headers: { 'x-forwarded-for': '203.0.113.1, 10.0.0.1' } }))
 
-      expect(checkAdminSyncRateLimit).toHaveBeenCalledWith('198.51.100.1')
+      expect(checkAdminSyncRateLimit).toHaveBeenCalledWith('203.0.113.1')
     })
 
     it('falls back to "unknown" when x-forwarded-for is absent', async () => {
@@ -85,12 +79,12 @@ describe('POST /api/catalog/sync-products', () => {
       expect(checkAdminSyncRateLimit).toHaveBeenCalledWith('unknown')
     })
 
-    it('does not call the products sync service when rate limited', async () => {
+    it('does not call the sync service when rate limited', async () => {
       vi.mocked(checkAdminSyncRateLimit).mockResolvedValue({ limited: true })
 
       await POST(makeRequest())
 
-      expect(syncProductsFromSupplier).not.toHaveBeenCalled()
+      expect(syncBrandsFromSupplier).not.toHaveBeenCalled()
     })
   })
 
@@ -111,49 +105,26 @@ describe('POST /api/catalog/sync-products', () => {
       expect(response.status).toBe(401)
     })
 
-    it('returns 200 with sync result on success', async () => {
-      vi.mocked(syncProductsFromSupplier).mockResolvedValue({
-        synced: 48,
-        errors: 2,
-        total: 50,
-        colorsUpserted: 200,
-        imagesUpserted: 1600,
-      })
+    it('returns 200 with brandsUpserted, errors, and timestamp on success', async () => {
+      vi.mocked(syncBrandsFromSupplier).mockResolvedValue({ brandsUpserted: 42, errors: 0 })
 
       const response = await POST(makeRequest())
 
       expect(response.status).toBe(200)
       const body = await response.json()
-      expect(body.synced).toBe(48)
-      expect(body.errors).toBe(2)
+      expect(body.brandsUpserted).toBe(42)
+      expect(body.errors).toBe(0)
       expect(body.timestamp).toBeDefined()
     })
 
-    it('passes styleIds from the request body to the sync service', async () => {
-      const response = await POST(
-        makeRequest({
-          headers: { 'content-type': 'application/json' },
-          body: { styleIds: ['STYLE-001', 'STYLE-002'] },
-        })
-      )
+    it('returns 500 when the sync service throws', async () => {
+      vi.mocked(syncBrandsFromSupplier).mockRejectedValue(new Error('S&S API unreachable'))
 
-      expect(response.status).toBe(200)
-      expect(syncProductsFromSupplier).toHaveBeenCalledWith(['STYLE-001', 'STYLE-002'], {
-        offset: undefined,
-        limit: undefined,
-      })
-    })
+      const response = await POST(makeRequest())
 
-    it('returns 400 for a malformed request body', async () => {
-      const badRequest = new Request('http://localhost/api/catalog/sync-products', {
-        method: 'POST',
-        headers: { 'x-admin-secret': 'test-secret', 'content-type': 'application/json' },
-        body: JSON.stringify({ styleIds: [123, 456] }), // numbers instead of strings
-      })
-
-      const response = await POST(badRequest)
-
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(500)
+      const body = await response.json()
+      expect(body.error).toBe('Internal server error')
     })
   })
 })

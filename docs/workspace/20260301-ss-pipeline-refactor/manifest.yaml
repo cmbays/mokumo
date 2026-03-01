@@ -1,6 +1,6 @@
 vertical: garments
 waves:
-  - name: "Wave 1 — Rename: Align to S&S API naming"
+  - name: 'Wave 1 — Rename: Align to S&S API naming'
     serial: true
     sessions:
       - topic: ss-pipeline-rename
@@ -211,7 +211,7 @@ waves:
           "fix(catalog): atomic products sync — eliminates timing-gap '-' bug"
           Closes #702, #699.
 
-  - name: "Wave 3 — Brands Persistence + Orchestrated Pipeline"
+  - name: 'Wave 3 — Brands Persistence + Orchestrated Pipeline'
     serial: true
     sessions:
       - topic: ss-brands-sync

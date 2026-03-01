@@ -505,6 +505,37 @@ describe('getBrands()', () => {
   })
 })
 
+// ─── getRawBrands() ───────────────────────────────────────────────────────────
+
+describe('getRawBrands()', () => {
+  it('calls ssGet with TTL=0 to bypass caching for sync jobs', async () => {
+    mockSsGet.mockResolvedValueOnce([{ brandName: 'Gildan', brandImage: '', description: '' }])
+    await adapter.getRawBrands()
+    expect(mockSsGet).toHaveBeenCalledWith('brands', {}, 0)
+  })
+
+  it('returns full SSBrand objects including brandImage and description', async () => {
+    mockSsGet.mockResolvedValueOnce([
+      {
+        brandID: '1',
+        brandName: 'Gildan',
+        brandImage: '/images/gildan.jpg',
+        description: 'Value brand',
+      },
+    ])
+    const brands = await adapter.getRawBrands()
+    expect(brands).toHaveLength(1)
+    expect(brands[0].brandName).toBe('Gildan')
+    expect(brands[0].brandImage).toBe('/images/gildan.jpg')
+    expect(brands[0].description).toBe('Value brand')
+  })
+
+  it('propagates errors without falling back to MockAdapter (unlike getBrands)', async () => {
+    mockSsGet.mockRejectedValueOnce(new SSClientError(502, 'Supplier API unreachable'))
+    await expect(adapter.getRawBrands()).rejects.toBeInstanceOf(SSClientError)
+  })
+})
+
 // ─── getCategories() ─────────────────────────────────────────────────────────
 
 describe('getCategories()', () => {

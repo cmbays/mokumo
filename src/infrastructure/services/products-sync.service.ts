@@ -2,7 +2,11 @@ import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { logger } from '@shared/lib/logger'
-import { mapSSProductToColorValue, buildImages, collectColorGroupPairs } from './products-sync.utils'
+import {
+  mapSSProductToColorValue,
+  buildImages,
+  collectColorGroupPairs,
+} from './products-sync.utils'
 
 const syncLogger = logger.child({ domain: 'products-sync' })
 
@@ -66,9 +70,7 @@ export async function syncProductsFromSupplier(
         and(eq(catalogStyles.source, 'ss-activewear'), inArray(catalogStyles.externalId, styleIds))
       )
     catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
-    brandIdByStyleId = new Map(
-      rows.filter((r) => r.brandId != null).map((r) => [r.id, r.brandId!])
-    )
+    brandIdByStyleId = new Map(rows.filter((r) => r.brandId != null).map((r) => [r.id, r.brandId!]))
   } else {
     const rows = await db
       .select({
@@ -80,9 +82,7 @@ export async function syncProductsFromSupplier(
       .where(eq(catalogStyles.source, 'ss-activewear'))
     idsToSync = rows.map((r) => r.externalId)
     catalogStyleIdByExternalId = new Map(rows.map((r) => [r.externalId, r.id]))
-    brandIdByStyleId = new Map(
-      rows.filter((r) => r.brandId != null).map((r) => [r.id, r.brandId!])
-    )
+    brandIdByStyleId = new Map(rows.filter((r) => r.brandId != null).map((r) => [r.id, r.brandId!]))
   }
 
   if (idsToSync.length === 0) {
@@ -166,7 +166,13 @@ export async function syncProductsFromSupplier(
             if (!sizeMap.has(p.sizeName)) sizeMap.set(p.sizeName, p.sizeIndex)
           }
           for (const [name, sortOrder] of sizeMap.entries()) {
-            sizeValues.push({ styleId: catalogStyleId, name, sortOrder, priceAdjustment: 0, updatedAt: new Date() })
+            sizeValues.push({
+              styleId: catalogStyleId,
+              name,
+              sortOrder,
+              priceAdjustment: 0,
+              updatedAt: new Date(),
+            })
           }
         }
 
@@ -316,6 +322,12 @@ export async function syncProductsFromSupplier(
     })
   }
 
-  syncLogger.info('Products sync completed', { synced, errors, total, colorsUpserted, imagesUpserted })
+  syncLogger.info('Products sync completed', {
+    synced,
+    errors,
+    total,
+    colorsUpserted,
+    imagesUpserted,
+  })
   return { synced, errors, total, colorsUpserted, imagesUpserted }
 }

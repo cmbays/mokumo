@@ -24,6 +24,7 @@ yet in `raw.ss_activewear_products` (or vice versa), producing "–" availabilit
 ## Fix Architecture
 
 One `db.transaction()` per style, wrapping all four writes in order:
+
 1. `catalog_colors` — upsert, returns IDs for image association
 2. `catalog_images` — upsert keyed by `(colorId, imageType)`
 3. `catalog_sizes` — upsert keyed by `(styleId, sizeName)` using `sizeIndex` sort order
@@ -35,26 +36,32 @@ bulk-upserted after each batch of 50 styles via `onConflictDoNothing()`.
 ## Key Decisions
 
 ### Utility file placement
+
 `products-sync.utils.ts` lives next to the service in `src/infrastructure/services/` rather
 than staying in `scripts/`. Rationale: it's now imported by a server-side service, not a
 standalone CLI script. Keeping it in `scripts/` would be a leaky abstraction.
 
 ### Color dedup vs raw dedup
+
 - **Color/image writes**: deduplicated by colorName (one entry per color, not one per SKU)
 - **Raw insert**: ALL SKUs inserted (no dedup) — dbt deduplicates via `row_number()`
 
 ### brandId in upfront SELECT
+
 Added `brandId: catalogStyles.brandId` to the initial `catalog_styles` query. This avoids
 a per-style DB round-trip and enables `collectColorGroupPairs()` to map styles → brands.
 `brandId` is nullable; filtered with `.filter(r => r.brandId != null)` before building the map.
 
 ### Error granularity
+
 - Batch API failure: `errors += batch.length` (style count) — unchanged from original
 - Per-style transaction failure: `errors += styleProducts.length` (SKU count) — now isolated;
   one style failing no longer aborts the remaining styles in the same batch
 
 ### Behavior when catalogStyleId is absent
+
 If a style exists in S&S but not yet in `catalog_styles` (not yet catalog-synced):
+
 - color/image/size upserts are skipped
 - raw insert still happens (pricing data captured for dbt)
 - This matches the original pricing-sync behavior
@@ -62,18 +69,21 @@ If a style exists in S&S but not yet in `catalog_styles` (not yet catalog-synced
 ## Files Changed
 
 ### Created
+
 - `src/infrastructure/services/products-sync.utils.ts` — pure utilities (renamed from
   `scripts/image-sync-utils.ts` + absorbed `scripts/color-group-utils.ts`)
 - `src/infrastructure/services/__tests__/products-sync.utils.test.ts` — merged test file
   (renamed from `scripts/__tests__/image-sync-utils.test.ts` + `color-group-utils.test.ts`)
 
 ### Modified
+
 - `src/infrastructure/services/products-sync.service.ts` — major rewrite
 - `src/infrastructure/services/__tests__/products-sync.service.test.ts` — add transaction mock
 - `src/app/api/catalog/sync-products/__tests__/route.test.ts` — update mock return type
 - `dbt/models/marts/garments/_catalog__sources.yml` — update source description
 
 ### Deleted (via `git rm`)
+
 - `scripts/run-image-sync.ts`
 - `scripts/image-sync-utils.ts`
 - `scripts/color-group-utils.ts`

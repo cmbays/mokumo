@@ -47,6 +47,9 @@ export const catalogBrands = pgTable('catalog_brands', {
   id: uuid('id').primaryKey().defaultRandom(),
   canonicalName: varchar('canonical_name', { length: 255 }).notNull().unique(),
   isActive: boolean('is_active').notNull().default(true),
+  // Enrichment fields from S&S /v2/brands/ — null until first brands sync run
+  brandImageUrl: varchar('brand_image_url', { length: 1024 }),
+  description: text('description'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
