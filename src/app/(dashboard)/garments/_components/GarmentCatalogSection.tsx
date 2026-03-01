@@ -87,7 +87,6 @@ export async function GarmentCatalogSection({
     styleSwatches,
     styleColorGroups,
     colorGroups: colorGroupsRaw,
-    catalogColors,
   } = buildSupplementMaps(supplementRows)
 
   // Pre-sort colorGroups so favorites appear first in the filter tabs
@@ -131,7 +130,6 @@ export async function GarmentCatalogSection({
       styleSwatches={styleSwatches}
       styleColorGroups={styleColorGroups}
       colorGroups={colorGroups}
-      catalogColors={catalogColors}
       initialFavoriteColorIds={initialFavoriteColorIds}
       initialFavoriteColorGroupNames={initialFavoriteColorGroupNames}
       inStockStyleIds={inStockStyleIds}

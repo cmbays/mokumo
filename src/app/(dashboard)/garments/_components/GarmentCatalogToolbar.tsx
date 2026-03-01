@@ -48,7 +48,6 @@ type GarmentCatalogToolbarProps = {
   onToggleColorGroup: (colorGroupName: string) => void
   onClearColorGroups: () => void
   garmentCount: number
-  onBrandClick?: (brandName: string) => void
   /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
   categoryHits: Partial<Record<GarmentCategory, number>>
   /** Controlled category state — managed by parent to avoid router.replace re-renders */
@@ -72,7 +71,6 @@ export function GarmentCatalogToolbar({
   onToggleColorGroup,
   onClearColorGroups,
   garmentCount,
-  onBrandClick,
   categoryHits,
   category,
   onCategoryChange,
@@ -322,18 +320,7 @@ export function GarmentCatalogToolbar({
           <>
             {activeFilters.map((filter) => (
               <Badge key={filter.key} variant="outline" className="gap-1 pl-2 pr-1 text-xs">
-                {/* Fix #3: Brand pill is clickable when onBrandClick is provided */}
-                {filter.key === 'brand' && onBrandClick ? (
-                  <button
-                    type="button"
-                    className="hover:text-action hover:underline focus-visible:outline-none focus-visible:text-action"
-                    onClick={() => onBrandClick(filter.value)}
-                  >
-                    {filter.label}
-                  </button>
-                ) : (
-                  filter.label
-                )}
+                {filter.label}
                 <button
                   type="button"
                   onClick={() => updateParam(filter.key, null)}
