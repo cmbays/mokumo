@@ -1,0 +1,1 @@
+../../docs/HOW_WE_WORK.md
