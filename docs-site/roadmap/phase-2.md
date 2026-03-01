@@ -378,6 +378,36 @@ _What we're actively working on right now._
 
 ---
 
+## Risks
+
+### Critical Path Risks
+
+These risks affect the pilot vertical (P4→P6→P9→P10) — the longest dependency chain. A slip here delays everything downstream.
+
+| Risk | Impact | Mitigation | When to Address |
+|------|--------|-----------|----------------|
+| **P6 M0 entity model decision** — Separate entities (quote→job→invoice) vs. Printavo-style unified entity. Wrong call means rework across P9 and P10. | High — affects 3 project schemas | Research both models deeply during P6 M0. Build a lightweight spike (schema + 2-3 queries) for each approach before committing. | P6 M0 (before any schema code) |
+| **P4 pricing matrix is the bottleneck** — P4 M3 (Integration) gates P6 M2 (Quote Builder). If pricing takes longer than expected, the entire pilot stalls. | High — critical path blocker | Start P4 M0 research immediately (Window 1). The pricing calculation engine (`big.js` pipeline) is well-understood; the unknown is the editor UI complexity. | Now — begin P4 M0 |
+| **H3+H4 (Email+PDF) gate P6 M4** — Quote sending requires both email infrastructure and PDF generation. Two horizontal enablers must be ready simultaneously. | Medium — parallel dependency | Build H3 and H4 as a single sprint early in Window 4, before P6 M3 completes. Both are well-scoped (Resend + @react-pdf/renderer). | Window 4, early |
+
+### Architecture Risks
+
+| Risk | Impact | Mitigation | When to Address |
+|------|--------|-----------|----------------|
+| **Issue #700 — Contact vs. company data model** — Unresolved. Affects how preferences cascade, how the customer detail page organizes information, and how P14 (Portal) scopes data access. | High — P3/P5/P6/P14 all depend on this | Resolve before P3 M1 completes. InkSoft's model (organizations contain contacts) is the right B2B pattern — validate with Gary. | Before P3 M1 ships |
+| **Multi-process quote schema** — P6 is the screen print pilot, but the quote schema must accommodate DTF (P7) and DTF Press (P8) line items from day one. Over-engineering risks delay; under-engineering risks rework. | Medium — P7/P8 rework if wrong | Design the polymorphic line item model during P6 M0. The existing `dtfLineItems` array on the quote entity suggests the pattern. Validate with a spike that models all 3 service types. | P6 M0–M1 |
+| **DTF codebase drift** — 560+ lines of DTF domain code (`dtf.service.ts`, `dtf-pricing.ts`, etc.) built during Phase 1 with mock data. May need refactoring when wired to real data and the P6 quote schema. | Low-Medium — rework scoped to P7 | Audit existing DTF code during P7 M0. It's well-tested (90% threshold), so the risk is interface mismatch, not logic bugs. | P7 M0 |
+
+### Validation Risks
+
+| Risk | Impact | Mitigation | When to Address |
+|------|--------|-----------|----------------|
+| **P12 (Screen Room) is novel territory** — No competitor has screen tracking software. We don't know if shop owners will actually use it daily. The QR scanning UX must be faster than a whiteboard or it fails. | High — could be wasted investment | **Validate before building.** P12 M0 is explicitly a validation milestone (shop owner interview). Do not proceed to M1 without confirmed demand. If validation fails, reallocate effort to P11 or P13. | P12 M0 — before any code |
+| **Batch production is a gap everyone has** — No competitor handles it well, but the data model is complex (batch entity linking jobs by shared design/ink/substrate). | Medium — complexity risk | Design the batch data model during P9 M0 research, but defer UI to P9 M3. The schema should support batching even if the full UI comes later. | P9 M0 (model) → P9 M3 (UI) |
+| **Customer portal scope creep** — P14 has 7 milestones (most of any project). Custom domains (M6) and full communication threads (M5) could expand scope significantly. | Medium — timeline risk | Hard-scope P14 to M0–M3 for Phase 2. M4–M6 are Phase 3 candidates. The portal is usable with just auth + order visibility + artwork approval. | P14 planning |
+
+---
+
 ## Resolved Decisions
 
 Previously open questions that have been resolved through research:
