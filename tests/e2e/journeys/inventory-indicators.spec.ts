@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * E2E smoke tests: Wave 4 inventory indicator surfaces.
@@ -23,7 +23,7 @@ const EMAIL = process.env.E2E_EMAIL ?? ''
 const PASSWORD = process.env.E2E_PASSWORD ?? ''
 const REQUIRES_AUTH = !!EMAIL && !!PASSWORD
 
-async function login(page: Parameters<Parameters<typeof test>[1]>[0]['page']) {
+async function login(page: Page) {
   if (!REQUIRES_AUTH) return
   await page.goto('/login', { waitUntil: 'networkidle' })
   await page.locator('#email').fill(EMAIL)
@@ -32,7 +32,7 @@ async function login(page: Parameters<Parameters<typeof test>[1]>[0]['page']) {
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 })
 }
 
-async function skipIfRedirectedToLogin(page: Parameters<Parameters<typeof test>[1]>[0]['page']) {
+async function skipIfRedirectedToLogin(page: Page) {
   if (page.url().includes('/login')) {
     test.skip(true, 'Redirected to login — set E2E_EMAIL and E2E_PASSWORD env vars')
   }
