@@ -78,11 +78,7 @@ export {
 
 export { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
 
-export {
-  getStyleInventory,
-  getStylesInventory,
-  getColorInventory,
-} from './repositories/inventory'
+export { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
 
 // -- Compile-time assertions --------------------------------------------------
 // Verify that concrete implementations satisfy their port contracts.
@@ -130,11 +126,7 @@ import {
   getDtfSheetTiers,
 } from './repositories/settings'
 import { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
-import {
-  getStyleInventory,
-  getStylesInventory,
-  getColorInventory,
-} from './repositories/inventory'
+import { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
 
 const _portChecks = {
   customer: {
