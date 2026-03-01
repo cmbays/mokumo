@@ -351,67 +351,78 @@ export function GarmentDetailDrawer({
             </div>
 
             {/* Size Availability — shown when normalized color data + inventory are loaded */}
-            {normalizedColors && colorInventory && colorInventory.size > 0 && garment.availableSizes.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  <Package size={14} aria-hidden="true" />
-                  Availability
-                </h3>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Size availability">
-                  {[...garment.availableSizes]
-                    .sort((a, b) => a.order - b.order)
-                    .map((size) => {
-                      const qty = colorInventory.get(size.name)
-                      const isOutOfStock = qty === 0
-                      // Wave 4: hardcode 1.5× buffer multiplier (shop-configurable in future wave)
-                      const isLowStock =
-                        qty !== undefined && qty > 0 && qty < LOW_STOCK_THRESHOLD * 1.5
-                      return (
-                        <div
-                          key={size.name}
-                          className={cn(
-                            'relative flex min-h-10 min-w-10 items-center justify-center rounded-md border px-2.5 py-1',
-                            isOutOfStock
-                              ? 'border-error/30 bg-error/5 opacity-60'
-                              : isLowStock
-                                ? 'border-warning/30 bg-warning/5'
-                                : 'border-border'
-                          )}
-                          aria-label={
-                            isOutOfStock
-                              ? `${size.name} — out of stock`
-                              : isLowStock
-                                ? `${size.name} — low stock`
-                                : size.name
-                          }
-                        >
-                          <span className="text-sm font-medium text-foreground">{size.name}</span>
-                          {isLowStock && (
-                            <AlertTriangle
-                              size={10}
-                              className="absolute -right-1 -top-1 text-warning"
-                              aria-hidden="true"
-                            />
-                          )}
-                          {isOutOfStock && (
-                            <XCircle
-                              size={10}
-                              className="absolute -right-1 -top-1 text-error"
-                              aria-hidden="true"
-                            />
-                          )}
-                        </div>
-                      )
-                    })}
+            {normalizedColors &&
+              colorInventory &&
+              colorInventory.size > 0 &&
+              garment.availableSizes.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <Package size={14} aria-hidden="true" />
+                    Availability
+                  </h3>
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label="Size availability"
+                  >
+                    {[...garment.availableSizes]
+                      .sort((a, b) => a.order - b.order)
+                      .map((size) => {
+                        const qty = colorInventory.get(size.name)
+                        const isOutOfStock = qty === 0
+                        // Wave 4: hardcode 1.5× buffer multiplier (shop-configurable in future wave)
+                        const isLowStock =
+                          qty !== undefined && qty > 0 && qty < LOW_STOCK_THRESHOLD * 1.5
+                        return (
+                          <div
+                            key={size.name}
+                            className={cn(
+                              'relative flex min-h-10 min-w-10 items-center justify-center rounded-md border px-2.5 py-1',
+                              isOutOfStock
+                                ? 'border-error/30 bg-error/5 opacity-60'
+                                : isLowStock
+                                  ? 'border-warning/30 bg-warning/5'
+                                  : 'border-border'
+                            )}
+                            aria-label={
+                              isOutOfStock
+                                ? `${size.name} — out of stock`
+                                : isLowStock
+                                  ? `${size.name} — low stock`
+                                  : size.name
+                            }
+                          >
+                            <span className="text-sm font-medium text-foreground">{size.name}</span>
+                            {isLowStock && (
+                              <AlertTriangle
+                                size={10}
+                                className="absolute -right-1 -top-1 text-warning"
+                                aria-hidden="true"
+                              />
+                            )}
+                            {isOutOfStock && (
+                              <XCircle
+                                size={10}
+                                className="absolute -right-1 -top-1 text-error"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                  </div>
+                  <p className="text-xs text-muted-foreground/60">
+                    <AlertTriangle
+                      size={10}
+                      className="inline text-warning mr-0.5"
+                      aria-hidden="true"
+                    />
+                    Low &nbsp;
+                    <XCircle size={10} className="inline text-error mr-0.5" aria-hidden="true" />
+                    Out of stock
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground/60">
-                  <AlertTriangle size={10} className="inline text-warning mr-0.5" aria-hidden="true" />
-                  Low &nbsp;
-                  <XCircle size={10} className="inline text-error mr-0.5" aria-hidden="true" />
-                  Out of stock
-                </p>
-              </div>
-            )}
+              )}
 
             {/* Size & Pricing table */}
             {showPrice && garment.availableSizes.length > 0 && (

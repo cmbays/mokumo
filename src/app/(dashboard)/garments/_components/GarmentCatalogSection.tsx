@@ -103,12 +103,13 @@ export async function GarmentCatalogSection({
   // Runs after styleMetas resolves (which is cached at 60s, so ~1ms on warm loads).
   // Returns the set of catalog_styles UUIDs that have totalQuantity > 0.
   const styleIds = styleMetas.map((m) => m.id)
-  const inventoryMap = styleIds.length > 0
-    ? await getStylesInventory(styleIds).catch((err: unknown) => {
-        sectionLogger.error('getStylesInventory failed — in-stock filter unavailable', { err })
-        return new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
-      })
-    : new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
+  const inventoryMap =
+    styleIds.length > 0
+      ? await getStylesInventory(styleIds).catch((err: unknown) => {
+          sectionLogger.error('getStylesInventory failed — in-stock filter unavailable', { err })
+          return new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
+        })
+      : new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
   const inStockStyleIds = [...inventoryMap.entries()]
     .filter(([, inv]) => inv.totalQuantity > 0)
     .map(([id]) => id)

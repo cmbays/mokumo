@@ -311,7 +311,17 @@ export function GarmentCatalogClient({
     filtered.sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0))
 
     return { filteredGarments: filtered, categoryHits: hits }
-  }, [catalog, category, searchQuery, brand, selectedGroupSet, styleColorGroupsMap, inStock, inStockStyleIdSet, skuToStyleId])
+  }, [
+    catalog,
+    category,
+    searchQuery,
+    brand,
+    selectedGroupSet,
+    styleColorGroupsMap,
+    inStock,
+    inStockStyleIdSet,
+    skuToStyleId,
+  ])
 
   // Per-page slice — enables true prev/next navigation
   const totalPages = Math.ceil(filteredGarments.length / PAGE_SIZE)
@@ -536,9 +546,7 @@ export function GarmentCatalogClient({
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Package className="size-12 text-muted-foreground/50 mb-4" />
           <p className="text-sm font-medium text-muted-foreground">
-            {inStock
-              ? 'No in-stock garments match your filters'
-              : 'No garments match your filters'}
+            {inStock ? 'No in-stock garments match your filters' : 'No garments match your filters'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground/60">
             {inStock

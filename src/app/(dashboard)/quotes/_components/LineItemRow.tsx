@@ -546,11 +546,7 @@ export function LineItemRow({
             role="alert"
             className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2"
           >
-            <AlertTriangle
-              size={14}
-              className="mt-0.5 shrink-0 text-warning"
-              aria-hidden="true"
-            />
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
             <p className="flex-1 text-xs text-warning">
               Some sizes may have limited availability. Check stock levels before finalizing.
             </p>
