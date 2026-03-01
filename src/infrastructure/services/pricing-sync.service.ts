@@ -1,7 +1,6 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
-import { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
-import { getSupplierAdapter } from '@lib/suppliers/registry'
+import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { logger } from '@shared/lib/logger'
 
 const syncLogger = logger.child({ domain: 'pricing-sync' })
@@ -27,11 +26,7 @@ export async function syncRawPricingFromSupplier(
   const { ssActivewearProducts } = await import('@db/schema/raw')
   const { catalogStyles } = await import('@db/schema/catalog-normalized')
 
-  const adapter = getSupplierAdapter()
-  if (!(adapter instanceof SSActivewearAdapter)) {
-    syncLogger.warn('Pricing sync requires SSActivewearAdapter; current adapter is not compatible')
-    return { synced: 0, errors: 0 }
-  }
+  const adapter = getSsActivewearAdapter()
 
   // Resolve style IDs
   let idsToSync: string[]
