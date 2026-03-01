@@ -53,17 +53,12 @@ vi.mock('@db/schema/catalog-normalized', () => ({
 }))
 
 // Mock the adapter module — the factory must be self-contained (vi.mock is hoisted)
-vi.mock('@lib/suppliers/adapters/ss-activewear', () => {
-  class SSActivewearAdapter {}
-  return { SSActivewearAdapter }
-})
-
 vi.mock('@lib/suppliers/registry', () => ({
-  getSupplierAdapter: vi.fn(),
+  getSsActivewearAdapter: vi.fn(),
 }))
 
-import { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
-import { getSupplierAdapter } from '@lib/suppliers/registry'
+import type { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
+import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { syncRawPricingFromSupplier } from '../pricing-sync.service'
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -76,33 +71,14 @@ beforeEach(() => {
 })
 
 function setupSSAdapter() {
-  // Create an instance that passes `instanceof SSActivewearAdapter`
-  // Cast through unknown: the vi.mock factory replaces the class with a no-arg constructor,
-  // but TypeScript still sees the original 2-arg signature.
-  const MockedSSAdapter = SSActivewearAdapter as unknown as new () => InstanceType<
-    typeof SSActivewearAdapter
-  >
-  const adapter = Object.assign(new MockedSSAdapter(), {
+  vi.mocked(getSsActivewearAdapter).mockReturnValue({
     getRawProducts: mockGetRawProducts,
-  })
-  vi.mocked(getSupplierAdapter).mockReturnValue(adapter as ReturnType<typeof getSupplierAdapter>)
-}
-
-function setupNonSSAdapter() {
-  vi.mocked(getSupplierAdapter).mockReturnValue({
-    supplierName: 'mock',
-  } as ReturnType<typeof getSupplierAdapter>)
+  } as unknown as SSActivewearAdapter)
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('syncRawPricingFromSupplier', () => {
-  it('returns { synced: 0, errors: 0 } when adapter is not SSActivewearAdapter', async () => {
-    setupNonSSAdapter()
-    const result = await syncRawPricingFromSupplier()
-    expect(result).toEqual({ synced: 0, errors: 0 })
-  })
-
   it('returns { synced: 0, errors: 0 } when no styles to sync', async () => {
     setupSSAdapter()
     mockWhere.mockResolvedValueOnce([])
