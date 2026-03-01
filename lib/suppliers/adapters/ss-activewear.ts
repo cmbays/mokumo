@@ -113,6 +113,34 @@ const ssInventoryItemSchema = z
   })
   .passthrough()
 
+/**
+ * Per-warehouse quantity record within a raw inventory item.
+ * warehouseAbbr: OH, IL, PA, CN, MA, NV, GA, TX, KS, FO (freight-only), DS (drop-ship).
+ */
+const ssRawInventoryWarehouseSchema = z
+  .object({
+    warehouseAbbr: z.string(),
+    skuID: z.number().optional(),
+    qty: z.number(),
+  })
+  .passthrough()
+
+/**
+ * Full inventory item from GET /v2/inventory/ — used for bulk sync.
+ * Differs from ssInventoryItemSchema (per-SKU lookup) by including styleID
+ * and the warehouses JSONB array (instead of a single aggregated qty).
+ */
+const ssRawInventoryItemSchema = z
+  .object({
+    sku: z.string(),
+    skuID: z.number().optional(),
+    styleID: z.union([z.number(), z.string()]).transform(String),
+    warehouses: z.array(ssRawInventoryWarehouseSchema).default([]),
+  })
+  .passthrough()
+
+export type SSRawInventoryItem = z.infer<typeof ssRawInventoryItemSchema>
+
 const ssBrandSchema = z
   .object({
     brandName: z.string(),
@@ -327,6 +355,20 @@ export class SSActivewearAdapter implements SupplierAdapter {
       await this.cache.set(cacheKey, style, SS_CACHE_TTL.products)
     }
     return style
+  }
+
+  /**
+   * Fetch all inventory SKUs from S&S in a single bulk request.
+   * Used by the inventory sync cron job to populate raw.ss_activewear_inventory
+   * and upsert catalog_inventory. Returns the full warehouses JSONB array
+   * (not the aggregated qty used by getInventory).
+   *
+   * Note: TTL=0 bypasses Next.js fetch cache — cron jobs always need fresh data.
+   * The ?skuids= filter is non-functional per S&S API; this returns all ~190k SKUs.
+   */
+  async getRawInventory(): Promise<SSRawInventoryItem[]> {
+    const raw = await ssGet('inventory', {}, 0)
+    return z.array(ssRawInventoryItemSchema).parse(raw)
   }
 
   /**

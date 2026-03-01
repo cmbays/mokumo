@@ -31,17 +31,17 @@ pipeline: 20260228-inventory-pipeline
 
 Key facts discovered by probing the live S&S Activewear API:
 
-| Finding | Detail |
-|---|---|
-| `skuids` param is non-functional | Ignores input — always returns all 190,224 SKUs |
-| `?style=<styleID>` filter works | Returns ~368 SKUs for a given style (numeric ID, not string) |
-| No per-SKU filter | Cannot refresh a single SKU without fetching all or fetching by style |
-| Quantity representation | `warehouses[].qty` per warehouse — no top-level total field |
-| Out-of-stock signal | `qty: 0` present in response (not absent) — no "discontinued" flag |
-| No timestamp on response | API returns no `asOf` or `lastUpdated` field |
-| Warehouse codes | Stable state abbreviations: OH, IL, PA, CN, MA, NV, GA, TX, KS + special: FO (freight-only), DS (drop-ship) |
-| Rate cost | 1 request per call regardless of payload size |
-| Products endpoint overlap | `/v2/products/` also contains `qty` + `warehouses` but we currently discard them |
+| Finding                          | Detail                                                                                                      |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `skuids` param is non-functional | Ignores input — always returns all 190,224 SKUs                                                             |
+| `?style=<styleID>` filter works  | Returns ~368 SKUs for a given style (numeric ID, not string)                                                |
+| No per-SKU filter                | Cannot refresh a single SKU without fetching all or fetching by style                                       |
+| Quantity representation          | `warehouses[].qty` per warehouse — no top-level total field                                                 |
+| Out-of-stock signal              | `qty: 0` present in response (not absent) — no "discontinued" flag                                          |
+| No timestamp on response         | API returns no `asOf` or `lastUpdated` field                                                                |
+| Warehouse codes                  | Stable state abbreviations: OH, IL, PA, CN, MA, NV, GA, TX, KS + special: FO (freight-only), DS (drop-ship) |
+| Rate cost                        | 1 request per call regardless of payload size                                                               |
+| Products endpoint overlap        | `/v2/products/` also contains `qty` + `warehouses` but we currently discard them                            |
 
 ---
 

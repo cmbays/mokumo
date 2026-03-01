@@ -9,9 +9,7 @@ export async function getStyleInventory(styleId: string): Promise<StyleInventory
   return repo.getForStyle(styleId)
 }
 
-export async function getStylesInventory(
-  styleIds: string[]
-): Promise<Map<string, StyleInventory>> {
+export async function getStylesInventory(styleIds: string[]): Promise<Map<string, StyleInventory>> {
   return repo.getForStyles(styleIds)
 }
 

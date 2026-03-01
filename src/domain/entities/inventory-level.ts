@@ -28,14 +28,12 @@ export const styleInventorySchema = z
     hasLowStock: z.boolean(), // any level with 0 < quantity < LOW_STOCK_THRESHOLD
     hasOutOfStock: z.boolean(), // any level with quantity === 0
   })
-  .refine(
-    (s) => s.totalQuantity === s.levels.reduce((sum, l) => sum + l.quantity, 0),
-    { message: 'totalQuantity must equal the sum of all level quantities' }
-  )
-  .refine(
-    (s) => s.hasOutOfStock === s.levels.some((l) => l.quantity === 0),
-    { message: 'hasOutOfStock must be true iff any level has quantity === 0' }
-  )
+  .refine((s) => s.totalQuantity === s.levels.reduce((sum, l) => sum + l.quantity, 0), {
+    message: 'totalQuantity must equal the sum of all level quantities',
+  })
+  .refine((s) => s.hasOutOfStock === s.levels.some((l) => l.quantity === 0), {
+    message: 'hasOutOfStock must be true iff any level has quantity === 0',
+  })
   .refine(
     (s) =>
       s.hasLowStock === s.levels.some((l) => l.quantity > 0 && l.quantity < LOW_STOCK_THRESHOLD),
