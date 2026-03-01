@@ -16,6 +16,6 @@ void (async () => {
   const count = await syncStylesFromSupplier()
   console.log(`Styles sync complete — synced ${count} styles`)
 })().catch((err) => {
-  console.error('Catalog sync failed:', err)
+  console.error('Styles sync failed:', err)
   process.exit(1)
 })
