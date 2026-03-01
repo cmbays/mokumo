@@ -179,10 +179,9 @@ test.describe('Inventory indicators — Surface 1: in-stock filter toggle', () =
     await clearAllBtn.click()
 
     // URL should be clean — no inStock, no q param
-    await page.waitForURL(
-      (url) => !url.searchParams.has('inStock') && !url.searchParams.has('q'),
-      { timeout: 5_000 }
-    )
+    await page.waitForURL((url) => !url.searchParams.has('inStock') && !url.searchParams.has('q'), {
+      timeout: 5_000,
+    })
     const finalUrl = new URL(page.url())
     expect(finalUrl.searchParams.has('inStock')).toBe(false)
     expect(finalUrl.searchParams.has('q')).toBe(false)
@@ -271,7 +270,10 @@ test.describe('Inventory indicators — Surface 2: drawer size availability', ()
     // Each size badge has role="img" (set in PR #681 review fix)
     const sizeBadges = sizeGroup.locator('[role="img"]')
     const badgeCount = await sizeBadges.count()
-    expect(badgeCount, 'Expected at least one size badge in the Availability section').toBeGreaterThan(0)
+    expect(
+      badgeCount,
+      'Expected at least one size badge in the Availability section'
+    ).toBeGreaterThan(0)
 
     await page.screenshot({
       path: 'tests/e2e/screenshots/inventory-drawer-availability.png',
