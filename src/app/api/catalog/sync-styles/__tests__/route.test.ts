@@ -24,27 +24,27 @@ vi.mock('@shared/lib/admin-auth', () => ({
   validateAdminSecret: vi.fn(),
 }))
 
-vi.mock('@infra/services/catalog-sync.service', () => ({
-  syncCatalogFromSupplier: vi.fn(),
+vi.mock('@infra/services/styles-sync.service', () => ({
+  syncStylesFromSupplier: vi.fn(),
 }))
 
 import { POST } from '../route'
 import { checkAdminSyncRateLimit } from '@shared/lib/rate-limit'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
-import { syncCatalogFromSupplier } from '@infra/services/catalog-sync.service'
+import { syncStylesFromSupplier } from '@infra/services/styles-sync.service'
 
 function makeRequest(overrides: { headers?: Record<string, string> } = {}): Request {
-  return new Request('http://localhost/api/catalog/sync', {
+  return new Request('http://localhost/api/catalog/sync-styles', {
     method: 'POST',
     headers: { 'x-admin-secret': 'test-secret', ...overrides.headers },
   })
 }
 
-describe('POST /api/catalog/sync', () => {
+describe('POST /api/catalog/sync-styles', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(validateAdminSecret).mockReturnValue({ valid: true })
-    vi.mocked(syncCatalogFromSupplier).mockResolvedValue(100)
+    vi.mocked(syncStylesFromSupplier).mockResolvedValue(100)
   })
 
   describe('rate limiting', () => {
@@ -80,7 +80,7 @@ describe('POST /api/catalog/sync', () => {
 
       await POST(makeRequest())
 
-      expect(syncCatalogFromSupplier).not.toHaveBeenCalled()
+      expect(syncStylesFromSupplier).not.toHaveBeenCalled()
     })
   })
 
@@ -102,7 +102,7 @@ describe('POST /api/catalog/sync', () => {
     })
 
     it('returns 200 with synced count on success', async () => {
-      vi.mocked(syncCatalogFromSupplier).mockResolvedValue(42)
+      vi.mocked(syncStylesFromSupplier).mockResolvedValue(42)
 
       const response = await POST(makeRequest())
 

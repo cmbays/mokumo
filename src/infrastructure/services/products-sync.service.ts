@@ -3,7 +3,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { getSsActivewearAdapter } from '@lib/suppliers/registry'
 import { logger } from '@shared/lib/logger'
 
-const syncLogger = logger.child({ domain: 'pricing-sync' })
+const syncLogger = logger.child({ domain: 'products-sync' })
 
 /** Number of S&S styleIds to pack into a single /v2/products/ API call. */
 const BATCH_SIZE = 50
@@ -22,7 +22,7 @@ const BATCH_SIZE = 50
  * @param styleIds - Optional list of S&S style IDs to sync. If omitted, syncs all
  *   styles from `catalog_styles` where source = 'ss-activewear'.
  */
-export async function syncRawPricingFromSupplier(
+export async function syncProductsFromSupplier(
   styleIds?: string[],
   options?: { limit?: number; offset?: number }
 ): Promise<{ synced: number; errors: number; total: number }> {
@@ -56,7 +56,7 @@ export async function syncRawPricingFromSupplier(
   }
 
   if (idsToSync.length === 0) {
-    syncLogger.info('No styles to sync pricing for')
+    syncLogger.info('No styles to sync products for')
     return { synced: 0, errors: 0, total: 0 }
   }
 
@@ -68,7 +68,7 @@ export async function syncRawPricingFromSupplier(
     idsToSync = idsToSync.slice(offset, limit !== undefined ? offset + limit : undefined)
   }
 
-  syncLogger.info('Starting raw pricing sync', {
+  syncLogger.info('Starting products sync', {
     styleCount: idsToSync.length,
     total,
     offset,
@@ -155,14 +155,14 @@ export async function syncRawPricingFromSupplier(
             })
         }
 
-        syncLogger.debug('Synced pricing for style', {
+        syncLogger.debug('Synced products for style', {
           styleId,
           productCount: styleProducts.length,
         })
       }
     } catch (error) {
       errors += batch.length
-      syncLogger.error('Failed to sync pricing batch', {
+      syncLogger.error('Failed to sync products batch', {
         batchStart: i,
         batchSize: batch.length,
         styleIds: batch,
@@ -170,7 +170,7 @@ export async function syncRawPricingFromSupplier(
       })
     }
 
-    syncLogger.info('Pricing sync batch progress', {
+    syncLogger.info('Products sync batch progress', {
       processed: Math.min(i + BATCH_SIZE, idsToSync.length),
       total: idsToSync.length,
       synced,
@@ -178,6 +178,6 @@ export async function syncRawPricingFromSupplier(
     })
   }
 
-  syncLogger.info('Raw pricing sync completed', { synced, errors, total })
+  syncLogger.info('Products sync completed', { synced, errors, total })
   return { synced, errors, total }
 }

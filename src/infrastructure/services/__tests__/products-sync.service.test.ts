@@ -68,7 +68,7 @@ vi.mock('@lib/suppliers/registry', () => ({
 
 import type { SSActivewearAdapter } from '@lib/suppliers/adapters/ss-activewear'
 import { getSsActivewearAdapter } from '@lib/suppliers/registry'
-import { syncRawPricingFromSupplier } from '../pricing-sync.service'
+import { syncProductsFromSupplier } from '../products-sync.service'
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
@@ -86,11 +86,11 @@ function setupSSAdapter() {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('syncRawPricingFromSupplier', () => {
+describe('syncProductsFromSupplier', () => {
   it('returns { synced: 0, errors: 0, total: 0 } when no styles to sync', async () => {
     setupSSAdapter()
     mockWhere.mockResolvedValueOnce([])
-    const result = await syncRawPricingFromSupplier()
+    const result = await syncProductsFromSupplier()
     expect(result).toEqual({ synced: 0, errors: 0, total: 0 })
   })
 
@@ -121,7 +121,7 @@ describe('syncRawPricingFromSupplier', () => {
       },
     ])
 
-    const result = await syncRawPricingFromSupplier(['1234'])
+    const result = await syncProductsFromSupplier(['1234'])
     expect(result.synced).toBe(1)
     expect(result.errors).toBe(0)
     // Batch call receives the array, not a single string
@@ -134,7 +134,7 @@ describe('syncRawPricingFromSupplier', () => {
     // First batch of ['1234', '5678'] fails; no second call because both are in one batch
     mockGetRawProductsBatch.mockRejectedValueOnce(new Error('API timeout'))
 
-    const result = await syncRawPricingFromSupplier(['1234', '5678'])
+    const result = await syncProductsFromSupplier(['1234', '5678'])
     expect(result.synced).toBe(0)
     expect(result.errors).toBe(2) // entire batch counted as errors
   })
@@ -189,7 +189,7 @@ describe('syncRawPricingFromSupplier', () => {
       },
     ])
 
-    const result = await syncRawPricingFromSupplier(['1234', '5678'])
+    const result = await syncProductsFromSupplier(['1234', '5678'])
     expect(result.synced).toBe(2)
     expect(result.errors).toBe(0)
     // Only ONE batch API call for both styles
@@ -201,7 +201,7 @@ describe('syncRawPricingFromSupplier', () => {
     setupSSAdapter()
     mockGetRawProductsBatch.mockResolvedValueOnce([])
 
-    const result = await syncRawPricingFromSupplier(['1234'])
+    const result = await syncProductsFromSupplier(['1234'])
     expect(result.synced).toBe(0)
     expect(result.errors).toBe(0)
     expect(mockInsert).not.toHaveBeenCalled()

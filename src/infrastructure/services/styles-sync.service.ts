@@ -11,7 +11,7 @@ import {
 import { fetchAllPages } from '@shared/lib/pagination'
 import { logger } from '@shared/lib/logger'
 
-const syncLogger = logger.child({ domain: 'catalog-sync' })
+const syncLogger = logger.child({ domain: 'styles-sync' })
 
 const BATCH_SIZE = 50 // Smaller batch — each style triggers multiple child inserts
 
@@ -24,7 +24,7 @@ const BATCH_SIZE = 50 // Smaller batch — each style triggers multiple child in
  * Preserves: catalog_style_preferences (never touched by sync)
  * Skips old: catalog table (still exists as fallback, not written to)
  */
-export async function syncCatalogFromSupplier(): Promise<number> {
+export async function syncStylesFromSupplier(): Promise<number> {
   try {
     syncLogger.info('Starting normalized catalog sync from supplier')
 
