@@ -36,7 +36,8 @@
         {
           "group": "Domain",
           "pages": [
-            "product/domain-glossary"
+            "product/domain-glossary",
+            "product/competitive-landscape"
           ]
         },
         {
@@ -76,6 +77,7 @@
         {
           "group": "Guides",
           "pages": [
+            "engineering/guides/supplier-integration",
             "engineering/guides/app-flow-standard",
             "engineering/guides/ss-api-reference"
           ]
