@@ -45,7 +45,7 @@ const ssStyleSchema = z
   .object({
     styleID: z.union([z.number(), z.string()]).transform(String),
     brandName: z.string(),
-    partNumber: z.string(),
+    partNumber: z.string().optional().default(''),
     styleName: z.string(),
     baseCategory: z.string().optional().default(''),
     description: z.string().optional().default(''),
@@ -62,7 +62,7 @@ const ssProductSchema = z
   .object({
     sku: z.string(),
     styleID: z.union([z.number(), z.string()]).transform(String),
-    partNumber: z.string(),
+    partNumber: z.string().optional().default(''),
     styleName: z.string(),
     brandName: z.string(),
     baseCategory: z.string().optional().default(''),
