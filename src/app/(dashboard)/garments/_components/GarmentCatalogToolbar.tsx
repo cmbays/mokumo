@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, LayoutGrid, List, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
@@ -88,9 +88,9 @@ export function GarmentCatalogToolbar({
   const inStock = searchParams.get('inStock') === 'true'
 
   // Local input state — controlled by local value so keystrokes never wait for URL round-trip.
-  // useTransition wraps the router.replace so it's non-blocking (low-priority update).
+  // The 300ms debounce provides the non-blocking feel; no useTransition needed here
+  // (Next.js router.replace inside startTransition+setTimeout gets swallowed).
   const [inputValue, setInputValue] = useState(query)
-  const [, startTransition] = useTransition()
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync local input when the URL query changes externally (e.g. "Clear all" resets params).
@@ -119,7 +119,8 @@ export function GarmentCatalogToolbar({
       } else {
         params.set(key, value)
       }
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      const url = `${pathname}?${params.toString()}`
+      router.replace(url, { scroll: false })
     },
     [searchParams, router, pathname]
   )
@@ -131,9 +132,7 @@ export function GarmentCatalogToolbar({
       setInputValue(value)
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
       searchDebounceRef.current = setTimeout(() => {
-        startTransition(() => {
-          updateParam('q', value || null)
-        })
+        updateParam('q', value || null)
       }, 300)
     },
     [updateParam]
