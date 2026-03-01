@@ -23,8 +23,9 @@ const BATCH_SIZE = 50
  *   styles from `catalog_styles` where source = 'ss-activewear'.
  */
 export async function syncRawPricingFromSupplier(
-  styleIds?: string[]
-): Promise<{ synced: number; errors: number }> {
+  styleIds?: string[],
+  options?: { limit?: number; offset?: number }
+): Promise<{ synced: number; errors: number; total: number }> {
   const { db } = await import('@shared/lib/supabase/db')
   const { ssActivewearProducts } = await import('@db/schema/raw')
   const { catalogStyles, catalogSizes } = await import('@db/schema/catalog-normalized')
@@ -59,10 +60,18 @@ export async function syncRawPricingFromSupplier(
 
   if (idsToSync.length === 0) {
     syncLogger.info('No styles to sync pricing for')
-    return { synced: 0, errors: 0 }
+    return { synced: 0, errors: 0, total: 0 }
   }
 
-  syncLogger.info('Starting raw pricing sync', { styleCount: idsToSync.length })
+  // Apply optional pagination slice — allows cron to page through catalog in chunks
+  // without enumerating IDs upfront.
+  const total = idsToSync.length
+  const { offset = 0, limit } = options ?? {}
+  if (offset > 0 || limit !== undefined) {
+    idsToSync = idsToSync.slice(offset, limit !== undefined ? offset + limit : undefined)
+  }
+
+  syncLogger.info('Starting raw pricing sync', { styleCount: idsToSync.length, total, offset, limit })
 
   let synced = 0
   let errors = 0
@@ -167,6 +176,6 @@ export async function syncRawPricingFromSupplier(
     })
   }
 
-  syncLogger.info('Raw pricing sync completed', { synced, errors })
-  return { synced, errors }
+  syncLogger.info('Raw pricing sync completed', { synced, errors, total })
+  return { synced, errors, total }
 }

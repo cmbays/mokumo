@@ -87,11 +87,11 @@ function setupSSAdapter() {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('syncRawPricingFromSupplier', () => {
-  it('returns { synced: 0, errors: 0 } when no styles to sync', async () => {
+  it('returns { synced: 0, errors: 0, total: 0 } when no styles to sync', async () => {
     setupSSAdapter()
     mockWhere.mockResolvedValueOnce([])
     const result = await syncRawPricingFromSupplier()
-    expect(result).toEqual({ synced: 0, errors: 0 })
+    expect(result).toEqual({ synced: 0, errors: 0, total: 0 })
   })
 
   it('syncs products for provided styleIds using a single batched API call', async () => {
