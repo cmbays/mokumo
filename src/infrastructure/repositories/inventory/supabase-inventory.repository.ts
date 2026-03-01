@@ -5,10 +5,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import { catalogInventory, catalogColors } from '@db/schema/catalog-normalized'
 import { logger } from '@shared/lib/logger'
-import {
-  styleInventorySchema,
-  LOW_STOCK_THRESHOLD,
-} from '@domain/entities/inventory-level'
+import { styleInventorySchema, LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
 import type { IInventoryRepository } from '@domain/ports/inventory.repository'
 import type { InventoryLevel, StyleInventory } from '@domain/entities/inventory-level'
 
