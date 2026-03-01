@@ -179,8 +179,7 @@ export function GarmentDetailDrawer({
       <SheetContent side="right" className="w-full md:max-w-md p-0 flex flex-col">
         <SheetHeader className="border-b border-border px-4 py-3">
           <SheetTitle className="text-base">
-            <span>{garment.brand}</span>{' '}
-            {garment.sku}
+            <span>{garment.brand}</span> {garment.sku}
           </SheetTitle>
           <SheetDescription className="sr-only">Detail view for {garment.name}</SheetDescription>
         </SheetHeader>

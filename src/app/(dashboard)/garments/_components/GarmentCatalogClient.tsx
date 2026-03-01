@@ -561,7 +561,6 @@ export function GarmentCatalogClient({
           frontImageUrl={skuToCardImageUrl.get(selectedGarment.sku)}
         />
       )}
-
     </>
   )
 }

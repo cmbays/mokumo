@@ -107,8 +107,7 @@ export function GarmentCard({
       <div className="px-2.5 py-2 space-y-0.5">
         {/* Brand + SKU */}
         <p className="truncate text-xs text-muted-foreground">
-          {garment.brand}{' '}
-          · {sku}
+          {garment.brand} · {sku}
         </p>
 
         {/* Name */}
