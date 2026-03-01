@@ -24,31 +24,31 @@ vi.mock('@shared/lib/admin-auth', () => ({
   validateAdminSecret: vi.fn(),
 }))
 
-vi.mock('@infra/services/pricing-sync.service', () => ({
-  syncRawPricingFromSupplier: vi.fn(),
+vi.mock('@infra/services/products-sync.service', () => ({
+  syncProductsFromSupplier: vi.fn(),
 }))
 
 import { POST } from '../route'
 import { checkAdminSyncRateLimit } from '@shared/lib/rate-limit'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
-import { syncRawPricingFromSupplier } from '@infra/services/pricing-sync.service'
+import { syncProductsFromSupplier } from '@infra/services/products-sync.service'
 
 function makeRequest(
   overrides: { headers?: Record<string, string>; body?: unknown } = {}
 ): Request {
   const { headers = {}, body } = overrides
-  return new Request('http://localhost/api/catalog/sync-pricing', {
+  return new Request('http://localhost/api/catalog/sync-products', {
     method: 'POST',
     headers: { 'x-admin-secret': 'test-secret', ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 }
 
-describe('POST /api/catalog/sync-pricing', () => {
+describe('POST /api/catalog/sync-products', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(validateAdminSecret).mockReturnValue({ valid: true })
-    vi.mocked(syncRawPricingFromSupplier).mockResolvedValue({ synced: 10, errors: 0, total: 10 })
+    vi.mocked(syncProductsFromSupplier).mockResolvedValue({ synced: 10, errors: 0, total: 10 })
   })
 
   describe('rate limiting', () => {
@@ -79,12 +79,12 @@ describe('POST /api/catalog/sync-pricing', () => {
       expect(checkAdminSyncRateLimit).toHaveBeenCalledWith('unknown')
     })
 
-    it('does not call the pricing sync service when rate limited', async () => {
+    it('does not call the products sync service when rate limited', async () => {
       vi.mocked(checkAdminSyncRateLimit).mockResolvedValue({ limited: true })
 
       await POST(makeRequest())
 
-      expect(syncRawPricingFromSupplier).not.toHaveBeenCalled()
+      expect(syncProductsFromSupplier).not.toHaveBeenCalled()
     })
   })
 
@@ -106,7 +106,7 @@ describe('POST /api/catalog/sync-pricing', () => {
     })
 
     it('returns 200 with sync result on success', async () => {
-      vi.mocked(syncRawPricingFromSupplier).mockResolvedValue({ synced: 48, errors: 2, total: 50 })
+      vi.mocked(syncProductsFromSupplier).mockResolvedValue({ synced: 48, errors: 2, total: 50 })
 
       const response = await POST(makeRequest())
 
@@ -126,14 +126,14 @@ describe('POST /api/catalog/sync-pricing', () => {
       )
 
       expect(response.status).toBe(200)
-      expect(syncRawPricingFromSupplier).toHaveBeenCalledWith(['STYLE-001', 'STYLE-002'], {
+      expect(syncProductsFromSupplier).toHaveBeenCalledWith(['STYLE-001', 'STYLE-002'], {
         offset: undefined,
         limit: undefined,
       })
     })
 
     it('returns 400 for a malformed request body', async () => {
-      const badRequest = new Request('http://localhost/api/catalog/sync-pricing', {
+      const badRequest = new Request('http://localhost/api/catalog/sync-products', {
         method: 'POST',
         headers: { 'x-admin-secret': 'test-secret', 'content-type': 'application/json' },
         body: JSON.stringify({ styleIds: [123, 456] }), // numbers instead of strings

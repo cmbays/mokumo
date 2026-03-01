@@ -1,16 +1,16 @@
 import 'server-only'
-import { syncCatalogFromSupplier } from '@infra/services/catalog-sync.service'
+import { syncStylesFromSupplier } from '@infra/services/styles-sync.service'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { logger } from '@shared/lib/logger'
 import { checkAdminSyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
 import { withRequestContext } from '@shared/lib/request-context'
 
-const syncLogger = logger.child({ domain: 'catalog-sync-endpoint' })
+const syncLogger = logger.child({ domain: 'styles-sync-endpoint' })
 
 /**
- * POST /api/catalog/sync
+ * POST /api/catalog/sync-styles
  *
- * Admin-only endpoint to sync the S&S Activewear catalog to Supabase PostgreSQL.
+ * Admin-only endpoint to sync the S&S Activewear styles catalog to Supabase PostgreSQL.
  */
 export const POST = withRequestContext(async (request: Request): Promise<Response> => {
   try {
@@ -28,11 +28,11 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
       return Response.json({ error: auth.error }, { status: auth.status })
     }
 
-    const synced = await syncCatalogFromSupplier()
+    const synced = await syncStylesFromSupplier()
 
     return Response.json({ synced, timestamp: new Date().toISOString() }, { status: 200 })
   } catch (error) {
-    syncLogger.error('Catalog sync failed', {
+    syncLogger.error('Styles sync failed', {
       error: Error.isError(error) ? error.message : String(error),
       errorName: Error.isError(error) ? error.name : 'unknown',
     })

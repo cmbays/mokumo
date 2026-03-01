@@ -1,12 +1,12 @@
 import 'server-only'
 import { z } from 'zod'
-import { syncRawPricingFromSupplier } from '@infra/services/pricing-sync.service'
+import { syncProductsFromSupplier } from '@infra/services/products-sync.service'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { logger } from '@shared/lib/logger'
 import { checkAdminSyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
 import { withRequestContext } from '@shared/lib/request-context'
 
-const syncLogger = logger.child({ domain: 'pricing-sync-endpoint' })
+const syncLogger = logger.child({ domain: 'products-sync-endpoint' })
 
 const requestBodySchema = z
   .object({
@@ -19,9 +19,9 @@ const requestBodySchema = z
   .optional()
 
 /**
- * POST /api/catalog/sync-pricing
+ * POST /api/catalog/sync-products
  *
- * Admin-only endpoint to sync raw per-SKU pricing data from S&S Activewear
+ * Admin-only endpoint to sync raw per-SKU product data from S&S Activewear
  * into the raw analytics table. Optional body: { styleIds: string[] } to
  * sync specific styles.
  */
@@ -58,11 +58,11 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
       }
     }
 
-    const result = await syncRawPricingFromSupplier(styleIds, paginationOpts)
+    const result = await syncProductsFromSupplier(styleIds, paginationOpts)
 
     return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
   } catch (error) {
-    syncLogger.error('Pricing sync failed', {
+    syncLogger.error('Products sync failed', {
       error: Error.isError(error) ? error.message : String(error),
       errorName: Error.isError(error) ? error.name : 'unknown',
     })

@@ -4,7 +4,7 @@ sources:
   - name: ss_activewear
     description: >
       Raw per-SKU product and pricing data from the S&S Activewear REST API V2.
-      Populated by the pricing sync service (POST /api/catalog/sync-pricing).
+      Populated by the products sync service (POST /api/catalog/sync-products).
       Append-only — each sync run inserts new rows. Staging models dedup via
       row_number() partitioned by sku ordered by _loaded_at desc.
       Note: sku is intentionally NOT unique at the source level (append-only).
