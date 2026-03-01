@@ -155,14 +155,16 @@ describe('SupabaseInventoryRepository', () => {
       ])
       const result = await repo.getForStyles([STYLE_UUID, STYLE_UUID_2])
       expect(result.size).toBe(2)
-      const style1 = result.get(STYLE_UUID)!
-      expect(style1.levels).toHaveLength(2)
-      expect(style1.totalQuantity).toBe(105)
-      expect(style1.hasLowStock).toBe(true)
-      expect(style1.hasOutOfStock).toBe(false)
-      const style2 = result.get(STYLE_UUID_2)!
-      expect(style2.levels).toHaveLength(1)
-      expect(style2.hasOutOfStock).toBe(true)
+      const style1 = result.get(STYLE_UUID)
+      expect(style1).toBeDefined()
+      expect(style1!.levels).toHaveLength(2)
+      expect(style1!.totalQuantity).toBe(105)
+      expect(style1!.hasLowStock).toBe(true)
+      expect(style1!.hasOutOfStock).toBe(false)
+      const style2 = result.get(STYLE_UUID_2)
+      expect(style2).toBeDefined()
+      expect(style2!.levels).toHaveLength(1)
+      expect(style2!.hasOutOfStock).toBe(true)
     })
 
     it('filters out invalid UUIDs before querying, keeps valid results', async () => {
