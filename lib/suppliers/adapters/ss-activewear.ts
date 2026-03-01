@@ -143,9 +143,15 @@ export type SSRawInventoryItem = z.infer<typeof ssRawInventoryItemSchema>
 
 const ssBrandSchema = z
   .object({
+    brandID: z.union([z.number(), z.string()]).transform(String).optional(),
     brandName: z.string(),
+    // Relative image path (e.g. "/(token)/images/brand/...") — resolved to absolute in sync service
+    brandImage: z.string().optional().default(''),
+    description: z.string().optional().default(''),
   })
   .passthrough()
+
+export type SSBrand = z.infer<typeof ssBrandSchema>
 
 const ssCategorySchema = z
   .object({
@@ -507,6 +513,18 @@ export class SSActivewearAdapter implements SupplierAdapter {
     const names = brands.map((b) => b.brandName).sort()
     await this.cache.set(cacheKey, names, SS_CACHE_TTL.brands)
     return names
+  }
+
+  /**
+   * Fetch full brand objects from S&S — for use by the brands sync service.
+   * Unlike getBrands() which returns string names only, this returns the full
+   * SSBrand shape including brandID, brandImage, and description.
+   *
+   * TTL=0 bypasses Next.js fetch cache — sync jobs always need fresh data.
+   */
+  async getRawBrands(): Promise<SSBrand[]> {
+    const raw = await ssGet('brands', {}, 0)
+    return z.array(ssBrandSchema).parse(raw)
   }
 
   async getCategories(): Promise<string[]> {
