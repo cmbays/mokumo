@@ -146,47 +146,85 @@ Configurable pricing per service type. Quantity breaks, setup fees, margin indic
 
 ## P5: Artwork Library
 
-**Status**: Planned | **Priority**: Tier 1 | **Blocks**: P6 (enriches quoting)
+**Status**: Research Complete | **Priority**: Tier 1 | **Blocks**: P6 (quote integration, M4), P8 (production gate)
 
-Customer-associated artwork storage with metadata, approval workflows, and automated mockup generation. Artwork is stored per-customer and reusable across quotes. This is the bridge between customer management and quoting — when Gary builds a quote, he picks from the customer's existing artwork, and the system auto-derives color count for pricing.
+Customer-associated artwork storage with metadata, approval workflows, and automated mockup generation. Artwork is stored per-customer and reusable across quotes. The bridge between customer management and quoting — when Gary builds a quote, he picks from the customer's existing artwork and the system auto-derives color count for pricing.
+
+> **Epic**: #717 | **Pipeline**: `20260301-artwork-vertical` | **Research**: Complete 2026-03-01
+> See [Artwork Management Research](/research/artwork-management) for full competitive analysis, domain model, and technical architecture.
 
 ### User Story
 
 > Riverside High orders from Gary 4-5 times a year — always the same school logo in different configurations. Today Gary digs through email attachments and Dropbox to find the right file. With the Artwork Library, he opens Coach Johnson's customer page and sees all their artwork: the school crest (4-color), the athletics wordmark (2-color), and last year's 5K run design (3-color). Each has metadata: color count, dimensions, print-ready status, and version history. When building a new quote, Gary selects the school crest for the front — the system auto-fills "4 colors" in the print location and pulls the correct pricing. For the approval workflow, Gary uploads a new back design, and Coach Johnson can approve the front artwork while requesting changes to the back — all from the customer portal.
 
+### Domain Model
+
+```
+Customer
+  └── Artwork (logical concept — "River City Brewing Logo")
+        ├── Design Variant A ("White on Dark" treatment)
+        │     ├── Version 1 (original upload)
+        │     ├── Version 2 (fixed spelling error)
+        │     └── Version 3 (approved — immutable snapshot)
+        ├── Design Variant B ("Dark on Light" treatment)
+        └── Separation (per-variant, post-approval)
+              ├── Channel 1: White Underbase (PMS White, 230 mesh, 45 LPI)
+              └── Channel 2: Red (PMS 186C, 160 mesh, spot)
+```
+
+**Version** (temporal, sequential): Same design intent, revised. v1→v2 fixes a spelling error. Only the latest approved version goes to production.
+**Variant** (parallel, simultaneous): Same base design, different color treatments for different garment colors. Multiple variants may be active and go to production in the same order.
+
 ### Milestones
 
-| Milestone             | Status  | Key Deliverables                                                                 |
-| --------------------- | ------- | -------------------------------------------------------------------------------- |
-| M0: Research          | Planned | Artwork management patterns, file formats, approval UX patterns                  |
-| M1: Storage & Schema  | Planned | File upload pipeline (H2), artwork metadata table, customer association, tagging |
-| M2: Library UI        | Planned | Browse, search, tag, preview artwork per customer. Grid and list views.          |
-| M3: Quote Integration | Planned | Select artwork when building quote, auto-derive color count, preview on quote    |
-| M4: Approval Workflow | Planned | Per-artwork approval, revision tracking, partial production start config         |
-| M5: Mockup Generation | Planned | Automated artwork placement on supplier garment templates from catalog data      |
+| Milestone | Issue | Status | Key Deliverables | Depends On |
+|-----------|-------|--------|-----------------|------------|
+| M0: Research | — | ✅ Complete | Domain model, competitive analysis, architecture decisions | — |
+| M1: Storage & Schema | #718 | Blocked by H2 | File upload pipeline, artwork/variant/version tables, Supabase Storage bucket, presigned uploads, Sharp rendition pipeline | H2 |
+| M2: Library UI | #719 | Planned | Browse/search/tag/favorite artwork per customer, Artwork tab on customer detail, upload with file validation | M1, P3 |
+| M3: Color Detection | #720 | Planned | Auto-detect color count + palette (MMCQ), PMS matching, garment-color context, underbase detection | M1 |
+| M4: Quote Integration | #722 | Planned | Select artwork in quote builder, auto-derive color count → pricing, live mockup preview | M2, P6 |
+| M5: Approval Workflow | #721 | Planned | Per-artwork approval with unique URL, automated reminders (T+24h/48h/72h/5-7d), version tracking, immutable proof snapshots | M2 |
+| M6: Separation Metadata | #723 | Planned | Per-channel specs (ink, mesh, LPI, print order), ScreenRequirement[] handoff to Screen Room vertical | M5 |
+| M7: Mockup Enhancement | #724 | Planned | SVG feDisplacementMap (fabric contours), dark garment two-layer composite, frozen mockup pipeline (Sharp server-side) | M4 |
 
-### Research Findings
+**Critical path**: M0 → M1 → M2 → {M3, M4, M5 in parallel} → M6 → M7
 
-- [x] **Approval patterns** → YoPrint: per-artwork granularity (approve/reject individual files within one order). DecoNetwork: auto-generates mockups from catalog data + template placement zones. Printavo: primitive (no annotation, no version tracking).
-- [x] **Mockup generation** → DecoNetwork auto-generates mockups from uploaded artwork + supplier catalog garment images. This is powerful UX — customers see their design on the actual product before approving.
-- [x] **Customer-designed approach** → InkSoft uses an Online Designer where the customer creates the design themselves. Different paradigm — not applicable for B2B print shops where the shop designs the artwork.
+**Spikes**: #725 (color detection library evaluation), #726 (Supabase Free tier storage limits)
 
-### Research Still Needed
+**Absorbed issues**: #212 → M1 (storage schema), #164 → M7 (mockup), #507 → M7 (mockup)
 
-- [ ] File formats: AI, EPS, PDF, PNG, PSD — what do shops actually receive? Which do they need to preview?
-- [ ] Metadata requirements: color count, print-ready status, dimensions, DPI, version history
-- [ ] Storage sizing: typical artwork file sizes (10-50MB for print-ready?), expected volume per shop per year
-- [ ] Mockup generation technical approach: server-side canvas compositing (Sharp/Canvas API), template placement zones, or AI-assisted? Performance requirements for on-demand generation.
-- [ ] Partial production start: shop owner interview needed — do they start production on approved locations while rejected artwork is being revised?
+### 8 Competitive Differentiators
+
+No competitor has all of these. Research found gaps across every major platform (Printavo, InkSoft, DecoNetwork, YoPrint, GraphicsFlow):
+
+1. **Customer Art Library** — Cross-order vault per customer. Nobody else has this — even DecoNetwork's "past artwork" is order-scoped, not customer-scoped.
+2. **File Validation** — DPI check, vector vs raster detection, color mode, print-readiness badge. Table-stakes in packaging software, absent in every decorated apparel platform.
+3. **Art-to-Screen-Room Integration** — Approved artwork generates `ScreenRequirement[]` (ink, mesh, LPI, print order). Connects art complexity to production effort — no competitor does this.
+4. **Visual Proof Annotation** — Customers mark up proofs with positioned comments. Exists in packaging software (Ashore), not in decorated apparel shop management.
+5. **Art Department Workflow Board** — Dedicated Kanban: Received → In Progress → Separated → Proof Sent → Approved → Print-Ready. Not generic task lists.
+6. **Revision History with Visual Diff** — Side-by-side version comparison. YoPrint tracks versions; no competitor shows a visual diff.
+7. **Smart Mockup from Catalog** — Leverage existing S&S catalog images + decoration zone metadata.
+8. **Color Count → Production Complexity** — Auto-connect detected color count to screen count → setup fees → pricing. No platform closes this loop automatically.
 
 ### Key Decisions
 
-- **Approval granularity**: Per-artwork within an order — approve front design, reject back design independently. Configurable per shop or per job whether production starts on approved locations.
-- **Mockup generation**: Automated placement of artwork on supplier garment images. Technical approach TBD but architecturally: artwork position metadata stored per quote line item, rendering done server-side, cached for repeat viewing.
-- **Storage**: Supabase Storage with RLS on buckets (decided in H2). File access scoped by customer → shop relationship. CDN delivery for preview images.
-- **Version tracking**: Each artwork file maintains a version history. Re-uploads create new versions, not new artwork. Previous versions remain accessible for audit trail.
+- **Domain model**: Artwork → Variant → Version hierarchy. Variants are parallel color treatments. Versions are sequential revisions. Separation metadata is per approved variant.
+- **Color detection**: "Suggest and confirm" — auto-detect palette at upload, user confirms/adjusts. ~85-95% accuracy for typical 1-6 spot color artwork. SVG: exact via `get-svg-colors`. Raster: MMCQ + CIEDE2000 merge (ΔE<8) + nearest-pantone.
+- **Storage**: Supabase Storage **Free tier** (1GB storage + 2GB egress, $0) for POC/Beta — sufficient for <200 artworks. Scale-up: Cloudflare R2 (~$4.50/mo for 300GB, zero egress). Free tier is sufficient for initial production use; R2 migration needed when storage exceeds 1GB.
+- **Mockup rendering**: Hybrid — client-side SVG for interactive preview (quote building, job board), server-side Sharp for frozen snapshots at lifecycle events (quote sent, artwork approved, job created).
+- **Approval granularity**: Per-artwork within an order (YoPrint model). Approve front design, reject back design independently.
+- **Legal record**: Immutable proof snapshot (not reference to mutable file) + who/what/when/IP/T&C version. Append-only — shop cannot retroactively modify approval records.
+- **Separation boundary**: Artwork vertical = system of record for separation metadata. Screen Room vertical = physical screen execution. Don't build separation software — be the system of record.
 
-> See [Customer & Portal Research](/research/customer-portal) for artwork approval flow patterns and partial production considerations.
+### Dependencies
+
+- **H2 (File Upload Pipeline)** must be built before M1 — presigned URLs, Sharp pipeline, Supabase Storage bucket
+- **P3 (Customer)** must wire before M2 — artwork is per-customer, requires customer detail page
+- **P6 (Quoting)** must be in progress before M4 — quote builder must exist to integrate artwork selection
+- **New packages** (all MIT, all <200 KB, no native deps): `quantize`, `get-svg-colors`, `ag-psd`, `nearest-pantone`, `color-diff`. `sharp` already in project.
+
+> See [Artwork Management Research](/research/artwork-management) for competitor capability matrix, color detection architecture, storage volume projections, and approval state machine.
 
 ---
 

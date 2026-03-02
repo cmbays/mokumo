@@ -4,8 +4,8 @@ description: 'Strategic planning document. Vision, phases, vertical inventory, c
 category: canonical
 status: active
 phase: all
-last_updated: 2026-02-15
-last_verified: 2026-02-15
+last_updated: 2026-03-01
+last_verified: 2026-03-01
 depends_on:
   - docs/PRD.md
   - docs/IMPLEMENTATION_PLAN.md
@@ -47,28 +47,25 @@ Each vertical passes through these stages. The KB tracks progress per vertical p
 
 **Status**: All 7 verticals built and demo-ready. 529 tests, 26 test files, zero rollbacks. Screen Room integrated into existing verticals (customer screens tab, job detail, quote-time reuse detection) rather than standalone page. Mobile optimization complete — 4-sprint plan executed (PRs #101, #114, #148, #167, #174, #175). Garment mockup SVG composition engine designed and built. 37+ KB session docs.
 
-### Phase 1.5: Demo Prep (CURRENT — Feb 15-21)
+### Phase 1.5: Demo Prep (COMPLETE — Feb 21)
 
-**Goal**: Polish mobile, add onboarding wizards, build DTF Gang Sheet Builder, fix demo-blocking bugs. Demo with Gary on February 21.
+**Goal**: Polish mobile, add onboarding wizards, build DTF Gang Sheet Builder, fix demo-blocking bugs. Demo with Gary on February 21 ✅.
 
-**Three must-haves** (ranked):
+**Delivered**:
 
-1. ~~**Mobile Polish** (Sprints 3-4)~~ — **Done** (PRs #148, #167, #174, #175). Remaining: #177 (5 pricing editor UX items).
-2. **Onboarding Wizards** (#145) — guided first-time experience across verticals
-3. **DTF Gang Sheet Builder** (#144) — new vertical, direct user request
+1. ~~**Mobile Polish** (Sprints 3-4)~~ — Done (PRs #148, #167, #174, #175).
+2. ~~**Onboarding Wizards** (#145)~~ — guided first-time experience across verticals
+3. ~~**DTF Gang Sheet Builder** (#144)~~ — Done (PRs #232, #237, #249, #280, #284).
 
-**Demo-blocking bugs**: All resolved — #128 (leading zeros, closed), #129 (tier validation, closed), #138 (color pricing, closed via PR #157)
+**Demo-blocking bugs**: All resolved — #128 (leading zeros), #129 (tier validation), #138 (color pricing, PR #157).
 
-### Phase 2: Feedback Iteration + Backend Foundation
+### Phase 2: Feedback Iteration + Backend Foundation (CURRENT)
 
 **Goal**: Incorporate user feedback, build backend horizontal foundation, connect first vertical end-to-end.
 
-**Key bets** (to be shaped during cool-down):
+**Progress**: Backend foundation shipped (Supabase, Drizzle, auth, S&S catalog pipeline). Garments catalog live (Epic #714). Customer vertical in progress (P3). Artwork vertical research complete (Epic #717).
 
-- Process Gary's demo feedback into vertical BRIEFs
-- Backend horizontal: Supabase setup, auth, data model, API patterns (#84)
-- Quoting vertical backend (reference implementation for other verticals)
-- Sentry error monitoring (#86)
+> **Per-project detail**: See [docs-site/roadmap/projects.md](docs-site/roadmap/projects.md) — maintained as the richer, living source of truth for each project's milestones, research findings, and key decisions.
 
 ### Phase 3: Production App
 
@@ -105,11 +102,10 @@ Each vertical passes through these stages. The KB tracks progress per vertical p
 
 ## Current Bets (What We're Working On)
 
-1. ~~**Mobile Polish** (Sprints 3-4)~~ — **Done** (PRs #148, #167, #174, #175). Remaining: #177 (5 pricing editor items).
-2. **Onboarding Wizards** (#145) — guided first-time experience for Gary demo. 3 journeys: view job board, close invoice, create customer.
-3. ~~**DTF Gang Sheet Builder** (#144)~~ — **Done** (PRs #232, #237, #249, #280, #284). Full pipeline complete: discovery → shaping → breadboard → 4-wave build. V5 job card wiring deferred to Phase 2 (PRI-155).
-4. ~~**Demo-blocking bug fixes**~~ — All 3 resolved (#128, #129, #138)
-5. **Gary demo** (Feb 21) — First real user feedback session. All 7 verticals + mobile + wizards.
+1. **Garments vertical UX polish** (Epic #714) — Search debounce fix (#695), inventory cron upgrade to 15-min (#706), drawer close animation (#697). Color UX complete (PRs #629, #639, #641). S&S pipeline complete (PRs #707–#713).
+2. **Customer vertical** (P3) — Paper design sessions (P1–P4 complete). Customer list, detail, artwork tab, referral balance screens designed and shipped.
+3. **Artwork vertical research** (Epic #717) — M0 Research complete 2026-03-01. 8 milestones (#718–#724). M1 blocked by H2 (File Upload Pipeline). Spikes #725 (color detection), #726 (storage limits).
+4. **Docs integration** — Mintlify docs-site launched (PR #716 merged). Artwork research integrated into docs-site P5 section and new research page.
 
 ## Forward Planning (Shaped But Not Started)
 
