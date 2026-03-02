@@ -31,6 +31,8 @@ export function CellInput({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(String(value))
   const inputRef = useRef<HTMLInputElement>(null)
+  // Prevents double-commit: Enter/Escape set this before blur fires
+  const skipBlurRef = useRef(false)
 
   // Sync draft when parent value changes externally (e.g., after save)
   useEffect(() => {
@@ -52,8 +54,12 @@ export function CellInput({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') commit()
+    if (e.key === 'Enter') {
+      skipBlurRef.current = true
+      commit()
+    }
     if (e.key === 'Escape') {
+      skipBlurRef.current = true
       setDraft(String(value))
       setEditing(false)
     }
@@ -70,7 +76,10 @@ export function CellInput({
           min={min}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
+          onBlur={() => {
+            if (!skipBlurRef.current) commit()
+            skipBlurRef.current = false
+          }}
           onKeyDown={handleKeyDown}
           aria-label={`Editing: ${ariaLabel}`}
           className={cn(
@@ -87,6 +96,7 @@ export function CellInput({
 
   return (
     <button
+      type="button"
       onClick={startEdit}
       aria-label={ariaLabel}
       className={cn(

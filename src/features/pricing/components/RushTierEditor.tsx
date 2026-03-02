@@ -138,12 +138,17 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
     setSaveSuccess(false)
 
     startTransition(async () => {
-      const result = await saveRushTiers(inserts)
-      if (result.error) {
-        log.error('saveRushTiers failed in RushTierEditor', { error: result.error })
-        setSaveError(result.error)
-      } else {
-        setSaveSuccess(true)
+      try {
+        const result = await saveRushTiers(inserts)
+        if (result.error) {
+          log.error('saveRushTiers failed in RushTierEditor', { error: result.error })
+          setSaveError(result.error)
+        } else {
+          setSaveSuccess(true)
+        }
+      } catch (err) {
+        log.error('saveRushTiers threw in RushTierEditor', { err })
+        setSaveError('Unexpected error saving rush tiers')
       }
     })
   }
@@ -250,7 +255,7 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
                 )}
               >
                 {/* Name */}
-                <td className="px-4 py-2" role="gridcell">
+                <td className="px-4 py-2">
                   <CellInput
                     value={row.name}
                     type="text"
@@ -260,7 +265,7 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
                 </td>
 
                 {/* Days under standard */}
-                <td className="px-4 py-2 text-right" role="gridcell">
+                <td className="px-4 py-2 text-right">
                   <CellInput
                     value={row.daysUnderStandard}
                     type="number"
@@ -273,7 +278,7 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
                 </td>
 
                 {/* Flat fee */}
-                <td className="px-4 py-2 text-right" role="gridcell">
+                <td className="px-4 py-2 text-right">
                   <CellInput
                     value={toFixed2(round2(money(row.flatFee)))}
                     type="number"
@@ -286,7 +291,7 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
                 </td>
 
                 {/* Surcharge % */}
-                <td className="px-4 py-2 text-right" role="gridcell">
+                <td className="px-4 py-2 text-right">
                   <CellInput
                     value={toFixed2(round2(money(row.pctDisplay)))}
                     type="number"
@@ -299,7 +304,7 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
                 </td>
 
                 {/* Remove */}
-                <td className="pr-2 py-2 text-right" role="gridcell">
+                <td className="pr-2 py-2 text-right">
                   <button
                     onClick={() => handleRemove(row.localKey)}
                     aria-label={`Remove tier ${row.name || idx + 1}`}

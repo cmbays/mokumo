@@ -92,6 +92,7 @@ export function addQtyRow(
   cells: PrintCostMatrixCell[],
   newQtyAnchor: number
 ): PrintCostMatrixCell[] {
+  if (cells.some((c) => c.qtyAnchor === newQtyAnchor)) return cells
   const templateId = inheritTemplateId(cells)
   const colorCounts = getUniqueColorCounts(cells)
   const toAdd = colorCounts.length > 0 ? colorCounts : [null]
@@ -124,6 +125,7 @@ export function addColorColumn(
   cells: PrintCostMatrixCell[],
   newColorCount: number
 ): PrintCostMatrixCell[] {
+  if (cells.some((c) => c.colorCount === newColorCount)) return cells
   const templateId = inheritTemplateId(cells)
   const qtyAnchors = getUniqueQtyAnchors(cells)
 
@@ -485,6 +487,7 @@ export function MatrixCellGrid({
                         onClick={() => setAddingCol(true)}
                         className={cn(
                           'inline-flex items-center gap-1 text-xs text-action',
+                          'min-h-11 md:min-h-0',
                           'hover:text-action/80 transition-colors',
                           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action rounded'
                         )}
@@ -522,6 +525,7 @@ export function MatrixCellGrid({
                       onClick={() => onChange(removeQtyRow(cells, qty))}
                       className={cn(
                         'p-0.5 text-muted-foreground hover:text-destructive transition-all rounded',
+                        'min-h-11 md:min-h-0',
                         'md:opacity-0 md:group-hover/row:opacity-100',
                         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action'
                       )}
@@ -566,14 +570,14 @@ export function MatrixCellGrid({
                   />
                   <button
                     onClick={handleConfirmAddRow}
-                    className="p-0.5 text-success hover:text-success/80 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action"
+                    className="p-0.5 min-h-11 md:min-h-0 text-success hover:text-success/80 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action"
                     aria-label="Confirm add row"
                   >
                     <Check className="size-4" />
                   </button>
                   <button
                     onClick={handleCancelAddRow}
-                    className="p-0.5 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action"
+                    className="p-0.5 min-h-11 md:min-h-0 text-muted-foreground hover:text-foreground rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action"
                     aria-label="Cancel add row"
                   >
                     <X className="size-4" />
@@ -600,6 +604,7 @@ export function MatrixCellGrid({
                   onClick={() => setAddingRow(true)}
                   className={cn(
                     'inline-flex items-center gap-1.5 text-xs text-action',
+                    'min-h-11 md:min-h-0',
                     'hover:text-action/80 transition-colors',
                     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-action rounded'
                   )}

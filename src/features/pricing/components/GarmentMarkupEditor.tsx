@@ -109,12 +109,17 @@ export function GarmentMarkupEditor({ initialRules }: GarmentMarkupEditorProps) 
     setSaveSuccess(false)
 
     startTransition(async () => {
-      const result = await saveMarkupRules(inserts)
-      if (result.error) {
-        log.error('saveMarkupRules failed in GarmentMarkupEditor', { error: result.error })
-        setSaveError(result.error)
-      } else {
-        setSaveSuccess(true)
+      try {
+        const result = await saveMarkupRules(inserts)
+        if (result.error) {
+          log.error('saveMarkupRules failed in GarmentMarkupEditor', { error: result.error })
+          setSaveError(result.error)
+        } else {
+          setSaveSuccess(true)
+        }
+      } catch (err) {
+        log.error('saveMarkupRules threw in GarmentMarkupEditor', { err })
+        setSaveError('Unexpected error saving markup rules')
       }
     })
   }
@@ -212,6 +217,7 @@ export function GarmentMarkupEditor({ initialRules }: GarmentMarkupEditorProps) 
                       aria-label={`${label} markup multiplier`}
                       className={cn(
                         'w-16 rounded border border-border bg-surface px-2 py-0.5',
+                        'min-h-11 md:min-h-0',
                         'text-right text-sm text-foreground tabular-nums',
                         'focus:outline-none focus-visible:ring-1 focus-visible:ring-action',
                         'transition-colors'
@@ -224,8 +230,7 @@ export function GarmentMarkupEditor({ initialRules }: GarmentMarkupEditorProps) 
                 {/* Markup % display */}
                 <td
                   className="px-4 py-2.5 text-right text-xs text-muted-foreground tabular-nums"
-                  role="gridcell"
-                >
+                                  >
                   {markupPctLabel(multiplier)}
                 </td>
               </tr>
