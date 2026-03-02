@@ -11,16 +11,16 @@ description: Infrastructure decisions, current capabilities, known gaps, and the
 
 ## Current Stack
 
-| Capability | Solution | Status | Cost |
-|-----------|---------|--------|------|
-| Database | Supabase PostgreSQL | Deployed | $0 dev / $25 prod |
-| Auth | Supabase Auth (email/password) | Deployed | Included |
-| ORM | Drizzle (`prepare: false` for PgBouncer) | Deployed | $0 |
-| Cache | Upstash Redis | Deployed | $0 dev / ~$10 prod |
-| Deployment | Vercel (two-branch model) | Deployed | $0 dev / $20 prod |
-| Analytics | dbt-core (medallion pipeline) | Deployed | $0 |
-| Supplier API | S&S Activewear REST V2 | Deployed | $0 |
-| Monitoring | Vercel Analytics + Web Vitals | Partial | Included |
+| Capability   | Solution                                 | Status   | Cost               |
+| ------------ | ---------------------------------------- | -------- | ------------------ |
+| Database     | Supabase PostgreSQL                      | Deployed | $0 dev / $25 prod  |
+| Auth         | Supabase Auth (email/password)           | Deployed | Included           |
+| ORM          | Drizzle (`prepare: false` for PgBouncer) | Deployed | $0                 |
+| Cache        | Upstash Redis                            | Deployed | $0 dev / ~$10 prod |
+| Deployment   | Vercel (two-branch model)                | Deployed | $0 dev / $20 prod  |
+| Analytics    | dbt-core (medallion pipeline)            | Deployed | $0                 |
+| Supplier API | S&S Activewear REST V2                   | Deployed | $0                 |
+| Monitoring   | Vercel Analytics + Web Vitals            | Partial  | Included           |
 
 **Current monthly cost**: ~$0 dev, ~$55 production estimate
 
@@ -64,11 +64,11 @@ No file upload infrastructure exists. Artwork management requires upload, storag
 
 **Options evaluated**:
 
-| Option | Pros | Cons | Cost |
-|--------|------|------|------|
-| Supabase Storage | Same SDK, RLS on buckets, CDN included | Transform options limited | Free tier: 1GB, $25/100GB |
-| Vercel Blob | Zero-config from Vercel, good CDN | No RLS, separate SDK | Free tier: 1GB |
-| Cloudflare R2 | Cheapest at scale, S3-compatible | Separate service, no auth integration | Free tier: 10GB |
+| Option           | Pros                                   | Cons                                  | Cost                      |
+| ---------------- | -------------------------------------- | ------------------------------------- | ------------------------- |
+| Supabase Storage | Same SDK, RLS on buckets, CDN included | Transform options limited             | Free tier: 1GB, $25/100GB |
+| Vercel Blob      | Zero-config from Vercel, good CDN      | No RLS, separate SDK                  | Free tier: 1GB            |
+| Cloudflare R2    | Cheapest at scale, S3-compatible       | Separate service, no auth integration | Free tier: 10GB           |
 
 **Recommendation**: Supabase Storage — keeps auth integration simple, RLS on buckets, one fewer vendor.
 
@@ -84,11 +84,11 @@ No email capability exists. Quotes need to be emailed. Invoices need reminders. 
 
 **Options evaluated**:
 
-| Option | Pros | Cons | Cost |
-|--------|------|------|------|
-| Resend | React Email templates, simple API, good DX | Newer service | Free: 100/day, $20/mo: 50k |
-| Supabase Auth emails | Already integrated for auth | Only for auth flows, not transactional | Included |
-| Postmark | Excellent deliverability | Higher cost | $15/mo: 10k |
+| Option               | Pros                                       | Cons                                   | Cost                       |
+| -------------------- | ------------------------------------------ | -------------------------------------- | -------------------------- |
+| Resend               | React Email templates, simple API, good DX | Newer service                          | Free: 100/day, $20/mo: 50k |
+| Supabase Auth emails | Already integrated for auth                | Only for auth flows, not transactional | Included                   |
+| Postmark             | Excellent deliverability                   | Higher cost                            | $15/mo: 10k                |
 
 **Recommendation**: Resend with React Email templates. Same React component model we already use. $0 for development, $20/mo when volume grows.
 
@@ -104,11 +104,11 @@ No PDF generation exists. Quotes and invoices need printable/downloadable PDF ou
 
 **Options evaluated**:
 
-| Option | Pros | Cons | Cost |
-|--------|------|------|------|
-| @react-pdf/renderer | React components → PDF, server-side, no browser needed | Learning curve for layout engine | $0 |
-| Puppeteer/Playwright | Render HTML → PDF, familiar CSS | Heavy dependency, cold start on serverless | $0 |
-| html-pdf-node | Lightweight | Limited styling control | $0 |
+| Option               | Pros                                                   | Cons                                       | Cost |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------ | ---- |
+| @react-pdf/renderer  | React components → PDF, server-side, no browser needed | Learning curve for layout engine           | $0   |
+| Puppeteer/Playwright | Render HTML → PDF, familiar CSS                        | Heavy dependency, cold start on serverless | $0   |
+| html-pdf-node        | Lightweight                                            | Limited styling control                    | $0   |
 
 **Recommendation**: `@react-pdf/renderer` — same component mental model, runs in serverless without headless browser overhead.
 
@@ -128,9 +128,9 @@ The entity lifecycle pattern exists conceptually (ADR-001 universal lanes, ADR-0
 // domain/rules/quote-transitions.ts
 const VALID_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   draft: ['sent'],
-  sent: ['accepted', 'declined', 'draft'],  // can revert to draft for edits
-  accepted: [],  // terminal for quoting; triggers job creation
-  declined: ['draft'],  // can reopen
+  sent: ['accepted', 'declined', 'draft'], // can revert to draft for edits
+  accepted: [], // terminal for quoting; triggers job creation
+  declined: ['draft'], // can reopen
 }
 ```
 
@@ -148,11 +148,11 @@ Vercel cron exists but limited to daily on free tier. Inventory needs 15-minute 
 
 **Options evaluated**:
 
-| Option | Pros | Cons | Cost |
-|--------|------|------|------|
-| Upstash QStash | Already have Upstash account, HTTP-based, retries | Another Upstash service | Free: 500 msg/day |
-| Supabase pg_cron | Runs in database, no external service | Limited to SQL, harder to debug | Included |
-| External cron (cron-job.org) | Simple, free | External dependency, no retries | Free |
+| Option                       | Pros                                              | Cons                            | Cost              |
+| ---------------------------- | ------------------------------------------------- | ------------------------------- | ----------------- |
+| Upstash QStash               | Already have Upstash account, HTTP-based, retries | Another Upstash service         | Free: 500 msg/day |
+| Supabase pg_cron             | Runs in database, no external service             | Limited to SQL, harder to debug | Included          |
+| External cron (cron-job.org) | Simple, free                                      | External dependency, no retries | Free              |
 
 **Recommendation**: QStash — HTTP-based (calls our API routes), built-in retries, same vendor as our Redis cache. Free tier sufficient for Phase 2.
 
