@@ -39,7 +39,8 @@ function mapRow(row: typeof customerActivities.$inferSelect): CustomerActivity {
 
 export const supabaseCustomerActivityRepository: ICustomerActivityRepository = {
   async insert(input: ActivityInput): Promise<CustomerActivity> {
-    if (!validateUUID(input.customerId)) throw new Error(`insert: invalid customerId "${input.customerId}"`)
+    if (!validateUUID(input.customerId))
+      throw new Error(`insert: invalid customerId "${input.customerId}"`)
     if (!validateUUID(input.shopId)) throw new Error(`insert: invalid shopId "${input.shopId}"`)
 
     repoLogger.debug('Inserting customer activity', {
@@ -82,7 +83,8 @@ export const supabaseCustomerActivityRepository: ICustomerActivityRepository = {
       filter?: ActivityFilter
     }
   ): Promise<ActivityPage> {
-    if (!validateUUID(customerId)) throw new Error(`listForCustomer: invalid customerId "${customerId}"`)
+    if (!validateUUID(customerId))
+      throw new Error(`listForCustomer: invalid customerId "${customerId}"`)
 
     const limit = Math.min(opts.limit ?? 20, 50)
     const cursor = opts.cursor ?? null

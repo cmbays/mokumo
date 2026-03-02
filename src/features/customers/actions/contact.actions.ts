@@ -138,4 +138,3 @@ export async function deleteContact(
     return err('UNKNOWN')
   }
 }
-

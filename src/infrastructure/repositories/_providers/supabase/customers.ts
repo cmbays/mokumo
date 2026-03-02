@@ -456,7 +456,9 @@ export const supabaseCustomerRepository: ICustomerRepository = {
           typeTags: input.typeTags,
           paymentTerms: input.paymentTerms,
           pricingTier: input.pricingTier,
-          discountPct: input.discountPercentage ? toNumber(money(input.discountPercentage).div(100)) : 0,
+          discountPct: input.discountPercentage
+            ? toNumber(money(input.discountPercentage).div(100))
+            : 0,
           taxExempt: input.taxExempt,
           taxExemptCertExpiry: input.taxExemptCertExpiry
             ? new Date(input.taxExemptCertExpiry).toISOString().split('T')[0]
