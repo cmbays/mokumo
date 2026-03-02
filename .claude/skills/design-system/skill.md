@@ -117,7 +117,7 @@ All utilities in `src/shared/lib/design-system.ts`:
 
 When a new concept arrives, follow this flowchart:
 
-```
+```text
 Is it a STATE of something (active, pending, error)?
   → YES: Use STATUS palette + filled badge
   → NO: Continue...

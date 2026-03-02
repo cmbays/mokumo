@@ -142,6 +142,7 @@ Each color has `-hover` and `-bold` variants.
 ### Badge Pattern — Three Variants
 
 ```tsx
+import { cn } from '@shared/lib/cn'
 import { statusBadge, categoryBadge, dotColor, MUTED_BADGE } from '@shared/lib/design-system'
 
 // 1. Filled badge (STATUS) — bg/10 + text + border/20
