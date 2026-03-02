@@ -70,6 +70,7 @@ export type UseFileUploadProps = {
     mimeType: string
     sizeBytes: number
     contentHash: string
+    variantId?: string
   }) => Promise<InitiateResult>
   onConfirm: (input: { artworkId: string; shopId: string }) => Promise<ConfirmResult>
 }

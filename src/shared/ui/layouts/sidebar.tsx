@@ -16,6 +16,7 @@ const SIDEBAR_MAIN_ORDER = [
   '/invoices',
   '/jobs/board',
   '/screens',
+  '/artwork',
   '/customers',
   '/garments',
   '/garments/favorites',
