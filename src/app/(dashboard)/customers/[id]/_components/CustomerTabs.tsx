@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@shared/ui/primitives/dropdown-menu'
 import { cn } from '@shared/lib/cn'
-import { ActivityTimeline } from './ActivityTimeline'
+import { ActivityFeed } from '@features/customers/components/ActivityFeed'
 import { CustomerQuotesTable } from './CustomerQuotesTable'
 import { CustomerJobsTable } from './CustomerJobsTable'
 import { ArtworkGallery } from '@features/quotes/components/ArtworkGallery'
@@ -21,6 +21,7 @@ import { CustomerPreferencesTab } from './CustomerPreferencesTab'
 import { NotesPanel } from '@features/quotes/components/NotesPanel'
 import { deriveScreensFromJobs } from '@domain/rules/screen.rules'
 import type { Customer } from '@domain/entities/customer'
+import type { CustomerActivity } from '@domain/ports/customer-activity.port'
 import type { Quote } from '@domain/entities/quote'
 import type { Job } from '@domain/entities/job'
 import type { Artwork } from '@domain/entities/artwork'
@@ -40,6 +41,9 @@ type CustomerTabsProps = {
   notes: Note[]
   colors: Color[]
   garmentCatalog: GarmentCatalog[]
+  initialActivities: CustomerActivity[]
+  initialHasMore: boolean
+  initialNextCursor: string | null
 }
 
 // Primary tabs shown directly on mobile
@@ -71,6 +75,9 @@ export function CustomerTabs({
   notes,
   colors,
   garmentCatalog,
+  initialActivities,
+  initialHasMore,
+  initialNextCursor,
 }: CustomerTabsProps) {
   const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'activity'
   const [activeTab, setActiveTab] = useState(defaultTab)
@@ -193,7 +200,12 @@ export function CustomerTabs({
       </div>
 
       <TabsContent value="activity" className="mt-4">
-        <ActivityTimeline quotes={quotes} jobs={jobs} notes={notes} onSwitchTab={setActiveTab} />
+        <ActivityFeed
+          customerId={customer.id}
+          initialActivities={initialActivities}
+          initialHasMore={initialHasMore}
+          initialNextCursor={initialNextCursor}
+        />
       </TabsContent>
 
       <TabsContent value="quotes" className="mt-4">

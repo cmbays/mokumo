@@ -12,29 +12,41 @@ import 'server-only'
 // The raw repository is not exported — use the service instead.
 
 import { CustomerActivityService } from '@domain/services/customer-activity.service'
-import { supabaseCustomerActivityRepository } from '@infra/repositories/_providers/supabase/customer-activity'
-import type { ICustomerActivityRepository } from '@domain/ports/customer-activity.port'
 
-// ─── Provider selection ───────────────────────────────────────────────────────
+// ─── Lazy Supabase module ─────────────────────────────────────────────────────
+// Mirrors the pattern in customers.ts: dynamic import defers Drizzle/Postgres
+// client initialization to request time, preventing Turbopack from tracing the
+// DB client into the module graph during Next.js build-time page data collection.
 
-function getRepo(): ICustomerActivityRepository {
-  // For now we always use Supabase — activities are always persisted to the DB.
-  // This hook point allows a mock provider to be injected in future test environments
-  // via DATA_PROVIDER='mock' without touching service or action code.
-  return supabaseCustomerActivityRepository
+let _service: CustomerActivityService | null = null
+
+async function resolveService(): Promise<CustomerActivityService> {
+  if (!_service) {
+    const { supabaseCustomerActivityRepository } =
+      await import('./_providers/supabase/customer-activity')
+    _service = new CustomerActivityService(supabaseCustomerActivityRepository)
+  }
+  return _service
 }
 
-// ─── Singleton service ────────────────────────────────────────────────────────
+// ─── Singleton service (lazy façade) ─────────────────────────────────────────
 
 /**
- * Shared `CustomerActivityService` instance.
+ * Lazy façade over `CustomerActivityService`.
  *
- * Server actions import this singleton:
- *   import { customerActivityService } from '@infra/repositories/customer-activity'
+ * API surface is identical to the original singleton — callers use `await`:
+ *   await customerActivityService.log(input)
+ *   await customerActivityService.list(customerId, opts)
  *
- * The service is the ONLY write path — never import the repo directly.
+ * The Supabase module (and Drizzle client) is only loaded on the first call,
+ * not at import time.
  */
-export const customerActivityService = new CustomerActivityService(getRepo())
+export const customerActivityService = {
+  log: (input: Parameters<CustomerActivityService['log']>[0]) =>
+    resolveService().then((s) => s.log(input)),
+  list: (customerId: string, opts?: Parameters<CustomerActivityService['list']>[1]) =>
+    resolveService().then((s) => s.list(customerId, opts ?? {})),
+}
 
 // ─── Named re-exports for convenience (list reads) ────────────────────────────
 
