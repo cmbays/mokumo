@@ -90,6 +90,8 @@ export { getStylePricing, getStylesPricing } from './repositories/supplier-prici
 
 export { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
 
+export { fileUploadService } from './storage'
+
 // -- Compile-time assertions --------------------------------------------------
 // Verify that concrete implementations satisfy their port contracts.
 // These objects are never called — they exist only for TypeScript structural
