@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Archive, Plus, Search, SlidersHorizontal, Users, X } from 'lucide-react'
+import { Archive, ChevronDown, Plus, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { z } from 'zod'
@@ -19,6 +19,12 @@ import {
   TableRow,
 } from '@shared/ui/primitives/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from '@shared/ui/primitives/dropdown-menu'
 import { LifecycleBadge } from '@shared/ui/organisms/LifecycleBadge'
 import { HealthBadge } from '@shared/ui/organisms/HealthBadge'
 import { TypeTagBadges } from '@shared/ui/organisms/TypeTagBadges'
@@ -140,14 +146,14 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
   const activeTags = useMemo(() => activeTagsRaw?.split(',').filter(Boolean) ?? [], [activeTagsRaw])
   const lifecycleFilter = searchParams.get('lifecycle') ?? ''
   const healthFilter = searchParams.get('health') ?? ''
-  const sortKeyParam = sortKeySchema.catch('company').parse(searchParams.get('sort') ?? 'company')
-  const sortDirParam = sortDirSchema.catch('asc').parse(searchParams.get('dir') ?? 'asc')
+  const sortKeyParam = sortKeySchema.catch('revenue').parse(searchParams.get('sort') ?? 'revenue')
+  const sortDirParam = sortDirSchema.catch('desc').parse(searchParams.get('dir') ?? 'desc')
   const showArchived = searchParams.get('archived') === 'true'
 
   // ---- Local state (for debounced search) -----------------------------------
   const [localSearch, setLocalSearch] = useState(searchQuery)
-  const [sortKey, setSortKey] = useState<SortKey>(sortKeyParam)
-  const [sortDir, setSortDir] = useState<SortDir>(sortDirParam)
+  const [sortKey, setSortKey] = useState<SortKey>(sortKeyParam ?? 'revenue')
+  const [sortDir, setSortDir] = useState<SortDir>(sortDirParam ?? 'desc')
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
 
   // Sync search from URL when navigating back/forward
@@ -468,28 +474,61 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
     setLocalSearch('')
   }, [router])
 
+  // ---- Derived labels for filter bar chips (Signal 2) ----------------------
+
+  const lifecycleLabel = lifecycleFilter
+    ? LIFECYCLE_STAGE_LABELS[lifecycleFilter as LifecycleStage]
+    : null
+  const healthLabel = healthFilter ? HEALTH_STATUS_LABELS[healthFilter as HealthStatus] : null
+  const typeLabel =
+    activeTags.length === 1
+      ? CUSTOMER_TYPE_TAG_LABELS[activeTags[0] as CustomerTypeTag]
+      : activeTags.length > 1
+        ? `${CUSTOMER_TYPE_TAG_LABELS[activeTags[0] as CustomerTypeTag]} +${activeTags.length - 1}`
+        : null
+
+  // ---- Hidden count line (Signal 5) ----------------------------------------
+
+  const totalBeforeFilter = useMemo(() => {
+    let result = customers
+    if (!showArchived) result = result.filter((c) => !c.isArchived)
+    return result.length
+  }, [customers, showArchived])
+
+  const hiddenCount = totalBeforeFilter - filteredCustomers.length
+
+  const hiddenDimensions = [
+    lifecycleLabel ? `Lifecycle: ${lifecycleLabel}` : null,
+    healthLabel ? `Health: ${healthLabel}` : null,
+    typeLabel ? `Type: ${typeLabel}` : null,
+    searchQuery ? 'Search' : null,
+  ].filter(Boolean) as string[]
+
+  const hiddenCountLine =
+    hiddenCount > 0 && (lifecycleFilter || healthFilter || activeTags.length > 0 || searchQuery)
+
+  const hiddenCountText = (() => {
+    if (!hiddenCountLine) return null
+    const first = hiddenDimensions[0]
+    const extra = hiddenDimensions.length - 1
+    return extra > 0 ? `${first} · +${extra} more` : first
+  })()
+
   // ---- Render ---------------------------------------------------------------
 
   return (
     <div className="flex flex-col gap-4">
       {/* ---- Sticky header area ---- */}
       <div className="sticky top-0 z-10 bg-background pb-2">
-        {/* Header row: title + search + archive toggle + action button */}
-        <div className="flex items-center gap-3">
-          <h1 className="hidden md:block text-2xl font-semibold tracking-tight shrink-0">
-            Customers
-          </h1>
-
-          <div className="hidden md:block flex-1" />
-
-          {/* Search bar — full width on mobile, constrained on desktop */}
-          <div className="relative flex-1 md:flex-none md:w-full md:max-w-xs">
+        {/* Mobile header row: search + filter + archive + add */}
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative flex-1">
             <Search
               className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
             />
             <Input
-              placeholder="Search company, contact, email, phone..."
+              placeholder="Search customers..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
               className="pl-9"
@@ -507,12 +546,11 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
             )}
           </div>
 
-          {/* Mobile filter button */}
           <button
             type="button"
             onClick={() => setFilterSheetOpen(true)}
             className={cn(
-              'inline-flex items-center justify-center rounded-md p-2 md:hidden',
+              'inline-flex items-center justify-center rounded-md p-2',
               'min-h-(--mobile-touch-target) min-w-(--mobile-touch-target)',
               'text-muted-foreground hover:text-foreground transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -523,6 +561,205 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
             <SlidersHorizontal className="size-4" />
           </button>
 
+          <Button
+            onClick={() => setModalOpen(true)}
+            className="bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
+
+        {/* Desktop filter bar: search flex:1 + filter dropdowns + archive + add */}
+        <div className="hidden md:flex items-center gap-2">
+          {/* Search — flex:1 */}
+          <div className="relative flex-1">
+            <Search
+              className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              placeholder="Search customers..."
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              className="pl-9"
+              aria-label="Search customers"
+            />
+            {localSearch && (
+              <button
+                type="button"
+                onClick={() => setLocalSearch('')}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Lifecycle filter dropdown — Signal 1: ring-action when active */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'hover:bg-surface',
+                  lifecycleFilter
+                    ? 'ring-1 ring-action border-action/30 text-foreground'
+                    : 'border-border text-muted-foreground'
+                )}
+                aria-label="Filter by lifecycle"
+              >
+                {/* Signal 2: chip label when active */}
+                {lifecycleLabel ? (
+                  <>
+                    <span>
+                      Lifecycle:{' '}
+                      <span className="font-medium text-foreground">{lifecycleLabel}</span>
+                    </span>
+                    <span
+                      role="button"
+                      aria-label="Clear lifecycle filter"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateParam('lifecycle', null)
+                      }}
+                      className="ml-0.5 rounded-sm hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Lifecycle
+                    <ChevronDown className="size-3.5" />
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[160px]">
+              {lifecycleFilterOptions.map((option) => (
+                <DropdownMenuCheckboxItem
+                  key={option.value}
+                  checked={lifecycleFilter === option.value}
+                  onCheckedChange={() => handleLifecycleFilterToggle(option.value)}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {option.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Health filter dropdown — Signal 1: ring-action when active */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'hover:bg-surface',
+                  healthFilter
+                    ? 'ring-1 ring-action border-action/30 text-foreground'
+                    : 'border-border text-muted-foreground'
+                )}
+                aria-label="Filter by health"
+              >
+                {healthLabel ? (
+                  <>
+                    <span>
+                      Health: <span className="font-medium text-foreground">{healthLabel}</span>
+                    </span>
+                    <span
+                      role="button"
+                      aria-label="Clear health filter"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateParam('health', null)
+                      }}
+                      className="ml-0.5 rounded-sm hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Health
+                    <ChevronDown className="size-3.5" />
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[160px]">
+              {healthFilterOptions.map((option) => (
+                <DropdownMenuCheckboxItem
+                  key={option.value}
+                  checked={healthFilter === option.value}
+                  onCheckedChange={() => handleHealthFilterToggle(option.value)}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {option.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Type filter dropdown — Signal 1: ring-action when active */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'hover:bg-surface',
+                  activeTags.length > 0
+                    ? 'ring-1 ring-action border-action/30 text-foreground'
+                    : 'border-border text-muted-foreground'
+                )}
+                aria-label="Filter by type"
+              >
+                {typeLabel ? (
+                  <>
+                    <span>
+                      Type: <span className="font-medium text-foreground">{typeLabel}</span>
+                    </span>
+                    <span
+                      role="button"
+                      aria-label="Clear type filter"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleTypeFilterClear()
+                      }}
+                      className="ml-0.5 rounded-sm hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Type
+                    <ChevronDown className="size-3.5" />
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[160px]">
+              {typeFilterOptions.map((option) => (
+                <DropdownMenuCheckboxItem
+                  key={option.value}
+                  checked={activeTags.includes(option.value)}
+                  onCheckedChange={() => handleTypeFilterToggle(option.value)}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {option.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Archive toggle — icon only with tooltip */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -531,7 +768,6 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                 onClick={toggleArchived}
                 className={cn(
                   'inline-flex items-center justify-center rounded-md p-2 transition-colors',
-                  'min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) md:min-h-0 md:min-w-0',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   'active:scale-95 disabled:opacity-50 disabled:pointer-events-none',
                   showArchived
@@ -555,7 +791,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
           </Button>
         </div>
 
-        {/* Clear all filters */}
+        {/* Clear all filters — shown when any filter is active */}
         {hasFilters && (
           <div className="flex items-center mt-2">
             <button
@@ -606,6 +842,8 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                       activeFilters={activeTags}
                       onFilterToggle={handleTypeFilterToggle}
                       onFilterClear={handleTypeFilterClear}
+                      isFiltered={activeTags.length > 0}
+                      filterTooltip={typeLabel ? `Filtered: ${typeLabel}` : undefined}
                     />
                   </TableHead>
                   <TableHead>
@@ -619,6 +857,8 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                       activeFilters={lifecycleFilter ? [lifecycleFilter] : []}
                       onFilterToggle={handleLifecycleFilterToggle}
                       onFilterClear={handleLifecycleFilterClear}
+                      isFiltered={!!lifecycleFilter}
+                      filterTooltip={lifecycleLabel ? `Filtered: ${lifecycleLabel}` : undefined}
                     />
                   </TableHead>
                   <TableHead>
@@ -632,6 +872,8 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                       activeFilters={healthFilter ? [healthFilter] : []}
                       onFilterToggle={handleHealthFilterToggle}
                       onFilterClear={handleHealthFilterClear}
+                      isFiltered={!!healthFilter}
+                      filterTooltip={healthLabel ? `Filtered: ${healthLabel}` : undefined}
                     />
                   </TableHead>
                   <TableHead>
@@ -662,7 +904,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                   return (
                     <TableRow
                       key={customer.id}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="cursor-pointer hover:bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       onClick={() => router.push(`/customers/${customer.id}`)}
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -678,7 +920,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                         {customer.isArchived && (
                           <Badge
                             variant="ghost"
-                            className="ml-2 bg-muted text-muted-foreground text-xs"
+                            className="ml-2 bg-surface text-muted-foreground text-xs"
                           >
                             Archived
                           </Badge>
@@ -731,7 +973,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                   onClick={() => router.push(`/customers/${customer.id}`)}
                   className={cn(
                     'flex flex-col gap-2 rounded-lg border border-border bg-elevated p-4',
-                    'text-left transition-colors hover:bg-muted/50',
+                    'text-left transition-colors hover:bg-surface',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/50'
                   )}
                 >
@@ -759,7 +1001,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                     <HealthBadge status={customer.healthStatus} />
                     <TypeTagBadges tags={customer.typeTags} />
                     {customer.isArchived && (
-                      <Badge variant="ghost" className="bg-muted text-muted-foreground text-xs">
+                      <Badge variant="ghost" className="bg-surface text-muted-foreground text-xs">
                         Archived
                       </Badge>
                     )}
@@ -794,11 +1036,19 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
         </div>
       )}
 
-      {/* ---- Result count ---- */}
-      {filteredCustomers.length > 0 && (
+      {/* ---- Signal 5: Hidden-count line ---- */}
+      {filteredCustomers.length > 0 && hiddenCountLine && hiddenCountText && (
+        <p className="text-xs text-muted-foreground">
+          Showing 1–{filteredCustomers.length} of {totalBeforeFilter}{' '}
+          {totalBeforeFilter === 1 ? 'customer' : 'customers'} ·{' '}
+          <span className="text-warning">
+            {hiddenCount} hidden ({hiddenCountText})
+          </span>
+        </p>
+      )}
+      {filteredCustomers.length > 0 && !hiddenCountLine && (
         <p className="text-xs text-muted-foreground">
           {filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'}
-          {hasFilters && ' (filtered)'}
         </p>
       )}
 

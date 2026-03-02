@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { Copy, Check, Plus, Pencil, Archive, Mail, Phone } from 'lucide-react'
+import { Copy, Check, Pencil, Archive, Star } from 'lucide-react'
 import { Button } from '@shared/ui/primitives/button'
 import { LifecycleBadge } from '@shared/ui/organisms/LifecycleBadge'
 import { HealthBadge } from '@shared/ui/organisms/HealthBadge'
@@ -11,6 +10,8 @@ import {
   CustomerQuickStats,
   type CustomerStats,
 } from '@features/customers/components/CustomerQuickStats'
+import { CONTACT_ROLE_LABELS } from '@domain/constants'
+import { cn } from '@shared/lib/cn'
 import { EditCustomerSheet } from './EditCustomerSheet'
 import { ArchiveDialog } from './ArchiveDialog'
 import type { Customer } from '@domain/entities/customer'
@@ -39,7 +40,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       {copied ? (
         <Check className="size-3 text-success" />
       ) : (
-        <Copy className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Copy className="size-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
       )}
     </button>
   )
@@ -49,94 +50,148 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
   const [editOpen, setEditOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
 
-  const primaryContact = customer.contacts.find((c) => c.isPrimary) ?? customer.contacts[0]
+  // Sort contacts so primary comes first
+  const sortedContacts = [...customer.contacts].sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1
+    if (!a.isPrimary && b.isPrimary) return 1
+    return 0
+  })
 
   return (
-    <div className="space-y-4">
-      {/* Top row: name + badges + actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          {/* Company name — hidden on mobile since breadcrumb shows it */}
-          <h1 className="hidden md:block text-2xl font-bold text-foreground tracking-tight">
-            {customer.company}
-          </h1>
+    <div className="space-y-3">
+      {/* ---- Section 2: Company row ----------------------------------------- */}
+      {/* All on one line: name · lifecycle · health · type tags · [spacer] · Archive · Edit */}
+      <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight shrink-0">
+          {customer.company}
+        </h1>
 
-          {/* Primary contact info */}
-          {primaryContact && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="text-sm font-medium text-foreground">{primaryContact.name}</span>
-              {primaryContact.email && (
-                <span className="inline-flex items-center gap-1">
-                  <Mail className="size-3 text-muted-foreground" aria-hidden="true" />
-                  {/* Desktop: copy-to-clipboard button */}
-                  <span className="hidden md:inline">
-                    <CopyButton value={primaryContact.email} label="email" />
-                  </span>
-                  {/* Mobile: tap-to-email link */}
-                  <a
-                    href={`mailto:${primaryContact.email}`}
-                    className="md:hidden inline-flex items-center min-h-(--mobile-touch-target) text-sm text-action active:text-action/80 transition-colors"
-                    aria-label={`Email ${primaryContact.email}`}
-                  >
-                    {primaryContact.email}
-                  </a>
-                </span>
-              )}
-              {primaryContact.phone && (
-                <span className="inline-flex items-center gap-1">
-                  <Phone className="size-3 text-muted-foreground" aria-hidden="true" />
-                  {/* Desktop: copy-to-clipboard button */}
-                  <span className="hidden md:inline">
-                    <CopyButton value={primaryContact.phone} label="phone" />
-                  </span>
-                  {/* Mobile: tap-to-call link */}
-                  <a
-                    href={`tel:${primaryContact.phone}`}
-                    className="md:hidden inline-flex items-center min-h-(--mobile-touch-target) text-sm text-action active:text-action/80 transition-colors"
-                    aria-label={`Call ${primaryContact.phone}`}
-                  >
-                    {primaryContact.phone}
-                  </a>
-                </span>
-              )}
-            </div>
-          )}
+        {/* Lifecycle dot indicator */}
+        <LifecycleBadge stage={customer.lifecycleStage} />
 
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            <LifecycleBadge stage={customer.lifecycleStage} />
-            <HealthBadge status={customer.healthStatus} />
-            <TypeTagBadges tags={customer.typeTags} />
-          </div>
-        </div>
+        {/* Health dot indicator */}
+        <HealthBadge status={customer.healthStatus} />
 
-        {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-          <Button asChild>
-            <Link href={`/quotes/new?customer=${customer.id}`}>
-              <Plus className="size-4" />
-              New Quote
-            </Link>
-          </Button>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil className="size-4" />
-            <span className="hidden sm:inline">Edit</span>
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setArchiveOpen(true)}
-            className="text-error/70 border-error/30 hover:text-error hover:border-error/50 hover:bg-error/5 focus-visible:ring-error/50"
-          >
-            <Archive className="size-4" />
-            <span className="hidden sm:inline">Archive</span>
-          </Button>
-        </div>
+        {/* Type tags — monochrome muted pill */}
+        {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
+
+        {/* Seasonal pattern chip — conditional, only shown if field exists */}
+        {(customer as Customer & { seasonalPattern?: string }).seasonalPattern && (
+          <span className="inline-flex items-center rounded px-2 py-0.5 text-xs border border-border text-muted-foreground shrink-0">
+            Orders typically {(customer as Customer & { seasonalPattern?: string }).seasonalPattern}
+          </span>
+        )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Archive button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setArchiveOpen(true)}
+          className="shrink-0 text-error/70 border-error/30 hover:text-error hover:border-error/50 hover:bg-error/5 focus-visible:ring-error/50"
+        >
+          <Archive className="size-4" />
+          <span className="hidden sm:inline">Archive</span>
+        </Button>
+
+        {/* Edit Customer button — action blue, neobrutalist shadow */}
+        <Button
+          size="sm"
+          onClick={() => setEditOpen(true)}
+          className="shrink-0 bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+        >
+          <Pencil className="size-4" />
+          Edit Customer
+        </Button>
       </div>
 
-      {/* Quick stats */}
+      {/* ---- Section 3: Contacts row ---------------------------------------- */}
+      {/* Fixed-width column slots — all contacts aligned vertically */}
+      {sortedContacts.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {sortedContacts.map((contact) => {
+            const roleLabel =
+              contact.role.length > 0
+                ? contact.role.map((r) => CONTACT_ROLE_LABELS[r]).join(', ')
+                : null
+
+            return (
+              <div key={contact.id} className="flex items-center gap-3 text-sm">
+                {/* Star / spacer — 18px fixed width */}
+                {contact.isPrimary ? (
+                  <Star
+                    className="size-[18px] shrink-0 fill-warning text-warning"
+                    aria-label="Primary contact"
+                  />
+                ) : (
+                  <span className="w-[18px] shrink-0" aria-hidden="true" />
+                )}
+
+                {/* Name — fixed minimum width */}
+                <span
+                  className={cn(
+                    'min-w-[140px] shrink-0 font-medium',
+                    contact.isPrimary ? 'text-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  {contact.name}
+                </span>
+
+                {/* Role badge */}
+                {roleLabel && (
+                  <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+                    {roleLabel}
+                  </span>
+                )}
+
+                {/* Email — copy-to-clipboard, flex:1 */}
+                {contact.email && (
+                  <span className="flex-1 min-w-0">
+                    {/* Desktop: copy button */}
+                    <span className="hidden md:inline">
+                      <CopyButton value={contact.email} label="email" />
+                    </span>
+                    {/* Mobile: mailto link */}
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="md:hidden text-sm text-action active:text-action/80 transition-colors truncate"
+                      aria-label={`Email ${contact.email}`}
+                    >
+                      {contact.email}
+                    </a>
+                  </span>
+                )}
+                {!contact.email && <span className="flex-1" />}
+
+                {/* Phone — fixed minimum width */}
+                {contact.phone && (
+                  <span className="min-w-[120px] shrink-0">
+                    {/* Desktop: copy button */}
+                    <span className="hidden md:inline">
+                      <CopyButton value={contact.phone} label="phone" />
+                    </span>
+                    {/* Mobile: tel link */}
+                    <a
+                      href={`tel:${contact.phone}`}
+                      className="md:hidden text-sm text-action active:text-action/80 transition-colors"
+                      aria-label={`Call ${contact.phone}`}
+                    >
+                      {contact.phone}
+                    </a>
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ---- Section 4: Stats strip ----------------------------------------- */}
       <CustomerQuickStats stats={stats} variant="header" />
 
-      {/* Modals */}
+      {/* ---- Modals --------------------------------------------------------- */}
       <EditCustomerSheet customer={customer} open={editOpen} onOpenChange={setEditOpen} />
       <ArchiveDialog customer={customer} open={archiveOpen} onOpenChange={setArchiveOpen} />
     </div>
