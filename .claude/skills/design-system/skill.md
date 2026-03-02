@@ -75,7 +75,6 @@ Small colored dot + plain text label. Used for lifecycle stage and health status
 
 ```tsx
 import { dotColor } from '@shared/lib/design-system'
-
 ;<span className="inline-flex items-center gap-1.5">
   <span className={cn('h-2 w-2 rounded-full', dotColor('success'))} />
   <span className="text-sm text-foreground">Repeat</span>
