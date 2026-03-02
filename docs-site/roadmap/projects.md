@@ -217,7 +217,11 @@ Customer
 
 **Critical path**: M0 → M1 → M2 → {M3, M4, M5 in parallel} → M6 → M7
 
-**Spikes**: #725 (color detection library evaluation), #726 (Supabase Free tier storage limits)
+**Spikes**:
+- ✅ #726 — Storage limits & rendition pipeline (2026-03-02): Sharp rendition overhead ×1.006–1.08 (near-zero). Supabase Storage POC passed (9/9 ops). Free tier holds ~900 artworks without PSDs — migrate to R2 when PSDs ship (~$0.37/mo). Sharp natively supports PNG/JPEG/WebP/SVG/GIF/TIFF; PSD/AI/EPS/PDF require preprocessing. Presigned upload URL pattern required (Vercel 4.5 MB body limit). `spike-726-storage.md`
+- ✅ #725 — Color detection libraries (2026-03-02): `get-svg-colors` exact for SVGs (3/3 colors, 5 ms). `quantize` (MMCQ) identifies correct colors but over-counts — needs CIEDE2000 post-merge + 2% coverage threshold. Pantone matching ΔE 1–3 for spot colors. Critical: `flatten(garmentColor)` required before detection. 3-path architecture confirmed. `spike-725-color-detection.md`
+
+**Next step**: Shaping (R × S) → frame.md + shaping.md. M1 (#718) remains blocked by H2 (File Upload Pipeline) — build H2 before resuming artwork build phase.
 
 **Absorbed issues**: #212 → M1 (storage schema), #164 → M7 (mockup), #507 → M7 (mockup)
 
@@ -237,8 +241,8 @@ No competitor has all of these. Research found gaps across every major platform 
 ### Key Decisions
 
 - **Domain model**: Artwork → Variant → Version hierarchy. Variants are parallel color treatments. Versions are sequential revisions. Separation metadata is per approved variant.
-- **Color detection**: "Suggest and confirm" — auto-detect palette at upload, user confirms/adjusts. ~85-95% accuracy for typical 1-6 spot color artwork. SVG: exact via `get-svg-colors`. Raster: MMCQ + CIEDE2000 merge (ΔE<8) + nearest-pantone.
-- **Storage**: Supabase Storage **Free tier** (1GB storage + 2GB egress, $0) for POC/Beta — sufficient for <200 artworks. Scale-up: Cloudflare R2 (~$4.50/mo for 300GB, zero egress). Free tier is sufficient for initial production use; R2 migration needed when storage exceeds 1GB.
+- **Color detection** (spike #725 validated): 3-path routing — SVG via `get-svg-colors` (exact), raster via `quantize` + CIEDE2000 merge (ΔE<10) + 2% coverage filter + `nearest-pantone` (ΔE 1–3 for spot colors), PSD via `ag-psd` (deferred M2). Always `flatten(garmentColor)` before raster detection. "Suggest and confirm" UX — never auto-populate pricing without explicit user confirmation.
+- **Storage** (spike #726 validated): Supabase Storage **Free tier** (1GB, $0) for POC/Beta. Migrate to Cloudflare R2 when PSDs ship or storage hits 800 MB (~$0.37/mo for full 3yr shop including PSDs). Rendition overhead is ×1.006–1.08 (near-zero). Sharp natively handles PNG/JPEG/WebP/SVG/GIF/TIFF — PSD/AI/PDF require preprocessing. Presigned upload URL pattern required (Vercel 4.5 MB body limit).
 - **Mockup rendering**: Hybrid — client-side SVG for interactive preview (quote building, job board), server-side Sharp for frozen snapshots at lifecycle events (quote sent, artwork approved, job created).
 - **Approval granularity**: Per-artwork within an order (YoPrint model). Approve front design, reject back design independently.
 - **Legal record**: Immutable proof snapshot (not reference to mutable file) + who/what/when/IP/T&C version. Append-only — shop cannot retroactively modify approval records.
