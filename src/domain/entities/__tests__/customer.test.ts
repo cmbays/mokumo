@@ -225,9 +225,7 @@ describe('customerSchema', () => {
   })
 
   it('rejects invalid type tag', () => {
-    expect(() =>
-      customerSchema.parse({ ...validCustomer, typeTags: ['premium-member'] })
-    ).toThrow()
+    expect(() => customerSchema.parse({ ...validCustomer, typeTags: ['premium-member'] })).toThrow()
   })
 
   it('accepts favoriteGarments field', () => {

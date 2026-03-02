@@ -31,6 +31,7 @@ Printavo's "unified" surface is a UI illusion — their GraphQL API v2 exposes `
 Dynamics 365, Salesforce CPQ, SAP CPQ all use this pattern. When "Revise" is clicked, the old quote is closed and a new quote is created in draft state with an incremented revision number. A sent quote is a legal document snapshot — mutating it destroys the audit trail. Option A (version on same entity) creates composite PK complexity. Option B (new quote, no parent link) loses lineage — you cannot show "v3 of quote Q-1001" thread view. Option C pays for itself on first customer dispute.
 
 **Schema additions required for P6 M1:**
+
 - `parent_quote_id UUID REFERENCES quotes(id) NULL`
 - `revision_number INTEGER NOT NULL DEFAULT 0`
 - Enforcement: if `status IN ('sent', 'accepted', 'declined')`, the row is immutable — a revision creates a new row
@@ -46,6 +47,7 @@ Dynamics 365, Salesforce CPQ, SAP CPQ all use this pattern. When "Revise" is cli
 The current `quoteSchema` has a design smell: `dtfLineItems` lives as a parallel array at the quote root level. This doesn't extend to embroidery (a third array?). shopVOX, YoPrint, and Printavo all treat decoration methods as line items or sub-entities of line item groups — not parallel arrays on the parent. The correct model: all decoration types share `quote_line_items` table, discriminated by `service_type`. Screen-print-specific fields live in `screen_print_payload JSONB`. DTF-specific fields live in `dtf_payload JSONB`. NULL for irrelevant columns.
 
 **Required changes for P6 M1 (also applies to `quoteSchema` Zod entity):**
+
 - Remove `dtfLineItems: z.array(dtfLineItemSchema)` from `quoteSchema` root
 - Remove `dtfSheetCalculation` from `quoteSchema` root
 - Add discriminated union to `quoteLineItemSchema`: `serviceType: 'screen-print' | 'dtf' | 'embroidery' | 'dtf-press'`
@@ -62,6 +64,7 @@ The current `quoteSchema` has a design smell: `dtfLineItems` lives as a parallel
 Every print shop platform converges here. InfoFlo Print: "sends estimates by email or SMS with a secure link." YoPrint: "as simple as clicking the Approve button." DecoNetwork: "the customer is sent a link to the quote that they can view online and electronically approve, decline or comment on." The magic link achieves 95% of value at 10% of cost. The `publicHash` pattern is confirmed in Printavo's Invoice entity. Full customer portal (P14) is the right long-term destination.
 
 **Schema additions required for P6 M1:**
+
 - `approval_token UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE`
 - `approval_token_expires_at TIMESTAMPTZ NULL` — 72h TTL recommended
 - `approved_at TIMESTAMPTZ NULL`

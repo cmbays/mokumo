@@ -40,6 +40,7 @@ status: complete
 - **YoPrint "breakless pricing" alternative**: Linear interpolation between single-unit price and bulk price. Eliminates the revenue cliff. Requires only `{price_at_1, price_at_bulk, bulk_qty}` as inputs.
 
 **Schema decision**: `pricing_template` needs:
+
 1. `markup_tiers[]` — `{garment_cost_min, garment_cost_max, markup_pct}` — separate from quantity breaks
 2. `quantity_breaks[]` — `{min_qty, max_qty, price_per_piece_per_color}` — shop-defined
 3. `breakless_pricing?` — `{price_at_1, price_at_bulk, bulk_qty}` — mutually exclusive with `quantity_breaks`
