@@ -310,31 +310,21 @@ describe('initiateArtworkUpload', () => {
       }
     })
 
-    it('passes isDuplicate: true + existingPath to fileUploadService when duplicate found', async () => {
+    it('does NOT call fileUploadService when duplicate is found (cache hit — no storage work needed)', async () => {
+      // The duplicate branch reads the existing URL directly from the DB row.
+      // Calling createPresignedUploadUrl on a cache hit is dead work — this
+      // test verifies it was removed.
       setupSelect([existingArtwork])
-      setupSelect([{ originalUrl: '' }])
-      mockCreatePresignedUploadUrl.mockResolvedValueOnce({
-        isDuplicate: true as const,
-        path: existingArtwork.originalPath,
-      })
+      setupSelect([{ originalUrl: 'https://existing-url.com' }])
 
       await initiateArtworkUpload(VALID_INITIATE_INPUT)
 
-      expect(mockCreatePresignedUploadUrl).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isDuplicate: true,
-          existingPath: existingArtwork.originalPath,
-        })
-      )
+      expect(mockCreatePresignedUploadUrl).not.toHaveBeenCalled()
     })
 
     it('does not call db.insert when duplicate is found', async () => {
       setupSelect([existingArtwork])
       setupSelect([{ originalUrl: '' }])
-      mockCreatePresignedUploadUrl.mockResolvedValueOnce({
-        isDuplicate: true as const,
-        path: existingArtwork.originalPath,
-      })
 
       await initiateArtworkUpload(VALID_INITIATE_INPUT)
 

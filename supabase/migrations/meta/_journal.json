@@ -106,6 +106,13 @@
       "when": 1772468939443,
       "tag": "0025_thick_agent_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1772470555887,
+      "tag": "0026_lumpy_micromax",
+      "breakpoints": true
     }
   ]
 }

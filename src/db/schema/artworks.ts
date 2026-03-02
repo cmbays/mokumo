@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, index } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core'
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
 
 // ─── artwork_versions ─────────────────────────────────────────────────────────
@@ -41,8 +41,10 @@ export const artworkVersions = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (t) => [
-    // Fast dedup lookup: consumer queries (shop_id, content_hash) before each upload
-    index('idx_artwork_versions_shop_id_content_hash').on(t.shopId, t.contentHash),
+    // Enforces one row per unique file per shop (content-addressed dedup invariant).
+    // Using UNIQUE so concurrent inserts with the same hash fail deterministically
+    // rather than producing duplicate rows (race condition guard).
+    uniqueIndex('idx_artwork_versions_shop_id_content_hash').on(t.shopId, t.contentHash),
     // List page: filter by shop
     index('idx_artwork_versions_shop_id').on(t.shopId),
   ]

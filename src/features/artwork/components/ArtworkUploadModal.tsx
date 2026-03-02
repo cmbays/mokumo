@@ -156,7 +156,7 @@ export function ArtworkUploadModal({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={cn(
-            'flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-6 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action',
+            'flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-6 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action',
             isDragging && 'border-action bg-action/5',
             !isDragging && !isDone && !isError && 'border-border hover:border-action/50',
             isDone && 'border-success bg-success/5 cursor-default',
@@ -167,7 +167,7 @@ export function ArtworkUploadModal({
           {/* Success state */}
           {isDone && (
             <>
-              <CheckCircle className="text-success" size={40} aria-hidden="true" />
+              <CheckCircle className="text-success" size={24} aria-hidden="true" />
               <p className="text-success text-sm font-medium">Upload complete</p>
             </>
           )}
@@ -175,7 +175,7 @@ export function ArtworkUploadModal({
           {/* Error state */}
           {isError && (
             <>
-              <AlertCircle className="text-error" size={40} aria-hidden="true" />
+              <AlertCircle className="text-error" size={24} aria-hidden="true" />
               <p className="text-error text-sm font-medium">{error}</p>
               <p className="text-muted-foreground text-xs">Click to try again</p>
             </>
@@ -186,7 +186,7 @@ export function ArtworkUploadModal({
             <>
               <Upload
                 className={cn(
-                  'size-10 transition-colors',
+                  'size-6 transition-colors',
                   isDragging ? 'text-action' : 'text-muted-foreground'
                 )}
                 aria-hidden="true"

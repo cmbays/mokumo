@@ -4,7 +4,7 @@ import 'server-only'
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
-import { artworkVersions } from '@db/schema/artworks'
+import { artworkVersions, type ArtworkVersion } from '@db/schema/artworks'
 import { fileUploadService } from '@infra/bootstrap'
 import { verifySession } from '@infra/auth/session'
 import { logger } from '@shared/lib/logger'
@@ -50,23 +50,10 @@ export type InitiateArtworkUploadResult =
       expiresAt: Date
     }
 
-export type ConfirmArtworkUploadResult = {
-  id: string
-  shopId: string
-  originalPath: string
-  thumbPath: string | null
-  previewPath: string | null
-  originalUrl: string | null
-  thumbUrl: string | null
-  previewUrl: string | null
-  contentHash: string
-  mimeType: string
-  sizeBytes: number
-  filename: string
-  status: 'pending' | 'ready' | 'error'
-  createdAt: Date
-  updatedAt: Date
-}
+// Re-export ArtworkVersion so callers get the full confirmed row shape.
+// Using the schema-inferred type (InferSelectModel) avoids a parallel
+// hand-written type that would drift on column changes.
+export type { ArtworkVersion as ConfirmArtworkUploadResult }
 
 // ---------------------------------------------------------------------------
 // initiateArtworkUpload
@@ -129,27 +116,8 @@ export async function initiateArtworkUpload(
       shopIdPrefix: shopId.slice(0, 8),
     })
 
-    const result = await fileUploadService.createPresignedUploadUrl({
-      entity: 'artwork',
-      shopId,
-      filename,
-      mimeType,
-      sizeBytes,
-      contentHash,
-      isDuplicate: true,
-      existingPath: dup.originalPath,
-    })
-
-    if (!result.isDuplicate) {
-      // Should never happen — isDuplicate: true always returns isDuplicate: true
-      throw new Error('Unexpected non-duplicate result from fileUploadService')
-    }
-
-    // Get a fresh presigned download URL for the existing file
-    // We get it via confirmUpload to stay consistent, but since it already exists
-    // we construct the originalUrl differently. Use the path from the result.
-    // The existing row may already have originalUrl; we return the path for the caller
-    // to query a fresh URL if needed.
+    // Fetch the cached originalUrl from the existing row.
+    // No service call needed — this is a cache hit; the file already exists in storage.
     const existingRow = await db
       .select({ originalUrl: artworkVersions.originalUrl })
       .from(artworkVersions)
@@ -239,7 +207,7 @@ export async function initiateArtworkUpload(
  */
 export async function confirmArtworkUpload(
   input: z.input<typeof confirmArtworkUploadSchema>
-): Promise<ConfirmArtworkUploadResult> {
+): Promise<ArtworkVersion> {
   const parsed = confirmArtworkUploadSchema.safeParse(input)
   if (!parsed.success) {
     throw new Error(`Invalid input: ${parsed.error.message}`)
@@ -305,7 +273,7 @@ export async function confirmArtworkUpload(
   })
 
   // Update artwork row with rendition results
-  let updated: ConfirmArtworkUploadResult[]
+  let updated: ArtworkVersion[]
   try {
     updated = await db
       .update(artworkVersions)

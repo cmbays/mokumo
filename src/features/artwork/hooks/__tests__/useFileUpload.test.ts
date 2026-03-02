@@ -69,7 +69,7 @@ function makeFile(name = 'test.png', type = 'image/png', sizeBytes = 1024): File
 }
 
 const DUMMY_CONFIRM_RESULT: ConfirmResult = {
-  artworkId: 'artwork-1',
+  id: 'artwork-1',
   originalUrl: 'https://cdn.example.com/originals/test.png',
   thumbUrl: 'https://cdn.example.com/thumbs/test.png',
   previewUrl: null,

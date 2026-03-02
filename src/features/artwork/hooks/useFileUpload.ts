@@ -32,11 +32,12 @@ const _initiateResultSchema = z.discriminatedUnion('isDuplicate', [
 export type InitiateResult = z.infer<typeof _initiateResultSchema>
 
 const _confirmResultSchema = z.object({
-  artworkId: z.string(),
-  originalUrl: z.string(),
+  // Field matches the Drizzle-inferred ArtworkVersion shape (primary key is `id`, not `artworkId`)
+  id: z.string(),
+  originalUrl: z.string().nullable(),
   thumbUrl: z.string().nullable(),
   previewUrl: z.string().nullable(),
-  status: z.enum(['ready', 'pending']),
+  status: z.enum(['pending', 'ready', 'error']),
 })
 
 export type ConfirmResult = z.infer<typeof _confirmResultSchema>
