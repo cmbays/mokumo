@@ -85,7 +85,7 @@ CREATE TABLE "customers" (
 	"lifecycle_stage" "lifecycle_stage" DEFAULT 'prospect' NOT NULL,
 	"health_status" "health_status" DEFAULT 'active' NOT NULL,
 	"type_tags" text[] DEFAULT '{}' NOT NULL,
-	"payment_terms" varchar(50) DEFAULT 'net30',
+	"payment_terms" varchar(50) DEFAULT 'net-30',
 	"pricing_tier" varchar(50) DEFAULT 'standard',
 	"discount_pct" numeric(5, 4) DEFAULT '0',
 	"tax_exempt" boolean DEFAULT false NOT NULL,
@@ -219,7 +219,7 @@ VALUES
     'River City Brewing Co.',
     'repeat', 'active',
     ARRAY['wholesale', 'hospitality'],
-    'net30', 'preferred', 0.1000,
+    'net-30', 'preferred', 0.1000,
     false, NOW(), NOW()
   ),
   (
@@ -227,8 +227,8 @@ VALUES
     '00000000-0000-4000-8000-000000004e6b',
     'Riverside Academy',
     'vip', 'active',
-    ARRAY['school', 'nonprofit'],
-    'net15', 'wholesale', 0.1500,
+    ARRAY['sports-school', 'nonprofit'],
+    'net-15', 'wholesale', 0.1500,
     true, NOW(), NOW()
   ),
   (
@@ -237,7 +237,7 @@ VALUES
     'Austin Sports League',
     'repeat', 'active',
     ARRAY['sports', 'nonprofit'],
-    'due-on-receipt', 'standard', 0.0500,
+    'cod', 'standard', 0.0500,
     false, NOW(), NOW()
   ),
   (
@@ -246,7 +246,7 @@ VALUES
     'Central Baptist Church',
     'new', 'active',
     ARRAY['nonprofit', 'religious'],
-    'net30', 'standard', 0.0000,
+    'net-30', 'standard', 0.0000,
     true, NOW(), NOW()
   ),
   (
@@ -255,7 +255,7 @@ VALUES
     'Thompson''s Restaurant Group',
     'prospect', 'active',
     ARRAY['hospitality', 'corporate'],
-    'net30', 'standard', 0.0000,
+    'net-30', 'standard', 0.0000,
     false, NOW(), NOW()
   )
 ON CONFLICT DO NOTHING;

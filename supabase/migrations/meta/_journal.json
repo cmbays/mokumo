@@ -85,6 +85,13 @@
       "when": 1772432384296,
       "tag": "0022_lowly_aqueduct",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1772433806479,
+      "tag": "0023_bitter_firebird",
+      "breakpoints": true
     }
   ]
 }

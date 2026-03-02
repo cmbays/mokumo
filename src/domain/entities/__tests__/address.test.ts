@@ -15,12 +15,11 @@ describe('addressSchema', () => {
   const validAddress = {
     id: '31a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
     label: 'Main',
-    street: '1200 E 6th St',
+    street1: '1200 E 6th St',
     city: 'Austin',
     state: 'TX',
     zip: '78702',
     country: 'US',
-    isDefault: true,
     type: 'billing' as const,
   }
 
@@ -44,8 +43,8 @@ describe('addressSchema', () => {
     expect(result.street2).toBe('Suite 200')
   })
 
-  it('rejects empty street', () => {
-    expect(() => addressSchema.parse({ ...validAddress, street: '' })).toThrow()
+  it('rejects empty street1', () => {
+    expect(() => addressSchema.parse({ ...validAddress, street1: '' })).toThrow()
   })
 
   it('rejects empty city', () => {

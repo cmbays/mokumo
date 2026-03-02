@@ -11,6 +11,7 @@ import {
   jsonb,
   index,
   primaryKey,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { shops } from './shops'
 
@@ -78,16 +79,22 @@ export const customers = pgTable(
     typeTags: text('type_tags').array().notNull().default([]),
 
     // Financial defaults (cascade to quotes/invoices — Issue #700 resolution)
-    paymentTerms: varchar('payment_terms', { length: 50 }).default('net30'),
+    // payment_terms values use hyphenated format to match paymentTermsEnum (e.g. 'net-30')
+    paymentTerms: varchar('payment_terms', { length: 50 }).default('net-30'),
     pricingTier: varchar('pricing_tier', { length: 50 }).default('standard'),
-    discountPct: numeric('discount_pct', { precision: 5, scale: 4 }).default('0'),
+    // Stored as fraction (0.15 = 15%). Wave 1 adapter multiplies by 100 → discountPercentage entity field.
+    // numeric(5,4): max 9.9999 — sufficient for any realistic discount (≤ 999.99%)
+    discountPct: numeric('discount_pct', { precision: 5, scale: 4, mode: 'number' }).default(0),
     taxExempt: boolean('tax_exempt').notNull().default(false),
     taxExemptCertExpiry: date('tax_exempt_cert_expiry'),
     // credit_limit is nullable — no limit set = no bar displayed
     creditLimit: numeric('credit_limit', { precision: 10, scale: 2 }),
 
-    // Referral chain — self-referencing FK
-    referralByCustomerId: uuid('referral_by_customer_id'),
+    // Referral chain — self-referencing FK (SET NULL so deleting referrer doesn't cascade)
+    referralByCustomerId: uuid('referral_by_customer_id').references(
+      (): AnyPgColumn => customers.id,
+      { onDelete: 'set null' }
+    ),
 
     // Flexible metadata for shop-specific fields
     metadata: jsonb('metadata'),
@@ -131,6 +138,7 @@ export const contacts = pgTable(
     canPlaceOrders: boolean('can_place_orders').notNull().default(false),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     // Detail tab: load all contacts for a customer

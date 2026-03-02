@@ -459,7 +459,8 @@ describe('data coverage', () => {
   })
 
   it('has contacts with various roles', () => {
-    const roles = new Set(contacts.map((c) => c.role))
+    // role is now ContactRole[] — flatten before building the set
+    const roles = new Set(contacts.flatMap((c) => c.role))
     expect(roles).toContain('ordering')
     expect(roles).toContain('art-approver')
     expect(roles).toContain('billing')

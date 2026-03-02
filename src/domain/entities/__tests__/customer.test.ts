@@ -20,12 +20,15 @@ describe('customerTagEnum', () => {
 })
 
 describe('lifecycleStageEnum', () => {
-  it.each(['prospect', 'new', 'repeat', 'contract'])("accepts '%s'", (stage) => {
-    expect(lifecycleStageEnum.parse(stage)).toBe(stage)
-  })
+  it.each(['prospect', 'new', 'repeat', 'contract', 'vip', 'at-risk', 'archived'])(
+    "accepts '%s'",
+    (stage) => {
+      expect(lifecycleStageEnum.parse(stage)).toBe(stage)
+    }
+  )
 
   it('rejects invalid stage', () => {
-    expect(() => lifecycleStageEnum.parse('vip')).toThrow()
+    expect(() => lifecycleStageEnum.parse('inactive')).toThrow()
   })
 })
 
@@ -48,7 +51,7 @@ describe('customerTypeTagEnum', () => {
   )
 
   it('rejects invalid type tag', () => {
-    expect(() => customerTypeTagEnum.parse('nonprofit')).toThrow()
+    expect(() => customerTypeTagEnum.parse('premium-member')).toThrow()
   })
 })
 
@@ -129,7 +132,7 @@ describe('customerSchema', () => {
           id: '01a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
           name: 'Marcus Rivera',
           email: 'marcus@example.com',
-          role: 'ordering' as const,
+          role: ['ordering', 'primary'] as const,
           isPrimary: true,
         },
       ],
@@ -152,24 +155,22 @@ describe('customerSchema', () => {
       billingAddress: {
         id: '31a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
         label: 'Main',
-        street: '1200 E 6th St',
+        street1: '1200 E 6th St',
         city: 'Austin',
         state: 'TX',
         zip: '78702',
         country: 'US',
-        isDefault: true,
         type: 'billing' as const,
       },
       shippingAddresses: [
         {
           id: '32b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
           label: 'Warehouse',
-          street: '3400 Industrial Blvd',
+          street1: '3400 Industrial Blvd',
           city: 'Austin',
           state: 'TX',
           zip: '78745',
           country: 'US',
-          isDefault: true,
           type: 'shipping' as const,
         },
       ],
@@ -224,7 +225,9 @@ describe('customerSchema', () => {
   })
 
   it('rejects invalid type tag', () => {
-    expect(() => customerSchema.parse({ ...validCustomer, typeTags: ['nonprofit'] })).toThrow()
+    expect(() =>
+      customerSchema.parse({ ...validCustomer, typeTags: ['premium-member'] })
+    ).toThrow()
   })
 
   it('accepts favoriteGarments field', () => {

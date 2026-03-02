@@ -40,7 +40,7 @@ export type CustomerOption = Pick<
   Customer,
   'id' | 'name' | 'company' | 'email' | 'phone' | 'tag' | 'lifecycleStage' | 'typeTags'
 > & {
-  contactRole?: ContactRole
+  contactRole?: ContactRole[]
 }
 
 export type CustomerComboboxProps = {
@@ -158,9 +158,9 @@ export function CustomerCombobox({
           <div className="flex items-center gap-2 text-foreground">
             <User className="size-4 shrink-0 text-muted-foreground" />
             <span>{selectedCustomer.name}</span>
-            {selectedCustomer.contactRole && (
+            {selectedCustomer.contactRole?.[0] && (
               <Badge variant="outline" className="text-xs text-muted-foreground">
-                {CONTACT_ROLE_LABELS[selectedCustomer.contactRole]}
+                {CONTACT_ROLE_LABELS[selectedCustomer.contactRole[0]]}
               </Badge>
             )}
           </div>
