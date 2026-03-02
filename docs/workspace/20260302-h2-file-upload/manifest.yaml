@@ -1,0 +1,703 @@
+vertical: artwork
+pipeline: 20260302-h2-file-upload
+shape: A
+
+waves:
+  - name: 'Wave 0: H2 Infrastructure Foundation'
+    serial: true
+    sessions:
+      - topic: h2-storage-foundation
+        stage: build
+        prompt: |
+          # H2: File Upload Pipeline — Infrastructure Foundation
+
+          You are building the complete H2 service layer. This is PURE INFRASTRUCTURE — no
+          consumer code, no UI. Read these docs first, in order:
+
+          1. docs/workspace/20260302-h2-file-upload/breadboard.md — P4 affordances (N10–N16)
+          2. docs/workspace/20260302-h2-file-upload/shaping.md — Shape A parts A1–A9
+          3. docs/workspace/20260302-h2-file-upload/plan.md — Task 0.1 for full file list
+          4. CLAUDE.md — architecture rules, coding standards
+
+          ## What to Build
+
+          ### 1. Domain Ports (src/domain/ports/storage.ts) — NEW FILE
+
+          Define these TypeScript types (NOT interfaces — CLAUDE.md rule: no `interface`):
+
+          ```typescript
+          export type IStorageProvider = {
+            upload(path: string, buffer: Buffer, opts: { contentType: string }): Promise<{ path: string }>
+            delete(paths: string[]): Promise<void>
+            createPresignedUploadUrl(path: string, expiresIn: number): Promise<{ uploadUrl: string; token: string }>
+            createPresignedDownloadUrl(path: string, expiresIn: number): Promise<string>
+            download(path: string): Promise<Buffer>
+            list(prefix: string): Promise<Array<{ name: string; size: number; mimeType: string }>>
+          }
+
+          export type CreatePresignedUploadUrlInput = {
+            entity: string
+            shopId: string
+            filename: string
+            mimeType: string
+            sizeBytes: number
+            contentHash: string
+            isDuplicate?: boolean
+          }
+
+          export type PresignedUploadResult =
+            | { isDuplicate: true; path: string }
+            | { isDuplicate: false; path: string; uploadUrl: string; token: string; expiresAt: Date }
+
+          export type ConfirmUploadInput = { path: string; contentHash: string }
+
+          export type ConfirmUploadResult = {
+            originalUrl: string
+            thumbUrl: string | null
+            previewUrl: string | null
+            status: 'ready' | 'pending'
+          }
+
+          export type IFileUploadService = {
+            createPresignedUploadUrl(input: CreatePresignedUploadUrlInput): Promise<PresignedUploadResult>
+            confirmUpload(input: ConfirmUploadInput): Promise<ConfirmUploadResult>
+            deleteFile(paths: string[]): Promise<void>
+          }
+          ```
+
+          Also add `IStorageProvider` and `IFileUploadService` to src/domain/ports/index.ts.
+
+          ### 2. Entity Configs (src/infrastructure/storage/entity-configs.ts) — NEW FILE
+
+          ```typescript
+          export type EntityConfig = {
+            bucket: string
+            allowedMimeTypes: string[]
+            maxSizeBytes: Record<string, number>
+          }
+
+          export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
+            artwork: {
+              bucket: 'artwork',
+              allowedMimeTypes: [
+                'image/png', 'image/jpeg', 'image/webp', 'image/svg+xml',
+                'image/tiff', 'image/gif', 'application/pdf'
+              ],
+              maxSizeBytes: {
+                'image/png': 50_000_000,
+                'image/jpeg': 50_000_000,
+                'image/webp': 50_000_000,
+                'image/svg+xml': 5_000_000,
+                'image/tiff': 50_000_000,
+                'image/gif': 50_000_000,
+                'application/pdf': 30_000_000,
+              },
+            },
+          }
+
+          export class UploadValidationError extends Error {
+            constructor(public readonly reason: 'mime_type' | 'file_size' | 'unknown_entity', message: string) {
+              super(message)
+              this.name = 'UploadValidationError'
+            }
+          }
+
+          export function validateEntityConfig(
+            entity: string,
+            mimeType: string,
+            sizeBytes: number,
+          ): EntityConfig {
+            const config = ENTITY_CONFIGS[entity]
+            if (!config) throw new UploadValidationError('unknown_entity', `Unknown entity: ${entity}`)
+            if (!config.allowedMimeTypes.includes(mimeType))
+              throw new UploadValidationError('mime_type', `MIME type not allowed: ${mimeType}`)
+            const limit = config.maxSizeBytes[mimeType]
+            if (limit !== undefined && sizeBytes > limit)
+              throw new UploadValidationError('file_size', `File too large: ${sizeBytes} > ${limit}`)
+            return config
+          }
+          ```
+
+          ### 3. SupabaseStorageProvider (src/infrastructure/storage/supabase-storage.provider.ts)
+
+          Implements IStorageProvider using the Supabase Storage v2 SDK.
+          - Use `SUPABASE_SERVICE_ROLE_KEY` env var (sb_secret_* key) for all admin ops
+          - Use `NEXT_PUBLIC_SUPABASE_URL` for the Supabase URL
+          - `download(path)` → `adminClient.storage.from(bucket).download(path)` → Buffer
+            (server-side direct; no presigned URL used server-side — that is a browser pattern)
+          - `createPresignedUploadUrl` → `adminClient.storage.from(bucket).createSignedUploadUrl(path)`
+            returns `{ path, signedUrl, token }` — expose as `{ uploadUrl, token }`
+          - All 6 methods must be implemented: upload, delete, createPresignedUploadUrl,
+            createPresignedDownloadUrl, download, list
+          - Use logger from @shared/lib/logger with domain: 'storage'
+
+          ### 4. RenditionService (src/infrastructure/storage/rendition.service.ts)
+
+          `generate(originalPath: string, mimeType: string): Promise<{ thumbPath: string | null; previewPath: string | null }>`
+
+          - R1: Call `provider.download(originalPath)` → Buffer
+          - R2: Format detect by mimeType parameter
+          - Sharp-native types: image/png, image/jpeg, image/webp, image/svg+xml, image/gif, image/tiff
+          - Non-Sharp: application/pdf → return `{ thumbPath: null, previewPath: null }`
+          - For Sharp-native:
+            - Thumb: `sharp(buffer).resize(200, 200, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 80 })`
+            - Preview: `sharp(buffer).resize(800, 800, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 })`
+            - Upload thumb to `{entity}/{shopId}/thumbs/{versionId}.webp` via provider.upload()
+            - Upload preview to `{entity}/{shopId}/previews/{versionId}.webp` via provider.upload()
+          - Use `import sharp from 'sharp'`
+
+          ### 5. FileUploadService (src/infrastructure/storage/file-upload.service.ts)
+
+          Implements IFileUploadService.
+
+          `createPresignedUploadUrl(input)`:
+          - validateEntityConfig(entity, mimeType, sizeBytes) — throws UploadValidationError on fail
+          - If input.isDuplicate === true → return { isDuplicate: true, path: existingPath } early
+          - Generate versionId = crypto.randomUUID()
+          - Generate path = `${entity}/${shopId}/originals/${versionId}_${sanitizeFilename(filename)}`
+          - Call provider.createPresignedUploadUrl(path, 600) → { uploadUrl, token }
+          - Return { isDuplicate: false, path, uploadUrl, token, expiresAt }
+
+          `confirmUpload(input)`:
+          - Parse entity + shopId + versionId from path (split by '/')
+          - Call RenditionService.generate(path, mimeType)
+          - Call provider.createPresignedDownloadUrl(originalPath, 3600) → originalUrl
+          - If thumbPath: call provider.createPresignedDownloadUrl(thumbPath, 3600) → thumbUrl
+          - Return { originalUrl, thumbUrl, previewUrl, status: 'ready' | 'pending' }
+
+          `deleteFile(paths)`:
+          - Call provider.delete(paths)
+
+          ### 6. Storage Index (src/infrastructure/storage/index.ts)
+
+          ```typescript
+          import { SupabaseStorageProvider } from './supabase-storage.provider'
+          import { FileUploadService } from './file-upload.service'
+
+          const provider = new SupabaseStorageProvider()
+          export const fileUploadService = new FileUploadService(provider)
+          export type { IFileUploadService, IStorageProvider, PresignedUploadResult, ConfirmUploadResult } from '@domain/ports/storage'
+          export { UploadValidationError } from './entity-configs'
+          ```
+
+          ### 7. Update Bootstrap (src/infrastructure/bootstrap.ts) — MODIFY
+
+          Add at the top of the exports section:
+          ```typescript
+          export { fileUploadService } from './storage'
+          ```
+
+          ### 8. Bootstrap Script (scripts/bootstrap-storage.ts)
+
+          Idempotent script. Run once manually before any upload.
+          - Create 'artwork' bucket: `{ public: false, fileSizeLimit: 52_428_800, allowedMimeTypes: [...] }`
+          - Apply RLS policies (SELECT + DELETE tied to auth.jwt()->>'shop_id')
+          - Use try/catch — if bucket already exists, log and continue
+          - Log success/skip for each operation
+
+          ### 9. Unit Tests
+
+          Write unit tests for all three classes. Mock `@supabase/ssr` at module level.
+          Test coverage targets: 80% on infrastructure layer.
+
+          Key test cases:
+          - SupabaseStorageProvider: each of the 6 methods — happy path + error from SDK
+          - RenditionService: Sharp-native → thumb+preview generated; PDF → pending returned; SVG handled
+          - FileUploadService.createPresignedUploadUrl: isDuplicate=true short-circuit; MIME validation error; size validation error; happy path
+          - FileUploadService.confirmUpload: ready path (PNG); pending path (PDF)
+          - FileUploadService.deleteFile: delegates to provider.delete
+
+          ## Coding Standards
+
+          - Use `type` not `interface` (CLAUDE.md)
+          - Use logger from @shared/lib/logger — no console.log
+          - No hardcoded env vars — use process.env.* with server-only guard
+          - Add 'server-only' import guard to provider and service files (they use Supabase admin SDK)
+          - Code against IStorageProvider in FileUploadService — constructor takes IStorageProvider
+
+          ## Workspace Documentation
+
+          Before finalizing, commit implementation notes to:
+            docs/workspace/20260302-h2-file-upload/h2-infra-notes.md
+
+          Include:
+          - Any Supabase SDK quirks discovered
+          - Sharp import/native binding notes (if any)
+          - Decision on mimeType propagation through confirmUpload (needs to be passed in or parsed from path)
+          - Test mocking strategy for Supabase SDK
+
+          ## Completion
+
+          Use build-session-protocol skill when done. PR title: "feat(h2): storage foundation — IStorageProvider + FileUploadService + RenditionService"
+
+  - name: 'Wave 1: P5 M1 Consumer Layer'
+    serial: false
+    sessions:
+      - topic: artwork-schema-actions
+        stage: build
+        dependsOn: h2-storage-foundation
+        prompt: |
+          # H2 First Consumer: Artwork Schema + Server Actions
+
+          Wave 0 (h2-storage-foundation) must be merged before this session starts.
+          Read these docs first:
+
+          1. docs/workspace/20260302-h2-file-upload/breadboard.md — P3 affordances (N6–N9)
+          2. docs/workspace/20260302-h2-file-upload/plan.md — Task 1.1
+          3. docs/workspace/20260302-h2-file-upload/h2-infra-notes.md — any notes from Wave 0
+          4. CLAUDE.md — architecture rules, Zod-first types, server auth pattern
+
+          ## What to Build
+
+          ### 1. Artwork Versions Schema (src/db/schema/artworks.ts) — NEW FILE
+
+          ```typescript
+          import { pgTable, uuid, text, integer, timestamp, index } from 'drizzle-orm/pg-core'
+
+          export const artworkVersions = pgTable(
+            'artwork_versions',
+            {
+              id: uuid('id').primaryKey().defaultRandom(),
+              shopId: text('shop_id').notNull(),
+              contentHash: text('content_hash').notNull(),
+              originalPath: text('original_path').notNull(),
+              originalUrl: text('original_url').notNull(),
+              thumbUrl: text('thumb_url'),
+              previewUrl: text('preview_url'),
+              status: text('status', { enum: ['ready', 'pending', 'processing'] })
+                .notNull()
+                .default('ready'),
+              filename: text('filename').notNull(),
+              mimeType: text('mime_type').notNull(),
+              sizeBytes: integer('size_bytes').notNull(),
+              createdAt: timestamp('created_at').defaultNow().notNull(),
+              updatedAt: timestamp('updated_at').defaultNow().notNull(),
+            },
+            (t) => [index('artwork_versions_shop_hash_idx').on(t.shopId, t.contentHash)],
+          )
+
+          export type ArtworkVersion = typeof artworkVersions.$inferSelect
+          export type InsertArtworkVersion = typeof artworkVersions.$inferInsert
+          ```
+
+          Add re-export to src/db/schema/index.ts.
+
+          Run `npm run db:generate` to produce the migration SQL, then check in the generated file.
+
+          ### 2. Extend Artwork Repository Port (src/domain/ports/artwork.repository.ts) — MODIFY
+
+          Add mutation methods:
+          ```typescript
+          insertVersion(data: InsertArtworkVersion): Promise<ArtworkVersion>
+          findVersionByContentHash(shopId: string, contentHash: string): Promise<ArtworkVersion | null>
+          ```
+
+          Import `InsertArtworkVersion` and `ArtworkVersion` from `@db/schema`.
+
+          ### 3. Supabase Artwork Provider (src/infrastructure/repositories/_providers/supabase/artworks.ts) — NEW
+
+          Implement `insertVersion` and `findVersionByContentHash` using Drizzle + Supabase.
+          - `findVersionByContentHash`: `db.select().from(artworkVersions).where(and(eq(shopId), eq(contentHash))).limit(1)`
+          - `insertVersion`: `db.insert(artworkVersions).values(data).returning()`
+          - Both must call `verifySession()` before touching DB — auth classification: AUTHENTICATED
+
+          ### 4. Update Repository Router (src/infrastructure/repositories/artworks.ts) — MODIFY
+
+          Route mutation calls to the Supabase provider. Keep existing `getArtworks` / `getArtworkById`
+          pointing to mock (they're read-only and not part of this wave). Add:
+          ```typescript
+          export { insertVersion, findVersionByContentHash } from './_providers/supabase/artworks'
+          ```
+
+          ### 5. Server Actions (src/features/artwork/actions/upload.action.ts) — NEW FILE
+
+          Two server actions. Both marked `'use server'`. Both call `verifySession()` first.
+
+          ```typescript
+          'use server'
+          import { verifySession } from '@infra/auth/session'
+          import { fileUploadService, UploadValidationError } from '@infra/storage'
+          import { insertVersion, findVersionByContentHash } from '@infra/repositories/artworks'
+
+          export async function initiateUpload(input: {
+            entity: string; shopId: string; filename: string
+            mimeType: string; sizeBytes: number; contentHash: string
+          }) {
+            const session = await verifySession()
+            // confirm shopId matches session — prevent cross-shop attacks
+            if (input.shopId !== session.shopId) throw new Error('Unauthorized')
+
+            const existing = await findVersionByContentHash(session.shopId, input.contentHash)
+            const isDuplicate = existing !== null
+
+            return fileUploadService.createPresignedUploadUrl({
+              ...input,
+              isDuplicate,
+            })
+          }
+
+          export async function confirmArtworkUpload(input: { path: string; contentHash: string; mimeType: string }) {
+            const session = await verifySession()
+
+            const result = await fileUploadService.confirmUpload(input)
+
+            const version = await insertVersion({
+              shopId: session.shopId,
+              contentHash: input.contentHash,
+              originalPath: input.path,
+              originalUrl: result.originalUrl,
+              thumbUrl: result.thumbUrl,
+              previewUrl: result.previewUrl,
+              status: result.status,
+              filename: input.path.split('/').pop() ?? 'unknown',
+              mimeType: input.mimeType,
+              sizeBytes: 0, // size already validated by H2 at initiate time
+            })
+
+            return version
+          }
+          ```
+
+          Note: `mimeType` must be threaded through from client to `confirmArtworkUpload` so H2
+          can pass it to RenditionService for format detection. This is a key interface detail —
+          document it in your notes.
+
+          ### 6. Unit Tests (src/features/artwork/actions/__tests__/upload.action.test.ts)
+
+          Mock `@infra/storage` (fileUploadService) and `@infra/repositories/artworks`.
+          Test:
+          - `initiateUpload`: shopId mismatch → throws; dedup match → isDuplicate:true; no match → happy path
+          - `confirmArtworkUpload`: calls fileUploadService.confirmUpload + insertVersion + returns version
+
+          Test threshold: 80%.
+
+          ## Workspace Documentation
+
+          Before finalizing, commit notes to:
+            docs/workspace/20260302-h2-file-upload/artwork-actions-notes.md
+
+          Include:
+          - How mimeType flows: client → initiateUpload → confirmArtworkUpload (it must be stored or re-passed)
+          - Decision on sizeBytes in insertVersion (client-reported vs server-side — note the tradeoff)
+          - Any Drizzle migration issues
+
+          ## Completion
+
+          Use build-session-protocol skill. PR: "feat(artwork): schema + upload server actions (H2 consumer)"
+
+      - topic: upload-modal-ui
+        stage: build
+        dependsOn: h2-storage-foundation
+        prompt: |
+          # H2 First Consumer: Upload Modal UI
+
+          Wave 0 (h2-storage-foundation) must be merged. Wave 1 session A (artwork-schema-actions)
+          may still be in progress — stub the server action signatures if needed (see below).
+
+          Read these docs first:
+          1. docs/workspace/20260302-h2-file-upload/breadboard.md — P2 affordances (N0–N2, U3–U10)
+          2. docs/workspace/20260302-h2-file-upload/plan.md — Task 1.2
+          3. CLAUDE.md — design system tokens, mobile patterns, coding standards
+
+          ## What to Build
+
+          ### 1. File Upload Hook (src/features/artwork/hooks/use-file-upload.ts) — NEW FILE
+
+          Client-side orchestrator. Implements N0 (`handleFileUpload`) + N1 (`computeHash`) + N2 (`uploadToStorage`).
+
+          ```typescript
+          'use client'
+
+          export type UploadState =
+            | { phase: 'idle' }
+            | { phase: 'hashing' }
+            | { phase: 'uploading'; progress: number }
+            | { phase: 'processing' }
+            | { phase: 'success'; version: ArtworkVersion }
+            | { phase: 'error'; message: string }
+            | { phase: 'duplicate'; existingPath: string }
+
+          export function useFileUpload(shopId: string) {
+            const [state, setState] = useState<UploadState>({ phase: 'idle' })
+
+            async function handleFileUpload(file: File) {
+              // Step 1: compute hash
+              setState({ phase: 'hashing' })
+              const contentHash = await computeHash(file)
+
+              // Step 2: initiate upload (dedup check + presigned URL)
+              let initiated
+              try {
+                initiated = await initiateUpload({
+                  entity: 'artwork',
+                  shopId,
+                  filename: file.name,
+                  mimeType: file.type,
+                  sizeBytes: file.size,
+                  contentHash,
+                })
+              } catch (err) {
+                setState({ phase: 'error', message: errorMessage(err) })
+                return
+              }
+
+              if (initiated.isDuplicate) {
+                setState({ phase: 'duplicate', existingPath: initiated.path })
+                return
+              }
+
+              // Step 3: XHR upload to storage
+              setState({ phase: 'uploading', progress: 0 })
+              try {
+                await uploadToStorage(
+                  initiated.uploadUrl,
+                  initiated.token,
+                  file,
+                  (pct) => setState({ phase: 'uploading', progress: pct }),
+                )
+              } catch (err) {
+                setState({ phase: 'error', message: 'Upload failed. Please try again.' })
+                return
+              }
+
+              // Step 4: confirm + renditions
+              setState({ phase: 'processing' })
+              const version = await confirmArtworkUpload({
+                path: initiated.path,
+                contentHash,
+                mimeType: file.type,
+              })
+              setState({ phase: 'success', version })
+            }
+
+            return { state, handleFileUpload, reset: () => setState({ phase: 'idle' }) }
+          }
+
+          async function computeHash(file: File): Promise<string> {
+            const buffer = await file.arrayBuffer()
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+            return Buffer.from(hashBuffer).toString('hex')
+          }
+
+          function uploadToStorage(
+            uploadUrl: string,
+            token: string,
+            file: File,
+            onProgress: (pct: number) => void,
+          ): Promise<void> {
+            return new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest()
+              xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+              }
+              xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`)))
+              xhr.onerror = () => reject(new Error('Network error'))
+              xhr.open('PUT', uploadUrl)
+              xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+              xhr.send(file)
+            })
+          }
+          ```
+
+          If `artwork-schema-actions` is not merged yet, stub the action imports:
+          ```typescript
+          // tmp stub — replace when artwork-schema-actions merges
+          const initiateUpload = async (_: unknown) => ({ isDuplicate: false as const, path: '', uploadUrl: '', token: '', expiresAt: new Date() })
+          const confirmArtworkUpload = async (_: unknown): Promise<ArtworkVersion> => ({ id: '', shopId: '', status: 'ready', originalUrl: '', thumbUrl: null, previewUrl: null, filename: '', mimeType: '', sizeBytes: 0, contentHash: '', originalPath: '', createdAt: new Date(), updatedAt: new Date() })
+          ```
+
+          ### 2. Upload Modal (src/features/artwork/components/upload-modal.tsx) — NEW FILE
+
+          A Dialog (shadcn/ui) with 6 mutually exclusive states. Use Lucide icons only.
+          Design tokens: bg-elevated for modal surface, bg-surface for dropzone, text-action for
+          progress fill, text-muted-foreground for secondary info.
+
+          States:
+          - `idle/hashing`: Dropzone with dashed border (border-border). File name + size shown below.
+          - `uploading`: Progress bar (div with bg-action, animated width). Show percentage.
+          - `processing`: "Generating previews..." + two shimmer bars (skeleton).
+          - `success`: Thumbnail image (thumbUrl || placeholder) + filename + "Upload complete" + Done button.
+          - `error`: Error icon (AlertCircle, Lucide) + message + "Try Again" button.
+          - `duplicate`: "This artwork already exists" + path + Close button.
+
+          Props:
+          ```typescript
+          type UploadModalProps = {
+            open: boolean
+            onOpenChange: (open: boolean) => void
+            shopId: string
+            onSuccess: (version: ArtworkVersion) => void
+          }
+          ```
+
+          When `onSuccess` is called (state.phase === 'success'), pass the version up to parent.
+          Parent calls `router.refresh()` to reload the artwork grid.
+
+          File dropzone: `<input type="file" accept="image/*,application/pdf" onChange={...} />`
+          Also support drag-and-drop via `onDrop` on the dropzone div.
+
+          ### 3. Unit Tests
+
+          Hook tests (src/features/artwork/hooks/__tests__/use-file-upload.test.ts):
+          - Mock window.crypto.subtle and XMLHttpRequest
+          - Test dedup path: state transitions idle → hashing → duplicate
+          - Test happy path: idle → hashing → uploading → processing → success
+          - Test error on XHR: uploading → error
+
+          Component tests (src/features/artwork/components/__tests__/upload-modal.test.tsx):
+          - Renders dropzone in idle state
+          - Shows progress bar in uploading state
+          - Shows success state with thumbnail
+
+          Test threshold: 70% on components (CLAUDE.md).
+
+          ## Workspace Documentation
+
+          Before finalizing, commit notes to:
+            docs/workspace/20260302-h2-file-upload/upload-modal-notes.md
+
+          Include:
+          - Decision on XHR vs fetch (XHR needed for progress events)
+          - Any issues with crypto.subtle in test environment (may need polyfill)
+          - How stub was wired and removed
+
+          ## Completion
+
+          Use build-session-protocol skill. PR: "feat(artwork): upload modal + useFileUpload hook"
+
+  - name: 'Wave 2: Artwork Library Page + Integration'
+    serial: false
+    sessions:
+      - topic: artwork-library-page
+        stage: build
+        dependsOn: upload-modal-ui
+        prompt: |
+          # H2 First Consumer: Artwork Library Page
+
+          Both Wave 1 sessions (artwork-schema-actions + upload-modal-ui) must be merged.
+
+          Read these docs first:
+          1. docs/workspace/20260302-h2-file-upload/breadboard.md — P1 affordances (U1, U2)
+          2. docs/workspace/20260302-h2-file-upload/plan.md — Task 2.1
+          3. docs/APP_FLOW.md — existing routes
+          4. CLAUDE.md — design system, mobile patterns, server component rules
+
+          ## What to Build
+
+          ### 1. Artwork Library Page (app/(dashboard)/artwork/page.tsx) — NEW FILE
+
+          Async Server Component. Calls verifySession(), loads artworkVersions for shopId.
+
+          ```typescript
+          import { verifySession } from '@infra/auth/session'
+          // import artworkVersions query from repository
+          export default async function ArtworkPage() {
+            const session = await verifySession()
+            const artworks = await getArtworkVersions(session.shopId)
+            return <ArtworkLibrary artworks={artworks} shopId={session.shopId} />
+          }
+          ```
+
+          ### 2. Add getArtworkVersions to repository
+
+          Add `getArtworkVersions(shopId: string): Promise<ArtworkVersion[]>` to the Supabase
+          artworks provider (src/infrastructure/repositories/_providers/supabase/artworks.ts).
+          Order by `createdAt DESC`.
+
+          ### 3. Loading State (app/(dashboard)/artwork/loading.tsx) — NEW FILE
+
+          Grid of shimmer skeleton cards while page loads (8 cards, same grid layout as the real grid).
+
+          ### 4. Artwork Library Component (src/features/artwork/components/artwork-library.tsx)
+
+          Client component (needs state for modal). Contains:
+          - Page header: "Artwork Library" + "Upload Artwork" button (U1, text-action, Lucide Upload icon)
+          - `<ArtworkGrid artworks={artworks} />`
+          - `<UploadModal open={modalOpen} onOpenChange={setModalOpen} shopId={shopId} onSuccess={handleSuccess} />`
+
+          `handleSuccess`: closes modal, calls `router.refresh()` to reload the grid.
+
+          ### 5. Artwork Grid (src/features/artwork/components/artwork-grid.tsx)
+
+          CSS grid: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4`.
+          Empty state: "No artwork yet" + Upload prompt when `artworks.length === 0`.
+
+          ### 6. Artwork Card (src/features/artwork/components/artwork-card.tsx)
+
+          Shows: thumbnail image (thumbUrl, or placeholder if pending), filename (truncated),
+          status badge (`ready` → success green; `pending` → warning gold), file size formatted.
+          On hover: subtle border highlight (border-border → border-action).
+
+          ### 7. Update APP_FLOW.md
+
+          Add `/artwork` route to the navigation section.
+
+          ## Workspace Documentation
+
+          Before finalizing, commit notes to:
+            docs/workspace/20260302-h2-file-upload/artwork-library-notes.md
+
+          ## Completion
+
+          Use build-session-protocol skill. PR: "feat(artwork): artwork library page + grid"
+
+      - topic: artwork-upload-e2e
+        stage: build
+        dependsOn: artwork-library-page
+        prompt: |
+          # H2 First Consumer: E2E Tests (Upload V1 + V2 + V3)
+
+          The artwork-library-page session must be merged before E2E tests can run.
+
+          Read these docs first:
+          1. docs/workspace/20260302-h2-file-upload/breadboard.md — V1/V2/V3 slice demos
+          2. CLAUDE.md — E2E patterns, test threshold rules
+
+          ## What to Build
+
+          File: tests/e2e/journeys/artwork-upload.spec.ts
+
+          ### Journey V1 — Happy Path (new file)
+
+          - Navigate to /artwork
+          - Click "Upload Artwork"
+          - Drop a test PNG file (fixture: tests/e2e/fixtures/artwork-test-files/simple-logo.png)
+          - Assert: progress bar visible during upload
+          - Assert: rendition skeleton visible briefly after upload completes
+          - Assert: success state shown (thumbnail visible, "Upload complete")
+          - Close modal
+          - Assert: new artwork card appears in grid with status "ready"
+
+          ### Journey V2 — Dedup Short-Circuit (same file)
+
+          - Ensure V1 journey ran first (or upload same file in test setup)
+          - Click "Upload Artwork"
+          - Drop same PNG file
+          - Assert: duplicate notice shown immediately (U9 state)
+          - Assert: no new artwork card added to grid
+          - Assert: Supabase Storage did NOT receive a new file
+            (mock/intercept the XHR upload endpoint with page.route() — assert it is never called)
+
+          ### Journey V3 — Validation Error (oversized file)
+
+          - Click "Upload Artwork"
+          - Drop a file that exceeds the size limit
+            (create a fake large File object in the test using page.evaluate or fixture)
+          - Assert: error state shown immediately (U8 state)
+          - Assert: no progress bar ever shown
+          - Assert: no XHR to storage (page.route intercept)
+
+          ### Test Fixtures
+
+          Create tests/e2e/fixtures/artwork-test-files/ with:
+          - simple-logo.png (small, ~100 KB, PNG)
+          - oversized-fake.jpg (create programmatically — just a large Buffer with JPEG mime)
+
+          ## Workspace Documentation
+
+          Before finalizing, commit notes to:
+            docs/workspace/20260302-h2-file-upload/e2e-notes.md
+
+          ## Completion
+
+          Use build-session-protocol skill. PR: "test(artwork): E2E upload journeys V1+V2+V3"
