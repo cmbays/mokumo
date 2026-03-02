@@ -30,8 +30,8 @@
           "pages": ["product/domain-glossary"]
         },
         {
-          "group": "Roadmap",
-          "pages": ["product/roadmap", "roadmap/phase-2", "roadmap/projects"]
+          "group": "Planning",
+          "pages": ["roadmap/phase-2", "roadmap/projects"]
         },
         {
           "group": "Research",
@@ -41,6 +41,7 @@
             "research/quoting-pricing",
             "research/production-workflow",
             "research/customer-portal",
+            "research/artwork-management",
             "research/infrastructure-decisions"
           ]
         }

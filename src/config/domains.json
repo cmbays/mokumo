@@ -33,5 +33,15 @@
     "slug": "mobile",
     "label": "Mobile",
     "description": "Mobile-responsive UI adaptations and touch interactions"
+  },
+  {
+    "slug": "artwork",
+    "label": "Artwork",
+    "description": "Artwork management, file validation, color detection, approvals, and separations"
+  },
+  {
+    "slug": "devx",
+    "label": "Developer Experience",
+    "description": "Tooling, methodology engines, and developer workflow systems external to the main app"
   }
 ]

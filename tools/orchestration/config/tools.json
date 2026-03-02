@@ -40,5 +40,23 @@
     "label": "Database",
     "description": "Database management and query tools",
     "icon": "Database"
+  },
+  {
+    "slug": "zeroclaw",
+    "label": "ZeroClaw",
+    "description": "Rust-based AI agent platform (forked for NanoClaw development)",
+    "icon": "Terminal"
+  },
+  {
+    "slug": "kata",
+    "label": "Kata",
+    "description": "Methodology engine — executable development stages with self-improving knowledge",
+    "icon": "Layers"
+  },
+  {
+    "slug": "methodology-engine",
+    "label": "Methodology Engine",
+    "description": "Stage and pipeline orchestration engine used by the Kata project",
+    "icon": "GitBranch"
   }
 ]
