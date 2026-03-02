@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { eq, and, asc } from 'drizzle-orm'
+import { eq, and, asc, ne } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import {
   pricingTemplates,
@@ -83,15 +83,18 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
     }
   }
 
-  async listTemplates(shopId: string): Promise<PricingTemplate[]> {
+  async listTemplates(shopId: string, serviceType?: string): Promise<PricingTemplate[]> {
     if (!isValidUuid(shopId)) {
       log.warn('listTemplates called with invalid shopId', { shopId })
       return []
     }
     try {
-      return db.select().from(pricingTemplates).where(eq(pricingTemplates.shopId, shopId))
+      const condition = serviceType
+        ? and(eq(pricingTemplates.shopId, shopId), eq(pricingTemplates.serviceType, serviceType))
+        : eq(pricingTemplates.shopId, shopId)
+      return db.select().from(pricingTemplates).where(condition)
     } catch (error) {
-      log.error('listTemplates failed', { shopId, error })
+      log.error('listTemplates failed', { shopId, serviceType, error })
       throw error
     }
   }
@@ -215,6 +218,55 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
       })
     } catch (error) {
       log.error('upsertRushTiers failed', { shopId, tierCount: tiers.length, error })
+      throw error
+    }
+  }
+
+  // ─── Delete template ────────────────────────────────────────────────────────
+
+  async deleteTemplate(id: string, shopId: string): Promise<void> {
+    if (!isValidUuid(id) || !isValidUuid(shopId)) {
+      log.warn('deleteTemplate called with invalid id or shopId', { id, shopId })
+      return
+    }
+    try {
+      await db
+        .delete(pricingTemplates)
+        .where(and(eq(pricingTemplates.id, id), eq(pricingTemplates.shopId, shopId)))
+    } catch (error) {
+      log.error('deleteTemplate failed', { id, shopId, error })
+      throw error
+    }
+  }
+
+  // ─── Set default template ───────────────────────────────────────────────────
+
+  async setDefaultTemplate(shopId: string, id: string, serviceType: string): Promise<void> {
+    if (!isValidUuid(shopId) || !isValidUuid(id)) {
+      log.warn('setDefaultTemplate called with invalid shopId or id', { shopId, id })
+      return
+    }
+    try {
+      await db.transaction(async (tx) => {
+        // Clear all existing defaults for this shop + service type
+        await tx
+          .update(pricingTemplates)
+          .set({ isDefault: false })
+          .where(
+            and(
+              eq(pricingTemplates.shopId, shopId),
+              eq(pricingTemplates.serviceType, serviceType),
+              ne(pricingTemplates.id, id)
+            )
+          )
+        // Set the target template as default
+        await tx
+          .update(pricingTemplates)
+          .set({ isDefault: true })
+          .where(eq(pricingTemplates.id, id))
+      })
+    } catch (error) {
+      log.error('setDefaultTemplate failed', { shopId, id, serviceType, error })
       throw error
     }
   }

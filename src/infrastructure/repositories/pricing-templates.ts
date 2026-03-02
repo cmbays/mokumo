@@ -25,8 +25,8 @@ export async function getTemplateById(id: string): Promise<PricingTemplateWithMa
   return repo.getTemplateById(id)
 }
 
-export async function listTemplates(shopId: string): Promise<PricingTemplate[]> {
-  return repo.listTemplates(shopId)
+export async function listTemplates(shopId: string, serviceType?: string): Promise<PricingTemplate[]> {
+  return repo.listTemplates(shopId, serviceType)
 }
 
 export async function upsertTemplate(data: PricingTemplateInsert): Promise<PricingTemplate> {
@@ -57,4 +57,16 @@ export async function getRushTiers(shopId: string): Promise<RushTier[]> {
 
 export async function upsertRushTiers(shopId: string, tiers: RushTierInsert[]): Promise<void> {
   return repo.upsertRushTiers(shopId, tiers)
+}
+
+export async function deleteTemplate(id: string, shopId: string): Promise<void> {
+  return repo.deleteTemplate(id, shopId)
+}
+
+export async function setDefaultTemplate(
+  shopId: string,
+  id: string,
+  serviceType: string
+): Promise<void> {
+  return repo.setDefaultTemplate(shopId, id, serviceType)
 }

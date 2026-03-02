@@ -20,8 +20,8 @@ export type IPricingTemplateRepository = {
   /** Returns a specific template by ID, including all matrix cells. */
   getTemplateById(id: string): Promise<PricingTemplateWithMatrix | null>
 
-  /** Lists all template headers (no cells) for a shop — used on the pricing editor list screen. */
-  listTemplates(shopId: string): Promise<PricingTemplate[]>
+  /** Lists all template headers (no cells) for a shop. Pass serviceType to filter by type. */
+  listTemplates(shopId: string, serviceType?: string): Promise<PricingTemplate[]>
 
   /** Creates or updates a pricing template. Pass id to update; omit id to create. */
   upsertTemplate(data: PricingTemplateInsert): Promise<PricingTemplate>
@@ -43,4 +43,14 @@ export type IPricingTemplateRepository = {
 
   /** Replaces rush tiers for a shop. Deletes existing, inserts new set. */
   upsertRushTiers(shopId: string, tiers: RushTierInsert[]): Promise<void>
+
+  /** Deletes a template. Both id AND shopId must match — shop scope guard. */
+  deleteTemplate(id: string, shopId: string): Promise<void>
+
+  /**
+   * Sets a template as the default for its service type within a shop.
+   * Runs in a transaction: clears all other defaults for (shopId, serviceType),
+   * then marks the target template as default.
+   */
+  setDefaultTemplate(shopId: string, id: string, serviceType: string): Promise<void>
 }
