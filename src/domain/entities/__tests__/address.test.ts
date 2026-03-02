@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { addressSchema, addressTypeEnum } from '../address'
 
 describe('addressTypeEnum', () => {
-  it.each(['billing', 'shipping'])("accepts '%s'", (type) => {
+  it.each(['billing', 'shipping', 'both'])("accepts '%s'", (type) => {
     expect(addressTypeEnum.parse(type)).toBe(type)
   })
 

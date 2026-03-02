@@ -1,4 +1,4 @@
-import type { Customer } from '@domain/entities/customer'
+import type { Customer, PaymentTerms, PricingTier } from '@domain/entities/customer'
 import type { Contact } from '@domain/entities/contact'
 import type { Note } from '@domain/entities/note'
 import type { Quote } from '@domain/entities/quote'
@@ -35,8 +35,8 @@ export type CustomerListStats = {
 export type CustomerDefaults = {
   primaryShippingAddress: Address | null
   primaryBillingAddress: Address | null
-  paymentTerms: string | null
-  pricingTier: string | null
+  paymentTerms: PaymentTerms | null
+  pricingTier: PricingTier | null
   discountPct: number
   taxExempt: boolean
 }

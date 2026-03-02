@@ -43,12 +43,19 @@ describe('healthStatusEnum', () => {
 })
 
 describe('customerTypeTagEnum', () => {
-  it.each(['retail', 'sports-school', 'corporate', 'storefront-merch', 'wholesale'])(
-    "accepts '%s'",
-    (tag) => {
-      expect(customerTypeTagEnum.parse(tag)).toBe(tag)
-    }
-  )
+  it.each([
+    'retail',
+    'sports-school',
+    'corporate',
+    'storefront-merch',
+    'wholesale',
+    'hospitality',
+    'nonprofit',
+    'sports',
+    'religious',
+  ])("accepts '%s'", (tag) => {
+    expect(customerTypeTagEnum.parse(tag)).toBe(tag)
+  })
 
   it('rejects invalid type tag', () => {
     expect(() => customerTypeTagEnum.parse('premium-member')).toThrow()

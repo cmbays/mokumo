@@ -35,6 +35,16 @@ export {
   getCustomerNotes,
   getCustomerArtworks,
   getCustomerInvoices,
+  // Wave 0 additions
+  listCustomers,
+  getListStats,
+  searchCustomers,
+  getCustomerDefaults,
+  createCustomer,
+  updateCustomer,
+  archiveCustomer,
+  getAccountBalance,
+  getPreferences,
 } from './repositories/customers'
 
 export { getQuotes, getQuoteById } from './repositories/quotes'

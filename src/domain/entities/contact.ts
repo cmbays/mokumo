@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+// Note: DB pgEnum `contact_role` contains only ['ordering', 'art-approver', 'billing'].
+// 'primary', 'owner', 'other' are stored as plain text[] values — accepted divergence because
+// the contacts.role column is `text[]` not `contact_role[]`. Wave 1 migration will align
+// the pgEnum values with this domain enum.
 export const contactRoleEnum = z.enum([
   'ordering',
   'art-approver',

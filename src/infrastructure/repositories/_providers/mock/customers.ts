@@ -97,7 +97,7 @@ export async function getCustomerDefaults(_customerId: string): Promise<Customer
   return {
     primaryShippingAddress: null,
     primaryBillingAddress: null,
-    paymentTerms: 'net30',
+    paymentTerms: 'net-30',
     pricingTier: 'standard',
     discountPct: 0,
     taxExempt: false,
