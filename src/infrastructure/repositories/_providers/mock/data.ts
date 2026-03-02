@@ -49,7 +49,7 @@ export const contacts: Contact[] = [
     name: 'Marcus Rivera',
     email: 'marcus@rivercitybrewing.com',
     phone: '(512) 555-0147',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
     groupId: '91a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
   },
@@ -57,7 +57,7 @@ export const contacts: Contact[] = [
     id: '02b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
     name: 'Lisa Park',
     email: 'lisa@rivercitybrewing.com',
-    role: 'art-approver',
+    role: ['art-approver'],
     isPrimary: false,
     groupId: '91a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
   },
@@ -67,7 +67,7 @@ export const contacts: Contact[] = [
     name: 'Sarah Chen',
     email: 'sarah@lonestarlax.org',
     phone: '(512) 555-0298',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
   },
   // Thompson Family — 1 contact
@@ -76,7 +76,7 @@ export const contacts: Contact[] = [
     name: 'Jake Thompson',
     email: 'jake.thompson@gmail.com',
     phone: '(737) 555-0412',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
   },
   // Sunset 5K — 1 contact
@@ -85,7 +85,7 @@ export const contacts: Contact[] = [
     name: 'Maria Gonzalez',
     email: 'maria@sunset5k.org',
     phone: '(512) 555-0533',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
   },
   // Lakeside Music Festival — 2 contacts
@@ -94,7 +94,7 @@ export const contacts: Contact[] = [
     name: 'Chris Patel',
     email: 'chris@lakesidefest.com',
     phone: '(737) 555-0671',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
   },
   {
@@ -102,7 +102,7 @@ export const contacts: Contact[] = [
     name: 'Amy Wong',
     email: 'amy@lakesidefest.com',
     phone: '(737) 555-0672',
-    role: 'billing',
+    role: ['billing'],
     isPrimary: false,
   },
   // Metro Youth Soccer — 2 contacts, 1 group
@@ -111,7 +111,7 @@ export const contacts: Contact[] = [
     name: 'Coach Williams',
     email: 'coach@metroyouthsoccer.org',
     phone: '(512) 555-0801',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
     groupId: '92b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
   },
@@ -120,7 +120,7 @@ export const contacts: Contact[] = [
     name: 'Janet Lee',
     email: 'janet@metroyouthsoccer.org',
     phone: '(512) 555-0802',
-    role: 'billing',
+    role: ['billing'],
     isPrimary: false,
     groupId: '92b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
   },
@@ -130,7 +130,7 @@ export const contacts: Contact[] = [
     name: 'Alex Kim',
     email: 'alex@tiktokmerch.co',
     phone: '(737) 555-0910',
-    role: 'owner',
+    role: ['owner'],
     isPrimary: true,
   },
   // Riverside Church — 1 contact
@@ -139,7 +139,7 @@ export const contacts: Contact[] = [
     name: 'Pastor James',
     email: 'pastor.james@riversidechurch.org',
     phone: '(512) 555-1101',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
   },
   // CrossTown Printing — 1 contact
@@ -148,7 +148,7 @@ export const contacts: Contact[] = [
     name: 'Mike Davis',
     email: 'mike@crosstownprinting.com',
     phone: '(512) 555-1201',
-    role: 'owner',
+    role: ['owner'],
     isPrimary: true,
   },
   // Mountain View HS — 1 contact
@@ -157,7 +157,7 @@ export const contacts: Contact[] = [
     name: 'Tom Rodriguez',
     email: 't.rodriguez@mvhs.edu',
     phone: '(737) 555-1301',
-    role: 'ordering',
+    role: ['ordering'],
     isPrimary: true,
     notes: 'Athletic Director',
   },
@@ -189,7 +189,7 @@ export const customerAddresses: Address[] = [
   {
     id: '31a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
     label: 'Main',
-    street: '1200 E 6th St',
+    street1: '1200 E 6th St',
     city: 'Austin',
     state: 'TX',
     zip: '78702',
@@ -200,7 +200,7 @@ export const customerAddresses: Address[] = [
   {
     id: '32b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
     label: 'Taproom',
-    street: '1200 E 6th St',
+    street1: '1200 E 6th St',
     city: 'Austin',
     state: 'TX',
     zip: '78702',
@@ -211,7 +211,7 @@ export const customerAddresses: Address[] = [
   {
     id: '33c4d5e6-f7a8-4b9c-8d1e-2f3a4b5c6d7e',
     label: 'Warehouse',
-    street: '3400 Industrial Blvd',
+    street1: '3400 Industrial Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78745',
@@ -223,7 +223,7 @@ export const customerAddresses: Address[] = [
   {
     id: '34d5e6f7-a8b9-4c0d-ae2f-3a4b5c6d7e8f',
     label: 'Office',
-    street: '4500 Mueller Blvd',
+    street1: '4500 Mueller Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78723',
@@ -234,7 +234,7 @@ export const customerAddresses: Address[] = [
   {
     id: '35e6f7a8-b9c0-4d1e-bf3a-4b5c6d7e8f9a',
     label: 'Fields',
-    street: '4500 Mueller Blvd',
+    street1: '4500 Mueller Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78723',
@@ -246,7 +246,7 @@ export const customerAddresses: Address[] = [
   {
     id: '36f7a8b9-c0d1-4e2f-8a4b-5c6d7e8f9a0b',
     label: 'Home',
-    street: '789 Live Oak Dr',
+    street1: '789 Live Oak Dr',
     city: 'Round Rock',
     state: 'TX',
     zip: '78664',
@@ -257,7 +257,7 @@ export const customerAddresses: Address[] = [
   {
     id: '37a8b9c0-d1e2-4f3a-9b5c-6d7e8f9a0b1c',
     label: 'Home',
-    street: '789 Live Oak Dr',
+    street1: '789 Live Oak Dr',
     city: 'Round Rock',
     state: 'TX',
     zip: '78664',
@@ -269,7 +269,7 @@ export const customerAddresses: Address[] = [
   {
     id: '38b9c0d1-e2f3-4a4b-ac6d-7e8f9a0b1c2d',
     label: 'Office',
-    street: '2100 Barton Springs Rd',
+    street1: '2100 Barton Springs Rd',
     city: 'Austin',
     state: 'TX',
     zip: '78704',
@@ -281,7 +281,7 @@ export const customerAddresses: Address[] = [
   {
     id: '39c0d1e2-f3a4-4b5c-bd7e-8f9a0b1c2d3e',
     label: 'Office',
-    street: '500 E Cesar Chavez',
+    street1: '500 E Cesar Chavez',
     city: 'Austin',
     state: 'TX',
     zip: '78701',
@@ -292,7 +292,7 @@ export const customerAddresses: Address[] = [
   {
     id: '40d1e2f3-a4b5-4c6d-8e8f-9a0b1c2d3e4f',
     label: 'Festival Grounds',
-    street: '2100 S Lakeshore Blvd',
+    street1: '2100 S Lakeshore Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78741',
@@ -304,7 +304,7 @@ export const customerAddresses: Address[] = [
   {
     id: '41e2f3a4-b5c6-4d7e-9f0a-1b2c3d4e5f6a',
     label: 'Office',
-    street: '8200 N Lamar Blvd',
+    street1: '8200 N Lamar Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78753',
@@ -315,7 +315,7 @@ export const customerAddresses: Address[] = [
   {
     id: '42f3a4b5-c6d7-4e8f-a01b-2c3d4e5f6a7b',
     label: 'Fields',
-    street: '8200 N Lamar Blvd',
+    street1: '8200 N Lamar Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78753',
@@ -327,7 +327,7 @@ export const customerAddresses: Address[] = [
   {
     id: '43a4b5c6-d7e8-4f9a-b12c-3d4e5f6a7b8c',
     label: 'Studio',
-    street: '1100 S Congress Ave',
+    street1: '1100 S Congress Ave',
     city: 'Austin',
     state: 'TX',
     zip: '78704',
@@ -338,7 +338,7 @@ export const customerAddresses: Address[] = [
   {
     id: '44b5c6d7-e8f9-4a0b-812c-3d4e5f6a7b8c',
     label: 'Studio',
-    street: '1100 S Congress Ave',
+    street1: '1100 S Congress Ave',
     city: 'Austin',
     state: 'TX',
     zip: '78704',
@@ -350,7 +350,7 @@ export const customerAddresses: Address[] = [
   {
     id: '45c6d7e8-f9a0-4b1c-923d-4e5f6a7b8c9d',
     label: 'Church',
-    street: '600 W Riverside Dr',
+    street1: '600 W Riverside Dr',
     city: 'Austin',
     state: 'TX',
     zip: '78704',
@@ -361,7 +361,7 @@ export const customerAddresses: Address[] = [
   {
     id: '46d7e8f9-a0b1-4c2d-a34e-5f6a7b8c9d0e',
     label: 'Church',
-    street: '600 W Riverside Dr',
+    street1: '600 W Riverside Dr',
     city: 'Austin',
     state: 'TX',
     zip: '78704',
@@ -373,7 +373,7 @@ export const customerAddresses: Address[] = [
   {
     id: '47e8f9a0-b1c2-4d3e-b45f-6a7b8c9d0e1f',
     label: 'Shop',
-    street: '2200 Airport Blvd',
+    street1: '2200 Airport Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78722',
@@ -384,7 +384,7 @@ export const customerAddresses: Address[] = [
   {
     id: '48f9a0b1-c2d3-4e4f-860a-7b8c9d0e1f2a',
     label: 'Shop',
-    street: '2200 Airport Blvd',
+    street1: '2200 Airport Blvd',
     city: 'Austin',
     state: 'TX',
     zip: '78722',
@@ -396,7 +396,7 @@ export const customerAddresses: Address[] = [
   {
     id: '49a0b1c2-d3e4-4f5a-971b-8c9d0e1f2a3b',
     label: 'School',
-    street: '5300 Mountain View Dr',
+    street1: '5300 Mountain View Dr',
     city: 'Cedar Park',
     state: 'TX',
     zip: '78613',
@@ -407,7 +407,7 @@ export const customerAddresses: Address[] = [
   {
     id: '50b1c2d3-e4f5-4a6b-a82c-9d0e1f2a3b4c',
     label: 'Athletics',
-    street: '5300 Mountain View Dr',
+    street1: '5300 Mountain View Dr',
     city: 'Cedar Park',
     state: 'TX',
     zip: '78613',
