@@ -7,7 +7,7 @@ import {
   contacts as contactsTable,
   addresses as addressesTable,
 } from '@db/schema/customers'
-import { customerSchema, lifecycleStageEnum, healthStatusEnum } from '@domain/entities/customer'
+import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
 import { contactSchema } from '@domain/entities/contact'
 import { addressSchema } from '@domain/entities/address'
 import { logger } from '@shared/lib/logger'

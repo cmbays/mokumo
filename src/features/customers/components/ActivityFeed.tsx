@@ -6,8 +6,11 @@ import { cn } from '@shared/lib/cn'
 import { Button } from '@shared/ui/primitives/button'
 import { Textarea } from '@shared/ui/primitives/textarea'
 import { ActivityEntry } from './ActivityEntry'
-import { addCustomerNote, loadMoreActivities } from '../actions/activity.actions'
-import type { ActivityError } from '../actions/activity.actions'
+import {
+  addCustomerNote,
+  loadMoreActivities,
+} from '@/app/(dashboard)/customers/actions/activity.actions'
+import type { ActivityError } from '@/app/(dashboard)/customers/actions/activity.actions'
 import type { CustomerActivity, ActivitySource } from '@domain/ports/customer-activity.port'
 
 // ─── Error message map ────────────────────────────────────────────────────────
@@ -233,7 +236,6 @@ export function ActivityFeed({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilter, customerId])
 
   async function handleLoadMore() {

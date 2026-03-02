@@ -19,9 +19,6 @@ import type {
   ActivityFilter,
 } from '@domain/ports/customer-activity.port'
 import { activityInputSchema } from '@domain/ports/customer-activity.port'
-import { logger } from '@shared/lib/logger'
-
-const log = logger.child({ domain: 'customers', service: 'CustomerActivityService' })
 
 export class CustomerActivityService {
   constructor(private readonly repo: ICustomerActivityRepository) {}
@@ -37,22 +34,7 @@ export class CustomerActivityService {
    */
   async log(input: ActivityInput): Promise<CustomerActivity> {
     const validated = activityInputSchema.parse(input)
-
-    log.info('Logging customer activity', {
-      customerId: validated.customerId,
-      source: validated.source,
-      actorType: validated.actorType,
-    })
-
-    const activity = await this.repo.insert(validated)
-
-    log.info('Customer activity logged', {
-      activityId: activity.id,
-      customerId: activity.customerId,
-      source: activity.source,
-    })
-
-    return activity
+    return this.repo.insert(validated)
   }
 
   /**
@@ -72,14 +54,6 @@ export class CustomerActivityService {
     } = {}
   ): Promise<ActivityPage> {
     const limit = Math.min(opts.limit ?? 20, 50)
-
-    log.debug('Listing customer activities', {
-      customerId,
-      limit,
-      hasCursor: !!opts.cursor,
-      filter: opts.filter,
-    })
-
     return this.repo.listForCustomer(customerId, {
       limit,
       cursor: opts.cursor,
