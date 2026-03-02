@@ -77,38 +77,38 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### Milestones
 
-| Milestone                   | Status          | Key Deliverables                                                                                      |
-| --------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
-| M0: Research                | Done            | Competitive analysis, B2B data model research, activity timeline differentiation                      |
-| M1: Schema Foundation       | Planned (Ready) | 7 Drizzle tables, 7 enums, RLS policies, IRepository ports expanded, seed data — Wave 0 spec complete |
-| M2: Core UI                 | Design Complete | Paper sessions P1-P4 locked; `design-spec.md` is implementation reference; P5-P8 pending             |
-| M3: Activity & Notes        | Planned         | `CustomerActivityService`, timeline UI, C3-B auto-logging from quote/job/invoice actions              |
-| M4: Financial + Intelligence | Planned        | Credit limits, tax exemptions, lifecycle rules, health scoring, garment preferences                   |
-| M5: Analytics               | Planned         | 5 dbt models: `dim_customers`, `fct_customer_orders`, seasonality mart, lifecycle funnel              |
-| M6: Cross-Vertical Wiring   | Planned         | Quote/job/invoice comboboxes, address snapshots, auto-activity logging site-wide                      |
+| Milestone                    | Status          | Key Deliverables                                                                                      |
+| ---------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| M0: Research                 | Done            | Competitive analysis, B2B data model research, activity timeline differentiation                      |
+| M1: Schema Foundation        | Planned (Ready) | 7 Drizzle tables, 7 enums, RLS policies, IRepository ports expanded, seed data — Wave 0 spec complete |
+| M2: Core UI                  | Design Complete | Paper sessions P1-P4 locked; `design-spec.md` is implementation reference; P5-P8 pending              |
+| M3: Activity & Notes         | Planned         | `CustomerActivityService`, timeline UI, C3-B auto-logging from quote/job/invoice actions              |
+| M4: Financial + Intelligence | Planned         | Credit limits, tax exemptions, lifecycle rules, health scoring, garment preferences                   |
+| M5: Analytics                | Planned         | 5 dbt models: `dim_customers`, `fct_customer_orders`, seasonality mart, lifecycle funnel              |
+| M6: Cross-Vertical Wiring    | Planned         | Quote/job/invoice comboboxes, address snapshots, auto-activity logging site-wide                      |
 
 ### Workspace Artifacts
 
-| Artifact | Description |
-| -------- | ----------- |
+| Artifact                                                           | Description                                                                           |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `docs/workspace/20260228-customer-vertical/designs/design-spec.md` | Locked design spec — 15 artboards (A–O), canonical header, component-level CSS values |
-| `docs/workspace/20260228-customer-vertical/plan.md` | Full implementation plan — Wave 0-3, parallelization model, 7 task specs |
-| `docs/workspace/20260228-customer-vertical/breadboard.md` | Affordance map with vertical slices V1-V8 |
-| `docs/workspace/20260228-customer-vertical/shaping.md` | Shaped parts C1-C7 |
-| `docs/workspace/20260228-customer-vertical/manifest.yaml` | YAML execution manifest for Wave 0-3 build sessions |
+| `docs/workspace/20260228-customer-vertical/plan.md`                | Full implementation plan — Wave 0-3, parallelization model, 7 task specs              |
+| `docs/workspace/20260228-customer-vertical/breadboard.md`          | Affordance map with vertical slices V1-V8                                             |
+| `docs/workspace/20260228-customer-vertical/shaping.md`             | Shaped parts C1-C7                                                                    |
+| `docs/workspace/20260228-customer-vertical/manifest.yaml`          | YAML execution manifest for Wave 0-3 build sessions                                   |
 
 ### Locked Design Decisions
 
-| Decision | Value | Scope |
-| -------- | ----- | ----- |
-| Left-border grouping | `border-left: 3px solid rgba(42,185,255,0.5)` — no card background | Activity, Preferences, Artwork tabs |
-| Canonical header | 5 rows: breadcrumbs → company row → contacts row → stats strip → tab row. Artboard L is locked canonical | All customer detail views (G, I, K, L, M, N) |
-| Health rendering | Healthy = green dot, no border box. At-Risk = red dot + red text | Customer list + detail header |
-| Lifecycle badge colors | Prospect (gray), New (`#2AB9FF`), Repeat (`#54CA74`), VIP (`#FFC663`) | Customer list + detail header |
-| Trash icon rule | Always `#D23E08` with `rgba(210,62,8,0.12)` tinted bg — **site-wide rule** | Every form with deletable items |
-| Urgency semantic tokens | `--urgency-critical/high/low` in `globals.css` — build-time task Issue #712 | Quote/job urgency indicators |
-| Upload sheet DRY | `<ArtworkUploadSheet customerId quoteId? />` — mounts from Customer Artwork tab AND Quote builder | Customer + Quote |
-| Customer list | Hybrid A KPIs + C layout — no finalized Paper mockup; build from spec directly | Customer list only |
+| Decision                | Value                                                                                                    | Scope                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Left-border grouping    | `border-left: 3px solid rgba(42,185,255,0.5)` — no card background                                       | Activity, Preferences, Artwork tabs          |
+| Canonical header        | 5 rows: breadcrumbs → company row → contacts row → stats strip → tab row. Artboard L is locked canonical | All customer detail views (G, I, K, L, M, N) |
+| Health rendering        | Healthy = green dot, no border box. At-Risk = red dot + red text                                         | Customer list + detail header                |
+| Lifecycle badge colors  | Prospect (gray), New (`#2AB9FF`), Repeat (`#54CA74`), VIP (`#FFC663`)                                    | Customer list + detail header                |
+| Trash icon rule         | Always `#D23E08` with `rgba(210,62,8,0.12)` tinted bg — **site-wide rule**                               | Every form with deletable items              |
+| Urgency semantic tokens | `--urgency-critical/high/low` in `globals.css` — build-time task Issue #712                              | Quote/job urgency indicators                 |
+| Upload sheet DRY        | `<ArtworkUploadSheet customerId quoteId? />` — mounts from Customer Artwork tab AND Quote builder        | Customer + Quote                             |
+| Customer list           | Hybrid A KPIs + C layout — no finalized Paper mockup; build from spec directly                           | Customer list only                           |
 
 ### Research Findings
 
@@ -204,16 +204,16 @@ Customer
 
 ### Milestones
 
-| Milestone | Issue | Status | Key Deliverables | Depends On |
-|-----------|-------|--------|-----------------|------------|
-| M0: Research | — | ✅ Complete | Domain model, competitive analysis, architecture decisions | — |
-| M1: Storage & Schema | #718 | Blocked by H2 | File upload pipeline, artwork/variant/version tables, Supabase Storage bucket, presigned uploads, Sharp rendition pipeline | H2 |
-| M2: Library UI | #719 | Planned | Browse/search/tag/favorite artwork per customer, Artwork tab on customer detail, upload with file validation | M1, P3 |
-| M3: Color Detection | #720 | Planned | Auto-detect color count + palette (MMCQ), PMS matching, garment-color context, underbase detection | M1 |
-| M4: Quote Integration | #722 | Planned | Select artwork in quote builder, auto-derive color count → pricing, live mockup preview | M2, P6 |
-| M5: Approval Workflow | #721 | Planned | Per-artwork approval with unique URL, automated reminders (T+24h/48h/72h/5-7d), version tracking, immutable proof snapshots | M2 |
-| M6: Separation Metadata | #723 | Planned | Per-channel specs (ink, mesh, LPI, print order), ScreenRequirement[] handoff to Screen Room vertical | M5 |
-| M7: Mockup Enhancement | #724 | Planned | SVG feDisplacementMap (fabric contours), dark garment two-layer composite, frozen mockup pipeline (Sharp server-side) | M4 |
+| Milestone               | Issue | Status        | Key Deliverables                                                                                                            | Depends On |
+| ----------------------- | ----- | ------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| M0: Research            | —     | ✅ Complete   | Domain model, competitive analysis, architecture decisions                                                                  | —          |
+| M1: Storage & Schema    | #718  | Blocked by H2 | File upload pipeline, artwork/variant/version tables, Supabase Storage bucket, presigned uploads, Sharp rendition pipeline  | H2         |
+| M2: Library UI          | #719  | Planned       | Browse/search/tag/favorite artwork per customer, Artwork tab on customer detail, upload with file validation                | M1, P3     |
+| M3: Color Detection     | #720  | Planned       | Auto-detect color count + palette (MMCQ), PMS matching, garment-color context, underbase detection                          | M1         |
+| M4: Quote Integration   | #722  | Planned       | Select artwork in quote builder, auto-derive color count → pricing, live mockup preview                                     | M2, P6     |
+| M5: Approval Workflow   | #721  | Planned       | Per-artwork approval with unique URL, automated reminders (T+24h/48h/72h/5-7d), version tracking, immutable proof snapshots | M2         |
+| M6: Separation Metadata | #723  | Planned       | Per-channel specs (ink, mesh, LPI, print order), ScreenRequirement[] handoff to Screen Room vertical                        | M5         |
+| M7: Mockup Enhancement  | #724  | Planned       | SVG feDisplacementMap (fabric contours), dark garment two-layer composite, frozen mockup pipeline (Sharp server-side)       | M4         |
 
 **Critical path**: M0 → M1 → M2 → {M3, M4, M5 in parallel} → M6 → M7
 

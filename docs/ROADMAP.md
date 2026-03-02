@@ -124,13 +124,13 @@ These are shaped ideas waiting for a betting decision:
 
 > This file is the fast-load primer read at every session start. When you need depth, reach into the docs-site — do not re-read this file expecting detail that isn't here.
 
-| When you need... | Read |
-| ---------------- | ---- |
-| Per-project milestones, research findings, locked decisions | `docs-site/roadmap/projects.md` |
-| Phase 2 dependency map, critical path, sequencing risks | `docs-site/roadmap/phase-2.md` |
-| Current build status, PR history | `PROGRESS.md` |
-| Routes and navigation paths | `docs/APP_FLOW.md` |
-| Feature definitions and acceptance criteria | `docs/PRD.md` |
-| Tool choices, versions, decisions | `docs/TECH_STACK.md` |
-| PM workflows, label taxonomy, issue templates | `docs/PM.md` |
-| Decision history and rationale | `knowledge-base/src/content/pipelines/` |
+| When you need...                                            | Read                                    |
+| ----------------------------------------------------------- | --------------------------------------- |
+| Per-project milestones, research findings, locked decisions | `docs-site/roadmap/projects.md`         |
+| Phase 2 dependency map, critical path, sequencing risks     | `docs-site/roadmap/phase-2.md`          |
+| Current build status, PR history                            | `PROGRESS.md`                           |
+| Routes and navigation paths                                 | `docs/APP_FLOW.md`                      |
+| Feature definitions and acceptance criteria                 | `docs/PRD.md`                           |
+| Tool choices, versions, decisions                           | `docs/TECH_STACK.md`                    |
+| PM workflows, label taxonomy, issue templates               | `docs/PM.md`                            |
+| Decision history and rationale                              | `knowledge-base/src/content/pipelines/` |
