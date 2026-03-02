@@ -24,6 +24,7 @@ description: Research on production tracking, job management, scheduling, and sh
 ### YoPrint — Multi-View
 
 Three production views (most flexible in market):
+
 1. **Gantt Chart** — timeline with drag-and-drop. Deadline enforcement (warns when pushing past due date). Task-level detail.
 2. **Calendar** — drag to reschedule. Double-click to edit status/assign/upload/comment.
 3. **Job List** — customizable columns. Inline editing. Filterable by status, assignee, rush, due date.
@@ -45,12 +46,12 @@ Three production views (most flexible in market):
 
 ## Production View Comparison
 
-| View Type | Best For | Competitors Using It | Our Plan |
-|-----------|---------|---------------------|----------|
-| **Kanban board** | Quick status scanning, "what's blocked?" | Phase 1 mockup (ours) | Pilot (P9 M2) — primary view |
-| **Calendar** | Deadline planning, "what's due this week?" | Printavo, YoPrint, DecoNetwork | P9 M2 — secondary view |
-| **Gantt/Timeline** | Capacity planning, "can I fit a rush order?" | YoPrint, Printavo (Premium) | P9 M5 — Layer 5 if low-lift |
-| **Status list** | Bulk operations, filtering, data export | Printavo (primary), YoPrint | Consider as filter view on board |
+| View Type          | Best For                                     | Competitors Using It           | Our Plan                         |
+| ------------------ | -------------------------------------------- | ------------------------------ | -------------------------------- |
+| **Kanban board**   | Quick status scanning, "what's blocked?"     | Phase 1 mockup (ours)          | Pilot (P9 M2) — primary view     |
+| **Calendar**       | Deadline planning, "what's due this week?"   | Printavo, YoPrint, DecoNetwork | P9 M2 — secondary view           |
+| **Gantt/Timeline** | Capacity planning, "can I fit a rush order?" | YoPrint, Printavo (Premium)    | P9 M5 — Layer 5 if low-lift      |
+| **Status list**    | Bulk operations, filtering, data export      | Printavo (primary), YoPrint    | Consider as filter view on board |
 
 **Our approach**: Board first (pilot), Calendar second (same milestone), Timeline as Layer 5 or V3 — mostly a different rendering of the same data. The data model (jobs with start dates, due dates, statuses, assignments) supports all views from day one.
 
@@ -63,6 +64,7 @@ Three production views (most flexible in market):
 **DecoNetwork**: Users explicitly complain — "still have to process each individual order." No batch concept.
 
 **What batching requires in the data model**:
+
 - A batch entity that links multiple jobs by shared attributes (design, ink colors, substrate)
 - Screen/setup sharing across jobs in a batch
 - Batch-level status tracking (all jobs in batch share the "pressing" phase)
@@ -79,12 +81,14 @@ Three production views (most flexible in market):
 **What it solves**: The shop floor worker who doesn't sit at a computer needs to update job status without navigating an app.
 
 **Flow**:
+
 1. Print job ticket/worksheet with barcode
 2. Worker scans barcode with phone or handheld scanner
 3. Scan pulls up job → one-tap to advance status (e.g., "Pressing" → "QC")
 4. Board updates for everyone viewing it
 
 **Implementation options**:
+
 - PWA camera scanning (phone points at barcode, browser-based — no app install)
 - Handheld USB/Bluetooth scanner (types barcode value into focused input field)
 - Both work with a "scan input" field on the board view
@@ -96,6 +100,7 @@ Three production views (most flexible in market):
 **Concept**: Full-screen read-only board on a shop floor monitor. Shows current production status. Updates when workers scan barcodes or status changes.
 
 **Implementation**:
+
 - Read-only board route (e.g., `/board/display`) with auto-refresh
 - Refresh options: polling interval (every 30-60 seconds), or event-driven (SSE/WebSocket when status changes)
 - Phase 2: polling is sufficient. Supabase Realtime available for Phase 3.
@@ -115,11 +120,11 @@ Three production views (most flexible in market):
 
 **Our approach (ADR-006)**: Service type determines which task template auto-populates when a job is created. Shared entity model with service-type-specific behavior.
 
-| Service Type | Canonical Tasks |
-|-------------|----------------|
+| Service Type | Canonical Tasks                                                                         |
+| ------------ | --------------------------------------------------------------------------------------- |
 | Screen Print | Art finalize → Film output → Screen coat → Expose → Wash → Register → Press → QC → Pack |
-| DTF | Art finalize → Gang sheet layout → Print transfers → Press → QC → Pack |
-| DTF Press | Receive transfers → Press → QC → Pack |
+| DTF          | Art finalize → Gang sheet layout → Print transfers → Press → QC → Pack                  |
+| DTF Press    | Receive transfers → Press → QC → Pack                                                   |
 
 Tasks are checkboxes within the job, not board columns. Progress bar on board cards shows % complete.
 

@@ -37,21 +37,21 @@ A **production-first** management system for small screen-printing shops. It tra
 
 ### In Scope
 
-| Capability | Description |
-|-----------|-------------|
-| **Backend foundation** | Supabase database, Drizzle ORM, auth, server actions, API routes |
-| **Garments catalog** | Real S&S Activewear data — styles, colors, images, pricing, inventory |
-| **Customer management** | Full CRM — contacts, companies, addresses, groups, activity, preferences |
+| Capability                 | Description                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| **Backend foundation**     | Supabase database, Drizzle ORM, auth, server actions, API routes              |
+| **Garments catalog**       | Real S&S Activewear data — styles, colors, images, pricing, inventory         |
+| **Customer management**    | Full CRM — contacts, companies, addresses, groups, activity, preferences      |
 | **Quoting (screen print)** | End-to-end quoting with pricing matrix, garment selection, artwork attachment |
-| **Quoting (DTF)** | Gang sheet builder, per-transfer pricing, film type selection |
-| **Quoting (DTF press)** | Simplified flow for customer-supplied transfers |
-| **Jobs & production** | Quote-to-job conversion, task tracking, board management, notes |
-| **Invoicing** | Invoice generation, payment tracking, reminders, basic tax handling |
-| **Pricing matrix** | Configurable per-service-type pricing with quantity breaks and setup fees |
-| **Artwork library** | Customer-associated design library with metadata for quoting |
-| **Shop settings** | Business info, preferences, decoration methods, notification config |
-| **Integrations setup** | Bring-your-own-token pattern for S&S API, future integrations |
-| **Analytics foundation** | dbt pipeline, dimensional model, dashboard-level metrics |
+| **Quoting (DTF)**          | Gang sheet builder, per-transfer pricing, film type selection                 |
+| **Quoting (DTF press)**    | Simplified flow for customer-supplied transfers                               |
+| **Jobs & production**      | Quote-to-job conversion, task tracking, board management, notes               |
+| **Invoicing**              | Invoice generation, payment tracking, reminders, basic tax handling           |
+| **Pricing matrix**         | Configurable per-service-type pricing with quantity breaks and setup fees     |
+| **Artwork library**        | Customer-associated design library with metadata for quoting                  |
+| **Shop settings**          | Business info, preferences, decoration methods, notification config           |
+| **Integrations setup**     | Bring-your-own-token pattern for S&S API, future integrations                 |
+| **Analytics foundation**   | dbt pipeline, dimensional model, dashboard-level metrics                      |
 
 ### Out of Scope (Phase 3+)
 

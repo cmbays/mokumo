@@ -12,16 +12,16 @@ description: How the shop owner accomplishes goals in Screen Print Pro. Story ma
 
 Journeys are organized by **capability domain** — the high-level goal the user is trying to accomplish.
 
-| Domain | Stories | Core Flow |
-|--------|---------|-----------|
-| **Morning Operations** | US-1: Status check, US-2: Unblock jobs | Open app → scan dashboard → act on blocked items |
-| **Customer Intake** | US-3: New inquiry, US-4: Returning customer | Phone rings → capture info → create/find customer → start quote |
-| **Quoting** | US-5: Screen print quote, US-6: DTF quote, US-7: DTF press quote | Select customer → pick garments → configure print → set pricing → send |
-| **Production** | US-8: Start job, US-9: Track progress, US-10: Handle blockers | Accept quote → create job → work tasks → move lanes → ship |
-| **Invoicing** | US-11: Generate invoice, US-12: Record payment, US-13: Chase overdue | Job completes → generate invoice → send → track payment |
-| **Customer Management** | US-14: View history, US-15: Manage preferences | Customer calls → find record → see full relationship |
-| **Catalog & Pricing** | US-16: Browse garments, US-17: Update pricing | Need garment info → browse catalog → check inventory → configure pricing |
-| **Artwork** | US-18: Upload artwork, US-19: Reuse design | Customer sends file → upload to library → tag → attach to quotes |
+| Domain                  | Stories                                                              | Core Flow                                                                |
+| ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Morning Operations**  | US-1: Status check, US-2: Unblock jobs                               | Open app → scan dashboard → act on blocked items                         |
+| **Customer Intake**     | US-3: New inquiry, US-4: Returning customer                          | Phone rings → capture info → create/find customer → start quote          |
+| **Quoting**             | US-5: Screen print quote, US-6: DTF quote, US-7: DTF press quote     | Select customer → pick garments → configure print → set pricing → send   |
+| **Production**          | US-8: Start job, US-9: Track progress, US-10: Handle blockers        | Accept quote → create job → work tasks → move lanes → ship               |
+| **Invoicing**           | US-11: Generate invoice, US-12: Record payment, US-13: Chase overdue | Job completes → generate invoice → send → track payment                  |
+| **Customer Management** | US-14: View history, US-15: Manage preferences                       | Customer calls → find record → see full relationship                     |
+| **Catalog & Pricing**   | US-16: Browse garments, US-17: Update pricing                        | Need garment info → browse catalog → check inventory → configure pricing |
+| **Artwork**             | US-18: Upload artwork, US-19: Reuse design                           | Customer sends file → upload to library → tag → attach to quotes         |
 
 ---
 
@@ -32,6 +32,7 @@ Journeys are organized by **capability domain** — the high-level goal the user
 **Trigger**: Phone call from a new customer requesting pricing for company t-shirts.
 
 **Acceptance Criteria**:
+
 - Customer record created in < 30 seconds
 - Quote built with real garment data and live pricing in < 3 minutes
 - Quote saved, visible on board, and sendable to customer
@@ -53,6 +54,7 @@ Journeys are organized by **capability domain** — the high-level goal the user
 **Trigger**: Customer accepts a quote. Shop needs to produce and bill.
 
 **Acceptance Criteria**:
+
 - Job created from quote with zero re-entry of data
 - Tasks auto-populated for service type
 - Invoice generated from job with accurate line items
@@ -76,6 +78,7 @@ Journeys are organized by **capability domain** — the high-level goal the user
 **Trigger**: Shop owner opens the app at start of day.
 
 **Acceptance Criteria**:
+
 - Shop state understood in < 5 seconds without scrolling
 - Blocked jobs visible with reasons and customer contact info
 - At-risk jobs (approaching due date) flagged
@@ -94,6 +97,7 @@ Journeys are organized by **capability domain** — the high-level goal the user
 **Trigger**: Existing customer calls for a repeat order (similar to last time).
 
 **Acceptance Criteria**:
+
 - Customer found in < 5 seconds
 - Previous quotes visible for reference
 - New quote built by cloning/modifying previous quote
@@ -112,6 +116,7 @@ Journeys are organized by **capability domain** — the high-level goal the user
 **Trigger**: Customer sends artwork files for a new order.
 
 **Acceptance Criteria**:
+
 - Artwork uploaded and associated with customer
 - Metadata tagged (color count, print locations, dimensions)
 - Artwork selectable when building quotes
@@ -128,21 +133,27 @@ Journeys are organized by **capability domain** — the high-level goal the user
 ## User Stories (Detailed)
 
 ### US-1: Morning Status Check
+
 **As a** shop owner, **I want to** see blocked and at-risk jobs immediately on opening the app **so that** I can unblock them before they delay production.
 
 ### US-3: New Customer Inquiry
+
 **As a** shop owner, **I want to** capture a new customer's info in < 30 seconds **so that** I can start building their quote while still on the phone.
 
 ### US-5: Screen Print Quote
+
 **As a** shop owner, **I want to** build a quote using real garment catalog data and my pricing matrix **so that** pricing is accurate and consistent.
 
 ### US-8: Start Production Job
+
 **As a** shop owner, **I want to** create a job from an accepted quote with all data inherited **so that** I don't re-enter customer, garment, or pricing information.
 
 ### US-11: Generate Invoice
+
 **As a** shop owner, **I want to** generate an invoice from a completed job **so that** billing is accurate and tied to the actual work performed.
 
 ### US-18: Upload Artwork
+
 **As a** shop owner, **I want to** upload and tag customer artwork **so that** I can attach it to future quotes without searching through email or folders.
 
 ---

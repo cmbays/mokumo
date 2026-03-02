@@ -77,6 +77,7 @@ Plus: setup fee per screen/color ($15-$35 typical), size upcharges (XXL+ = $2-$4
 No competitor treats setup fees as a first-class concept in the pricing matrix. Printavo requires manual line items. YoPrint uses formula-based rules. InkSoft separates them but the UX isn't elegant.
 
 **Our pricing matrix should**:
+
 - Auto-calculate setup fees based on color count × print locations
 - Show setup fees as a visible, transparent component of the quote
 - Allow per-location setup fee overrides (some locations are more complex)
@@ -86,12 +87,12 @@ No competitor treats setup fees as a first-class concept in the pricing matrix. 
 
 Each decoration method has different pricing axes:
 
-| Service Type | Primary Axis | Secondary Axis | Setup |
-|-------------|-------------|----------------|-------|
-| Screen Print | Quantity × Color Count | Print location | Per screen (color × location) |
-| DTF | Transfer size × Quantity | — | Per gang sheet setup |
-| DTF Press | Quantity (flat rate) | — | Minimal (customer-supplied) |
-| Embroidery | Stitch count × Quantity | — | Per digitizing setup |
+| Service Type | Primary Axis             | Secondary Axis | Setup                         |
+| ------------ | ------------------------ | -------------- | ----------------------------- |
+| Screen Print | Quantity × Color Count   | Print location | Per screen (color × location) |
+| DTF          | Transfer size × Quantity | —              | Per gang sheet setup          |
+| DTF Press    | Quantity (flat rate)     | —              | Minimal (customer-supplied)   |
+| Embroidery   | Stitch count × Quantity  | —              | Per digitizing setup          |
 
 Our pricing matrix (P4) must support these different shapes while sharing the same configuration UX.
 
@@ -116,6 +117,7 @@ Quote Sent → Approved → Payment Requested → In Production → Shipped → 
 All one entity. Status determines whether it renders as "QUOTE" or "INVOICE."
 
 **Trade-off**:
+
 - Pro: No conversion step, no data duplication, simpler entity model
 - Con: Quote revision history and invoice payment history are in the same audit trail. Harder to model "customer declined Quote v1, we revised and sent Quote v2" as distinct versions.
 

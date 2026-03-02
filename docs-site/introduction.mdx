@@ -21,11 +21,11 @@ Screen Print Pro replaces spreadsheets, text messages, and memory with a unified
 
 The system supports three decoration methods, each with its own quoting flow and production pipeline:
 
-| Service | Description | Production Steps |
-|---------|-------------|-----------------|
-| **Screen Printing** | Traditional ink-on-garment via burned screens | Art → Film → Burn → Register → Press → QC |
-| **DTF (Direct to Film)** | Transfer film printed and applied to garments | Art → Gang Sheet → Print → Press → QC |
-| **DTF Press** | Shop presses customer-supplied DTF transfers | Receive → Press → QC |
+| Service                  | Description                                   | Production Steps                          |
+| ------------------------ | --------------------------------------------- | ----------------------------------------- |
+| **Screen Printing**      | Traditional ink-on-garment via burned screens | Art → Film → Burn → Register → Press → QC |
+| **DTF (Direct to Film)** | Transfer film printed and applied to garments | Art → Gang Sheet → Print → Press → QC     |
+| **DTF Press**            | Shop presses customer-supplied DTF transfers  | Receive → Press → QC                      |
 
 ## Current Phase
 
@@ -50,13 +50,13 @@ The system supports three decoration methods, each with its own quoting flow and
 
 ## Tech Stack (Summary)
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router, TypeScript, Turbopack) |
-| Styling | Tailwind CSS v4 + shadcn/ui |
-| Database | Supabase PostgreSQL + Drizzle ORM |
-| Auth | Supabase Auth (email/password) |
-| Cache | Upstash Redis |
-| Analytics | dbt-core (medallion pipeline) |
-| Deployment | Vercel (preview on main, production branch) |
-| Supplier API | S&S Activewear REST V2 |
+| Layer        | Technology                                     |
+| ------------ | ---------------------------------------------- |
+| Framework    | Next.js 16 (App Router, TypeScript, Turbopack) |
+| Styling      | Tailwind CSS v4 + shadcn/ui                    |
+| Database     | Supabase PostgreSQL + Drizzle ORM              |
+| Auth         | Supabase Auth (email/password)                 |
+| Cache        | Upstash Redis                                  |
+| Analytics    | dbt-core (medallion pipeline)                  |
+| Deployment   | Vercel (preview on main, production branch)    |
+| Supplier API | S&S Activewear REST V2                         |

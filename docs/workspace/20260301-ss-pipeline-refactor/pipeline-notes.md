@@ -9,6 +9,7 @@
 ### Service: `src/infrastructure/services/catalog-pipeline.service.ts`
 
 Chains all three sync jobs in dependency order:
+
 1. `syncStylesFromSupplier()` — upserts `catalog_styles` UUIDs
 2. `syncProductsFromSupplier(styleIds?, { offset, limit })` — resolves those UUIDs for atomic writes
 3. `syncBrandsFromSupplier()` — independent enrichment
@@ -20,10 +21,10 @@ and ISO 8601 `timestamp` baked into the service result (not added at the route l
 
 Two handlers on the same path:
 
-| Method | Caller          | Auth pattern                                              |
-| ------ | --------------- | --------------------------------------------------------- |
-| `GET`  | Vercel Cron     | `Authorization: Bearer {CRON_SECRET}` (env var)          |
-| `POST` | Admin (manual)  | `x-admin-secret` header via `validateAdminSecret`         |
+| Method | Caller         | Auth pattern                                      |
+| ------ | -------------- | ------------------------------------------------- |
+| `GET`  | Vercel Cron    | `Authorization: Bearer {CRON_SECRET}` (env var)   |
+| `POST` | Admin (manual) | `x-admin-secret` header via `validateAdminSecret` |
 
 `POST` accepts optional body `{ styleIds?: string[], offset?: number, limit?: number }` to limit
 the pipeline run to a subset of styles (useful for incremental re-syncs or debugging).
@@ -61,12 +62,14 @@ the cron is active.
 ## Files Changed
 
 ### Created
+
 - `src/infrastructure/services/catalog-pipeline.service.ts`
 - `src/infrastructure/services/__tests__/catalog-pipeline.service.test.ts`
 - `src/app/api/catalog/sync-pipeline/route.ts`
 - `src/app/api/catalog/sync-pipeline/__tests__/route.test.ts`
 
 ### Modified
+
 - `vercel.json` — added weekly cron entry for `/api/catalog/sync-pipeline`
 
 ## Result Type Field Mapping
@@ -74,13 +77,13 @@ the cron is active.
 The `products` section of `CatalogPipelineResult` bridges a naming mismatch between
 the pipeline's semantic names and `syncProductsFromSupplier`'s return shape:
 
-| `CatalogPipelineResult.products` field | Source from `syncProductsFromSupplier` |
-| --------------------------------------- | --------------------------------------- |
-| `stylesProcessed`                       | `total`                                 |
-| `colorsUpserted`                        | `colorsUpserted`                        |
-| `sizesUpserted`                         | `0` (not tracked separately in service) |
-| `skusInserted`                          | `synced`                                |
-| `errors`                                | `errors`                                |
+| `CatalogPipelineResult.products` field | Source from `syncProductsFromSupplier`  |
+| -------------------------------------- | --------------------------------------- |
+| `stylesProcessed`                      | `total`                                 |
+| `colorsUpserted`                       | `colorsUpserted`                        |
+| `sizesUpserted`                        | `0` (not tracked separately in service) |
+| `skusInserted`                         | `synced`                                |
+| `errors`                               | `errors`                                |
 
 `imagesUpserted` from the products service is intentionally excluded from the pipeline result
 (internal detail, not meaningful at the pipeline summary level).

@@ -13,13 +13,13 @@ description: Supplier API capabilities, multi-supplier architecture, and integra
 
 Screen Print Pro integrates with **S&S Activewear REST V2** for garment catalog data. The integration covers:
 
-| Capability | Status | Endpoint |
-|-----------|--------|----------|
-| Product catalog (styles, colors, sizes) | Active | `GET /v2/styles/`, `GET /v2/products/` |
-| Product images | Active | `GET /v2/products/` (image URLs in response) |
-| Pricing (piece, dozen, case, customer) | Active | `GET /v2/products/` (pricing fields) |
-| Inventory (per-warehouse quantities) | Active | `GET /v2/products/` (inventory fields) |
-| Color families | Active | `GET /v2/products/` (`colorFamily` field) |
+| Capability                              | Status | Endpoint                                     |
+| --------------------------------------- | ------ | -------------------------------------------- |
+| Product catalog (styles, colors, sizes) | Active | `GET /v2/styles/`, `GET /v2/products/`       |
+| Product images                          | Active | `GET /v2/products/` (image URLs in response) |
+| Pricing (piece, dozen, case, customer)  | Active | `GET /v2/products/` (pricing fields)         |
+| Inventory (per-warehouse quantities)    | Active | `GET /v2/products/` (inventory fields)       |
+| Color families                          | Active | `GET /v2/products/` (`colorFamily` field)    |
 
 **Rate limit**: 60 requests/minute. `X-Rate-Limit-Remaining` header for feedback.
 
@@ -34,6 +34,7 @@ The S&S API has a full order management surface we haven't integrated:
 ### Order Placement
 
 `POST /v2/orders/` supports wholesale order placement with:
+
 - Shipping address, line items (by SkuID/SKU/GTIN), shipping method (16+ carriers)
 - Multi-warehouse fulfillment (automatic or specified)
 - Partial fulfillment (proceeds on available items, notifies on shortages)
@@ -45,33 +46,33 @@ The S&S API has a full order management surface we haven't integrated:
 
 ### Tracking and Logistics
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /v2/trackingdata/` | Shipment tracking for placed orders |
-| `GET /v2/daysintransit/` | Delivery estimates by carrier and destination ZIP |
-| `GET /v2/orders/` | Order history (last 3 months, filterable by PO/invoice/date) |
+| Endpoint                 | Purpose                                                      |
+| ------------------------ | ------------------------------------------------------------ |
+| `GET /v2/trackingdata/`  | Shipment tracking for placed orders                          |
+| `GET /v2/daysintransit/` | Delivery estimates by carrier and destination ZIP            |
+| `GET /v2/orders/`        | Order history (last 3 months, filterable by PO/invoice/date) |
 
 **Delivery statuses**: In Transit, Out For Delivery, Delivered, Exception, Expired, Pending, Unknown.
 
 ### Account and Billing
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /v2/paymentprofiles/` | Saved payment methods on the account |
-| `GET /v2/invoices/` | S&S billing history and invoice documents |
-| `PUT /v2/crossref/` | Map internal SKUs to S&S SKU identifiers |
+| Endpoint                   | Purpose                                   |
+| -------------------------- | ----------------------------------------- |
+| `GET /v2/paymentprofiles/` | Saved payment methods on the account      |
+| `GET /v2/invoices/`        | S&S billing history and invoice documents |
+| `PUT /v2/crossref/`        | Map internal SKUs to S&S SKU identifiers  |
 
 ### Pricing Fields
 
 The Products endpoint returns multiple pricing tiers per SKU:
 
-| Field | Meaning |
-|-------|---------|
-| `piecePrice` | Standard single-unit price |
-| `dozenPrice` | Price at 12-unit quantity break |
-| `casePrice` | Price at case quantity (varies by style) |
-| `salePrice` | Promotional price with `saleExpiration` date |
-| `mapPrice` | Minimum Advertised Price floor |
+| Field           | Meaning                                          |
+| --------------- | ------------------------------------------------ |
+| `piecePrice`    | Standard single-unit price                       |
+| `dozenPrice`    | Price at 12-unit quantity break                  |
+| `casePrice`     | Price at case quantity (varies by style)         |
+| `salePrice`     | Promotional price with `saleExpiration` date     |
+| `mapPrice`      | Minimum Advertised Price floor                   |
 | `customerPrice` | Account-specific contracted price ("your price") |
 
 **`customerPrice`** reflects the shop's negotiated rate — this is the number that matters for margin calculations. Pricing tiers are account-negotiated through the S&S rep, not volume-based per order.
@@ -79,6 +80,7 @@ The Products endpoint returns multiple pricing tiers per SKU:
 ### Inventory Detail
 
 Per-SKU inventory includes:
+
 - `qty` — combined across all warehouses
 - `warehouses[]` — per-warehouse breakdown with:
   - `warehouseAbbr`, `qty`, `closeout` (discontinuation flag)
@@ -90,6 +92,7 @@ Per-SKU inventory includes:
 ### alphabroder Merger Impact
 
 S&S acquired alphabroder (October 2024). Timeline:
+
 - **March 2025**: S&S started supporting alphabroder API traffic through S&S endpoint
 - **July 2025**: All alphabroder API traffic redirected to S&S. alphabroder brand retired (US).
 
@@ -105,44 +108,45 @@ SanMar is the second major garment supplier. Their API is **SOAP-first** (no nat
 
 ### Available Services
 
-| Service | Protocol | Purpose |
-|---------|----------|---------|
-| Product Information | SOAP | Catalog data, descriptions, GTINs |
-| Pricing | SOAP | Per-account pricing (piece/dozen/case/sale/myPrice) |
-| Inventory (+ V2) | SOAP | Per-warehouse stock (capped at 500 per warehouse) |
-| Purchase Order | SOAP | Order placement |
-| Order/Shipment Notification | SOAP | Order status and tracking |
-| Invoice | SOAP | Invoice retrieval |
-| Packing Slip | SOAP | Shipping documentation |
+| Service                     | Protocol | Purpose                                             |
+| --------------------------- | -------- | --------------------------------------------------- |
+| Product Information         | SOAP     | Catalog data, descriptions, GTINs                   |
+| Pricing                     | SOAP     | Per-account pricing (piece/dozen/case/sale/myPrice) |
+| Inventory (+ V2)            | SOAP     | Per-warehouse stock (capped at 500 per warehouse)   |
+| Purchase Order              | SOAP     | Order placement                                     |
+| Order/Shipment Notification | SOAP     | Order status and tracking                           |
+| Invoice                     | SOAP     | Invoice retrieval                                   |
+| Packing Slip                | SOAP     | Shipping documentation                              |
 
 ### API Access
 
 Requires approval from SanMar's Integration Support team:
+
 - Email: `sanmarintegrations@sanmar.com`
 - Process: email request → e-sign agreement → credentials within 2-3 business days
 
 ### Data Model Comparison
 
-| Dimension | S&S Activewear | SanMar |
-|-----------|---------------|--------|
-| Primary SKU ID | `skuId` (integer) | `inventoryKey` (numeric) |
-| Pricing tiers | piece / dozen / case / sale / customer | piece / dozen / case / sale / myPrice |
-| Inventory cap | No cap documented | 500 per warehouse |
-| Color taxonomy | `colorFamily` + `colorGroupName` (3-tier) | Free-text color names only |
-| Image delivery | CDN URLs in API response | Data Library / FTP / PromoStandards Media |
-| Bulk inventory | API polling only | FTP `sanmar_dip.txt` (hourly updates) |
-| Real-time push | None (poll-based) | None (poll-based) |
-| Style numbers | S&S internal numbering | SanMar internal numbering |
+| Dimension      | S&S Activewear                            | SanMar                                    |
+| -------------- | ----------------------------------------- | ----------------------------------------- |
+| Primary SKU ID | `skuId` (integer)                         | `inventoryKey` (numeric)                  |
+| Pricing tiers  | piece / dozen / case / sale / customer    | piece / dozen / case / sale / myPrice     |
+| Inventory cap  | No cap documented                         | 500 per warehouse                         |
+| Color taxonomy | `colorFamily` + `colorGroupName` (3-tier) | Free-text color names only                |
+| Image delivery | CDN URLs in API response                  | Data Library / FTP / PromoStandards Media |
+| Bulk inventory | API polling only                          | FTP `sanmar_dip.txt` (hourly updates)     |
+| Real-time push | None (poll-based)                         | None (poll-based)                         |
+| Style numbers  | S&S internal numbering                    | SanMar internal numbering                 |
 
 **Key difference**: SanMar has no `colorFamily` equivalent. Cross-supplier color matching by name is fragile ("Royal Blue" vs "True Navy"). GTIN is the only reliable deduplication key.
 
 ### Integration Options (Ranked)
 
-| Option | Effort | Cost | Supplier Coverage |
-|--------|--------|------|-------------------|
-| **PSRESTful proxy** | Low — REST/JSON wrapper | $100/year (Standard) | 554 suppliers including SanMar |
-| **PromoStandards SOAP** | Medium — SOAP client + XML mapping | $0 | Any PS-compliant supplier |
-| **SanMar native SOAP** | Medium — their specific WSDL endpoints | $0 | SanMar only |
+| Option                  | Effort                                 | Cost                 | Supplier Coverage              |
+| ----------------------- | -------------------------------------- | -------------------- | ------------------------------ |
+| **PSRESTful proxy**     | Low — REST/JSON wrapper                | $100/year (Standard) | 554 suppliers including SanMar |
+| **PromoStandards SOAP** | Medium — SOAP client + XML mapping     | $0                   | Any PS-compliant supplier      |
+| **SanMar native SOAP**  | Medium — their specific WSDL endpoints | $0                   | SanMar only                    |
 
 **Recommendation**: PSRESTful for fastest path to SanMar + multi-supplier. The $100/year cost is trivial and eliminates SOAP complexity entirely.
 
@@ -154,16 +158,16 @@ PromoStandards is a nonprofit standards body for the promotional products indust
 
 ### Service Catalog
 
-| Service | What It Covers |
-|---------|---------------|
-| Product Data | Full catalog: styles, colors, sizes, descriptions, specs |
-| Media Content | Product images and media assets |
-| Pricing & Configuration | Pricing tiers, decoration area config, price breaks |
-| Inventory | Per-SKU stock availability |
-| Purchase Order | Submit orders to suppliers |
-| Order Status | Track order progress |
-| Order Shipment Notification | Tracking and delivery updates |
-| Invoice | Invoice retrieval |
+| Service                     | What It Covers                                           |
+| --------------------------- | -------------------------------------------------------- |
+| Product Data                | Full catalog: styles, colors, sizes, descriptions, specs |
+| Media Content               | Product images and media assets                          |
+| Pricing & Configuration     | Pricing tiers, decoration area config, price breaks      |
+| Inventory                   | Per-SKU stock availability                               |
+| Purchase Order              | Submit orders to suppliers                               |
+| Order Status                | Track order progress                                     |
+| Order Shipment Notification | Tracking and delivery updates                            |
+| Invoice                     | Invoice retrieval                                        |
 
 Both S&S and SanMar support nearly the full suite.
 
@@ -171,11 +175,11 @@ Both S&S and SanMar support nearly the full suite.
 
 PSRESTful (psrestful.com) wraps PromoStandards SOAP in REST/JSON. 554 integrated suppliers.
 
-| Tier | Cost | Calls/Day | Users |
-|------|------|-----------|-------|
-| Free | $0/month | 10 | 1 |
-| Standard | $100/year | 300 | 3 |
-| Premium | $300/year | Unlimited | 10 |
+| Tier     | Cost      | Calls/Day | Users |
+| -------- | --------- | --------- | ----- |
+| Free     | $0/month  | 10        | 1     |
+| Standard | $100/year | 300       | 3     |
+| Premium  | $300/year | Unlimited | 10    |
 
 ### What PromoStandards Does and Doesn't Solve
 
@@ -205,6 +209,7 @@ All competitors treat suppliers as **independent, parallel catalogs** with no cr
 GTIN/UPC is the universal key. Assigned by the brand (Bella+Canvas), not the distributor. Same physical garment = same GTIN regardless of supplier.
 
 **Availability**:
+
 - S&S: `gtin` field in Products API response
 - SanMar: `sanmar_pdd.txt` FTP file or `getProductInfoByStyle` SOAP call
 

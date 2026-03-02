@@ -59,15 +59,19 @@ Quote Builder
 _To be documented as verticals are built. Each vertical adds its interaction patterns here._
 
 ### Pattern: Entity Transition
+
 _How quotes become jobs, jobs generate invoices._
 
 ### Pattern: Inline Editing
+
 _How fields are edited in-place vs. via forms._
 
 ### Pattern: Board Drag-and-Drop
+
 _Lane transitions, block reason prompts, task auto-progression._
 
 ### Pattern: Search and Select
+
 _Global search, entity pickers, catalog browsing._
 
 ---
