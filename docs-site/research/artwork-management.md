@@ -6,7 +6,7 @@ description: Competitive analysis, domain model, color detection, storage, separ
 # Artwork Management Research
 
 > Research date: March 2026 | Status: Complete
-> **Informs**: P5 (Artwork Library), P6 (Quote Integration via M4), P8 (Screen Room via M6 separation handoff)
+> **Informs**: P5 (Artwork Library), P6 (Quote Integration via M4), P12 (Screen Room via M6 separation handoff)
 > **Epic**: #717 | **Milestones**: #718–#724 | **Spikes**: #725 (color detection), #726 (storage limits)
 
 ---
@@ -377,12 +377,12 @@ Append-only — shop cannot retroactively modify approval records. This is an ar
 - Art department workflow board tracks internal status
 - Approved artwork is the production gate (blocks job start)
 
-### Artwork → Screen Room (P10)
+### Artwork → Screen Room (P12)
 - `ScreenRequirement[]` generated from separation metadata (see Separation Files above)
 - Physical screen assignment tracked in Screen Room vertical
 - Burn/exposure tracking per screen linked to separation
 
-### Artwork → Invoices (P11)
+### Artwork → Invoices (P10)
 - Frozen mockup reference carried to invoice
 - Setup fees itemized per screen/color
 - Artwork approval audit trail available for payment disputes
