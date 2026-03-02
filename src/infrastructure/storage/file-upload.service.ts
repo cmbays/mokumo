@@ -39,8 +39,16 @@ export class FileUploadService implements IFileUploadService {
   async createPresignedUploadUrl(
     input: CreatePresignedUploadUrlInput
   ): Promise<PresignedUploadResult> {
-    const { entity, shopId, filename, mimeType, sizeBytes, contentHash, isDuplicate, existingPath } =
-      input
+    const {
+      entity,
+      shopId,
+      filename,
+      mimeType,
+      sizeBytes,
+      contentHash,
+      isDuplicate,
+      existingPath,
+    } = input
 
     // Validate entity, MIME type, and size — throws UploadValidationError on failure
     validateEntityConfig(entity, mimeType, sizeBytes)
