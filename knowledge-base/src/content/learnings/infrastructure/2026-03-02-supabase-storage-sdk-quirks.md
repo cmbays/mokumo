@@ -29,7 +29,7 @@ without passing it to the SDK.
 ## `createSignedUrl` (Download) — Uses `expiresIn` Correctly
 
 ```typescript
-storage.from(bucket).createSignedUrl(path, expiresIn)  // ✓ works as expected
+storage.from(bucket).createSignedUrl(path, expiresIn) // ✓ works as expected
 ```
 
 ## `download()` Returns `Blob | null` — Convert to Buffer

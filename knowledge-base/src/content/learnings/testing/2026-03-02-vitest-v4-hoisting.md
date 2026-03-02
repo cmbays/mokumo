@@ -35,7 +35,7 @@ const { mockFoo, mockBar } = vi.hoisted(() => {
 
 vi.mock('./some-module', () => ({
   SomeClass: vi.fn().mockImplementation(function (this: { foo: typeof mockFoo }) {
-    this.foo = mockFoo  // ✓ mockFoo is initialized
+    this.foo = mockFoo // ✓ mockFoo is initialized
   }),
 }))
 ```
