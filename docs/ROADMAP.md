@@ -89,18 +89,19 @@ Each vertical passes through these stages. The KB tracks progress per vertical p
 
 ## Vertical Inventory
 
-| Vertical            | Phase 1 Status | Pipeline Stage | Vertical BRIEF                   |
-| ------------------- | -------------- | -------------- | -------------------------------- |
-| Dashboard           | Complete       | Demo           | —                                |
-| Quoting             | Complete       | Demo           | TODO                             |
-| Customer Management | Complete       | Demo           | TODO                             |
-| Invoicing           | Complete       | Demo           | TODO                             |
-| Price Matrix        | Complete       | Demo           | TODO                             |
-| Jobs                | Complete       | Demo           | TODO                             |
-| Screen Room         | Integrated     | Demo           | TODO                             |
-| Garments            | Complete       | Demo           | TODO                             |
-| Mobile Optimization | Complete       | Demo           | —                                |
-| DTF Gang Sheet      | Complete       | Demo           | PRs #232, #237, #249, #280, #284 |
+| Vertical            | Phase 1 Status | Phase 2 Status | Pipeline Stage | Epic / BRIEF                     |
+| ------------------- | -------------- | -------------- | -------------- | -------------------------------- |
+| Dashboard           | Complete       | —              | Demo           | —                                |
+| Quoting             | Complete       | Planned        | Demo           | TODO                             |
+| Customer Management | Complete       | In Progress    | Build          | TODO                             |
+| Invoicing           | Complete       | Planned        | Demo           | TODO                             |
+| Price Matrix        | Complete       | —              | Demo           | TODO                             |
+| Jobs                | Complete       | Planned        | Demo           | TODO                             |
+| Screen Room         | Integrated     | Planned        | Demo           | TODO                             |
+| Garments            | Complete       | In Progress    | Build          | Epic #714                        |
+| Mobile Optimization | Complete       | —              | Demo           | —                                |
+| DTF Gang Sheet      | Complete       | —              | Demo           | PRs #232, #237, #249, #280, #284 |
+| **Artwork Library** | Mock entity    | **Research ✅** | **Research**   | **Epic #717**                    |
 
 ## Current Bets (What We're Working On)
 
@@ -112,12 +113,10 @@ Each vertical passes through these stages. The KB tracks progress per vertical p
 
 ## Forward Planning (Shaped But Not Started)
 
-These are shaped ideas waiting for a betting decision post-demo:
+These are shaped ideas waiting for a betting decision:
 
-- **Backend horizontal foundation** (#84) — Supabase architecture, data model, auth, migration patterns
-- **Vertical BRIEF system** (#89) — Per-vertical state documents consolidating feedback, dependencies, pipeline stage
-- **Mockup integration** — Wire garment mockup thumbnails into Quote Detail, Job Detail, Kanban Board. Auto-attach mockups to quote emails.
-- **Minimal backend** — Supabase for seamless demo user journey (stretch goal if time allows)
+- **Artwork Library Vertical** (Epic #717) — Research complete. 7 milestones: Storage & Schema → Library UI → {Color Detection, Quote Integration, Approval Workflow} → Separation Metadata → Mockup Enhancement. Blocked by H2 (File Upload Pipeline). See `docs/workspace/20260301-artwork-vertical/research-report.md`.
+- **Mockup integration** — Wire garment mockup thumbnails into Quote Detail, Job Detail, Kanban Board. Auto-attach mockups to quote emails. Will be absorbed into Artwork M7.
 - **Shop floor display** — Auto-refreshing Kanban board for TV/tablet (replaces physical whiteboard)
 
 ## Resolved Strategic Questions
@@ -137,8 +136,8 @@ Issues are tagged with a consistent multi-dimensional taxonomy:
 
 | Dimension    | Labels                                                                                                                              | Purpose                    |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| **Product**  | `product/quotes`, `product/jobs`, `product/invoices`, `product/customers`, `product/dashboard`                                      | Things users DO            |
-| **Domain**   | `domain/garments`, `domain/screens`, `domain/pricing`, `domain/colors`, `domain/dtf`, `domain/screen-printing`, `domain/mobile`     | Things products USE        |
+| **Product**  | `product/quotes`, `product/jobs`, `product/invoices`, `product/customers`, `product/dashboard`, `product/artwork`                   | Things users DO            |
+| **Domain**   | `domain/garments`, `domain/screens`, `domain/pricing`, `domain/colors`, `domain/dtf`, `domain/screen-printing`, `domain/mobile`, `domain/artwork` | Things products USE |
 | **Tool**     | `tool/work-orchestrator`, `tool/skills-framework`, `tool/agent-system`, `tool/knowledge-base`, `tool/ci-pipeline`, `tool/pm-system` | How we BUILD               |
 | **Pipeline** | `pipeline/vertical`, `pipeline/polish`, `pipeline/horizontal`, `pipeline/bug-fix`                                                   | What kind of pipeline      |
 | **Type**     | `type/bug`, `type/feature`, `type/research`, `type/feedback`, `type/tech-debt`, `type/refactor`, `type/tooling`                     | What kind of thing is it?  |
