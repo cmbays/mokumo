@@ -1,5 +1,6 @@
 export type { IStorageProvider, IFileUploadService } from './storage'
 export type { ICustomerRepository } from './customer.repository'
+export type { IPricingTemplateRepository } from './pricing-template.repository'
 export type { IQuoteRepository } from './quote.repository'
 export type { IJobRepository } from './job.repository'
 export type { IInvoiceRepository } from './invoice.repository'
