@@ -71,7 +71,8 @@ export function GarmentCard({
   const legacyBasePrice = !isNormalized(garment) && garment.basePrice > 0 ? garment.basePrice : null
   const displayPrice = overrideBasePrice != null ? overrideBasePrice : legacyBasePrice
 
-  const hasBottomRow = (showPrice && !isNormalized(garment) && displayPrice != null) || !garment.isEnabled
+  const hasBottomRow =
+    (showPrice && !isNormalized(garment) && displayPrice != null) || !garment.isEnabled
 
   return (
     <div

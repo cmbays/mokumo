@@ -537,7 +537,9 @@ export function GarmentDetailDrawer({
                       {[...garment.availableSizes]
                         .sort((a, b) => a.order - b.order)
                         .map((size) => {
-                          const finalPrice = money(effectiveBasePrice ?? 0).plus(size.priceAdjustment)
+                          const finalPrice = money(effectiveBasePrice ?? 0).plus(
+                            size.priceAdjustment
+                          )
                           return (
                             <tr key={size.name} className="border-b border-border last:border-b-0">
                               <td className="px-3 py-2 font-medium text-foreground">{size.name}</td>
