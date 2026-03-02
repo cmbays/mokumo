@@ -77,13 +77,38 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### Milestones
 
-| Milestone            | Status      | Key Deliverables                                                                         |
-| -------------------- | ----------- | ---------------------------------------------------------------------------------------- |
-| M0: Research         | Done        | Competitive analysis, data model research                                                |
-| M1: Schema & API     | In Progress | Company/contact hierarchy, addresses, groups/tags, server actions                        |
-| M2: Core UI          | In Progress | Customer detail tabs — overview, orders, artwork, contacts (Paper design sessions P1-P8) |
-| M3: Activity & Notes | Planned     | Activity timeline (H1), notes feed, linked entities (quotes, jobs, invoices, artwork)    |
-| M4: Preferences      | Planned     | Garment/color favorites per customer, preference cascading (company → contact)           |
+| Milestone                   | Status          | Key Deliverables                                                                                      |
+| --------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| M0: Research                | Done            | Competitive analysis, B2B data model research, activity timeline differentiation                      |
+| M1: Schema Foundation       | Planned (Ready) | 7 Drizzle tables, 7 enums, RLS policies, IRepository ports expanded, seed data — Wave 0 spec complete |
+| M2: Core UI                 | Design Complete | Paper sessions P1-P4 locked; `design-spec.md` is implementation reference; P5-P8 pending             |
+| M3: Activity & Notes        | Planned         | `CustomerActivityService`, timeline UI, C3-B auto-logging from quote/job/invoice actions              |
+| M4: Financial + Intelligence | Planned        | Credit limits, tax exemptions, lifecycle rules, health scoring, garment preferences                   |
+| M5: Analytics               | Planned         | 5 dbt models: `dim_customers`, `fct_customer_orders`, seasonality mart, lifecycle funnel              |
+| M6: Cross-Vertical Wiring   | Planned         | Quote/job/invoice comboboxes, address snapshots, auto-activity logging site-wide                      |
+
+### Workspace Artifacts
+
+| Artifact | Description |
+| -------- | ----------- |
+| `docs/workspace/20260228-customer-vertical/designs/design-spec.md` | Locked design spec — 15 artboards (A–O), canonical header, component-level CSS values |
+| `docs/workspace/20260228-customer-vertical/plan.md` | Full implementation plan — Wave 0-3, parallelization model, 7 task specs |
+| `docs/workspace/20260228-customer-vertical/breadboard.md` | Affordance map with vertical slices V1-V8 |
+| `docs/workspace/20260228-customer-vertical/shaping.md` | Shaped parts C1-C7 |
+| `docs/workspace/20260228-customer-vertical/manifest.yaml` | YAML execution manifest for Wave 0-3 build sessions |
+
+### Locked Design Decisions
+
+| Decision | Value | Scope |
+| -------- | ----- | ----- |
+| Left-border grouping | `border-left: 3px solid rgba(42,185,255,0.5)` — no card background | Activity, Preferences, Artwork tabs |
+| Canonical header | 5 rows: breadcrumbs → company row → contacts row → stats strip → tab row. Artboard L is locked canonical | All customer detail views (G, I, K, L, M, N) |
+| Health rendering | Healthy = green dot, no border box. At-Risk = red dot + red text | Customer list + detail header |
+| Lifecycle badge colors | Prospect (gray), New (`#2AB9FF`), Repeat (`#54CA74`), VIP (`#FFC663`) | Customer list + detail header |
+| Trash icon rule | Always `#D23E08` with `rgba(210,62,8,0.12)` tinted bg — **site-wide rule** | Every form with deletable items |
+| Urgency semantic tokens | `--urgency-critical/high/low` in `globals.css` — build-time task Issue #712 | Quote/job urgency indicators |
+| Upload sheet DRY | `<ArtworkUploadSheet customerId quoteId? />` — mounts from Customer Artwork tab AND Quote builder | Customer + Quote |
+| Customer list | Hybrid A KPIs + C layout — no finalized Paper mockup; build from spec directly | Customer list only |
 
 ### Research Findings
 
@@ -94,9 +119,11 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### Open Questions
 
-- **Issue #700**: Contact vs. company data model — how do balance levels, credit terms, and tax exemptions cascade? Company-level with contact overrides?
+- **Issue #700** (open): Contact vs. company data model — how do balance levels, credit terms, and tax exemptions cascade? Company-level with contact overrides?
 - Customer portal implications for the data model (P14 auth model needs customer entity)
 - Customer import format — CSV? How do shops currently store customer data?
+
+> Paper sessions P5-P8 (Addresses, Groups, Contacts CRUD, Mobile Polish) pending — weekly budget resets ~March 5.
 
 > See [Customer & Portal Research](/research/customer-portal) for competitive CRM analysis and our opportunity table.
 
