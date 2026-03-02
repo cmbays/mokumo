@@ -95,6 +95,7 @@ export function ArtworkLibraryClient({ initialPieces }: ArtworkLibraryClientProp
   async function handleCreatePieceAndVariant(pieceName: string, variantName: string) {
     const result = await createArtworkPieceAndVariant({
       shopId: SHOP_ID,
+      scope: 'shop',
       pieceName,
       variantName,
     })

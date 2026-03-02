@@ -30,6 +30,7 @@ const initiateArtworkUploadSchema = z.object({
 
 const createArtworkPieceAndVariantSchema = z.object({
   shopId: z.string().min(1),
+  scope: z.enum(['shop', 'customer']),
   customerId: z.string().uuid().optional(),
   pieceName: z.string().min(1).max(255),
   variantName: z.string().min(1).max(255),
@@ -460,10 +461,18 @@ export async function createArtworkPieceAndVariant(
     throw new Error('Unauthorized')
   }
 
-  const { shopId, customerId, pieceName, variantName } = parsed.data
+  const { shopId, scope, customerId, pieceName, variantName } = parsed.data
 
   if (shopId !== session.shopId) {
     throw new Error('Forbidden: shopId mismatch')
+  }
+
+  // Validate that scope and customerId are consistent before hitting the DB constraint
+  if (scope === 'customer' && !customerId) {
+    throw new Error('customerId is required when scope is "customer"')
+  }
+  if (scope === 'shop' && customerId) {
+    throw new Error('customerId must not be set when scope is "shop"')
   }
 
   let pieceId: string
@@ -473,7 +482,7 @@ export async function createArtworkPieceAndVariant(
     await db.transaction(async (tx) => {
       const [piece] = await tx
         .insert(artworkPieces)
-        .values({ shopId, customerId: customerId ?? null, name: pieceName })
+        .values({ shopId, scope, customerId: customerId ?? null, name: pieceName })
         .returning({ id: artworkPieces.id })
 
       if (!piece) throw new Error('Failed to create artwork piece')

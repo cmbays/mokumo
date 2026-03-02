@@ -14,15 +14,22 @@ import { customers } from './customers'
 
 // ─── artwork_pieces ────────────────────────────────────────────────────────────
 // Named artwork concepts — one per design idea (e.g. "Front Logo", "Back Print").
-// customer_id null = shop-level library piece (available across all customers).
-// customer_id set = scoped to that customer's artwork tab.
+//
+// scope discriminator:
+//   'shop'     → belongs to the shop library; customer_id MUST be null
+//   'customer' → belongs to a specific customer; customer_id MUST be set
+//
+// DB enforces: (scope='shop' AND customer_id IS NULL) OR
+//              (scope='customer' AND customer_id IS NOT NULL)
+// See: artwork_pieces_scope_check constraint (migration 0028).
 
 export const artworkPieces = pgTable(
   'artwork_pieces',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     shopId: text('shop_id').notNull(),
-    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+    scope: text('scope', { enum: ['shop', 'customer'] }).notNull().default('shop'),
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'restrict' }),
     name: text('name').notNull(),
     notes: text('notes'),
     isFavorite: boolean('is_favorite').notNull().default(false),
@@ -31,9 +38,8 @@ export const artworkPieces = pgTable(
   },
   (t) => [
     index('idx_artwork_pieces_shop_id').on(t.shopId),
-    // Partial index — only rows with a customer_id (shop-level pieces need no customer filter)
+    index('idx_artwork_pieces_shop_scope').on(t.shopId, t.scope),
     index('idx_artwork_pieces_customer_id').on(t.customerId),
-    index('idx_artwork_pieces_shop_customer').on(t.shopId, t.customerId),
   ]
 )
 
