@@ -308,7 +308,7 @@ export function PowerModeGrid({
                         className={cn(
                           'border border-border bg-surface px-3 py-2 font-medium text-muted-foreground',
                           header.id === 'tierLabel'
-                            ? 'text-left sticky left-0 z-[1] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]'
+                            ? 'text-left sticky left-0 z-[1] shadow-sticky-column'
                             : 'text-center',
                           isColorHeader &&
                             ss.isManualEditOn &&
@@ -348,7 +348,7 @@ export function PowerModeGrid({
                       className={cn(
                         'border border-border px-3 py-2 transition-colors',
                         cell.column.id === 'tierLabel'
-                          ? 'bg-surface sticky left-0 z-[1] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]'
+                          ? 'bg-surface sticky left-0 z-[1] shadow-sticky-column'
                           : 'text-center'
                       )}
                     >

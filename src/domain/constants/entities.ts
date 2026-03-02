@@ -23,8 +23,8 @@ export const ENTITY_STYLES = {
     label: 'Quotes',
   },
   invoice: {
-    color: 'text-success',
-    borderColor: 'border-l-success',
+    color: 'text-emerald',
+    borderColor: 'border-l-emerald',
     label: 'Invoices',
   },
   scratch_note: {

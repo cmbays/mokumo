@@ -47,7 +47,7 @@ export function ColorPricingGrid({
       <table className="w-full min-w-[540px] border-collapse text-xs">
         <thead>
           <tr>
-            <th className="border border-border bg-surface px-3 py-2 text-left font-medium text-muted-foreground sticky left-0 z-[1] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+            <th className="border border-border bg-surface px-3 py-2 text-left font-medium text-muted-foreground sticky left-0 z-[1] shadow-sticky-column">
               Qty Tier
             </th>
             {colorColumns.map((col) => (
@@ -63,7 +63,7 @@ export function ColorPricingGrid({
         <tbody>
           {matrixData.map((row) => (
             <tr key={row.tierLabel}>
-              <td className="border border-border bg-surface px-3 py-2 font-medium text-foreground whitespace-nowrap sticky left-0 z-[1] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+              <td className="border border-border bg-surface px-3 py-2 font-medium text-foreground whitespace-nowrap sticky left-0 z-[1] shadow-sticky-column">
                 {row.tierLabel}
               </td>
               {row.cells.map((cell, colIdx) => (
