@@ -1,10 +1,18 @@
 # Customer Vertical — Design Specification
 
 **Pipeline**: `20260228-customer-vertical`
-**Last updated**: 2026-03-01
+**Last updated**: 2026-03-02
 **Status**: Implementation-ready. Synthesizes P1–P4 Paper sessions.
 
 This document is the single source of truth for building the customer vertical. Artboard references are in Paper file `https://app.paper.design/file/01KJEJAKJWFM2XXMSHAW5T13RN`.
+
+> **⚠ Post-P4 session overrides (2026-03-02)**: The Paper artboards (P1–P4) were designed before PR #731 (design system upgrade). The following rules in this spec **supersede** any artboard pixel values:
+> 1. Lifecycle stage + health → dot indicators, not colored pills (see Lifecycle & Health section)
+> 2. Customer type tags → monochrome muted pill, no status/categorical color
+> 3. Activity timeline entries → direct on `bg-background`, no card background
+> 4. Customer list filter visibility → 5-signal system (see Customer List section)
+> 5. Customer list sort → chevron icons, not `↑`/`↓` glyphs
+> When in doubt: trust this spec over Paper artboard screenshots.
 
 ---
 
@@ -46,20 +54,39 @@ This document is the single source of truth for building the customer vertical. 
 
 ## Lifecycle & Health Badge Colors
 
-| Stage    | Style                                                                                     |
-| -------- | ----------------------------------------------------------------------------------------- |
-| Prospect | `rgba(255,255,255,0.30)` border + text — gray pill                                        |
-| New      | `#2AB9FF` — action blue pill                                                              |
-| Repeat   | `#54CA74` — success green pill                                                            |
-| VIP      | `background:rgba(255,198,99,0.18); border:1px solid rgba(255,198,99,0.35); color:#FFC663` |
+> **Design system update (PR #731)**: Lifecycle stage and health use **dot indicators**, not colored pills. Use `dotColor()` from `@shared/lib/design-system`. The original Paper sessions showed colored pills — ignore those. Trust this spec.
 
-**Health** (separate dimension from lifecycle):
-| Status | Style |
-|---|---|
-| Healthy | `• Healthy` — 6px green circle (`#54CA74`) + text. **No border box.** |
-| At-Risk | Red dot + red text (`#D23E08`) |
+### Lifecycle stage — dot + text
 
-All pills: `border-radius: 4px; padding: 2px 8px; font-size: 11px`
+```tsx
+import { dotColor } from '@shared/lib/design-system'
+<span className="inline-flex items-center gap-1.5">
+  <span className={cn('h-2 w-2 rounded-full', dotColor('muted'))} />
+  <span className="text-sm text-foreground">Prospect</span>
+</span>
+```
+
+| Stage    | `dotColor()` arg | Rationale                          |
+| -------- | ---------------- | ---------------------------------- |
+| Prospect | `'muted'`        | Not yet a customer — neutral       |
+| New      | `'action'`       | Active, in-progress relationship   |
+| Repeat   | `'success'`      | Healthy, proven relationship       |
+| VIP      | `'warning'`      | Premium — needs attention/care     |
+| At-Risk  | `'error'`        | Relationship flagged               |
+| Archived | `'muted'`        | Inactive — same as Prospect        |
+
+### Health status — dot + text
+
+| Status   | `dotColor()` arg | Text color          |
+| -------- | ---------------- | ------------------- |
+| Active   | `'success'`      | `text-foreground`   |
+| At-Risk  | `'error'`        | `text-error`        |
+
+**No border box on health.** Dot + plain text only.
+
+### Customer type tags (School, Corporate, Wholesale, etc.)
+
+Monochrome muted pill — `bg-muted text-muted-foreground`, `border-radius: 4px; padding: 2px 8px; font-size: 11px`. No color. Classification tags never use the status or categorical palette.
 
 ---
 
@@ -150,21 +177,25 @@ Single full-width control:
 - Filter dropdowns embedded in the bar (not separate row)
 - Active filter state: dropdown changes to `[Health: Healthy ×]` — colored chip, dismissible
 
-### 3-Layer Filter Visibility
+### 5-Signal Filter Visibility
 
-When a filter is active, THREE signals appear simultaneously:
+When a filter is active, FIVE signals appear simultaneously — each reinforces the others:
 
-1. **Active token chip in bar**: `[Health: Healthy ×]` replaces the dropdown label
-2. **Column header indicator**: filtered column header turns `#2AB9FF` + small `⊘` icon. Tooltip: "Filtered: Healthy only"
-3. **Count line below table**: `Showing 1–8 of 89 customers · ` **`38 hidden (Health: Healthy)`** (gold text `#FFC663`)
-   - Multiple: `38 hidden (Health: Healthy · +1 more)`
+1. **Blue ring on filter dropdown button** (filter bar): `ring-1 ring-action` applied per-dimension. If Health is filtered → Health dropdown gets the ring. If Type is also filtered → Type dropdown gets its own ring. Independent per dimension.
+2. **Chip label in filter bar**: `[Health: Healthy ×]` replaces the dropdown label — dismissible. Still present alongside the ring (ring wraps the chip).
+3. **Filter icon on column header**: A filter icon appears next to the column header label for any filtered column, plus `ring-1 ring-action` on that header cell.
+4. **Tooltip on column filter icon**: Hovering the filter icon shows a `<Tooltip>` — e.g. `"Filtered: Healthy only"`. Uses app-wide `<TooltipProvider>` — no per-component provider.
+5. **Hidden-count line below table**: `Showing 1–8 of 127 customers · ` **`38 hidden (Health: Healthy)`** (gold `text-warning`). Multiple filters: `38 hidden (Health: Healthy · +1 more)`. Only visible when at least one filter is active.
+
+> Note: Artboard C shows a stats block at the bottom of the list — **ignore this**. It is replaced by the hidden-count line above.
 
 ### Sort
 
 - Column header click → sort toggle (asc/desc)
-- Active sort column: header text turns `#2AB9FF` + `↑` or `↓` glyph
+- Active sort column: header text turns `text-action` + **chevron** icon (not `↑`/`↓` glyphs) pointing up or down
+- Inactive sortable columns: show a faint double-chevron or no indicator — just the label
 - Default sort: **Revenue YTD descending**
-- Sort removed from filter bar — lives exclusively in column headers
+- Sort lives exclusively in column headers — not in the filter bar
 
 ### Table Rows (48px height — medium density)
 

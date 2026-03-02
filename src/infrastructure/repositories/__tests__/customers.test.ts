@@ -1,4 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// Mock server-only module so tests can run in Vitest environment
+vi.mock('server-only', () => ({}))
+
 import {
   getCustomers,
   getCustomerById,
