@@ -16,13 +16,13 @@
 
 ## 1. Libraries Evaluated
 
-| Library | Version | Purpose | Size | License |
-|---------|---------|---------|------|---------|
-| `quantize` | latest | MMCQ color quantization (browser + server) | ~5 KB | MIT |
-| `color-diff` | latest | CIEDE2000 ΔE calculation (RGB → Lab → diff) | ~8 KB | MIT |
-| `get-svg-colors` | latest | SVG fill/stroke attribute extraction | ~3 KB | MIT |
-| `nearest-pantone` | latest | Hex → closest Pantone name + hex | ~150 KB (includes PMS DB) | MIT |
-| `sharp` | 0.34.5 | Image backbone — resize, raw pixel access | already installed | Apache-2.0 |
+| Library           | Version | Purpose                                     | Size                      | License    |
+| ----------------- | ------- | ------------------------------------------- | ------------------------- | ---------- |
+| `quantize`        | latest  | MMCQ color quantization (browser + server)  | ~5 KB                     | MIT        |
+| `color-diff`      | latest  | CIEDE2000 ΔE calculation (RGB → Lab → diff) | ~8 KB                     | MIT        |
+| `get-svg-colors`  | latest  | SVG fill/stroke attribute extraction        | ~3 KB                     | MIT        |
+| `nearest-pantone` | latest  | Hex → closest Pantone name + hex            | ~150 KB (includes PMS DB) | MIT        |
+| `sharp`           | 0.34.5  | Image backbone — resize, raw pixel access   | already installed         | Apache-2.0 |
 
 All five are MIT or Apache-2.0, have no native binary dependencies (except Sharp which is already in the project), and are actively maintained.
 
@@ -59,20 +59,21 @@ All five are MIT or Apache-2.0, have no native binary dependencies (except Sharp
 ## 3. Accuracy Benchmark
 
 Tested against 6 synthetic files with known ground truth. Scoring:
+
 - **Exact**: detected count = ground truth
 - **Off-by-1**: ±1 color
 - **Colors found**: detected colors within ΔE < 15 of ground truth
 
 ### Results Table
 
-| File | GT Colors | quantize raw | MMCQ + merge | get-svg-colors | Winner |
-|------|-----------|-------------|--------------|----------------|--------|
-| `high-res-spot-color.png` (4 colors) | 4 | 7 colors, 2/4 found | 7 (filtered), 2/4 | N/A | Tie — both miss 2 colors¹ |
-| `vector-origin-logo.png` (3 colors) | 3 | 7 colors, **3/3 found** | 5 (filtered), 2/3 | N/A | quantize² |
-| `photo-heavy-design.jpg` (full-color) | N/A | 7 — correct "many" | 6 | N/A | Tie |
-| `simple-logo.png` (2 colors) | 2 | 7 colors, **2/2 found** | 5 (filtered), 1/2 | N/A | quantize² |
-| `customer-lowres.jpg` (3 colors) | 3 | 7 colors, **3/3 found** | 7 (filtered), 2/3 | N/A | quantize² |
-| `vector-spot-color.svg` (3 colors) | 3 | 7 colors, 3/3 found | 9 (filtered!), 2/3 | **3/3 exact** | **get-svg-colors** |
+| File                                  | GT Colors | quantize raw            | MMCQ + merge       | get-svg-colors | Winner                    |
+| ------------------------------------- | --------- | ----------------------- | ------------------ | -------------- | ------------------------- |
+| `high-res-spot-color.png` (4 colors)  | 4         | 7 colors, 2/4 found     | 7 (filtered), 2/4  | N/A            | Tie — both miss 2 colors¹ |
+| `vector-origin-logo.png` (3 colors)   | 3         | 7 colors, **3/3 found** | 5 (filtered), 2/3  | N/A            | quantize²                 |
+| `photo-heavy-design.jpg` (full-color) | N/A       | 7 — correct "many"      | 6                  | N/A            | Tie                       |
+| `simple-logo.png` (2 colors)          | 2         | 7 colors, **2/2 found** | 5 (filtered), 1/2  | N/A            | quantize²                 |
+| `customer-lowres.jpg` (3 colors)      | 3         | 7 colors, **3/3 found** | 7 (filtered), 2/3  | N/A            | quantize²                 |
+| `vector-spot-color.svg` (3 colors)    | 3         | 7 colors, 3/3 found     | 9 (filtered!), 2/3 | **3/3 exact**  | **get-svg-colors**        |
 
 > ¹ The high-res 4-color design uses subtle navy, gold, red, white. Both methods detect 2 of 4 correctly at the top of the palette. The star polygon and gold ring produce many intermediate tones. A higher quantize count (16 or 24) likely recovers all 4.
 >
@@ -84,6 +85,7 @@ Tested against 6 synthetic files with known ground truth. Scoring:
 **Color count accuracy** (does the count match ground truth?) is **zero** from raw quantize output.
 
 This is the core problem: quantize finds the right colors but can't tell you how many to report. You need either:
+
 1. User confirmation ("we detected these colors — does this look right?")
 2. Post-merge to collapse similar colors until stable
 
@@ -93,16 +95,16 @@ This is the core problem: quantize finds the right colors but can't tell you how
 
 Tested against detected palettes using `nearest-pantone` + CIEDE2000:
 
-| Input Color | Detected Pantone | ΔE | Quality |
-|------------|-----------------|-----|---------|
-| `#c81030` (bright red) | **True Red** (`#bf1932`) | 1.8 | ✅ Excellent |
-| `#e0a818` (gold) | **Golden Rod** (`#e2a829`) | 1.5 | ✅ Excellent |
-| `#0057b8` (royal blue) | *(not matched — hexToRGB bug)* | — | — |
-| `#ff6b35` (orange) | **Exotic Orange** (`#f96531`) | 1.0 | ✅ Excellent |
-| `#c8c8c8` (light gray) | **Lunar Rock** (`#c5c5c5`) | 0.8 | ✅ Excellent |
-| `#f0f0f0` (off-white) | **Blanc de Blanc** (`#e7e9e7`) | 2.3 | ✅ Good |
-| `#de0414` (process red) | **Orange Com** (`#da321c`) | 2.8 | ✅ Good |
-| `#300000` (dark maroon) | **Port Royale** (`#502b33`) | 12.1 | ⚠️ Marginal³ |
+| Input Color             | Detected Pantone               | ΔE   | Quality      |
+| ----------------------- | ------------------------------ | ---- | ------------ |
+| `#c81030` (bright red)  | **True Red** (`#bf1932`)       | 1.8  | ✅ Excellent |
+| `#e0a818` (gold)        | **Golden Rod** (`#e2a829`)     | 1.5  | ✅ Excellent |
+| `#0057b8` (royal blue)  | _(not matched — hexToRGB bug)_ | —    | —            |
+| `#ff6b35` (orange)      | **Exotic Orange** (`#f96531`)  | 1.0  | ✅ Excellent |
+| `#c8c8c8` (light gray)  | **Lunar Rock** (`#c5c5c5`)     | 0.8  | ✅ Excellent |
+| `#f0f0f0` (off-white)   | **Blanc de Blanc** (`#e7e9e7`) | 2.3  | ✅ Good      |
+| `#de0414` (process red) | **Orange Com** (`#da321c`)     | 2.8  | ✅ Good      |
+| `#300000` (dark maroon) | **Port Royale** (`#502b33`)    | 12.1 | ⚠️ Marginal³ |
 
 > ³ Dark near-black colors are hard to Pantone-match because multiple Pantones cluster there. Use with caution for very dark colors — offer alternatives.
 
@@ -116,16 +118,17 @@ Tested against detected palettes using `nearest-pantone` + CIEDE2000:
 
 ## 5. Processing Time Budget
 
-| File | Size | quantize | CIEDE2000 pipeline | get-svg-colors |
-|------|------|----------|--------------------|----------------|
-| high-res-spot-color.png | 5.03 MB | **562 ms** | **530 ms** | — |
-| vector-origin-logo.png | 1.40 MB | 240 ms | 253 ms | — |
-| photo-heavy-design.jpg | 97 KB | 6 ms | 9 ms | — |
-| simple-logo.png | 490 KB | 61 ms | 64 ms | — |
-| customer-lowres.jpg | 16 KB | 4 ms | 6 ms | — |
-| vector-spot-color.svg | 0.4 KB | 78 ms (after rasterize) | 25 ms | **5 ms** |
+| File                    | Size    | quantize                | CIEDE2000 pipeline | get-svg-colors |
+| ----------------------- | ------- | ----------------------- | ------------------ | -------------- |
+| high-res-spot-color.png | 5.03 MB | **562 ms**              | **530 ms**         | —              |
+| vector-origin-logo.png  | 1.40 MB | 240 ms                  | 253 ms             | —              |
+| photo-heavy-design.jpg  | 97 KB   | 6 ms                    | 9 ms               | —              |
+| simple-logo.png         | 490 KB  | 61 ms                   | 64 ms              | —              |
+| customer-lowres.jpg     | 16 KB   | 4 ms                    | 6 ms               | —              |
+| vector-spot-color.svg   | 0.4 KB  | 78 ms (after rasterize) | 25 ms              | **5 ms**       |
 
 **Budgets**:
+
 - Server-side: < 5,000 ms ✅ (all files pass — max 562 ms)
 - Client-side: < 2,000 ms ✅ (MMCQ without Sharp preprocessing runs in ~30-50 ms on browser Canvas)
 - Get-svg-colors is instant (5 ms) regardless of complexity
@@ -152,7 +155,7 @@ Tested against detected palettes using `nearest-pantone` + CIEDE2000:
 
 ```typescript
 await sharp(inputBuffer)
-  .flatten({ background: garmentColorRGB })  // ← critical
+  .flatten({ background: garmentColorRGB }) // ← critical
   .resize(200, 200, { fit: 'inside' })
   .raw()
   .toBuffer()
@@ -165,6 +168,7 @@ await sharp(inputBuffer)
 **Result**: quantize(16) produced 15 raw colors. After CIEDE2000 merge at ΔE < 10: 8 colors remained — still 5 too many.
 
 **Fix**: Two-pass approach:
+
 1. quantize with count = 24 to capture all colors
 2. CIEDE2000 merge at ΔE < 10
 3. Discard colors whose total pixel coverage is < 2% of the image
@@ -180,12 +184,13 @@ Anti-aliasing colors cover very few pixels each. A coverage threshold eliminates
 **Result on synthetic gradient**: Max ΔE between palette entries was 82.6, palette had 15 entries — correctly indicates full-color.
 
 **Production heuristic**:
+
 ```typescript
 function detectFullColor(palette: string[]): boolean {
   if (palette.length < 8) return false
   let maxDeltaE = 0
   for (let i = 1; i < palette.length; i++) {
-    const dE = ciede2000(palette[i-1], palette[i])
+    const dE = ciede2000(palette[i - 1], palette[i])
     if (dE > maxDeltaE) maxDeltaE = dE
   }
   return palette.length >= 10 && maxDeltaE > 40
@@ -237,18 +242,18 @@ This means color detection must happen **after** the user selects a garment or s
 type ColorDetectionResult = {
   method: 'svg-exact' | 'raster-quantize' | 'psd-layer'
   confidence: 'high' | 'medium' | 'low'
-  isFullColor: boolean               // → suggest simulated process
+  isFullColor: boolean // → suggest simulated process
   detectedColors: {
     hex: string
-    coverage: number                 // % of image pixels
-    pantone: string | null           // "Pantone 186 C"
+    coverage: number // % of image pixels
+    pantone: string | null // "Pantone 186 C"
     pantoneHex: string | null
     pantoneMatchDeltaE: number | null
     role: 'background' | 'color' | 'unknown'
   }[]
-  suggestedCount: number             // Screen count suggestion
-  needsUnderbase: boolean            // Dark garment + any non-white color
-  garmentContextUsed: string | null  // Hex of garment color used for context
+  suggestedCount: number // Screen count suggestion
+  needsUnderbase: boolean // Dark garment + any non-white color
+  garmentContextUsed: string | null // Hex of garment color used for context
   processingMs: number
 }
 ```
@@ -271,14 +276,14 @@ Confirmed count → pricing: 3 screens × setup fee → auto-fills quote line it
 
 ### Confidence Levels
 
-| Scenario | Confidence | UX |
-|----------|-----------|-----|
-| SVG input | **High** | "Detected 3 colors (from vector data)" |
-| PSD with channel names | **High** | "Detected 4 channels: White, Red, Black, Navy" (ag-psd) |
-| Clean raster, 1-4 colors | **Medium** | "Likely 3 colors — please confirm" |
-| Raster, 5-8 colors | **Medium-Low** | "Detected 5-8 colors — please adjust" |
-| Full-color / gradient | **Low** | "Full color design — recommend simulated process" |
-| Photo/CMYK | **Low** | "Photo-realistic — CMYK or simulated process" |
+| Scenario                 | Confidence     | UX                                                      |
+| ------------------------ | -------------- | ------------------------------------------------------- |
+| SVG input                | **High**       | "Detected 3 colors (from vector data)"                  |
+| PSD with channel names   | **High**       | "Detected 4 channels: White, Red, Black, Navy" (ag-psd) |
+| Clean raster, 1-4 colors | **Medium**     | "Likely 3 colors — please confirm"                      |
+| Raster, 5-8 colors       | **Medium-Low** | "Detected 5-8 colors — please adjust"                   |
+| Full-color / gradient    | **Low**        | "Full color design — recommend simulated process"       |
+| Photo/CMYK               | **Low**        | "Photo-realistic — CMYK or simulated process"           |
 
 ---
 
@@ -286,12 +291,12 @@ Confirmed count → pricing: 3 screens × setup fee → auto-fills quote line it
 
 Color count → screen count → setup fees connection:
 
-| Separation Type | Formula | Pricing Implication |
-|----------------|---------|---------------------|
-| Spot color | 1 color = 1 screen | Linear: 3 colors = 3 setup fees |
-| Dark garment + spot | colors + 1 (underbase) | 3 colors on dark = 4 screens |
-| Simulated process | 6-12 screens (fixed) | Full-color recommendation → price as 8-screen minimum |
-| CMYK process | 4 screens | Only on light garments |
+| Separation Type     | Formula                | Pricing Implication                                   |
+| ------------------- | ---------------------- | ----------------------------------------------------- |
+| Spot color          | 1 color = 1 screen     | Linear: 3 colors = 3 setup fees                       |
+| Dark garment + spot | colors + 1 (underbase) | 3 colors on dark = 4 screens                          |
+| Simulated process   | 6-12 screens (fixed)   | Full-color recommendation → price as 8-screen minimum |
+| CMYK process        | 4 screens              | Only on light garments                                |
 
 **Confidence for pricing**: At medium confidence (clean raster, 1-6 spot colors), the detected count ± 1 is reliable enough to auto-populate pricing. The "suggest and confirm" step gives Gary the escape hatch. Do NOT auto-confirm pricing for full-color or low-confidence detections — always require explicit color count input.
 
@@ -346,5 +351,5 @@ garment_color_context    text,                 -- hex of garment used for detect
 
 ---
 
-*Feeds into: M3 (#720) shaping — color detection architecture, server-side route design, UX "suggest and confirm" flow*
-*Also informs: M1 (#718) schema — nullable color detection columns*
+_Feeds into: M3 (#720) shaping — color detection architecture, server-side route design, UX "suggest and confirm" flow_
+_Also informs: M1 (#718) schema — nullable color detection columns_

@@ -218,6 +218,7 @@ Customer
 **Critical path**: M0 → M1 → M2 → {M3, M4, M5 in parallel} → M6 → M7
 
 **Spikes**:
+
 - ✅ #726 — Storage limits & rendition pipeline (2026-03-02): Sharp rendition overhead ×1.006–1.08 (near-zero). Supabase Storage POC passed (9/9 ops). Free tier holds ~900 artworks without PSDs — migrate to R2 when PSDs ship (~$0.37/mo). Sharp natively supports PNG/JPEG/WebP/SVG/GIF/TIFF; PSD/AI/EPS/PDF require preprocessing. Presigned upload URL pattern required (Vercel 4.5 MB body limit). `spike-726-storage.md`
 - ✅ #725 — Color detection libraries (2026-03-02): `get-svg-colors` exact for SVGs (3/3 colors, 5 ms). `quantize` (MMCQ) identifies correct colors but over-counts — needs CIEDE2000 post-merge + 2% coverage threshold. Pantone matching ΔE 1–3 for spot colors. Critical: `flatten(garmentColor)` required before detection. 3-path architecture confirmed. `spike-725-color-detection.md`
 
