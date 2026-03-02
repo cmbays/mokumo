@@ -42,8 +42,9 @@ const {
   const mockAnd = vi.fn((a: unknown, b: unknown, c: unknown) => ({ a, b, c }))
 
   // Transaction mock: immediately calls the callback with a tx object that has the same methods
-  const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<void>) => {
-    const tx = {
+  type MockTx = { delete: typeof mockDelete; insert: typeof mockInsert; update: typeof mockUpdate }
+  const mockTransaction = vi.fn(async (callback: (tx: MockTx) => Promise<void>) => {
+    const tx: MockTx = {
       delete: mockDelete,
       insert: mockInsert,
       update: mockUpdate,

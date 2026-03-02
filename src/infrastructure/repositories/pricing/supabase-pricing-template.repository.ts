@@ -116,7 +116,7 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
             isDefault: data.isDefault,
             updatedAt: now,
           })
-          .where(eq(pricingTemplates.id, data.id))
+          .where(and(eq(pricingTemplates.id, data.id), eq(pricingTemplates.shopId, data.shopId)))
           .returning()
         if (!row) throw new Error(`upsertTemplate: no row returned for id=${data.id}`)
         return row
@@ -259,11 +259,11 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
               ne(pricingTemplates.id, id)
             )
           )
-        // Set the target template as default
+        // Set the target template as default — include shopId to prevent cross-tenant mutation
         await tx
           .update(pricingTemplates)
           .set({ isDefault: true })
-          .where(eq(pricingTemplates.id, id))
+          .where(and(eq(pricingTemplates.id, id), eq(pricingTemplates.shopId, shopId)))
       })
     } catch (error) {
       log.error('setDefaultTemplate failed', { shopId, id, serviceType, error })

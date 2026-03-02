@@ -4,12 +4,13 @@ import { z } from 'zod'
 import { verifySession } from '@infra/auth/session'
 import {
   listTemplates,
+  getDefaultTemplate,
   getTemplateById,
   upsertTemplate,
   upsertMatrixCells,
-  getMarkupRules,
+  getMarkupRules as fetchMarkupRules,
   upsertMarkupRules,
-  getRushTiers,
+  getRushTiers as fetchRushTiers,
   upsertRushTiers,
   deleteTemplate,
   setDefaultTemplate,
@@ -80,6 +81,7 @@ export async function getPricingTemplate(
 
   try {
     const data = await getTemplateById(id)
+    if (data && data.shopId !== session.shopId) return err('Template not found')
     return ok(data)
   } catch (error) {
     log.error('getPricingTemplate failed', { id, error })
@@ -167,6 +169,8 @@ export async function savePricingMatrix(
   if (!session) return err('Unauthorized')
 
   try {
+    const template = await getTemplateById(templateId)
+    if (!template || template.shopId !== session.shopId) return err('Template not found')
     await upsertMatrixCells(templateId, cells)
     return ok(null)
   } catch (error) {
@@ -199,20 +203,43 @@ export async function setDefaultPricingTemplate(
   }
 }
 
-// ─── getMarkupRulesAction ─────────────────────────────────────────────────────
+// ─── getDefaultPricingTemplate ────────────────────────────────────────────────
 
 /**
- * Returns all garment markup rules for the authenticated shop.
+ * Returns the default template for a given service type, with all matrix cells.
+ * This is the primary read path for the pricing editor — called on first load.
  */
-export async function getMarkupRulesAction(): Promise<ActionResult<GarmentMarkupRule[]>> {
+export async function getDefaultPricingTemplate(
+  serviceType: string
+): Promise<ActionResult<PricingTemplateWithMatrix | null>> {
+  if (!serviceType || serviceType.trim().length === 0) return err('Invalid service type')
+
   const session = await verifySession()
   if (!session) return err('Unauthorized')
 
   try {
-    const data = await getMarkupRules(session.shopId)
+    const data = await getDefaultTemplate(session.shopId, serviceType)
     return ok(data)
   } catch (error) {
-    log.error('getMarkupRulesAction failed', { error })
+    log.error('getDefaultPricingTemplate failed', { serviceType, error })
+    return err('Failed to load default pricing template')
+  }
+}
+
+// ─── getMarkupRules ───────────────────────────────────────────────────────────
+
+/**
+ * Returns all garment markup rules for the authenticated shop.
+ */
+export async function getMarkupRules(): Promise<ActionResult<GarmentMarkupRule[]>> {
+  const session = await verifySession()
+  if (!session) return err('Unauthorized')
+
+  try {
+    const data = await fetchMarkupRules(session.shopId)
+    return ok(data)
+  } catch (error) {
+    log.error('getMarkupRules failed', { error })
     return err('Failed to load markup rules')
   }
 }
@@ -237,20 +264,20 @@ export async function saveMarkupRules(
   }
 }
 
-// ─── getRushTiersAction ───────────────────────────────────────────────────────
+// ─── getRushTiers ─────────────────────────────────────────────────────────────
 
 /**
  * Returns all rush tiers for the authenticated shop, ordered by displayOrder.
  */
-export async function getRushTiersAction(): Promise<ActionResult<RushTier[]>> {
+export async function getRushTiers(): Promise<ActionResult<RushTier[]>> {
   const session = await verifySession()
   if (!session) return err('Unauthorized')
 
   try {
-    const data = await getRushTiers(session.shopId)
+    const data = await fetchRushTiers(session.shopId)
     return ok(data)
   } catch (error) {
-    log.error('getRushTiersAction failed', { error })
+    log.error('getRushTiers failed', { error })
     return err('Failed to load rush tiers')
   }
 }

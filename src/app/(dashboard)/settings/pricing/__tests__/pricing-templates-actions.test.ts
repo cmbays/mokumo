@@ -9,6 +9,7 @@ vi.mock('server-only', () => ({}))
 const {
   mockVerifySession,
   mockListTemplates,
+  mockGetDefaultTemplate,
   mockGetTemplateById,
   mockUpsertTemplate,
   mockUpsertMatrixCells,
@@ -22,6 +23,7 @@ const {
   return {
     mockVerifySession: vi.fn(),
     mockListTemplates: vi.fn(),
+    mockGetDefaultTemplate: vi.fn(),
     mockGetTemplateById: vi.fn(),
     mockUpsertTemplate: vi.fn(),
     mockUpsertMatrixCells: vi.fn(),
@@ -38,6 +40,7 @@ vi.mock('@infra/auth/session', () => ({ verifySession: mockVerifySession }))
 
 vi.mock('@infra/repositories/pricing-templates', () => ({
   listTemplates: mockListTemplates,
+  getDefaultTemplate: mockGetDefaultTemplate,
   getTemplateById: mockGetTemplateById,
   upsertTemplate: mockUpsertTemplate,
   upsertMatrixCells: mockUpsertMatrixCells,
@@ -59,15 +62,16 @@ vi.mock('@shared/lib/logger', () => ({
 
 import {
   listPricingTemplates,
+  getDefaultPricingTemplate,
   getPricingTemplate,
   createPricingTemplate,
   updatePricingTemplate,
   deletePricingTemplate,
   savePricingMatrix,
   setDefaultPricingTemplate,
-  getMarkupRulesAction,
+  getMarkupRules,
   saveMarkupRules,
-  getRushTiersAction,
+  getRushTiers,
   saveRushTiers,
 } from '../pricing-templates-actions'
 
@@ -76,6 +80,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const SHOP_ID = '00000000-0000-4000-8000-000000004e6b'
+const OTHER_SHOP_ID = '00000000-0000-4000-8000-000000009999'
 const TEMPLATE_ID = '00000000-0000-4000-8000-000000000001'
 const SESSION = { userId: 'user-1', role: 'owner', shopId: SHOP_ID }
 
@@ -94,6 +99,16 @@ const TEMPLATE_ROW = {
 }
 
 const TEMPLATE_WITH_MATRIX = { ...TEMPLATE_ROW, cells: [] }
+
+const CREATE_DATA = {
+  name: 'New',
+  serviceType: 'screen_print',
+  interpolationMode: 'linear' as const,
+  setupFeePerColor: 15,
+  sizeUpchargeXxl: 2,
+  standardTurnaroundDays: 7,
+  isDefault: false,
+}
 
 // ---------------------------------------------------------------------------
 // Helper to reset mocks with a valid session by default
@@ -137,6 +152,44 @@ describe('listPricingTemplates', () => {
 })
 
 // ---------------------------------------------------------------------------
+// getDefaultPricingTemplate
+// ---------------------------------------------------------------------------
+
+describe('getDefaultPricingTemplate', () => {
+  it('returns error for empty service type', async () => {
+    const result = await getDefaultPricingTemplate('')
+    expect(result).toEqual({ data: null, error: 'Invalid service type' })
+    expect(mockVerifySession).not.toHaveBeenCalled()
+  })
+
+  it('returns Unauthorized when session is null', async () => {
+    mockVerifySession.mockResolvedValueOnce(null)
+    const result = await getDefaultPricingTemplate('screen_print')
+    expect(result).toEqual({ data: null, error: 'Unauthorized' })
+    expect(mockGetDefaultTemplate).not.toHaveBeenCalled()
+  })
+
+  it('calls getDefaultTemplate with shopId from session', async () => {
+    mockGetDefaultTemplate.mockResolvedValueOnce(TEMPLATE_WITH_MATRIX)
+    const result = await getDefaultPricingTemplate('screen_print')
+    expect(mockGetDefaultTemplate).toHaveBeenCalledWith(SHOP_ID, 'screen_print')
+    expect(result).toEqual({ data: TEMPLATE_WITH_MATRIX, error: null })
+  })
+
+  it('returns null data when no default template exists', async () => {
+    mockGetDefaultTemplate.mockResolvedValueOnce(null)
+    const result = await getDefaultPricingTemplate('screen_print')
+    expect(result).toEqual({ data: null, error: null })
+  })
+
+  it('returns error envelope when repo throws', async () => {
+    mockGetDefaultTemplate.mockRejectedValueOnce(new Error('DB error'))
+    const result = await getDefaultPricingTemplate('screen_print')
+    expect(result).toEqual({ data: null, error: 'Failed to load default pricing template' })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getPricingTemplate
 // ---------------------------------------------------------------------------
 
@@ -164,6 +217,12 @@ describe('getPricingTemplate', () => {
     const result = await getPricingTemplate(TEMPLATE_ID)
     expect(result).toEqual({ data: null, error: null })
   })
+
+  it('returns not found when template belongs to a different shop', async () => {
+    mockGetTemplateById.mockResolvedValueOnce({ ...TEMPLATE_WITH_MATRIX, shopId: OTHER_SHOP_ID })
+    const result = await getPricingTemplate(TEMPLATE_ID)
+    expect(result).toEqual({ data: null, error: 'Template not found' })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -173,14 +232,14 @@ describe('getPricingTemplate', () => {
 describe('createPricingTemplate', () => {
   it('returns Unauthorized when session is null', async () => {
     mockVerifySession.mockResolvedValueOnce(null)
-    const result = await createPricingTemplate({ name: 'New', serviceType: 'screen_print' } as never)
+    const result = await createPricingTemplate(CREATE_DATA)
     expect(result).toEqual({ data: null, error: 'Unauthorized' })
     expect(mockUpsertTemplate).not.toHaveBeenCalled()
   })
 
   it('injects shopId from session — never from caller', async () => {
     mockUpsertTemplate.mockResolvedValueOnce(TEMPLATE_ROW)
-    await createPricingTemplate({ name: 'New', serviceType: 'screen_print' } as never)
+    await createPricingTemplate(CREATE_DATA)
     expect(mockUpsertTemplate).toHaveBeenCalledWith(
       expect.objectContaining({ shopId: SHOP_ID })
     )
@@ -188,7 +247,7 @@ describe('createPricingTemplate', () => {
 
   it('returns created template', async () => {
     mockUpsertTemplate.mockResolvedValueOnce(TEMPLATE_ROW)
-    const result = await createPricingTemplate({ name: 'New', serviceType: 'screen_print' } as never)
+    const result = await createPricingTemplate(CREATE_DATA)
     expect(result).toEqual({ data: TEMPLATE_ROW, error: null })
   })
 })
@@ -282,7 +341,22 @@ describe('savePricingMatrix', () => {
     expect(result).toEqual({ data: null, error: 'Unauthorized' })
   })
 
+  it('returns not found when template does not exist', async () => {
+    mockGetTemplateById.mockResolvedValueOnce(null)
+    const result = await savePricingMatrix(TEMPLATE_ID, [])
+    expect(result).toEqual({ data: null, error: 'Template not found' })
+    expect(mockUpsertMatrixCells).not.toHaveBeenCalled()
+  })
+
+  it('returns not found when template belongs to a different shop', async () => {
+    mockGetTemplateById.mockResolvedValueOnce({ ...TEMPLATE_WITH_MATRIX, shopId: OTHER_SHOP_ID })
+    const result = await savePricingMatrix(TEMPLATE_ID, [])
+    expect(result).toEqual({ data: null, error: 'Template not found' })
+    expect(mockUpsertMatrixCells).not.toHaveBeenCalled()
+  })
+
   it('calls upsertMatrixCells with templateId and cells', async () => {
+    mockGetTemplateById.mockResolvedValueOnce(TEMPLATE_WITH_MATRIX)
     mockUpsertMatrixCells.mockResolvedValueOnce(undefined)
     const cells = [{ templateId: TEMPLATE_ID, qtyAnchor: 24, colorCount: 2, costPerPiece: 5.5 }]
     await savePricingMatrix(TEMPLATE_ID, cells)
@@ -290,6 +364,7 @@ describe('savePricingMatrix', () => {
   })
 
   it('returns ok null on success', async () => {
+    mockGetTemplateById.mockResolvedValueOnce(TEMPLATE_WITH_MATRIX)
     mockUpsertMatrixCells.mockResolvedValueOnce(undefined)
     const result = await savePricingMatrix(TEMPLATE_ID, [])
     expect(result).toEqual({ data: null, error: null })
@@ -334,20 +409,20 @@ describe('setDefaultPricingTemplate', () => {
 })
 
 // ---------------------------------------------------------------------------
-// getMarkupRulesAction
+// getMarkupRules
 // ---------------------------------------------------------------------------
 
-describe('getMarkupRulesAction', () => {
+describe('getMarkupRules', () => {
   it('returns Unauthorized when session is null', async () => {
     mockVerifySession.mockResolvedValueOnce(null)
-    const result = await getMarkupRulesAction()
+    const result = await getMarkupRules()
     expect(result).toEqual({ data: null, error: 'Unauthorized' })
   })
 
   it('calls getMarkupRules with shopId from session', async () => {
     const rules = [{ id: 'r1', shopId: SHOP_ID, garmentCategory: 'tshirt', markupMultiplier: 2.0 }]
     mockGetMarkupRules.mockResolvedValueOnce(rules)
-    const result = await getMarkupRulesAction()
+    const result = await getMarkupRules()
     expect(mockGetMarkupRules).toHaveBeenCalledWith(SHOP_ID)
     expect(result).toEqual({ data: rules, error: null })
   })
@@ -386,13 +461,13 @@ describe('saveMarkupRules', () => {
 })
 
 // ---------------------------------------------------------------------------
-// getRushTiersAction
+// getRushTiers
 // ---------------------------------------------------------------------------
 
-describe('getRushTiersAction', () => {
+describe('getRushTiers', () => {
   it('returns Unauthorized when session is null', async () => {
     mockVerifySession.mockResolvedValueOnce(null)
-    const result = await getRushTiersAction()
+    const result = await getRushTiers()
     expect(result).toEqual({ data: null, error: 'Unauthorized' })
   })
 
@@ -401,7 +476,7 @@ describe('getRushTiersAction', () => {
       { id: 't1', shopId: SHOP_ID, name: 'Next Day', daysUnderStandard: 6, flatFee: 30, pctSurcharge: 0.1, displayOrder: 1 },
     ]
     mockGetRushTiers.mockResolvedValueOnce(tiers)
-    const result = await getRushTiersAction()
+    const result = await getRushTiers()
     expect(mockGetRushTiers).toHaveBeenCalledWith(SHOP_ID)
     expect(result).toEqual({ data: tiers, error: null })
   })
