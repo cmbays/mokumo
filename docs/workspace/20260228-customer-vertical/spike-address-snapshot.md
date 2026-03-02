@@ -21,6 +21,7 @@ what gaps exist, and exactly what needs to be added.
 ## Goal
 
 Identify:
+
 1. What address snapshot fields exist in `quote.ts` and `invoice.ts` domain entities
 2. Whether the Drizzle schema (`src/db/schema/`) has corresponding columns
 3. What needs to be added (entity fields + migration columns + Zod schemas)
@@ -30,13 +31,13 @@ Identify:
 
 ## Questions
 
-| # | Question |
-| --- | --- |
+| #         | Question                                                                           |
+| --------- | ---------------------------------------------------------------------------------- |
 | **C6-Q1** | Does `quote.ts` have `shippingAddressSnapshot` or `billingAddressSnapshot` fields? |
-| **C6-Q2** | Does `invoice.ts` have `billingAddressSnapshot` fields? |
-| **C6-Q3** | Does the Drizzle schema have corresponding JSONB columns? |
-| **C6-Q4** | What is the correct JSONB structure for a snapshotted address? |
-| **C6-Q5** | Which action populates the snapshot — at quote creation or invoice creation? |
+| **C6-Q2** | Does `invoice.ts` have `billingAddressSnapshot` fields?                            |
+| **C6-Q3** | Does the Drizzle schema have corresponding JSONB columns?                          |
+| **C6-Q4** | What is the correct JSONB structure for a snapshotted address?                     |
+| **C6-Q5** | Which action populates the snapshot — at quote creation or invoice creation?       |
 
 ---
 
@@ -45,15 +46,17 @@ Identify:
 ### C6-Q1: Quote entity
 
 `src/domain/entities/quote.ts` — fully read. Fields present:
+
 - `id, quoteNumber, customerId, lineItems, setupFees, subtotal, total, discounts, shipping,
-  tax, dtfLineItems, dtfSheetCalculation, artworkIds, isArchived, status, internalNotes,
-  customerNotes, createdAt, updatedAt, sentAt`
+tax, dtfLineItems, dtfSheetCalculation, artworkIds, isArchived, status, internalNotes,
+customerNotes, createdAt, updatedAt, sentAt`
 
 **No address snapshot fields.** `shippingAddressSnapshot` and `billingAddressSnapshot` are absent.
 
 ### C6-Q2: Invoice entity
 
 `src/domain/entities/invoice.ts` — fully read. Fields present:
+
 - Includes `pricingSnapshot` (pricing at creation time) ✅
 - Includes `customerId, quoteId, jobId`
 
@@ -62,6 +65,7 @@ Identify:
 ### C6-Q3: Drizzle schema
 
 The Drizzle schema files at `src/db/schema/` were not read in this spike. However, given:
+
 - Phase 1 is mock-only with no real migrations yet
 - The quote/invoice domain entities lack snapshot fields
 - The customer vertical Wave 0 migration will create all new tables
@@ -74,6 +78,7 @@ if starting fresh).
 ### C6-Q4: JSONB shape for snapshotted address
 
 Based on `address.ts` domain entity:
+
 ```typescript
 // src/domain/entities/address.ts
 const addressSchema = z.object({
@@ -86,7 +91,7 @@ const addressSchema = z.object({
   zip: z.string().min(1),
   country: z.string().default('US'),
   isDefault: z.boolean().default(false),
-  type: addressTypeEnum,  // 'billing' | 'shipping'
+  type: addressTypeEnum, // 'billing' | 'shipping'
 })
 ```
 
@@ -96,6 +101,7 @@ NEW address shape from `C1.3`. The snapshot schema for quoting/invoicing should 
 schema as the address entity (exact copy at creation time).
 
 Snapshot JSONB shape:
+
 ```json
 {
   "id": "uuid",
@@ -118,6 +124,7 @@ Snapshot JSONB shape:
 
 Both actions receive the customer record which contains the customer's current addresses.
 The server action:
+
 1. Reads `customerAddresses` from the customer record
 2. Finds the primary shipping (for quote) or primary billing (for invoice) address
 3. Deep-copies it into the quote/invoice JSONB field
@@ -130,12 +137,14 @@ The server action:
 ### Domain Entity Changes
 
 **`quote.ts`** — add two optional snapshot fields:
+
 ```typescript
 shippingAddressSnapshot: addressSchema.optional(),
 billingAddressSnapshot: addressSchema.optional(),
 ```
 
 **`invoice.ts`** — add one required snapshot field (billing is required for invoices):
+
 ```typescript
 billingAddressSnapshot: addressSchema.optional(), // optional for backward compat with existing mock data
 ```
@@ -143,16 +152,19 @@ billingAddressSnapshot: addressSchema.optional(), // optional for backward compa
 ### Drizzle Schema Changes
 
 If quotes/invoices tables already exist in `src/db/schema/`:
+
 - `ALTER TABLE quotes ADD COLUMN shipping_address_snapshot jsonb;`
 - `ALTER TABLE quotes ADD COLUMN billing_address_snapshot jsonb;`
 - `ALTER TABLE invoices ADD COLUMN billing_address_snapshot jsonb;`
 
 If starting from fresh migration (more likely — Phase 2 clean slate):
+
 - Include these columns in the initial quotes/invoices table DDL
 
 ### Address Schema Evolution
 
 The existing `address.ts` entity needs these additions for the customer vertical:
+
 - `label: z.string().min(1)` — already exists ✅
 - `attention_to: z.string().optional()` — ADD (not in current schema)
 - `is_primary_billing: z.boolean()` — ADD
@@ -166,6 +178,7 @@ the snapshot schema.
 ## Acceptance
 
 Spike complete. We can describe:
+
 - Both `quote.ts` and `invoice.ts` lack address snapshot fields — need to add them
 - No Drizzle columns exist yet — added in Wave 0 migration (or ALTER TABLE if schema exists)
 - JSONB snapshot shape is the full `addressSchema` (extended version from C1.3)

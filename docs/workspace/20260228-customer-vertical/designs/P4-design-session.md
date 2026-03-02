@@ -8,10 +8,10 @@
 
 ## Prototypes Built
 
-| Artboard | Node ID | Size | Core bet |
-|---|---|---|---|
-| N — Artwork Tab | 3O5-0 (shell: 3KL-0) | 1440×960 | ArtworkPiece grouping with blue left-border, Customer Color Palette right rail |
-| O — Upload Sheet | 3QJ-0 (overlay: 3XI-0) | 1440×960 | Slide-over sheet overlaid on dimmed Artwork tab |
+| Artboard         | Node ID                | Size     | Core bet                                                                       |
+| ---------------- | ---------------------- | -------- | ------------------------------------------------------------------------------ |
+| N — Artwork Tab  | 3O5-0 (shell: 3KL-0)   | 1440×960 | ArtworkPiece grouping with blue left-border, Customer Color Palette right rail |
+| O — Upload Sheet | 3QJ-0 (overlay: 3XI-0) | 1440×960 | Slide-over sheet overlaid on dimmed Artwork tab                                |
 
 ---
 
@@ -55,6 +55,7 @@
 ### Upload Sheet Form — Minimalistic
 
 All form fields use **no background fill**:
+
 - **Artwork Piece**: Full-border combobox only when selected (border: `1px solid rgba(42,185,255,0.45)`) — no helper text, no "Create new piece" link. Combobox is a creatable select; typing a new name creates inline.
 - **Design Name**: Bottom-border only (`border-bottom: 1px solid rgba(255,255,255,0.18)`) on transparent bg
 - **File**: Thumbnail preview (54×54px dark bg + artwork SVG preview) + filename + file size — NOT a type badge. Trash icon is red (`#D23E08`, tinted bg `rgba(210,62,8,0.12)`)
@@ -91,6 +92,7 @@ ArtworkPiece (customer-level, named group)
 ### DRY Upload Component
 
 `<ArtworkUploadSheet customerId={...} quoteId={...} />`
+
 - `customerId` always required (design belongs to customer)
 - `quoteId` optional — when present, auto-links uploaded design to the quote
 - Same component mounted from Customer Artwork tab AND Quote builder
@@ -99,6 +101,7 @@ ArtworkPiece (customer-level, named group)
 ### Artwork Vertical Separation
 
 Customer vertical ships the Artwork tab as a **working shell** — browsable, uploadable, grouped by ArtworkPiece. The Artwork vertical will build:
+
 - Full `ArtworkPiece → Design` schema with proper DB migrations
 - Auto-detect colors from file analysis
 - Integration with screen count / ink cost calculations
@@ -120,11 +123,13 @@ During P4 session, Artboard I (Preferences tab) was also updated to match canoni
 ## Pending Header Sync (Blocked — Paper MCP weekly limit reached)
 
 Changes needed on **Artboard G** (Overview) and **Artboard K** (Activity: All) — same as applied to I:
+
 - Healthy badge: de-box (green dot + text only)
 - Stats strip: balance inline after referrals
 - Smart tag already in company row on these boards
 
 Node structure partially navigated:
+
 - G: Artboard `1J7-0` → App Shell `1O8-0` → Sidebar `1O9-0` + Main `1OO-0`
 - K: Artboard `2G1-0` → App Shell `2TI-0` → (not yet navigated — hit limit)
 

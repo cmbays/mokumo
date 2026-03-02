@@ -8,11 +8,11 @@
 
 ## Prototypes Built
 
-| Artboard | Node ID | Size | Core bet |
-|---|---|---|---|
-| K — Activity: All | 2G1-0 (shell: 2TI-0) | 1440×960 | Full page shell — baseline filter state with 3 job entries |
+| Artboard               | Node ID              | Size     | Core bet                                                    |
+| ---------------------- | -------------------- | -------- | ----------------------------------------------------------- |
+| K — Activity: All      | 2G1-0 (shell: 2TI-0) | 1440×960 | Full page shell — baseline filter state with 3 job entries  |
 | L — Activity: Invoices | 30Q-0 (shell: 30R-0) | 1440×960 | Invoice filter state — 3 invoice states (Sent/Overdue/Paid) |
-| M — Activity: Quotes | 36N-0 (shell: 36O-0) | 1440×960 | Quotes filter state — 3 quote states (Draft/Sent/Accepted) |
+| M — Activity: Quotes   | 36N-0 (shell: 36O-0) | 1440×960 | Quotes filter state — 3 quote states (Draft/Sent/Accepted)  |
 
 Notes filter state deemed unnecessary — straightforward enough to implement without a mockup.
 
@@ -65,6 +65,7 @@ Exception: overdue invoices use `#D23E08` on line 2 instead of muted white (urge
 ### Filter Chips
 
 Pill style: `padding: 5px 14px; border-radius: 20px`
+
 - Inactive: `border: 1px solid #FFFFFF17; color: #FFFFFF52`
 - Active: `border: 1px solid #2AB9FF59; background: #2AB9FF17; color: #2AB9FF; font-weight: 500`
 
@@ -107,6 +108,7 @@ Left border and status badge color by status:
 Identified during P3: urgency-signaling colors should be **semantic tokens** separate from raw color tokens.
 
 Proposed token layer:
+
 ```
 --urgency-critical  → currently maps to --error   (#D23E08)
 --urgency-high      → currently maps to --warning  (#FFC663)
@@ -122,16 +124,19 @@ Rationale: the expiry chip on a Sent quote uses gold for urgency, not because th
 ## Mock Data Used
 
 **Job entries (Artboard K — All filter)**:
+
 - J-1048 · Fall Showcase Fan Shirts — BLOCKED (red) · $4,800 · Started 7d ago
 - J-1043 · Spring Cheer Showcase Hoodies — IN PROGRESS (blue) · $9,600 · Due in 4d
 - J-1039 · Regional Competition Warmups — DONE (green) · $14,200 · Shipped Oct 3
 
 **Invoice entries (Artboard L — Invoices filter)**:
+
 - INV-1042 · Fall Showcase Fan Shirts — Sent (gold) · $67,200 · 0% paid · Due in 14 days
 - INV-1035 · Spring Cheer Camp Jerseys — Overdue (red) · $8,200 · 50% paid · 12 days overdue
 - INV-1029 · Summer Invitational Team Uniforms — Paid (green) · $23,400 · 100% paid · Paid Aug 3
 
 **Quote entries (Artboard M — Quotes filter)**:
+
 - Q-1058 · Fall Showcase Fan Shirts — Draft (gold) · $12,400 · 5 items · Saved 2d ago
 - Q-1051 · Winter Tournament Uniforms — Sent (blue) · $41,500 · 3 items · Expires in 7 days
 - Q-1044 · Summer Invitational Team Uniforms — Accepted (green) · $67,200 · 8 items · Accepted Dec 12 · Job J-1044 created

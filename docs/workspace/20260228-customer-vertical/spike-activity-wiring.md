@@ -26,6 +26,7 @@ to build vs. wire in the cross-vertical wave?
 ## Goal
 
 Identify:
+
 1. What quote/job/invoice state transitions should trigger activity entries
 2. What data is available at each call site (customerId, entity ID, status)
 3. Whether cross-vertical server actions need to be built from scratch or wired into existing handlers
@@ -35,14 +36,14 @@ Identify:
 
 ## Questions
 
-| # | Question |
-| --- | --- |
+| #         | Question                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------- |
 | **C3-Q1** | Where do quote status mutations currently live (mock)? Are they component state, context, or mock repository? |
-| **C3-Q2** | What data is available in the quote record at mutation time — does it carry `customerId`? |
-| **C3-Q3** | Where do job lane-change/completion mutations live? |
-| **C3-Q4** | Does the job entity carry `customerId` directly or only via `quoteId`? |
-| **C3-Q5** | Where do invoice payment/send mutations live? |
-| **C3-Q6** | Does the invoice entity carry `customerId` directly? |
+| **C3-Q2** | What data is available in the quote record at mutation time — does it carry `customerId`?                     |
+| **C3-Q3** | Where do job lane-change/completion mutations live?                                                           |
+| **C3-Q4** | Does the job entity carry `customerId` directly or only via `quoteId`?                                        |
+| **C3-Q5** | Where do invoice payment/send mutations live?                                                                 |
+| **C3-Q6** | Does the invoice entity carry `customerId` directly?                                                          |
 
 ---
 
@@ -52,6 +53,7 @@ Identify:
 
 No server actions exist. Quote mutations are handled via mock in-memory patterns.
 The `quoteSchema` in `src/domain/entities/quote.ts` has:
+
 - `id: z.string().uuid()`
 - `customerId: z.string().uuid()` — customerId IS on the quote ✅
 - `status: quoteStatusEnum` — `draft | sent | accepted | declined | revised`
@@ -90,6 +92,7 @@ Key question: does `job.customerId` exist as a direct field, or is it only deriv
 ### C3-Q5, C3-Q6: Invoice mutations
 
 `invoice.ts` has:
+
 - `id: z.string().uuid()`
 - `customerId: z.string().uuid()` — customerId IS on the invoice ✅
 - `quoteId: z.string().uuid().optional()`
@@ -98,6 +101,7 @@ Key question: does `job.customerId` exist as a direct field, or is it only deriv
 - `auditLog: z.array(auditLogEntrySchema)` — existing audit trail within the invoice entity
 
 Note: the invoice already has `auditLog` with `action` enum (`created | sent | payment_recorded | voided | edited | credit_memo_issued`). This is the INTERNAL invoice audit log. The customer activity timeline is the EXTERNAL cross-entity timeline. Both are needed — they serve different purposes:
+
 - `auditLog` on invoice = for invoice-centric audit (who did what to this invoice)
 - `customer_activities` = for customer-centric history (everything about this customer)
 
@@ -122,11 +126,11 @@ type ActivityInput = {
   source: 'manual' | 'system' | 'email' | 'sms' | 'voicemail' | 'portal'
   direction: 'inbound' | 'outbound'
   actorType: 'staff' | 'system' | 'customer'
-  actorId?: string          // userId or 'system'
-  content: string           // human-readable description
+  actorId?: string // userId or 'system'
+  content: string // human-readable description
   relatedEntityType?: 'quote' | 'job' | 'invoice' | 'contact' | 'address'
-  relatedEntityId?: string  // UUID of the related entity
-  externalRef?: string      // Twilio SID, email message ID, etc. (future use)
+  relatedEntityId?: string // UUID of the related entity
+  externalRef?: string // Twilio SID, email message ID, etc. (future use)
 }
 ```
 
@@ -152,6 +156,7 @@ to their own vertical build phases.
 ## Acceptance
 
 Spike complete. We can describe:
+
 - All 9 activity events that need auto-logging (4 quote, 3 job, 4 invoice — two overlap: create)
 - The `ActivityInput` shape for the service
 - Which entities already carry `customerId` (quote ✅, invoice ✅; job needs confirmation)

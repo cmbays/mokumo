@@ -24,20 +24,20 @@ The artwork vertical is a foundational capability that feeds into customers, quo
 
 ### Competitor Capabilities Matrix
 
-| Capability | Printavo | InkSoft | DecoNetwork | YoPrint | GraphicsFlow |
-|---|---|---|---|---|---|
-| File upload per order | Yes | Via designer | Yes | Yes | N/A |
-| Customer art library | **No** | Saved designs/store | Design library | **No** | My Art workspace |
-| Online designer | No (basic Mockup Creator) | Yes (Design Studio) | Yes (Online Designer) | No | Stock Art Customizer |
-| Auto mockup from catalog | No | Partial | **Yes (SmartSelect)** | No | No |
-| Artwork approval | Yes (flexible) | Proposal-based | Formal workflow | **Yes (per-artwork)** | Basic |
-| Revision tracking | No | Proposal-level | Multiple versions | **Yes (best-in-class)** | No |
-| File validation | No | Boundary enforcement | File standards notif. | No | No |
-| Annotation/markup | No | No | Notes/attachments | Comments only | Comments only |
-| PDF approval sheet | No | No | **Yes (comprehensive)** | No | No |
-| Art-to-production gate | Custom statuses | Approval blocks cards | Approval blocks prod. | All-art-approved gate | N/A |
-| Decoration zones | No | Yes (boundaries) | **Yes (auto-config)** | No | No |
-| Starting price | $49/mo | $314/mo | $199/mo + $499 | $69/mo | $99/mo |
+| Capability               | Printavo                  | InkSoft               | DecoNetwork             | YoPrint                 | GraphicsFlow         |
+| ------------------------ | ------------------------- | --------------------- | ----------------------- | ----------------------- | -------------------- |
+| File upload per order    | Yes                       | Via designer          | Yes                     | Yes                     | N/A                  |
+| Customer art library     | **No**                    | Saved designs/store   | Design library          | **No**                  | My Art workspace     |
+| Online designer          | No (basic Mockup Creator) | Yes (Design Studio)   | Yes (Online Designer)   | No                      | Stock Art Customizer |
+| Auto mockup from catalog | No                        | Partial               | **Yes (SmartSelect)**   | No                      | No                   |
+| Artwork approval         | Yes (flexible)            | Proposal-based        | Formal workflow         | **Yes (per-artwork)**   | Basic                |
+| Revision tracking        | No                        | Proposal-level        | Multiple versions       | **Yes (best-in-class)** | No                   |
+| File validation          | No                        | Boundary enforcement  | File standards notif.   | No                      | No                   |
+| Annotation/markup        | No                        | No                    | Notes/attachments       | Comments only           | Comments only        |
+| PDF approval sheet       | No                        | No                    | **Yes (comprehensive)** | No                      | No                   |
+| Art-to-production gate   | Custom statuses           | Approval blocks cards | Approval blocks prod.   | All-art-approved gate   | N/A                  |
+| Decoration zones         | No                        | Yes (boundaries)      | **Yes (auto-config)**   | No                      | No                   |
+| Starting price           | $49/mo                    | $314/mo               | $199/mo + $499          | $69/mo                  | $99/mo               |
 
 ### 8 Competitive Gaps (Differentiation Opportunities)
 
@@ -81,12 +81,12 @@ Customer
 
 ### Key Distinctions
 
-| Concept | Definition | Relationship |
-|---|---|---|
-| **Artwork** | Logical design concept owned by a customer | 1 customer → many artworks |
-| **Design Variant** | Specific color treatment of an artwork for a garment color context | 1 artwork → many variants |
-| **Version** | Temporal revision of a variant (v1→v2→v3) | 1 variant → many versions (linear) |
-| **Separation** | Production specification — per-channel metadata extracted from approved variant | 1 approved variant → 1 separation set |
+| Concept            | Definition                                                                      | Relationship                          |
+| ------------------ | ------------------------------------------------------------------------------- | ------------------------------------- |
+| **Artwork**        | Logical design concept owned by a customer                                      | 1 customer → many artworks            |
+| **Design Variant** | Specific color treatment of an artwork for a garment color context              | 1 artwork → many variants             |
+| **Version**        | Temporal revision of a variant (v1→v2→v3)                                       | 1 variant → many versions (linear)    |
+| **Separation**     | Production specification — per-channel metadata extracted from approved variant | 1 approved variant → 1 separation set |
 
 ### Version vs Variant
 
@@ -103,34 +103,37 @@ Color separation decomposes a full-color design into individual single-color lay
 
 ### Four Major Separation Types
 
-| Type | Screens | Garments | Best For | Cost |
-|---|---|---|---|---|
-| **Spot Color** | 1 per color (1-6 typical) | Any | Logos, text, solid graphics | Cheapest for 1-4 colors |
-| **CMYK Process** | 4 (C, M, Y, K) | Light only | Photos, pastels | Expensive (tight registration) |
-| **Simulated Process** | 6-12 | Any (including dark) | Photorealistic on dark | Higher (dominant method) |
-| **Index** | 8-15 | Any | Hard edges + photos | Easiest to print |
+| Type                  | Screens                   | Garments             | Best For                    | Cost                           |
+| --------------------- | ------------------------- | -------------------- | --------------------------- | ------------------------------ |
+| **Spot Color**        | 1 per color (1-6 typical) | Any                  | Logos, text, solid graphics | Cheapest for 1-4 colors        |
+| **CMYK Process**      | 4 (C, M, Y, K)            | Light only           | Photos, pastels             | Expensive (tight registration) |
+| **Simulated Process** | 6-12                      | Any (including dark) | Photorealistic on dark      | Higher (dominant method)       |
+| **Index**             | 8-15                      | Any                  | Hard edges + photos         | Easiest to print               |
 
 ### Architectural Decision: Where Separations Live
 
 **Artwork vertical** owns:
+
 - Separation file storage (PSD with named channels)
 - Separation metadata capture (manually entered or parsed from channel names)
 - Per-channel specs: ink color/PMS, role (underbase/color/highlight), halftone LPI, screen angle, dot shape, print order
 
 **Screen Room vertical** owns:
+
 - Physical screen inventory (mesh counts, states)
 - Screen-to-separation assignment
 - Exposure/burn tracking
 - Screen reclamation workflow
 
 **Handoff interface** — ScreenRequirement:
+
 ```typescript
 type ScreenRequirement = {
   separationId: string
-  inkColor: string            // "Pantone 186 C" or "White Underbase"
+  inkColor: string // "Pantone 186 C" or "White Underbase"
   inkType: 'plastisol' | 'water-based' | 'discharge'
-  meshCountMin: number        // Derived from LPI (LPI × 4-5)
-  printOrderPosition: number  // 1 = first on press
+  meshCountMin: number // Derived from LPI (LPI × 4-5)
+  printOrderPosition: number // 1 = first on press
   role: 'underbase' | 'color' | 'highlight'
   halftoneSpec?: {
     lpi: number
@@ -184,14 +187,14 @@ Auto-detect a color count and palette, let the user adjust. 80%+ accuracy is rea
 
 ### Key Libraries
 
-| Library | Purpose |
-|---|---|
-| `quantize` | MMCQ color quantization (browser + server) |
-| `Sharp` | Image processing backbone (server) |
-| `get-svg-colors` | SVG fill/stroke extraction |
-| `ag-psd` | PSD layer/channel parsing |
-| `nearest-pantone` | Hex → PMS matching via CIEDE2000 |
-| `color-diff` | CIEDE2000 Delta E calculation |
+| Library           | Purpose                                    |
+| ----------------- | ------------------------------------------ |
+| `quantize`        | MMCQ color quantization (browser + server) |
+| `Sharp`           | Image processing backbone (server)         |
+| `get-svg-colors`  | SVG fill/stroke extraction                 |
+| `ag-psd`          | PSD layer/channel parsing                  |
+| `nearest-pantone` | Hex → PMS matching via CIEDE2000           |
+| `color-diff`      | CIEDE2000 Delta E calculation              |
 
 ### Domain-Specific Rules
 
@@ -202,11 +205,11 @@ Auto-detect a color count and palette, let the user adjust. 80%+ accuracy is rea
 
 ### Accuracy Expectations
 
-| Input Type | Expected Accuracy |
-|---|---|
-| SVG/vector | ~95%+ (colors are explicit) |
-| Clean spot-color raster | ~85-90% |
-| Designs with gradients | ~70-80% |
+| Input Type                 | Expected Accuracy              |
+| -------------------------- | ------------------------------ |
+| SVG/vector                 | ~95%+ (colors are explicit)    |
+| Clean spot-color raster    | ~85-90%                        |
+| Designs with gradients     | ~70-80%                        |
 | Photorealistic/sim process | ~50-60% (inherently ambiguous) |
 
 ---
@@ -215,21 +218,21 @@ Auto-detect a color count and palette, let the user adjust. 80%+ accuracy is rea
 
 ### Provider Recommendation
 
-| Phase | Provider | Why | Monthly Cost |
-|---|---|---|---|
-| **POC / Beta** | Supabase Storage (Free tier) | Already have Supabase project; 1GB storage + 2GB egress included. Sufficient for initial testing with <200 artworks | $0 |
-| **Single Shop** | Cloudflare R2 | Zero egress fees, S3-compatible API. Move when storage exceeds 1GB or for production reliability | ~$4.50 for 300GB |
-| **SaaS Scale** | R2 or Backblaze B2 + Cloudflare CDN | Lowest cost at scale | ~$18-45 for 3TB |
+| Phase           | Provider                            | Why                                                                                                                 | Monthly Cost     |
+| --------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| **POC / Beta**  | Supabase Storage (Free tier)        | Already have Supabase project; 1GB storage + 2GB egress included. Sufficient for initial testing with <200 artworks | $0               |
+| **Single Shop** | Cloudflare R2                       | Zero egress fees, S3-compatible API. Move when storage exceeds 1GB or for production reliability                    | ~$4.50 for 300GB |
+| **SaaS Scale**  | R2 or Backblaze B2 + Cloudflare CDN | Lowest cost at scale                                                                                                | ~$18-45 for 3TB  |
 
 ### Volume Projections (Small Shop)
 
-| Metric | Conservative | Moderate |
-|---|---|---|
-| Unique designs/year | 300 | 700 |
-| Files per design | 2-4 | 3-6 |
-| Avg file size | ~5 MB | ~8 MB |
-| Storage/year | 5-10 GB | 28-62 GB |
-| 3-year cumulative | 13-32 GB | 84-186 GB |
+| Metric              | Conservative | Moderate  |
+| ------------------- | ------------ | --------- |
+| Unique designs/year | 300          | 700       |
+| Files per design    | 2-4          | 3-6       |
+| Avg file size       | ~5 MB        | ~8 MB     |
+| Storage/year        | 5-10 GB      | 28-62 GB  |
+| 3-year cumulative   | 13-32 GB     | 84-186 GB |
 
 ### Architecture Patterns
 
@@ -245,14 +248,14 @@ Auto-detect a color count and palette, let the user adjust. 80%+ accuracy is rea
 
 ### Typical File Sizes
 
-| File Type | Typical Size | Notes |
-|---|---|---|
-| Customer JPEG | 500 KB - 10 MB | Often low-quality, preserve as-is |
-| Vector (AI/EPS) | 200 KB - 5 MB | Balloons to 20-80 MB with embedded rasters |
-| SVG | 50 KB - 2 MB | Smallest vector format |
-| Print-ready PSD | 60 - 300 MB | 300 DPI, multi-layer |
-| Separation PSD | 100 - 500 MB | Per-color channels (6-12 channels) |
-| Customer PDF | 1 - 30 MB | Highly variable quality |
+| File Type       | Typical Size   | Notes                                      |
+| --------------- | -------------- | ------------------------------------------ |
+| Customer JPEG   | 500 KB - 10 MB | Often low-quality, preserve as-is          |
+| Vector (AI/EPS) | 200 KB - 5 MB  | Balloons to 20-80 MB with embedded rasters |
+| SVG             | 50 KB - 2 MB   | Smallest vector format                     |
+| Print-ready PSD | 60 - 300 MB    | 300 DPI, multi-layer                       |
+| Separation PSD  | 100 - 500 MB   | Per-color channels (6-12 channels)         |
+| Customer PDF    | 1 - 30 MB      | Highly variable quality                    |
 
 ---
 
@@ -260,14 +263,14 @@ Auto-detect a color count and palette, let the user adjust. 80%+ accuracy is rea
 
 ### Recommended Architecture: Hybrid Rendering
 
-| Context | Rendering | Why |
-|---|---|---|
-| Quote building | Client-side SVG (on-the-fly) | Interactive, instant feedback |
-| Quote sent | Server-side Sharp (frozen snapshot) | Immutable audit trail |
-| Artwork approved | Server-side Sharp (frozen) | Contractual record |
-| Job card/board | Client-side SVG (on-the-fly) | Lightweight, always current |
-| PDF proof | Server-side Sharp (high-quality) | Print-quality document |
-| Customer portal | CDN-served pre-render | Fast, cached |
+| Context          | Rendering                           | Why                           |
+| ---------------- | ----------------------------------- | ----------------------------- |
+| Quote building   | Client-side SVG (on-the-fly)        | Interactive, instant feedback |
+| Quote sent       | Server-side Sharp (frozen snapshot) | Immutable audit trail         |
+| Artwork approved | Server-side Sharp (frozen)          | Contractual record            |
+| Job card/board   | Client-side SVG (on-the-fly)        | Lightweight, always current   |
+| PDF proof        | Server-side Sharp (high-quality)    | Print-quality document        |
+| Customer portal  | CDN-served pre-render               | Fast, cached                  |
 
 ### Enhancement: SVG feDisplacementMap
 
@@ -284,6 +287,7 @@ Highest-impact upgrade to existing `GarmentMockup.tsx`. Makes artwork follow fab
 ### Dark Garment Rendering
 
 Current `mix-blend-multiply` makes artwork invisible on dark garments. Solution: two-layer composite mirroring actual screen printing on dark fabric:
+
 1. White underbase shape at ~80% opacity (simulates the physical underbase)
 2. Artwork with multiply blend on top of the white layer
 
@@ -292,6 +296,7 @@ Detect garment darkness during catalog sync (average luminance in print zone are
 ### Freezing Mockups (Lifecycle Events)
 
 A mockup should be frozen (pre-rendered and stored as immutable image) at:
+
 1. **Quote sent** — contractual representation
 2. **Artwork approved** — approval timestamp + frozen mockup = audit trail
 3. **Job created** — production reference carried forward
@@ -330,17 +335,18 @@ draft → pending_review → sent → viewed → approved → production
 
 Based on Ashore's data (50% faster approvals with reminders):
 
-| Timing | Action |
-|---|---|
-| T+0 | Initial notification (email + optional SMS) |
-| T+24h | First reminder if not viewed |
-| T+48h | Second reminder |
-| T+72h | Escalation — different tone, CC additional contacts |
+| Timing | Action                                                  |
+| ------ | ------------------------------------------------------- |
+| T+0    | Initial notification (email + optional SMS)             |
+| T+24h  | First reminder if not viewed                            |
+| T+48h  | Second reminder                                         |
+| T+72h  | Escalation — different tone, CC additional contacts     |
 | T+5-7d | Final — marked urgent, surfaces on dashboard as "stuck" |
 
 ### Proof Delivery Method
 
 **Unique URL (no login required)** is the industry standard for fastest approval:
+
 - Frictionless — customer clicks link, sees proof, one-click approve
 - Trackable — view analytics (opened, viewed duration)
 - Supports annotation
@@ -351,6 +357,7 @@ Customer portal login reserved for repeat/VIP customers who want full history.
 ### Legal Protection
 
 Every approval must capture immutably:
+
 - **Who**: name, email, IP address
 - **What**: immutable proof snapshot (not reference to mutable file)
 - **When**: timestamp with timezone
@@ -369,36 +376,42 @@ Append-only — shop cannot retroactively modify approval records.
 ## 8. Cross-Vertical Integration Points
 
 ### Artwork → Customer
+
 - Per-customer artwork library (FK: `artwork.customer_id`)
 - Artwork tab on customer detail page
 - Favorites surfaced in customer profile
 - Reuse detection when creating new quotes
 
 ### Artwork → Quoting
+
 - Select artwork from customer library when building quote
 - Color count auto-derived → screen count → pricing matrix lookup
 - Live mockup preview (artwork on selected garment)
 - Service type suitability (screen print vs DTF vs DTG)
 
 ### Artwork → Pricing
+
 - Color count drives screen count (spot color: 1:1)
 - Screen count drives setup fees ($15-35 per screen typical)
 - Dark garment + underbase = +1 screen = +1 setup fee
 - Separation type affects pricing (simulated process = more screens)
 
 ### Artwork → Jobs/Production
+
 - Frozen mockup follows from approved quote to job
 - Separation metadata generates screen requirements
 - Art department workflow board tracks internal status
 - Approved artwork is production gate (blocks job start)
 
 ### Artwork → Screen Room
+
 - ScreenRequirement[] generated from separation metadata
 - Mesh count derived from LPI (LPI × 4-5)
 - Print order from separation sequence
 - Physical screen assignment tracked
 
 ### Artwork → Invoices
+
 - Frozen mockup reference carried to invoice
 - Setup fees itemized per screen/color
 - Artwork approval audit trail available for disputes
@@ -410,6 +423,7 @@ Append-only — shop cannot retroactively modify approval records.
 ### Horizontal Enabler: H2 (File Upload Pipeline)
 
 Must be built before Artwork M1. Requires:
+
 - Supabase Storage bucket setup with RLS policies
 - Presigned upload URL generation (`createSignedUploadUrl()`)
 - Sharp pipeline for thumbnail/preview generation at upload
@@ -418,13 +432,13 @@ Must be built before Artwork M1. Requires:
 
 ### New Dependencies to Evaluate
 
-| Package | Purpose | Size | License |
-|---|---|---|---|
-| `quantize` | MMCQ color quantization | ~5 KB | MIT |
-| `get-svg-colors` | SVG color extraction | ~3 KB | MIT |
-| `ag-psd` | PSD file parsing | ~200 KB | MIT |
-| `nearest-pantone` | Hex → PMS matching | ~150 KB (includes PMS DB) | MIT |
-| `color-diff` | CIEDE2000 calculation | ~8 KB | MIT |
+| Package           | Purpose                 | Size                      | License |
+| ----------------- | ----------------------- | ------------------------- | ------- |
+| `quantize`        | MMCQ color quantization | ~5 KB                     | MIT     |
+| `get-svg-colors`  | SVG color extraction    | ~3 KB                     | MIT     |
+| `ag-psd`          | PSD file parsing        | ~200 KB                   | MIT     |
+| `nearest-pantone` | Hex → PMS matching      | ~150 KB (includes PMS DB) | MIT     |
+| `color-diff`      | CIEDE2000 calculation   | ~8 KB                     | MIT     |
 
 All are MIT-licensed, small, and have no native dependencies. Sharp is already in the project.
 
@@ -434,16 +448,16 @@ All are MIT-licensed, small, and have no native dependencies. Sharp is already i
 
 ### P5: Artwork Library — Milestones
 
-| Milestone | Deliverables | Depends On |
-|---|---|---|
-| **M0: Research** | This document. Domain understanding, competitive gaps, technical decisions. | — |
-| **M1: Storage & Schema** | File upload pipeline (H2), artwork/variant/version tables, Drizzle schema, Supabase Storage bucket, presigned uploads, Sharp rendition pipeline | H2 |
-| **M2: Library UI** | Browse/search/tag/favorite artwork per customer. Customer detail Artwork tab. Upload flow with file validation. | M1, P3 (Customer) |
-| **M3: Color Detection** | Auto-detect color count + palette at upload. PMS matching. "Suggest and confirm" UX. Garment color context for underbase detection. | M1 |
-| **M4: Quote Integration** | Select artwork from customer library in quote builder. Auto-derive color count → pricing. Live mockup preview. | M2, P6 (Quoting) |
-| **M5: Approval Workflow** | Per-artwork approval with unique URL. Automated reminders. Version tracking. Terms acceptance. Immutable proof snapshots. | M2 |
-| **M6: Separation Metadata** | Capture per-channel specs (ink, mesh, LPI, print order). Generate ScreenRequirement[] for screen room handoff. | M5 |
-| **M7: Mockup Enhancement** | SVG feDisplacementMap for fabric contours. Dark garment rendering. Frozen mockup pipeline (Sharp server-side). | M4 |
+| Milestone                   | Deliverables                                                                                                                                    | Depends On        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| **M0: Research**            | This document. Domain understanding, competitive gaps, technical decisions.                                                                     | —                 |
+| **M1: Storage & Schema**    | File upload pipeline (H2), artwork/variant/version tables, Drizzle schema, Supabase Storage bucket, presigned uploads, Sharp rendition pipeline | H2                |
+| **M2: Library UI**          | Browse/search/tag/favorite artwork per customer. Customer detail Artwork tab. Upload flow with file validation.                                 | M1, P3 (Customer) |
+| **M3: Color Detection**     | Auto-detect color count + palette at upload. PMS matching. "Suggest and confirm" UX. Garment color context for underbase detection.             | M1                |
+| **M4: Quote Integration**   | Select artwork from customer library in quote builder. Auto-derive color count → pricing. Live mockup preview.                                  | M2, P6 (Quoting)  |
+| **M5: Approval Workflow**   | Per-artwork approval with unique URL. Automated reminders. Version tracking. Terms acceptance. Immutable proof snapshots.                       | M2                |
+| **M6: Separation Metadata** | Capture per-channel specs (ink, mesh, LPI, print order). Generate ScreenRequirement[] for screen room handoff.                                  | M5                |
+| **M7: Mockup Enhancement**  | SVG feDisplacementMap for fabric contours. Dark garment rendering. Frozen mockup pipeline (Sharp server-side).                                  | M4                |
 
 ### Critical Path
 

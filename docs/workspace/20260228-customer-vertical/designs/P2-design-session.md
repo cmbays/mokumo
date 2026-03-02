@@ -10,14 +10,14 @@
 
 All artboards on the Paper canvas (Page 1), positioned after P1's A–D:
 
-| Artboard | Node ID | Size | Core bet |
-|---|---|---|---|
-| E — Overview (compact) | 1BQ-0 | 1440×900 | P1-aligned header, horizontal tabs, compact stats strip |
-| F — Activity (prominent) | 1F5-0 | 1440×900 | Large stats card, sidebar nav, F-style timeline |
-| G — Revised Overview (WCA) | App Shell in 1J7-0 | 1440×900 | Synthesized from E/F feedback — chosen desktop direction |
-| H — (empty) | 1UA-0 | 1440×900 | Created for Lakefront Brewing second customer; unused, user redirected |
-| I — Preferences Tab (WCA) | 1ZN-0 | 1440×900 | Per-brand favorited colors + styles |
-| J — Mobile Overview (WCA) | 2B2-0 | 390×844 | Mobile-first layout with balance row + scroll hints |
+| Artboard                   | Node ID            | Size     | Core bet                                                               |
+| -------------------------- | ------------------ | -------- | ---------------------------------------------------------------------- |
+| E — Overview (compact)     | 1BQ-0              | 1440×900 | P1-aligned header, horizontal tabs, compact stats strip                |
+| F — Activity (prominent)   | 1F5-0              | 1440×900 | Large stats card, sidebar nav, F-style timeline                        |
+| G — Revised Overview (WCA) | App Shell in 1J7-0 | 1440×900 | Synthesized from E/F feedback — chosen desktop direction               |
+| H — (empty)                | 1UA-0              | 1440×900 | Created for Lakefront Brewing second customer; unused, user redirected |
+| I — Preferences Tab (WCA)  | 1ZN-0              | 1440×900 | Per-brand favorited colors + styles                                    |
+| J — Mobile Overview (WCA)  | 2B2-0              | 390×844  | Mobile-first layout with balance row + scroll hints                    |
 
 ---
 
@@ -130,18 +130,18 @@ Before implementing the header, resolve:
 
 **Favorited brands (Preferences tab)**:
 
-| Brand | Colors | Styles |
-|---|---|---|
-| Gildan | Black, White, Red (3) | G500 Classic T-Shirt, G18500 Heavy Blend Hoodie (2) |
-| Port Authority | Navy, Black (2) | K500 Silk Touch Polo (1) |
-| Bella+Canvas | Black, Navy, White, Ath. Heather (4) | 3001C Unisex Jersey Tee, 2719 Sponge Fleece Pullover (2) |
+| Brand          | Colors                               | Styles                                                   |
+| -------------- | ------------------------------------ | -------------------------------------------------------- |
+| Gildan         | Black, White, Red (3)                | G500 Classic T-Shirt, G18500 Heavy Blend Hoodie (2)      |
+| Port Authority | Navy, Black (2)                      | K500 Silk Touch Polo (1)                                 |
+| Bella+Canvas   | Black, Navy, White, Ath. Heather (4) | 3001C Unisex Jersey Tee, 2719 Sponge Fleece Pullover (2) |
 
 ---
 
 ## Refinements Noted (Not Yet Applied in Mockup)
 
-| Item | Current | Target |
-|---|---|---|
+| Item                   | Current                                           | Target                                                     |
+| ---------------------- | ------------------------------------------------- | ---------------------------------------------------------- |
 | Preferences count line | `[palette] 3 colors · [shirt] 2 styles favorited` | `3 [palette] · 2 [shirt]` — number first, no English words |
 
 ---

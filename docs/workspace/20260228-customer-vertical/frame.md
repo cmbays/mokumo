@@ -39,6 +39,7 @@ a real customer entity to link against. The customer vertical is a prerequisite 
 backend.
 
 The current codebase has:
+
 - A mature Zod domain entity (`customer.ts`) with lifecycle, health, financial, preference fields
 - A `customer.rules.ts` with a `global→brand→customer` cascade that has "global" as a Phase 1
   artifact (needs to become `shop→brand→customer`)
