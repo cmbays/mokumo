@@ -106,7 +106,7 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 | Health rendering        | Dot indicator: Active = green dot, Needs Attention = warning dot, Inactive = error dot. No border box.   | Customer list + detail header                |
 | Lifecycle badge colors  | Dot indicators: Prospect (action dot), New (muted dot), Repeat (success dot), Contract (warning dot)     | Customer list + detail header                |
 | Trash icon rule         | Always `#D23E08` with `rgba(210,62,8,0.12)` tinted bg — **site-wide rule**                               | Every form with deletable items              |
-| Urgency semantic tokens | ✅ Done (PR #731) — `--urgency-critical/high/low` in `globals.css`, aliases to status colors              | Quote/job urgency indicators                 |
+| Urgency semantic tokens | ✅ Done (PR #731) — `--urgency-critical/high/low` in `globals.css`, aliases to status colors             | Quote/job urgency indicators                 |
 | Upload sheet DRY        | `<ArtworkUploadSheet customerId quoteId? />` — mounts from Customer Artwork tab AND Quote builder        | Customer + Quote                             |
 | Customer list           | Hybrid A KPIs + C layout — no finalized Paper mockup; build from spec directly                           | Customer list only                           |
 
