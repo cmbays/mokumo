@@ -119,12 +119,22 @@ Colors defined as CSS custom properties in `app/globals.css`, exposed via `@them
 | `text-foreground`                 | `--foreground`              | `rgba(255,255,255,0.87)` | High-emphasis text          |
 | `text-muted-foreground`           | `--muted-foreground`        | `rgba(255,255,255,0.60)` | Medium-emphasis text, hints |
 | `text-action`                     | `--action`                  | `#2ab9ff` (Niji blue)    | Primary CTAs, active states |
-| `text-success`                    | `--success`                 | `#54ca74` (Niji green)   | Completions                 |
+| `text-success`                    | `--success`                 | `#54ca74` (Niji green)   | Completions (STATUS only)   |
 | `text-error` / `text-destructive` | `--error` / `--destructive` | `#d23e08` (Niji red)     | Failures                    |
 | `text-warning`                    | `--warning`                 | `#ffc663` (Niji gold)    | Cautions                    |
 | `border-border`                   | `--border`                  | `rgba(255,255,255,0.12)` | Subtle borders              |
+| `text-purple`                     | `--purple`                  | `#a855f7`                | Jobs (categorical)          |
+| `text-magenta`                    | `--magenta`                 | `#ff50da`                | Quotes (categorical)        |
+| `text-teal`                       | `--teal`                    | `#2dd4bf`                | Screen Print (categorical)  |
+| `text-emerald`                    | `--emerald`                 | `#10b981`                | Invoices (categorical)      |
+| `text-lime`                       | `--lime`                    | `#84cc16`                | Embroidery (categorical)    |
+| `text-brown`                      | `--brown`                   | `#c47a3a`                | DTF (categorical)           |
+| `text-urgency-critical`           | `--urgency-critical`        | → `--error`              | Overdue, SLA breach         |
+| `text-urgency-high`               | `--urgency-high`            | → `--warning`            | Approaching deadline        |
+| `text-urgency-low`                | `--urgency-low`             | → `--muted-foreground`   | Low priority                |
 
 > No `text-secondary` or `text-muted` tokens. Do NOT use `text-text-muted` or `text-text-secondary` — these classes do not exist.
+> See `.claude/skills/design-system/skill.md` for full encoding channel rules (two color pools, three badge variants).
 
 ### Typography & Spacing
 

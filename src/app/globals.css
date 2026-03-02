@@ -75,6 +75,12 @@
   --color-brown: #c47a3a;
   --color-brown-hover: #a8652e;
   --color-brown-bold: #d9954f;
+  --color-teal: var(--teal);
+  --color-teal-hover: var(--teal-hover);
+  --color-teal-bold: var(--teal-bold);
+  --color-emerald: var(--emerald);
+  --color-emerald-hover: var(--emerald-hover);
+  --color-emerald-bold: var(--emerald-bold);
 
   /* Design system: surface colors */
   --color-surface: var(--surface);
@@ -84,6 +90,12 @@
   --shadow-brutal-sm: 2px 2px 0px;
   --shadow-brutal: 4px 4px 0px;
   --shadow-brutal-lg: 6px 6px 0px;
+  --shadow-sticky-column: 2px 0px 4px -2px rgba(0, 0, 0, 0.3);
+
+  /* Urgency — semantic aliases */
+  --color-urgency-critical: var(--urgency-critical);
+  --color-urgency-high: var(--urgency-high);
+  --color-urgency-low: var(--urgency-low);
 
   /* Spring transition */
   --transition-timing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -178,6 +190,14 @@
   --brown-hover: #a8652e;
   --brown-bold: #d9954f;
 
+  --teal: #2dd4bf;
+  --teal-hover: #14b8a6;
+  --teal-bold: #5eead4;
+
+  --emerald: #10b981;
+  --emerald-hover: #059669;
+  --emerald-bold: #34d399;
+
   /* Charts — Niji rainbow */
   --chart-1: #2ab9ff;
   --chart-2: #54ca74;
@@ -195,6 +215,11 @@
   --canvas-spacing-label: rgba(255, 255, 255, 0.4);
   --canvas-void: rgba(255, 255, 255, 0.02);
   --canvas-void-label: rgba(255, 255, 255, 0.25);
+
+  /* Urgency — semantic aliases (Issue #712) */
+  --urgency-critical: var(--error);
+  --urgency-high: var(--warning);
+  --urgency-low: var(--muted-foreground);
 
   /* Sidebar */
   --sidebar: #111213;

@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { MoreHorizontal } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
+import { textToBgColor } from '@shared/lib/design-system'
 import { PRIMARY_NAV, type NavItem } from '@shared/constants/navigation'
 
 const tabs: (NavItem | { label: string; href: '#more'; icon: typeof MoreHorizontal })[] = [
@@ -74,13 +75,7 @@ export function BottomTabBar({ onMorePress }: BottomTabBarProps) {
               <span
                 className={cn(
                   'absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full',
-                  activeIconColor === 'text-purple'
-                    ? 'bg-purple'
-                    : activeIconColor === 'text-magenta'
-                      ? 'bg-magenta'
-                      : activeIconColor === 'text-success'
-                        ? 'bg-success'
-                        : 'bg-action'
+                  textToBgColor(activeIconColor)
                 )}
               />
             )}

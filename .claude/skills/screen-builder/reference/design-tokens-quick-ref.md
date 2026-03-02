@@ -19,7 +19,7 @@ Use these Tailwind classes. Do NOT use raw hex/rgb values in components.
 | Secondary text | `text-muted-foreground`    | rgba(255,255,255,0.60) |
 | Muted/hints    | `text-muted-foreground/50` | ~38% opacity           |
 
-## Status Colors
+## Status Colors (STATE — filled badges)
 
 | Status         | Text class     | Use                                |
 | -------------- | -------------- | ---------------------------------- |
@@ -29,6 +29,26 @@ Use these Tailwind classes. Do NOT use raw hex/rgb values in components.
 | Warning        | `text-warning` | Cautions, pending, blocked         |
 
 Each has hover variant: `text-action-hover`, `text-success-hover`, etc.
+
+## Categorical Colors (IDENTITY — outline badges, left borders)
+
+| Color   | Text class     | Assigned To  |
+| ------- | -------------- | ------------ |
+| Purple  | `text-purple`  | Jobs         |
+| Magenta | `text-magenta` | Quotes       |
+| Teal    | `text-teal`    | Screen Print |
+| Emerald | `text-emerald` | Invoices     |
+| Lime    | `text-lime`    | Embroidery   |
+| Brown   | `text-brown`   | DTF          |
+
+## Badge Utilities (`@shared/lib/design-system`)
+
+```tsx
+statusBadge('success') // filled: bg-success/10 text-success border border-success/20
+categoryBadge('teal') // outline: text-teal border border-teal/20
+dotColor('success') // dot: bg-success
+MUTED_BADGE // neutral: bg-muted text-muted-foreground
+```
 
 ## Production State → Color
 
