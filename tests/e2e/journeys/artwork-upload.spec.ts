@@ -7,14 +7,15 @@ import { createMinimalPng, MINIMAL_PNG_FILENAME } from '../fixtures/create-test-
 /**
  * E2E journey tests: Artwork upload flow.
  *
- * Tests the ArtworkUploadModal from src/features/artwork/components/ via the
- * /artwork route (ArtworkLibraryClient). The /artwork page exposes an "Upload"
- * button in the page header that opens the H2 ArtworkUploadModal.
+ * Tests the two-step ArtworkUploadSheet via the /artwork route (ArtworkLibraryClient).
+ *
+ * Step 1 — Metadata form: Piece Name (required), Design Name (required), Colors (optional)
+ * Step 2 — File upload zone: drag-and-drop or file picker
  *
  * Client-side validations tested (no real Supabase required):
- *   V1 — Upload button visibility, modal open/close, valid file selection
- *   V2 — Rejected file type shows "Unsupported file type" error, modal stays open
- *   V3 — File too large shows "File exceeds 50 MB limit" error, modal stays open
+ *   V1 — Upload button visibility, sheet open/close, metadata form, idle drop zone
+ *   V2 — Rejected file type shows "Unsupported file type" error, sheet stays open
+ *   V3 — File too large shows "File exceeds 50 MB limit" error, sheet stays open
  *
  * The happy-path (V1 full upload through to confirmed artwork card) requires a
  * live Supabase instance with presigned URL support. In CI without a backend,
@@ -22,7 +23,7 @@ import { createMinimalPng, MINIMAL_PNG_FILENAME } from '../fixtures/create-test-
  * server action response.
  *
  * Running locally against the dev server (auth bypassed in NODE_ENV=development):
- *   PLAYWRIGHT_BASE_URL=http://localhost:3000 npx playwright test artwork-upload
+ *   PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test artwork-upload
  *
  * Running against a Vercel preview with credentials:
  *   PLAYWRIGHT_BASE_URL=<url> E2E_EMAIL=... E2E_PASSWORD=... npx playwright test artwork-upload
@@ -71,16 +72,16 @@ function writeTmpPng(): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the hidden file input inside the open ArtworkUploadModal dialog.
- * The modal renders: <input type="file" accept="..." class="sr-only" aria-hidden="true" />
+ * Returns the hidden file input inside the open ArtworkUploadSheet (step 2).
+ * Sheet uses role="dialog" (Radix), same as a modal.
  */
-function getDialogFileInput(page: Page) {
+function getSheetFileInput(page: Page) {
   return page.locator('[role="dialog"] input[type="file"]')
 }
 
 /**
- * Returns the upload drop zone inside the open dialog.
- * ArtworkUploadModal renders: <div role="button" aria-label="Upload artwork file" ...>
+ * Returns the upload drop zone inside the open sheet (step 2).
+ * ArtworkUploadSheet renders: <div role="button" aria-label="Upload artwork file" ...>
  */
 function getDropZone(page: Page) {
   return page.locator('[role="dialog"] [role="button"][aria-label="Upload artwork file"]')
@@ -96,11 +97,10 @@ async function gotoArtworkPage(page: Page) {
 }
 
 /**
- * Clicks the Upload button on the /artwork page to open the upload modal.
- * Returns true if the dialog appeared.
+ * Clicks the Upload button on the /artwork page to open the sheet.
+ * Returns true if the sheet's step-1 metadata form appeared.
  */
-async function openUploadModal(page: Page): Promise<boolean> {
-  // ArtworkLibraryClient renders a header Upload button with UploadCloud icon
+async function openUploadSheet(page: Page): Promise<boolean> {
   const uploadBtn = page.getByRole('button', { name: /Upload/i })
   const isVisible = await uploadBtn
     .waitFor({ timeout: 5_000, state: 'visible' })
@@ -112,17 +112,58 @@ async function openUploadModal(page: Page): Promise<boolean> {
   await uploadBtn.click()
 
   const dialog = page.getByRole('dialog')
-  return dialog
+  const sheetOpen = await dialog
     .waitFor({ timeout: 5_000, state: 'visible' })
+    .then(() => true)
+    .catch(() => false)
+
+  if (!sheetOpen) return false
+
+  // Confirm step-1 label is present
+  const step1Label = dialog.getByText(/Artwork Piece/i)
+  return step1Label
+    .waitFor({ timeout: 3_000, state: 'visible' })
+    .then(() => true)
+    .catch(() => false)
+}
+
+/**
+ * Fills the step-1 metadata form and submits, advancing to the file drop zone (step 2).
+ * Returns true if the drop zone appeared after submit.
+ *
+ * pieceName and variantName are required. colorCount is optional.
+ */
+async function advanceToFileStep(
+  page: Page,
+  pieceName = 'Test Piece',
+  variantName = 'Navy on White',
+  colorCount = ''
+): Promise<boolean> {
+  const dialog = page.getByRole('dialog')
+
+  await dialog.getByLabel('Artwork Piece').fill(pieceName)
+  await dialog.getByLabel('Design Name').fill(variantName)
+
+  if (colorCount) {
+    await dialog.getByLabel('Colors').fill(colorCount)
+  }
+
+  const continueBtn = dialog.getByRole('button', { name: /Continue to File Upload/i })
+  await continueBtn.click()
+
+  // Wait for file drop zone (step 2)
+  const dropZone = getDropZone(page)
+  return dropZone
+    .waitFor({ timeout: 10_000, state: 'visible' })
     .then(() => true)
     .catch(() => false)
 }
 
 // ---------------------------------------------------------------------------
-// Journey V1 — Upload button visibility and modal open/close
+// Journey V1 — Upload button visibility and sheet open/close
 // ---------------------------------------------------------------------------
 
-test.describe('Artwork upload — V1: Upload button visibility and modal', () => {
+test.describe('Artwork upload — V1: Upload button visibility and sheet', () => {
   test.setTimeout(90_000)
 
   test.beforeEach(async ({ page }) => {
@@ -144,82 +185,121 @@ test.describe('Artwork upload — V1: Upload button visibility and modal', () =>
     })
   })
 
-  test('clicking Upload opens a dialog with "Upload Artwork" title', async ({ page }) => {
+  test('clicking Upload opens a sheet with title and metadata form (step 1)', async ({ page }) => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open')
+      test.skip(true, 'Upload sheet did not open')
       return
     }
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 5_000 })
 
-    const dialogTitle = dialog.getByText(/Upload Artwork/i)
-    await expect(dialogTitle).toBeVisible()
+    // Sheet title
+    await expect(dialog.getByText(/Upload Artwork/i)).toBeVisible()
 
-    // Dialog should describe the drop action
-    const dialogDesc = dialog.getByText(/Drop a file or click to browse/i)
-    await expect(dialogDesc).toBeVisible()
+    // Step 1 description
+    await expect(dialog.getByText(/Name the piece and design before uploading/i)).toBeVisible()
+
+    // Step 1 form fields
+    await expect(dialog.getByLabel('Artwork Piece')).toBeVisible()
+    await expect(dialog.getByLabel('Design Name')).toBeVisible()
+    await expect(dialog.getByLabel('Colors')).toBeVisible()
 
     await page.screenshot({
-      path: 'tests/e2e/screenshots/artwork-upload-v1-modal-open.png',
+      path: 'tests/e2e/screenshots/artwork-upload-v1-sheet-step1.png',
       fullPage: false,
     })
   })
 
-  test('modal closes when Escape is pressed in idle state', async ({ page }) => {
+  test('sheet closes when Escape is pressed in step 1', async ({ page }) => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping close test')
+      test.skip(true, 'Upload sheet did not open — skipping close test')
       return
     }
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 5_000 })
 
-    // ArtworkUploadModal allows Escape when not uploading (isActive = false in idle state)
     await page.keyboard.press('Escape')
     await expect(dialog).not.toBeVisible({ timeout: 3_000 })
 
     await page.screenshot({
-      path: 'tests/e2e/screenshots/artwork-upload-v1-modal-closed.png',
+      path: 'tests/e2e/screenshots/artwork-upload-v1-sheet-closed.png',
       fullPage: false,
     })
   })
 
-  test('modal has idle state: drop zone with Upload icon and browse link', async ({ page }) => {
+  test('submit button is disabled until both required fields are filled', async ({ page }) => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping idle state test')
+      test.skip(true, 'Upload sheet did not open — skipping validation test')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
+    const continueBtn = dialog.getByRole('button', { name: /Continue to File Upload/i })
 
-    // Drop zone is present with correct aria label
+    // Initially disabled (both fields empty)
+    await expect(continueBtn).toBeDisabled()
+
+    // Only piece name filled → still disabled
+    await dialog.getByLabel('Artwork Piece').fill('Front Logo')
+    await expect(continueBtn).toBeDisabled()
+
+    // Both filled → enabled
+    await dialog.getByLabel('Design Name').fill('Navy on White')
+    await expect(continueBtn).toBeEnabled()
+
+    await page.screenshot({
+      path: 'tests/e2e/screenshots/artwork-upload-v1-form-validation.png',
+      fullPage: false,
+    })
+  })
+
+  test('step 2 file drop zone has idle state after metadata submit', async ({ page }) => {
+    await gotoArtworkPage(page)
+    await skipIfRedirectedToLogin(page)
+
+    const opened = await openUploadSheet(page)
+    if (!opened) {
+      test.skip(true, 'Upload sheet did not open — skipping idle state test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not advance to file upload step — server action may be unavailable')
+      return
+    }
+
+    const dialog = page.getByRole('dialog')
+
+    // Step 2 description
+    await expect(dialog.getByText(/Drop or select the artwork file/i)).toBeVisible()
+
+    // Drop zone present with correct aria label
     const dropZone = getDropZone(page)
     await expect(dropZone).toBeVisible()
 
-    // Idle state text: "Drop file here or browse"
-    const idleText = dialog.getByText(/Drop file here or/i)
-    await expect(idleText).toBeVisible()
+    // Idle state text
+    await expect(dialog.getByText(/Drop file here or/i)).toBeVisible()
 
-    // Accepted types label is shown
-    const typesLabel = dialog.getByText(/PNG, JPEG/i)
-    await expect(typesLabel).toBeVisible()
+    // Accepted types label
+    await expect(dialog.getByText(/PNG, JPEG/i)).toBeVisible()
 
-    // Hidden file input has accept attribute listing supported types
-    const fileInput = getDialogFileInput(page)
+    // Hidden file input with accept attribute
+    const fileInput = getSheetFileInput(page)
     await expect(fileInput).toBeAttached()
     const acceptAttr = await fileInput.getAttribute('accept')
     expect(acceptAttr).toContain('.png')
@@ -227,7 +307,7 @@ test.describe('Artwork upload — V1: Upload button visibility and modal', () =>
     expect(acceptAttr).toContain('.pdf')
 
     await page.screenshot({
-      path: 'tests/e2e/screenshots/artwork-upload-v1-idle-state.png',
+      path: 'tests/e2e/screenshots/artwork-upload-v1-step2-idle.png',
       fullPage: false,
     })
   })
@@ -244,40 +324,40 @@ test.describe('Artwork upload — V2: Rejected file type', () => {
     await login(page)
   })
 
-  test('selecting a .txt file shows "Unsupported file type" error and keeps modal open', async ({
+  test('selecting a .txt file shows "Unsupported file type" error and keeps sheet open', async ({
     page,
   }) => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping V2 test')
+      test.skip(true, 'Upload sheet did not open — skipping V2 test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step — server action unavailable')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
+    const fileInput = getSheetFileInput(page)
 
-    // Set a text/plain file — not in ALLOWED_MIME_TYPES
-    // useFileUpload checks: if !ALLOWED_MIME_TYPES.includes(file.type) → 'Unsupported file type'
-    const fileInput = getDialogFileInput(page)
     await fileInput.setInputFiles({
       name: 'test-invalid.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('this is not an image'),
     })
 
-    // Error message from useFileUpload.ts: 'Unsupported file type'
     const errorMsg = dialog.getByText('Unsupported file type')
     await expect(errorMsg).toBeVisible({ timeout: 5_000 })
 
-    // Modal must remain open (user needs to retry)
+    // Sheet must remain open
     await expect(dialog).toBeVisible()
 
-    // "Click to try again" hint from ArtworkUploadModal error state
-    const retryHint = dialog.getByText(/Click to try again/i)
-    await expect(retryHint).toBeVisible()
+    await expect(dialog.getByText(/Click to try again/i)).toBeVisible()
 
     await page.screenshot({
       path: 'tests/e2e/screenshots/artwork-upload-v2-bad-type-error.png',
@@ -289,29 +369,30 @@ test.describe('Artwork upload — V2: Rejected file type', () => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping V2 error state test')
+      test.skip(true, 'Upload sheet did not open — skipping V2 error state test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
+    const fileInput = getSheetFileInput(page)
 
-    const fileInput = getDialogFileInput(page)
     await fileInput.setInputFiles({
       name: 'bad.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('not an image'),
     })
 
-    // Wait for error to appear
-    const errorMsg = dialog.getByText('Unsupported file type')
-    await expect(errorMsg).toBeVisible({ timeout: 5_000 })
+    await expect(dialog.getByText('Unsupported file type')).toBeVisible({ timeout: 5_000 })
 
-    // ArtworkUploadModal applies `border-error` CSS class in error state
-    const dropZone = getDropZone(page)
-    const classAttr = await dropZone.getAttribute('class')
+    const classAttr = await getDropZone(page).getAttribute('class')
     expect(classAttr, 'Drop zone should have border-error class in error state').toContain(
       'border-error'
     )
@@ -326,18 +407,21 @@ test.describe('Artwork upload — V2: Rejected file type', () => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping V2 retry test')
+      test.skip(true, 'Upload sheet did not open — skipping V2 retry test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
+    const fileInput = getSheetFileInput(page)
 
-    const fileInput = getDialogFileInput(page)
-
-    // First: trigger file type error
     await fileInput.setInputFiles({
       name: 'bad.txt',
       mimeType: 'text/plain',
@@ -346,11 +430,10 @@ test.describe('Artwork upload — V2: Rejected file type', () => {
     const errorMsg = dialog.getByText('Unsupported file type')
     await expect(errorMsg).toBeVisible({ timeout: 5_000 })
 
-    // Second: set a valid PNG — the hook resets error on the next upload() call
+    // Retry with valid PNG — hook resets error immediately on next upload() call
     const pngPath = writeTmpPng()
     try {
       await fileInput.setInputFiles(pngPath)
-      // Error should clear as state transitions to 'hashing'
       await expect(errorMsg).not.toBeVisible({ timeout: 5_000 })
     } finally {
       fs.unlinkSync(pngPath)
@@ -378,38 +461,33 @@ test.describe('Artwork upload — V3: File exceeds size limit', () => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping V3 test')
+      test.skip(true, 'Upload sheet did not open — skipping V3 test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
-
-    // Create a buffer 1 byte over the 50 MB limit.
-    // MIME type is valid (image/png) to ensure size check is reached.
-    // useFileUpload checks size before MIME type: if file.size > MAX_SIZE_BYTES → error
     const FIFTY_MB = 50 * 1024 * 1024
-    const oversizeBuffer = Buffer.alloc(FIFTY_MB + 1, 0x00)
 
-    const fileInput = getDialogFileInput(page)
+    const fileInput = getSheetFileInput(page)
     await fileInput.setInputFiles({
       name: 'giant-artwork.png',
       mimeType: 'image/png',
-      buffer: oversizeBuffer,
+      buffer: Buffer.alloc(FIFTY_MB + 1, 0x00),
     })
 
-    // Error message from useFileUpload.ts: 'File exceeds 50 MB limit'
     const errorMsg = dialog.getByText('File exceeds 50 MB limit')
     await expect(errorMsg).toBeVisible({ timeout: 5_000 })
 
-    // Modal must remain open
     await expect(dialog).toBeVisible()
-
-    // "Click to try again" hint
-    const retryHint = dialog.getByText(/Click to try again/i)
-    await expect(retryHint).toBeVisible()
+    await expect(dialog.getByText(/Click to try again/i)).toBeVisible()
 
     await page.screenshot({
       path: 'tests/e2e/screenshots/artwork-upload-v3-size-error.png',
@@ -421,29 +499,31 @@ test.describe('Artwork upload — V3: File exceeds size limit', () => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping V3 border test')
+      test.skip(true, 'Upload sheet did not open — skipping V3 border test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
-
     const FIFTY_MB = 50 * 1024 * 1024
-    const fileInput = getDialogFileInput(page)
+    const fileInput = getSheetFileInput(page)
+
     await fileInput.setInputFiles({
       name: 'toobig.png',
       mimeType: 'image/png',
       buffer: Buffer.alloc(FIFTY_MB + 1, 0x00),
     })
 
-    const errorMsg = dialog.getByText('File exceeds 50 MB limit')
-    await expect(errorMsg).toBeVisible({ timeout: 5_000 })
+    await expect(dialog.getByText('File exceeds 50 MB limit')).toBeVisible({ timeout: 5_000 })
 
-    // Drop zone should have border-error in error state
-    const dropZone = getDropZone(page)
-    const classAttr = await dropZone.getAttribute('class')
+    const classAttr = await getDropZone(page).getAttribute('class')
     expect(classAttr, 'Drop zone should have border-error class in size error state').toContain(
       'border-error'
     )
@@ -460,18 +540,21 @@ test.describe('Artwork upload — V3: File exceeds size limit', () => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping V3 reset test')
+      test.skip(true, 'Upload sheet did not open — skipping V3 reset test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
+    const fileInput = getSheetFileInput(page)
 
-    const fileInput = getDialogFileInput(page)
-
-    // Trigger size error
     const FIFTY_MB = 50 * 1024 * 1024
     await fileInput.setInputFiles({
       name: 'giant.png',
@@ -481,11 +564,9 @@ test.describe('Artwork upload — V3: File exceeds size limit', () => {
     const errorMsg = dialog.getByText('File exceeds 50 MB limit')
     await expect(errorMsg).toBeVisible({ timeout: 5_000 })
 
-    // Retry with valid PNG — hook resets error immediately on next upload() call
     const pngPath = writeTmpPng()
     try {
       await fileInput.setInputFiles(pngPath)
-      // Size error should clear as state transitions to 'hashing'
       await expect(errorMsg).not.toBeVisible({ timeout: 5_000 })
     } finally {
       fs.unlinkSync(pngPath)
@@ -515,55 +596,49 @@ test.describe('Artwork upload — V1 extended: valid file selection state transi
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping valid PNG state transition test')
+      test.skip(true, 'Upload sheet did not open — skipping valid PNG state transition test')
+      return
+    }
+
+    const advancedToStep2 = await advanceToFileStep(page)
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
-
-    // Verify initial idle state
     const idleText = dialog.getByText(/Drop file here or/i)
     await expect(idleText).toBeVisible()
 
     const pngPath = writeTmpPng()
     try {
-      const fileInput = getDialogFileInput(page)
+      const fileInput = getSheetFileInput(page)
       await fileInput.setInputFiles(pngPath)
 
-      // After file selection, the hook:
+      // After file selection:
       //   1. Validates size (passes — 68 bytes)
       //   2. Validates MIME type (passes — image/png)
       //   3. Transitions to 'hashing' → calls sha256Hex()
       //   4. Then 'validating' → calls onInitiate (server action)
       //   5. In CI (no real Supabase): server action throws → state → 'error'
-      //   6. With live Supabase: continues through 'uploading' → 'confirming' → 'done'
-      //
-      // The idle drop zone text disappears in ALL cases — verifies client-side
-      // validation passed and the upload pipeline started.
+      //   6. With live Supabase: 'uploading' → 'confirming' → 'done'
       await expect(idleText).not.toBeVisible({ timeout: 10_000 })
 
-      // One of these states should be visible after idle clears
       const processingOrError = dialog
         .locator('*')
         .filter({ hasText: /Computing checksum|Validating|Uploading|Confirming|Upload complete/ })
-        .or(
-          // Error from server action in CI (server unavailable)
-          dialog.locator('*').filter({ hasText: /Upload failed|Unauthorized|Failed to/ })
-        )
+        .or(dialog.locator('*').filter({ hasText: /Upload failed|Unauthorized|Failed to/ }))
         .first()
 
-      // Either a processing state OR an error state is acceptable
       const hasStateChange = await processingOrError
         .waitFor({ timeout: 10_000, state: 'visible' })
         .then(() => true)
         .catch(() => false)
 
-      // If neither appears, it may be a timing issue — at minimum idle text should be gone
       if (!hasStateChange) {
-        // The idle text is gone — that's sufficient to confirm state transition occurred
+        // Idle text gone is sufficient to confirm state transition occurred
         const idleStillVisible = await idleText.isVisible()
         expect(idleStillVisible, 'Idle state text should be gone after valid file selection').toBe(
           false
@@ -581,27 +656,34 @@ test.describe('Artwork upload — V1 extended: valid file selection state transi
     })
   })
 
-  test('artwork grid shows new card after successful upload (requires live Supabase)', async ({
+  test('artwork grid shows new piece card after successful upload (requires live Supabase)', async ({
     page,
   }) => {
     await gotoArtworkPage(page)
     await skipIfRedirectedToLogin(page)
 
-    const opened = await openUploadModal(page)
+    const opened = await openUploadSheet(page)
     if (!opened) {
-      test.skip(true, 'Upload modal did not open — skipping full upload test')
+      test.skip(true, 'Upload sheet did not open — skipping full upload test')
+      return
+    }
+
+    // Use a recognizable piece name so we can find it in the grid afterward.
+    // On success, the page reloads (window.location.reload) and shows the piece card by name.
+    const TEST_PIECE_NAME = 'E2E Test Piece'
+    const advancedToStep2 = await advanceToFileStep(page, TEST_PIECE_NAME, 'E2E Design', '2')
+    if (!advancedToStep2) {
+      test.skip(true, 'Could not reach file step — server action may be unavailable')
       return
     }
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5_000 })
 
     const pngPath = writeTmpPng()
     try {
-      const fileInput = getDialogFileInput(page)
+      const fileInput = getSheetFileInput(page)
       await fileInput.setInputFiles(pngPath)
 
-      // Wait for 'done' state (success indicator)
       const successIcon = dialog.getByText(/Upload complete/i)
       const uploadCompleted = await successIcon
         .waitFor({ timeout: 15_000, state: 'visible' })
@@ -609,7 +691,6 @@ test.describe('Artwork upload — V1 extended: valid file selection state transi
         .catch(() => false)
 
       if (!uploadCompleted) {
-        // Server action not available in this environment — skip gracefully
         test.skip(
           true,
           'Upload did not complete — likely no live Supabase. Full upload test skipped.'
@@ -617,12 +698,12 @@ test.describe('Artwork upload — V1 extended: valid file selection state transi
         return
       }
 
-      // After 1200ms delay, modal closes and onSuccess is called
+      // Sheet closes after 1s delay, then page reloads
       await expect(dialog).not.toBeVisible({ timeout: 5_000 })
 
-      // The artwork grid should now show a card for the uploaded file
-      const artworkCard = page.locator('.grid').locator('text=test-artwork.png')
-      await expect(artworkCard).toBeVisible({ timeout: 5_000 })
+      // Grid shows piece card with the user-entered piece name (not the filename)
+      const artworkCard = page.locator('.grid').getByText(TEST_PIECE_NAME)
+      await expect(artworkCard).toBeVisible({ timeout: 10_000 })
     } finally {
       if (fs.existsSync(pngPath)) {
         fs.unlinkSync(pngPath)
