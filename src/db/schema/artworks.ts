@@ -28,7 +28,9 @@ export const artworkPieces = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     shopId: text('shop_id').notNull(),
-    scope: text('scope', { enum: ['shop', 'customer'] }).notNull().default('shop'),
+    scope: text('scope', { enum: ['shop', 'customer'] })
+      .notNull()
+      .default('shop'),
     customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'restrict' }),
     name: text('name').notNull(),
     notes: text('notes'),
