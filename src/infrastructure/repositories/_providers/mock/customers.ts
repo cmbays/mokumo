@@ -7,6 +7,14 @@ import type { Quote } from '@domain/entities/quote'
 import type { Job } from '@domain/entities/job'
 import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
+import type {
+  CustomerFilters,
+  CustomerListResult,
+  CustomerListStats,
+  CustomerDefaults,
+  SortDirection,
+  CustomerSortField,
+} from '@domain/ports/customer.repository'
 
 export async function getCustomers(): Promise<Customer[]> {
   return customers.map((c) => structuredClone(c))
@@ -57,4 +65,67 @@ export async function getCustomerInvoices(customerId: string): Promise<Invoice[]
 /** Phase 1 only: returns raw mutable arrays for in-place mock data mutations. */
 export function getCustomersMutable(): Customer[] {
   return customers
+}
+
+// ── Wave 0 port stubs — Phase 1 mock provider does not implement these ────────
+// These satisfy ICustomerRepository at compile-time; Supabase implements them in Wave 1.
+
+export async function listCustomers(
+  _shopId: string,
+  _filters: CustomerFilters,
+  _sort: { field: CustomerSortField; direction: SortDirection },
+  _page: { offset: number; limit: number }
+): Promise<CustomerListResult> {
+  return { items: customers.map((c) => structuredClone(c)), total: customers.length }
+}
+
+export async function getListStats(_shopId: string): Promise<CustomerListStats> {
+  return { total: customers.length, activeCount: customers.length, atRiskCount: 0, newThisMonth: 0 }
+}
+
+export async function searchCustomers(
+  _shopId: string,
+  query: string
+): Promise<Pick<Customer, 'id' | 'company'>[]> {
+  const q = query.toLowerCase()
+  return customers
+    .filter((c) => c.company.toLowerCase().includes(q))
+    .map(({ id, company }) => ({ id, company }))
+}
+
+export async function getCustomerDefaults(_customerId: string): Promise<CustomerDefaults> {
+  return {
+    primaryShippingAddress: null,
+    primaryBillingAddress: null,
+    paymentTerms: 'net30',
+    pricingTier: 'standard',
+    discountPct: 0,
+    taxExempt: false,
+  }
+}
+
+export async function createCustomer(
+  _shopId: string,
+  _input: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<Customer> {
+  throw new Error('createCustomer: not implemented in mock provider')
+}
+
+export async function updateCustomer(
+  _id: string,
+  _input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
+): Promise<Customer> {
+  throw new Error('updateCustomer: not implemented in mock provider')
+}
+
+export async function archiveCustomer(_id: string): Promise<void> {
+  throw new Error('archiveCustomer: not implemented in mock provider')
+}
+
+export async function getAccountBalance(_customerId: string): Promise<number> {
+  return 0
+}
+
+export async function getPreferences(_customerId: string): Promise<unknown> {
+  return {}
 }

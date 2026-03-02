@@ -10,4 +10,14 @@ export {
   getCustomerArtworks,
   getCustomerInvoices,
   getCustomersMutable,
+  // Wave 0 — new port methods (stubs in mock, real impl in Wave 1 Supabase provider)
+  listCustomers,
+  getListStats,
+  searchCustomers,
+  getCustomerDefaults,
+  createCustomer,
+  updateCustomer,
+  archiveCustomer,
+  getAccountBalance,
+  getPreferences,
 } from '@infra/repositories/_providers/mock/customers'

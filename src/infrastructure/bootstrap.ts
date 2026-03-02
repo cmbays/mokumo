@@ -95,6 +95,15 @@ import {
   getCustomerNotes,
   getCustomerArtworks,
   getCustomerInvoices,
+  listCustomers,
+  getListStats,
+  searchCustomers,
+  getCustomerDefaults,
+  createCustomer,
+  updateCustomer,
+  archiveCustomer,
+  getAccountBalance,
+  getPreferences,
 } from './repositories/customers'
 import { getQuotes, getQuoteById } from './repositories/quotes'
 import {
@@ -138,6 +147,15 @@ const _portChecks = {
     getNotes: getCustomerNotes,
     getArtworks: getCustomerArtworks,
     getInvoices: getCustomerInvoices,
+    listCustomers,
+    getListStats,
+    searchCustomers,
+    getCustomerDefaults,
+    createCustomer,
+    updateCustomer,
+    archiveCustomer,
+    getAccountBalance,
+    getPreferences,
   } satisfies ICustomerRepository,
 
   quote: {
