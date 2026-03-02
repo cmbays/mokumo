@@ -8,7 +8,7 @@ pipelineType: vertical
 products: []
 domains: [devx]
 tools: [zeroclaw]
-stage: complete
+stage: wrap-up
 tags: [architecture, decision, devx]
 sessionId: 'TBD'
 branch: 'main'

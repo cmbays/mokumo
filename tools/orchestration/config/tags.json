@@ -34,5 +34,23 @@
     "label": "Learning",
     "description": "Lessons learned and patterns discovered during work",
     "color": "amber"
+  },
+  {
+    "slug": "architecture",
+    "label": "Architecture",
+    "description": "Structural design decisions affecting system shape or layer boundaries",
+    "color": "blue"
+  },
+  {
+    "slug": "devx",
+    "label": "Developer Experience",
+    "description": "Tooling, workflow, and methodology improvements for the development process",
+    "color": "purple"
+  },
+  {
+    "slug": "methodology",
+    "label": "Methodology",
+    "description": "Process and workflow design for how development is conducted",
+    "color": "purple"
   }
 ]
