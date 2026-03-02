@@ -42,10 +42,12 @@ const {
   const mockAnd = vi.fn((a: unknown, b: unknown, c: unknown) => ({ a, b, c }))
 
   // Transaction mock: immediately calls the callback with a tx object that has the same methods
-  const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<void>) => {
-    const tx = {
+  type MockTx = { delete: typeof mockDelete; insert: typeof mockInsert; update: typeof mockUpdate }
+  const mockTransaction = vi.fn(async (callback: (tx: MockTx) => Promise<void>) => {
+    const tx: MockTx = {
       delete: mockDelete,
       insert: mockInsert,
+      update: mockUpdate,
     }
     await callback(tx)
   })
@@ -77,7 +79,7 @@ vi.mock('@shared/lib/logger', () => ({
 }))
 vi.mock('drizzle-orm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('drizzle-orm')>()
-  return { ...actual, and: mockAnd }
+  return { ...actual, and: mockAnd, ne: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'ne' })) }
 })
 vi.mock('@shared/lib/supabase/db', () => ({
   db: {
@@ -353,6 +355,78 @@ describe('SupabasePricingTemplateRepository', () => {
       expect(mockTransaction).toHaveBeenCalled()
       expect(mockDelete).toHaveBeenCalled()
       expect(mockInsert).not.toHaveBeenCalled()
+    })
+  })
+
+  // ─── listTemplates (serviceType filter) ───────────────────────────────────
+
+  describe('listTemplates (with serviceType)', () => {
+    it('filters by serviceType when provided', async () => {
+      mockWhere.mockResolvedValueOnce([TEMPLATE_ROW])
+      const result = await repo.listTemplates(SHOP_UUID, 'screen-print')
+      expect(result).toHaveLength(1)
+      // and() should be called to combine shopId + serviceType conditions
+      expect(mockAnd).toHaveBeenCalled()
+    })
+
+    it('returns all templates when serviceType is omitted', async () => {
+      mockWhere.mockResolvedValueOnce([TEMPLATE_ROW])
+      const result = await repo.listTemplates(SHOP_UUID)
+      expect(result).toHaveLength(1)
+    })
+  })
+
+  // ─── deleteTemplate ───────────────────────────────────────────────────────
+
+  describe('deleteTemplate', () => {
+    it('returns early for an invalid id', async () => {
+      await repo.deleteTemplate('bad-id', SHOP_UUID)
+      expect(mockDelete).not.toHaveBeenCalled()
+    })
+
+    it('returns early for an invalid shopId', async () => {
+      await repo.deleteTemplate(TEMPLATE_UUID, 'bad-shop')
+      expect(mockDelete).not.toHaveBeenCalled()
+    })
+
+    it('deletes the template with both id and shopId as conditions', async () => {
+      mockDeleteWhere.mockResolvedValueOnce(undefined)
+      await repo.deleteTemplate(TEMPLATE_UUID, SHOP_UUID)
+      expect(mockDelete).toHaveBeenCalled()
+      expect(mockDeleteWhere).toHaveBeenCalled()
+    })
+
+    it('throws when the DB delete fails', async () => {
+      mockDeleteWhere.mockRejectedValueOnce(new Error('DB error'))
+      await expect(repo.deleteTemplate(TEMPLATE_UUID, SHOP_UUID)).rejects.toThrow('DB error')
+    })
+  })
+
+  // ─── setDefaultTemplate ───────────────────────────────────────────────────
+
+  describe('setDefaultTemplate', () => {
+    it('returns early for an invalid shopId', async () => {
+      await repo.setDefaultTemplate('bad-shop', TEMPLATE_UUID, 'screen-print')
+      expect(mockTransaction).not.toHaveBeenCalled()
+    })
+
+    it('returns early for an invalid id', async () => {
+      await repo.setDefaultTemplate(SHOP_UUID, 'bad-id', 'screen-print')
+      expect(mockTransaction).not.toHaveBeenCalled()
+    })
+
+    it('runs two UPDATE statements in a transaction', async () => {
+      await repo.setDefaultTemplate(SHOP_UUID, TEMPLATE_UUID, 'screen-print')
+      expect(mockTransaction).toHaveBeenCalled()
+      // update is called twice: once to clear defaults, once to set the target
+      expect(mockUpdate).toHaveBeenCalledTimes(2)
+    })
+
+    it('throws when the transaction fails', async () => {
+      mockTransaction.mockRejectedValueOnce(new Error('TX error'))
+      await expect(
+        repo.setDefaultTemplate(SHOP_UUID, TEMPLATE_UUID, 'screen-print')
+      ).rejects.toThrow('TX error')
     })
   })
 })
