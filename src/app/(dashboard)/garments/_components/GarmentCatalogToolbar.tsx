@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, LayoutGrid, List, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Tabs, TabsList, TabsTrigger } from '@shared/ui/primitives/tabs'
@@ -87,6 +87,17 @@ export function GarmentCatalogToolbar({
   const brand = searchParams.get('brand') ?? ''
   const inStock = searchParams.get('inStock') === 'true'
 
+  // Local input state — controlled by local value so keystrokes never wait for URL round-trip.
+  // The 300ms debounce provides the non-blocking feel; no useTransition needed here
+  // (Next.js router.replace inside startTransition+setTimeout gets swallowed).
+  const [inputValue, setInputValue] = useState(query)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Sync local input when the URL query changes externally (e.g. "Clear all" resets params).
+  useEffect(() => {
+    setInputValue(query)
+  }, [query])
+
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -108,9 +119,23 @@ export function GarmentCatalogToolbar({
       } else {
         params.set(key, value)
       }
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      const url = `${pathname}?${params.toString()}`
+      router.replace(url, { scroll: false })
     },
     [searchParams, router, pathname]
+  )
+
+  // Debounced search handler — local state updates immediately; URL update fires 300ms after typing stops.
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+      setInputValue(value)
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+      searchDebounceRef.current = setTimeout(() => {
+        updateParam('q', value || null)
+      }, 300)
+    },
+    [updateParam]
   )
 
   // clearAll: reset URL params (search/brand) AND reset category local state
@@ -129,24 +154,30 @@ export function GarmentCatalogToolbar({
   )
 
   // --- Active filters (for pills — excludes color swatches which get their own row) ---
-  const activeFilters: { key: string; label: string; value: string }[] = []
+  // Each filter carries its own onRemove so category (local state) and URL params
+  // can each be cleared through the correct mechanism.
+  const activeFilters: { key: string; label: string; onRemove: () => void }[] = []
 
   if (category !== 'all') {
     const cat = CATEGORIES.find((c) => c.value === category)
     activeFilters.push({
       key: 'category',
       label: cat?.label ?? category,
-      value: category,
+      onRemove: () => onCategoryChange('all'),
     })
   }
   if (query) {
-    activeFilters.push({ key: 'q', label: `"${query}"`, value: query })
+    activeFilters.push({ key: 'q', label: `"${query}"`, onRemove: () => updateParam('q', null) })
   }
   if (brand) {
-    activeFilters.push({ key: 'brand', label: brand, value: brand })
+    activeFilters.push({ key: 'brand', label: brand, onRemove: () => updateParam('brand', null) })
   }
   if (inStock) {
-    activeFilters.push({ key: 'inStock', label: 'In stock', value: 'true' })
+    activeFilters.push({
+      key: 'inStock',
+      label: 'In stock',
+      onRemove: () => updateParam('inStock', null),
+    })
   }
 
   const hasAnyFilter = activeFilters.length > 0 || selectedColorGroups.length > 0
@@ -188,15 +219,18 @@ export function GarmentCatalogToolbar({
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by name, brand, or SKU..."
-            value={query}
-            onChange={(e) => updateParam('q', e.target.value || null)}
+            value={inputValue}
+            onChange={handleSearchChange}
             className="h-9 pl-8"
             aria-label="Search garments"
           />
-          {query && (
+          {inputValue && (
             <button
               type="button"
-              onClick={() => updateParam('q', null)}
+              onClick={() => {
+                setInputValue('')
+                updateParam('q', null)
+              }}
               className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Clear search"
             >
@@ -323,7 +357,7 @@ export function GarmentCatalogToolbar({
                 {filter.label}
                 <button
                   type="button"
-                  onClick={() => updateParam(filter.key, null)}
+                  onClick={filter.onRemove}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10"
                   aria-label={`Remove ${filter.label} filter`}
                 >

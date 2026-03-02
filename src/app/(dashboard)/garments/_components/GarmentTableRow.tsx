@@ -13,6 +13,8 @@ type GarmentTableRowProps = {
   onToggleEnabled: (garmentId: string) => void
   onToggleFavorite: (garmentId: string) => void
   onClick: (garmentId: string) => void
+  /** Real base price from raw.ss_activewear_products — overrides catalog_archived.base_price (always 0). */
+  overrideBasePrice?: number | null
 }
 
 export function GarmentTableRow({
@@ -21,6 +23,7 @@ export function GarmentTableRow({
   onToggleEnabled,
   onToggleFavorite,
   onClick,
+  overrideBasePrice,
 }: GarmentTableRowProps) {
   return (
     <tr
@@ -50,7 +53,11 @@ export function GarmentTableRow({
       </td>
       {showPrice && (
         <td className="px-3 py-2.5 text-sm text-foreground tabular-nums">
-          {formatCurrency(garment.basePrice)}
+          {overrideBasePrice != null
+            ? formatCurrency(overrideBasePrice)
+            : garment.basePrice > 0
+              ? formatCurrency(garment.basePrice)
+              : '—'}
         </td>
       )}
       <td className="px-3 py-2.5">

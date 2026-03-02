@@ -135,6 +135,17 @@ export function GarmentCatalogClient({
     [styleMetas]
   )
 
+  // SKU → basePrice — sourced from raw.ss_activewear_products via slim metadata join
+  const skuToBasePrice = useMemo(
+    () =>
+      new Map(
+        styleMetas
+          .filter((m) => m.basePrice != null)
+          .map((m) => [m.styleNumber, m.basePrice as number])
+      ),
+    [styleMetas]
+  )
+
   // styleNumber → Set<colorGroupName> — for color group filter matching
   const styleColorGroupsMap = useMemo(
     () => new Map(Object.entries(styleColorGroups).map(([k, v]) => [k, new Set(v)])),
@@ -187,16 +198,22 @@ export function GarmentCatalogClient({
     () => true // server snapshot
   )
 
-  // Selected garment for detail drawer
+  // Selected garment for detail drawer.
+  // drawerOpen is decoupled from selectedGarmentId so the Sheet's 300ms exit animation
+  // can play before React unmounts the component. When the user closes the drawer:
+  //   1. drawerOpen → false  (Sheet begins slide-out animation)
+  //   2. 300ms later → selectedGarmentId → null  (component unmounts, state resets)
   const [selectedGarmentId, setSelectedGarmentId] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
-  // Tier 2 lazy state — colors + images + sizes loaded on drawer open, cached per style
+  // Tier 2 lazy state — colors + images + sizes + basePrice loaded on drawer open, cached per style
   const styleDetailsCacheRef = useRef(
-    new Map<string, { colors: CatalogColor[]; sizes: CatalogSize[] }>()
+    new Map<string, { colors: CatalogColor[]; sizes: CatalogSize[]; basePrice: number | null }>()
   )
   const [drawerColors, setDrawerColors] = useState<CatalogColor[] | undefined>(undefined)
   const [drawerSizes, setDrawerSizes] = useState<CatalogSize[] | undefined>(undefined)
+  const [drawerBasePrice, setDrawerBasePrice] = useState<number | null>(null)
   const [isLoadingColors, setIsLoadingColors] = useState(false)
 
   // handleSelectGarment — opens drawer and triggers Tier 2 fetch if not cached
@@ -206,12 +223,14 @@ export function GarmentCatalogClient({
       if (!garment) return
 
       setSelectedGarmentId(garmentId)
+      setDrawerOpen(true)
 
       // Serve from client-side cache on repeat opens (same session)
       const cached = styleDetailsCacheRef.current.get(garment.sku)
       if (cached) {
         setDrawerColors(cached.colors)
         setDrawerSizes(cached.sizes)
+        setDrawerBasePrice(cached.basePrice)
         setIsLoadingColors(false)
         return
       }
@@ -219,6 +238,7 @@ export function GarmentCatalogClient({
       // No cache: show skeleton while fetching Tier 2
       setDrawerColors(undefined)
       setDrawerSizes(undefined)
+      setDrawerBasePrice(null)
       setIsLoadingColors(true)
 
       const styleId = skuToStyleId.get(garment.sku)
@@ -235,11 +255,13 @@ export function GarmentCatalogClient({
         styleDetailsCacheRef.current.set(garment.sku, detail)
         setDrawerColors(detail.colors)
         setDrawerSizes(detail.sizes)
+        setDrawerBasePrice(detail.basePrice)
       } catch (err) {
         clientLogger.error('fetchStyleDetail failed', { styleId, err })
         toast.error("Couldn't load color details — try again")
         setDrawerColors(undefined)
         setDrawerSizes(undefined)
+        setDrawerBasePrice(null)
       } finally {
         setIsLoadingColors(false)
       }
@@ -460,6 +482,7 @@ export function GarmentCatalogClient({
               onClick={handleSelectGarment}
               frontImageUrl={skuToCardImageUrl.get(garment.sku)}
               normalizedColors={styleSwatches[garment.sku]}
+              overrideBasePrice={skuToBasePrice.get(garment.sku) ?? null}
             />
           ))}
         </div>
@@ -503,6 +526,7 @@ export function GarmentCatalogClient({
                   onToggleEnabled={handleToggleEnabled}
                   onToggleFavorite={handleToggleFavorite}
                   onClick={handleSelectGarment}
+                  overrideBasePrice={skuToBasePrice.get(garment.sku) ?? null}
                 />
               ))}
             </tbody>
@@ -555,13 +579,18 @@ export function GarmentCatalogClient({
         </div>
       )}
 
-      {/* Detail Drawer — conditional rendering for state reset */}
+      {/* Detail Drawer — conditional rendering for state reset.
+          drawerOpen controls the Sheet open prop so Radix can play its exit animation (300ms).
+          setSelectedGarmentId(null) fires after the animation completes to unmount + reset. */}
       {selectedGarment && (
         <GarmentDetailDrawer
           garment={selectedGarment}
-          open={true}
+          open={drawerOpen}
           onOpenChange={(open) => {
-            if (!open) setSelectedGarmentId(null)
+            if (!open) {
+              setDrawerOpen(false)
+              setTimeout(() => setSelectedGarmentId(null), 300)
+            }
           }}
           showPrice={showPrice}
           linkedJobs={linkedJobs}
@@ -571,6 +600,7 @@ export function GarmentCatalogClient({
           normalizedSizes={drawerSizes}
           isLoadingColors={isLoadingColors}
           frontImageUrl={skuToCardImageUrl.get(selectedGarment.sku)}
+          overrideBasePrice={drawerBasePrice}
         />
       )}
     </>

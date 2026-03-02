@@ -142,9 +142,10 @@ const styleIdSchema = z.string().min(1).max(100)
 export async function getCatalogStyleDetail(styleId: string): Promise<{
   colors: import('@domain/entities/catalog-style').CatalogColor[]
   sizes: import('@domain/entities/catalog-style').CatalogSize[]
+  basePrice: number | null
 }> {
-  if (!styleIdSchema.safeParse(styleId).success) return { colors: [], sizes: [] }
-  if (getActiveProvider() !== 'supabase-catalog') return { colors: [], sizes: [] }
+  if (!styleIdSchema.safeParse(styleId).success) return { colors: [], sizes: [], basePrice: null }
+  if (getActiveProvider() !== 'supabase-catalog') return { colors: [], sizes: [], basePrice: null }
   const mod = await loadSupabaseCatalogModule()
   return mod.getCatalogStyleDetail(styleId)
 }

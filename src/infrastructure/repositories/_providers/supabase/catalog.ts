@@ -1,7 +1,7 @@
 import 'server-only'
 import { z } from 'zod'
 import { unstable_cache } from 'next/cache'
-import { sql, eq, and } from 'drizzle-orm'
+import { sql, eq, and, min, inArray } from 'drizzle-orm'
 import type {
   NormalizedGarmentCatalog,
   CatalogStyleMetadata,
@@ -12,7 +12,8 @@ import { catalogImageSchema, catalogSizeSchema } from '@domain/entities/catalog-
 import { garmentCategoryEnum } from '@domain/entities/garment'
 import { logger } from '@shared/lib/logger'
 import { verifySession } from '@infra/auth/session'
-import { catalogStylePreferences, catalogSizes } from '@db/schema/catalog-normalized'
+import { catalogStylePreferences, catalogSizes, catalogStyles } from '@db/schema/catalog-normalized'
+import { ssActivewearProducts } from '@db/schema/raw'
 
 const repoLogger = logger.child({ domain: 'supabase-catalog' })
 
@@ -275,7 +276,8 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
         cs.style_number,
         (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
         csp.is_favorite,
-        card_img.url AS card_image_url
+        card_img.url AS card_image_url,
+        price_agg.base_price
       FROM catalog_styles cs
       JOIN catalog_brands cb ON cb.id = cs.brand_id
       LEFT JOIN catalog_style_preferences csp
@@ -305,6 +307,11 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
           END
         LIMIT 1
       ) card_img ON true
+      LEFT JOIN (
+        SELECT style_id_external, MIN(piece_price)::float AS base_price
+        FROM raw.ss_activewear_products
+        GROUP BY style_id_external
+      ) price_agg ON price_agg.style_id_external = cs.external_id
       ORDER BY cs.style_number ASC
     `)
     rows = result as unknown[]
@@ -324,7 +331,9 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
       is_enabled: boolean | null
       is_favorite: boolean | null
       card_image_url: string | null
+      base_price: number | string | null
     }
+    const rawPrice = r.base_price
     parsed.push({
       id: r.id,
       brand: r.brand_canonical,
@@ -332,6 +341,7 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
       isEnabled: r.is_enabled ?? true,
       isFavorite: r.is_favorite ?? false,
       cardImageUrl: r.card_image_url,
+      basePrice: rawPrice != null && rawPrice !== '' ? Number(rawPrice) : null,
     })
   }
   return parsed
@@ -452,8 +462,8 @@ const styleIdSchema = z.string().uuid()
 
 export async function getCatalogStyleDetail(
   styleId: string
-): Promise<{ colors: CatalogColor[]; sizes: CatalogSize[] }> {
-  if (!styleIdSchema.safeParse(styleId).success) return { colors: [], sizes: [] }
+): Promise<{ colors: CatalogColor[]; sizes: CatalogSize[]; basePrice: number | null }> {
+  if (!styleIdSchema.safeParse(styleId).success) return { colors: [], sizes: [], basePrice: null }
   const { db } = await import('@shared/lib/supabase/db')
 
   let rows: unknown[]
@@ -535,7 +545,34 @@ export async function getCatalogStyleDetail(
     })
   }
 
-  return { colors, sizes: sizesResult.success ? sizesResult.data : [] }
+  // Fetch minimum piece price from raw S&S products table — the most recent sync run
+  // for a given external_id gives us the current wholesale piece price.
+  // Drizzle returns numeric columns as strings; coerce via Number().
+  let basePrice: number | null = null
+  try {
+    const styleRow = await db
+      .select({ externalId: catalogStyles.externalId })
+      .from(catalogStyles)
+      .where(eq(catalogStyles.id, styleId))
+      .limit(1)
+
+    if (styleRow[0]) {
+      const priceRow = await db
+        .select({ minPrice: min(ssActivewearProducts.piecePrice) })
+        .from(ssActivewearProducts)
+        .where(eq(ssActivewearProducts.styleIdExternal, styleRow[0].externalId))
+
+      const raw = priceRow[0]?.minPrice
+      basePrice = raw != null && raw !== '' ? Number(raw) : null
+    }
+  } catch (err) {
+    repoLogger.warn('getCatalogStyleDetail: pricing query failed — returning null', {
+      styleId,
+      err,
+    })
+  }
+
+  return { colors, sizes: sizesResult.success ? sizesResult.data : [], basePrice }
 }
 
 /**

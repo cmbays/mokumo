@@ -330,21 +330,22 @@ export async function getColorFavorites(scopeType: 'shop', scopeId: string): Pro
 export async function fetchStyleDetail(styleId: string): Promise<{
   colors: import('@domain/entities/catalog-style').CatalogColor[]
   sizes: import('@domain/entities/catalog-style').CatalogSize[]
+  basePrice: number | null
 }> {
   const parsed = uuidSchema.safeParse(styleId)
   if (!parsed.success) {
     actionsLogger.warn('fetchStyleDetail called with invalid styleId', { styleId })
-    return { colors: [], sizes: [] }
+    return { colors: [], sizes: [], basePrice: null }
   }
   const session = await verifySession()
-  if (!session) return { colors: [], sizes: [] }
+  if (!session) return { colors: [], sizes: [], basePrice: null }
 
   const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
   try {
     return await getCatalogStyleDetail(styleId)
   } catch (err) {
     actionsLogger.error('fetchStyleDetail failed', { styleId, err })
-    return { colors: [], sizes: [] }
+    return { colors: [], sizes: [], basePrice: null }
   }
 }
 

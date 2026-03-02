@@ -329,13 +329,13 @@ describe('getCatalogStyleDetail', () => {
 
   it('returns { colors: [], sizes: [] } for non-UUID styleId (Zod validation)', async () => {
     const result = await getCatalogStyleDetail('not-a-uuid')
-    expect(result).toEqual({ colors: [], sizes: [] })
+    expect(result).toEqual({ colors: [], sizes: [], basePrice: null })
     expect(mockExecute).not.toHaveBeenCalled()
   })
 
   it('returns { colors: [], sizes: [] } for empty string styleId', async () => {
     const result = await getCatalogStyleDetail('')
-    expect(result).toEqual({ colors: [], sizes: [] })
+    expect(result).toEqual({ colors: [], sizes: [], basePrice: null })
     expect(mockExecute).not.toHaveBeenCalled()
   })
 

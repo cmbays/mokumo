@@ -167,14 +167,14 @@ describe('garments repository router', () => {
     vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
     const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
     const result = await getCatalogStyleDetail('')
-    expect(result).toEqual({ colors: [], sizes: [] })
+    expect(result).toEqual({ colors: [], sizes: [], basePrice: null })
   })
 
   it('getCatalogStyleDetail returns { colors: [], sizes: [] } when not supabase-catalog', async () => {
     vi.stubEnv('SUPPLIER_ADAPTER', '')
     const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
     const result = await getCatalogStyleDetail('style-123')
-    expect(result).toEqual({ colors: [], sizes: [] })
+    expect(result).toEqual({ colors: [], sizes: [], basePrice: null })
   })
 
   it('getCatalogStyleDetail delegates to catalog module when supabase-catalog', async () => {

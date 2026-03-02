@@ -128,6 +128,7 @@ function makeStyleMeta(overrides: Partial<CatalogStyleMetadata> = {}): CatalogSt
     isEnabled: true,
     isFavorite: false,
     cardImageUrl: null,
+    basePrice: null,
     ...overrides,
   }
 }
