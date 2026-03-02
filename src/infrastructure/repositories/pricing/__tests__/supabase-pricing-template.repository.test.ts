@@ -79,7 +79,11 @@ vi.mock('@shared/lib/logger', () => ({
 }))
 vi.mock('drizzle-orm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('drizzle-orm')>()
-  return { ...actual, and: mockAnd, ne: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'ne' })) }
+  return {
+    ...actual,
+    and: mockAnd,
+    ne: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'ne' })),
+  }
 })
 vi.mock('@shared/lib/supabase/db', () => ({
   db: {

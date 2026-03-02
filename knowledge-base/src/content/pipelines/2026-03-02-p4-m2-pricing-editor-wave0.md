@@ -23,12 +23,12 @@ Wave 0 of P4 M2 extends the pricing backend to support the Pricing Editor UI. No
 
 ### Files Changed
 
-| File | Change |
-|------|--------|
-| `src/domain/ports/pricing-template.repository.ts` | Extended with `listTemplates(serviceType?)`, `deleteTemplate`, `setDefaultTemplate` |
-| `src/infrastructure/repositories/pricing/supabase-pricing-template.repository.ts` | Implemented all three new methods |
-| `src/infrastructure/repositories/pricing-templates.ts` | Re-exported new methods from facade |
-| `src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts` | 12 server actions (was 0) |
+| File                                                                              | Change                                                                              |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `src/domain/ports/pricing-template.repository.ts`                                 | Extended with `listTemplates(serviceType?)`, `deleteTemplate`, `setDefaultTemplate` |
+| `src/infrastructure/repositories/pricing/supabase-pricing-template.repository.ts` | Implemented all three new methods                                                   |
+| `src/infrastructure/repositories/pricing-templates.ts`                            | Re-exported new methods from facade                                                 |
+| `src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts`               | 12 server actions (was 0)                                                           |
 
 ### Architecture Decision: Actions in `app/` not `features/`
 
@@ -96,6 +96,7 @@ All were BOLA (Broken Object Level Authorization) — authenticated but not auth
 ### Iteration 2: PASS_WITH_WARNINGS
 
 Two warnings deferred as GitHub Issues:
+
 - **#758**: `savePricingMatrix` TOCTOU — ownership check and write are separate (un-transacted) DB calls. Low risk now (single-user), needs fixing before multi-user or concurrent sessions. Fix: add `shopId` to `upsertMatrixCells` and enforce inside transaction.
 - **#759**: `upsertTemplate` update path skips `isValidUuid(data.shopId)` guard. Theoretical only — `shopId` always comes from trusted `session.shopId`.
 
@@ -128,6 +129,7 @@ claude --resume 0a1b62cb-84e6-46ff-b178-9021bb5a09ae
 ## What's Next
 
 **Wave 1** (two parallel sessions, both depend on `pricing-backend`):
+
 - `matrix-cell-grid` — `MatrixCellGrid` shared component with pure logic functions for add/remove rows/columns and big.js cell tinting
 - `hub-surfaces` — `GarmentMarkupEditor`, `RushTierEditor`, and `PricingTemplateCard` adaptation
 

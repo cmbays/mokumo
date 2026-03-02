@@ -45,6 +45,7 @@ One session. All UI waves depend on this being merged.
 that the editor UI will call.
 
 **Files touched:**
+
 - `src/domain/ports/pricing-template.repository.ts` — add `deleteTemplate` + `setDefaultTemplate`
 - `src/infrastructure/repositories/pricing/supabase-pricing-template.repository.ts` — implement both
 - `src/infrastructure/repositories/pricing-templates.ts` — add 2 facade exports
@@ -52,6 +53,7 @@ that the editor UI will call.
 - `src/features/pricing/actions/__tests__/pricing-templates.test.ts` — NEW: action tests
 
 **Port methods to add:**
+
 ```ts
 deleteTemplate(id: string, shopId: string): Promise<void>
 // DELETE WHERE id = ? AND shop_id = ? (shop scope guard)
@@ -62,6 +64,7 @@ setDefaultTemplate(shopId: string, id: string, serviceType: string): Promise<voi
 ```
 
 **Server actions (in `src/features/pricing/actions/pricing-templates.ts`):**
+
 ```ts
 // All call verifySession() → { shopId } first
 listPricingTemplates(serviceType?: string)  → repo.listTemplates(shopId, serviceType?)
@@ -91,20 +94,23 @@ Two independent sessions. Both depend on Wave 0 being merged.
 grid components. Used by both SP and DTF editors.
 
 **Files created:**
+
 - `src/features/pricing/components/MatrixCellGrid.tsx` — main component
 - `src/features/pricing/components/MatrixCellGrid.test.ts` — logic tests
 
 **Props interface:**
+
 ```ts
 type MatrixCellGridProps = {
   cells: PrintCostMatrixCell[]
-  mode: 'sp' | 'dtf'          // 'dtf' = single column, colorCount always null
+  mode: 'sp' | 'dtf' // 'dtf' = single column, colorCount always null
   onChange: (cells: PrintCostMatrixCell[]) => void
   readOnly?: boolean
 }
 ```
 
 **Behavior:**
+
 - Rows = sorted unique `qty_anchor` values from cells
 - Columns = sorted unique `color_count` values (sp-mode) OR single unlabeled column (dtf-mode)
 - Click cell → inline `<input type="number">` edit mode (S8/S11 pattern)
@@ -123,11 +129,13 @@ type MatrixCellGridProps = {
 PricingTemplateCard to the new entity shape.
 
 **Files touched/created:**
+
 - `src/features/pricing/components/GarmentMarkupEditor.tsx` — NEW
 - `src/features/pricing/components/RushTierEditor.tsx` — NEW
 - `src/features/pricing/components/PricingTemplateCard.tsx` — UPDATE props
 
 **GarmentMarkupEditor:**
+
 - Table with 6 rows: tshirt, hoodie, hat, tank, polo, jacket (human-readable labels)
 - Each row: category label + multiplier input (number, step 0.1)
 - Display format: show both raw multiplier (e.g. `2.0×`) and percentage (e.g. `(100% markup)`)
@@ -135,6 +143,7 @@ PricingTemplateCard to the new entity shape.
 - Accepts initial rules as props; manages local state for edits
 
 **RushTierEditor:**
+
 - Table with add/remove rows
 - Columns: Name | Days Under Standard | Flat Fee ($) | Surcharge (%)
 - Inline editing for all fields
@@ -143,6 +152,7 @@ PricingTemplateCard to the new entity shape.
 - "Save All" button → calls `saveRushTiers(tiers[])` server action
 
 **PricingTemplateCard adaptation (props to remove):**
+
 - Remove: `pricingTier`, `isIndustryDefault`, `healthPercentage`, `lastUpdated`
 - Add: `serviceType: 'screen_print' | 'dtf'`, `isDefault: boolean`, `updatedAt: Date`
 - Keep: MarginIndicator (show 'unknown' state until cell data is passed in)
@@ -160,10 +170,12 @@ Hub rebuild depends on `hub-surfaces` (Wave 1B).
 async RSC + client component using the real P4 M1 entity and MatrixCellGrid.
 
 **Files rewritten:**
+
 - `src/app/(dashboard)/settings/pricing/screen-print/[id]/page.tsx` — async RSC
 - `src/app/(dashboard)/settings/pricing/screen-print/[id]/editor.tsx` → keep filename, rewrite contents as `SpEditorClient`
 
 **Page (async RSC):**
+
 ```tsx
 // Calls getPricingTemplate(id) server action
 // If not found: notFound()
@@ -171,6 +183,7 @@ async RSC + client component using the real P4 M1 entity and MatrixCellGrid.
 ```
 
 **SpEditorClient (client component) fields:**
+
 - Template name input
 - Interpolation mode toggle: `linear` | `step` (shadcn/ui ToggleGroup or RadioGroup)
 - Setup fee per color input (currency, big.js)
@@ -185,10 +198,12 @@ async RSC + client component using the real P4 M1 entity and MatrixCellGrid.
 **Goal:** Replace the Phase 1 DTF editor with a 1D qty curve editor using the real entity.
 
 **Files rewritten:**
+
 - `src/app/(dashboard)/settings/pricing/dtf/[id]/page.tsx` — async RSC
 - `src/app/(dashboard)/settings/pricing/dtf/[id]/dtf-editor-client.tsx` — rewrite
 
 **DTF editor is the same as SP but:**
+
 - MatrixCellGrid in `dtf-mode` (single column, no color dimension)
 - All cells have `colorCount: null`
 - No "Add Color" button
@@ -200,28 +215,33 @@ async RSC + client component using the real P4 M1 entity and MatrixCellGrid.
 that fetches real data and passes it to a 4-tab PricingHubClient.
 
 **Files rewritten/created:**
+
 - `src/app/(dashboard)/settings/pricing/page.tsx` — async RSC (was: full client with mock data)
 - `src/app/(dashboard)/settings/pricing/_components/PricingHubClient.tsx` — NEW client component
 - `src/app/(dashboard)/settings/pricing/_components/NewTemplateDialog.tsx` — NEW dialog component
 
 **Page (async RSC):**
+
 ```tsx
 // Parallel-fetches: listPricingTemplates() + getMarkupRules() + getRushTiers()
 // Passes all as initial props to PricingHubClient
 ```
 
 **PricingHubClient 4-tab layout:**
+
 - "Screen Print" tab: list of SP templates using PricingTemplateCard
 - "DTF" tab: list of DTF templates using PricingTemplateCard
 - "Markup Rules" tab: GarmentMarkupEditor
 - "Rush Tiers" tab: RushTierEditor
 
 **PricingTemplateCard actions to wire:**
+
 - "Open" → `router.push('/settings/pricing/{serviceType}/{id}')`
 - "Set as Default" → optimistic update S1 + `setDefaultTemplate()` server action
 - "Delete" → open `DeleteConfirmDialog` → `deletePricingTemplate()` + remove from local list
 
 **NewTemplateDialog:**
+
 - Dialog trigger: "New Template" button in hub header
 - Form: name (required) + service type select
 - On create: `createPricingTemplate()` → router.push to new template's editor
@@ -238,6 +258,7 @@ One session. Depends on all Wave 2 PRs being merged.
 clean up stale imports, and verify the build is clean.
 
 **Files to delete:**
+
 - `src/app/(dashboard)/settings/pricing/_components/ColorPricingGrid.tsx`
 - `src/app/(dashboard)/settings/pricing/_components/PowerModeGrid.tsx`
 - `src/app/(dashboard)/settings/pricing/_components/QuantityTierEditor.tsx`
@@ -253,11 +274,13 @@ clean up stale imports, and verify the build is clean.
 - `src/app/(dashboard)/settings/pricing/_components/SetupFeeEditor.tsx`
 
 **Imports to remove from any surviving files:**
+
 - `@domain/entities/price-matrix`
 - `@domain/entities/dtf-pricing`
 - `@infra/repositories/pricing` (mock module)
 
 **Verification steps:**
+
 1. `npx tsc --noEmit` — must pass with zero errors
 2. `npm run lint` — must pass
 3. `npm run build` — confirm no dead imports in bundle
