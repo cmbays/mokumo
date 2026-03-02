@@ -35,26 +35,26 @@ claude --resume 0a1b62cb-84e6-46ff-b178-9021bb5a09ae
 
 ### Wave 1a — Customer CRUD
 
-| File | Role |
-|---|---|
+| File                                                               | Role                                                                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `src/infrastructure/repositories/_providers/supabase/customers.ts` | `SupabaseCustomerRepository` — 23 methods implementing `ICustomerRepository` |
-| `src/infrastructure/repositories/customers.ts` | Provider router (env-switch: `DATA_PROVIDER=supabase` vs mock) |
-| `src/infrastructure/repositories/customers-mutable.ts` | Client-safe barrel exporting only `getCustomersMutable` |
-| `src/features/customers/actions/customer.actions.ts` | createCustomer / updateCustomer / archiveCustomer |
-| `src/features/customers/actions/contact.actions.ts` | createContact / updateContact / deleteContact |
-| `src/features/customers/actions/address.actions.ts` | createAddress / updateAddress / deleteAddress |
+| `src/infrastructure/repositories/customers.ts`                     | Provider router (env-switch: `DATA_PROVIDER=supabase` vs mock)               |
+| `src/infrastructure/repositories/customers-mutable.ts`             | Client-safe barrel exporting only `getCustomersMutable`                      |
+| `src/features/customers/actions/customer.actions.ts`               | createCustomer / updateCustomer / archiveCustomer                            |
+| `src/features/customers/actions/contact.actions.ts`                | createContact / updateContact / deleteContact                                |
+| `src/features/customers/actions/address.actions.ts`                | createAddress / updateAddress / deleteAddress                                |
 
 ### Wave 1b — Activity Timeline
 
-| File | Role |
-|---|---|
-| `src/domain/ports/customer-activity.port.ts` | `ICustomerActivityRepository` interface + Zod schemas |
-| `src/domain/services/customer-activity.service.ts` | `CustomerActivityService` — single write path |
-| `src/infrastructure/repositories/_providers/supabase/customer-activity.ts` | Supabase implementation |
-| `src/infrastructure/repositories/customer-activity.ts` | Provider router + exported singleton service |
-| `src/features/customers/actions/activity.actions.ts` | `addCustomerNote`, `loadMoreActivities` server actions |
-| `src/features/customers/components/ActivityFeed.tsx` | Filter chips + timeline + load more + Quick Note rail |
-| `src/features/customers/components/ActivityEntry.tsx` | Single timeline entry (left border + icon + metadata) |
+| File                                                                       | Role                                                   |
+| -------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `src/domain/ports/customer-activity.port.ts`                               | `ICustomerActivityRepository` interface + Zod schemas  |
+| `src/domain/services/customer-activity.service.ts`                         | `CustomerActivityService` — single write path          |
+| `src/infrastructure/repositories/_providers/supabase/customer-activity.ts` | Supabase implementation                                |
+| `src/infrastructure/repositories/customer-activity.ts`                     | Provider router + exported singleton service           |
+| `src/features/customers/actions/activity.actions.ts`                       | `addCustomerNote`, `loadMoreActivities` server actions |
+| `src/features/customers/components/ActivityFeed.tsx`                       | Filter chips + timeline + load more + Quick Note rail  |
+| `src/features/customers/components/ActivityEntry.tsx`                      | Single timeline entry (left border + icon + metadata)  |
 
 ---
 
@@ -79,6 +79,7 @@ The domain entity allows `'contract'` for backward compat with the quoting engin
 ### 4. Legacy Flat Fields on Customer Entity
 
 The new schema derives `name/email/phone/address` from `contacts[]`. Until Wave 3 wires primary contacts, the `mapCustomerRow()` mapper returns safe placeholders:
+
 - `name` → company name
 - `email` → `'unknown@placeholder.local'` (sentinel, not shown in UI)
 - `phone` / `address` → `''`
@@ -95,16 +96,16 @@ The 23 Supabase-mode branches in `customers.ts` were uncovered, pulling reposito
 
 ## Deferred Items
 
-| Item | Deferred To |
-|---|---|
-| `getQuotes/getJobs/getInvoices(customerId)` cross-join | Wave 3 (customer-cross-vertical) |
-| `getArtworks(customerId)` | Artwork vertical (P5 M1) |
-| `getAccountBalance(customerId)` | Wave 2a (customer-financial) |
-| `getPreferences(customerId)` | Wave 2b (customer-intelligence) |
-| Remove `'contract'` from lifecycle domain enum | Wave 3 Step 13 |
-| Remove legacy flat fields (name/email/phone/address) | Wave 3 Step 13 |
-| `actorId` in activity records (currently `null`) | Wave 2 |
-| Color resolution by invoice/quote status in ActivityFeed | Wave 3 cross-vertical wiring |
+| Item                                                     | Deferred To                      |
+| -------------------------------------------------------- | -------------------------------- |
+| `getQuotes/getJobs/getInvoices(customerId)` cross-join   | Wave 3 (customer-cross-vertical) |
+| `getArtworks(customerId)`                                | Artwork vertical (P5 M1)         |
+| `getAccountBalance(customerId)`                          | Wave 2a (customer-financial)     |
+| `getPreferences(customerId)`                             | Wave 2b (customer-intelligence)  |
+| Remove `'contract'` from lifecycle domain enum           | Wave 3 Step 13                   |
+| Remove legacy flat fields (name/email/phone/address)     | Wave 3 Step 13                   |
+| `actorId` in activity records (currently `null`)         | Wave 2                           |
+| Color resolution by invoice/quote status in ActivityFeed | Wave 3 cross-vertical wiring     |
 
 ---
 
