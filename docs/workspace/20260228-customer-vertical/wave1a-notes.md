@@ -12,9 +12,11 @@
 ### Files Created
 
 **Supabase repository implementation:**
+
 - `src/infrastructure/repositories/_providers/supabase/customers.ts` — `SupabaseCustomerRepository` implementing the full `ICustomerRepository` interface (16 methods)
 
 **Server actions (3 files):**
+
 - `src/features/customers/actions/customer.actions.ts` — `createCustomer`, `updateCustomer`, `archiveCustomer`
 - `src/features/customers/actions/contact.actions.ts` — `createContact`, `updateContact`, `deleteContact`
 - `src/features/customers/actions/address.actions.ts` — `createAddress`, `updateAddress`, `deleteAddress`
@@ -24,6 +26,7 @@
 - `src/infrastructure/repositories/customers.ts` — Provider router (env-based switch: `DATA_PROVIDER=supabase` routes to Supabase, anything else falls through to mock)
 
 **Not updated (pre-existing pages were left as-is):**
+
 - `src/app/(dashboard)/customers/page.tsx` — Still uses `getCustomers()` + `getQuotes()` from mock (correct: both are routed through the provider switch)
 - `src/app/(dashboard)/customers/[id]/page.tsx` — Still uses the legacy `getCustomerBy*` helpers (correct: all routed through provider switch)
 
@@ -46,6 +49,7 @@ The domain entity allows `'contract'` for backward compat with the quoting engin
 ### 4. Legacy Flat Fields (name/email/phone/address)
 
 The `customers` DB table does not store `name`, `email`, `phone`, or `address` — these Phase 1 legacy fields are derived from `contacts[]` in the new schema. The `mapCustomerRow` function provides safe placeholders:
+
 - `name` → company name (until Wave 3 wires `contacts[0].isPrimary`)
 - `email` → `'unknown@placeholder.local'` (sentinel value)
 - `phone` → `''`
@@ -57,6 +61,7 @@ When Supabase data is loaded, the `CustomerCombobox` and other legacy consumers 
 ### 5. Cross-Vertical Joins Deferred
 
 These methods return empty arrays until Wave 3 wires the cross-vertical FKs:
+
 - `getQuotes(customerId)` → Wave 3
 - `getJobs(customerId)` → Wave 3
 - `getInvoices(customerId)` → Wave 3
@@ -70,6 +75,7 @@ Returns `0` until invoices table has `customer_id` FK wired (Wave 3 / Wave 2a fi
 ### 7. `discountPct` DB ↔ Domain Conversion
 
 The DB stores fraction (0.15 = 15%). The domain entity field `discountPercentage` is the human-readable percentage (15). Conversion:
+
 - Read: `row.discountPct * 100` → `discountPercentage`
 - Write: `discountPercentage / 100` → `discountPct`
 
@@ -103,16 +109,16 @@ Domain enum includes `'contract'`; DB enum does not. `inArray()` rejected the va
 
 ## Deferred Items
 
-| Item | Deferred To |
-|------|-------------|
-| `getQuotes/getJobs/getInvoices(customerId)` cross-join | Wave 3 (customer-cross-vertical) |
-| `getArtworks(customerId)` | Artwork vertical (P5 M1) |
-| `getNotes(customerId)` | Wave 1b outputs customer_activities |
-| `getAccountBalance(customerId)` | Wave 2a (customer-financial) |
-| `getPreferences(customerId)` | Wave 2b (customer-intelligence) |
-| Remove `'contract'` from lifecycle domain enum (Step 13) | Wave 3 |
-| Remove legacy flat fields (name/email/phone/address) from Customer entity | Wave 3 Step 13 |
-| Wire list/detail pages to use `listCustomers()` + `getListStats()` | Future — pages currently work via `getCustomers()` through the provider switch |
+| Item                                                                      | Deferred To                                                                    |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `getQuotes/getJobs/getInvoices(customerId)` cross-join                    | Wave 3 (customer-cross-vertical)                                               |
+| `getArtworks(customerId)`                                                 | Artwork vertical (P5 M1)                                                       |
+| `getNotes(customerId)`                                                    | Wave 1b outputs customer_activities                                            |
+| `getAccountBalance(customerId)`                                           | Wave 2a (customer-financial)                                                   |
+| `getPreferences(customerId)`                                              | Wave 2b (customer-intelligence)                                                |
+| Remove `'contract'` from lifecycle domain enum (Step 13)                  | Wave 3                                                                         |
+| Remove legacy flat fields (name/email/phone/address) from Customer entity | Wave 3 Step 13                                                                 |
+| Wire list/detail pages to use `listCustomers()` + `getListStats()`        | Future — pages currently work via `getCustomers()` through the provider switch |
 
 ---
 
@@ -126,10 +132,10 @@ Domain enum includes `'contract'`; DB enum does not. `inArray()` rejected the va
 
 ## Key File Paths
 
-| File | Purpose |
-|------|---------|
-| `src/infrastructure/repositories/_providers/supabase/customers.ts` | Supabase implementation of `ICustomerRepository` |
-| `src/infrastructure/repositories/customers.ts` | Provider router (env-based switch) |
-| `src/features/customers/actions/customer.actions.ts` | createCustomer / updateCustomer / archiveCustomer |
-| `src/features/customers/actions/contact.actions.ts` | createContact / updateContact / deleteContact |
-| `src/features/customers/actions/address.actions.ts` | createAddress / updateAddress / deleteAddress |
+| File                                                               | Purpose                                           |
+| ------------------------------------------------------------------ | ------------------------------------------------- |
+| `src/infrastructure/repositories/_providers/supabase/customers.ts` | Supabase implementation of `ICustomerRepository`  |
+| `src/infrastructure/repositories/customers.ts`                     | Provider router (env-based switch)                |
+| `src/features/customers/actions/customer.actions.ts`               | createCustomer / updateCustomer / archiveCustomer |
+| `src/features/customers/actions/contact.actions.ts`                | createContact / updateContact / deleteContact     |
+| `src/features/customers/actions/address.actions.ts`                | createAddress / updateAddress / deleteAddress     |

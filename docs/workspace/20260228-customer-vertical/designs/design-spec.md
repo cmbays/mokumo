@@ -7,12 +7,13 @@
 This document is the single source of truth for building the customer vertical. Artboard references are in Paper file `https://app.paper.design/file/01KJEJAKJWFM2XXMSHAW5T13RN`.
 
 > **⚠ Post-P4 session overrides (2026-03-02)**: The Paper artboards (P1–P4) were designed before PR #731 (design system upgrade). The following rules in this spec **supersede** any artboard pixel values:
+>
 > 1. Lifecycle stage + health → dot indicators, not colored pills (see Lifecycle & Health section)
 > 2. Customer type tags → monochrome muted pill, no status/categorical color
 > 3. Activity timeline entries → direct on `bg-background`, no card background
 > 4. Customer list filter visibility → 5-signal system (see Customer List section)
 > 5. Customer list sort → chevron icons, not `↑`/`↓` glyphs
-> When in doubt: trust this spec over Paper artboard screenshots.
+>    When in doubt: trust this spec over Paper artboard screenshots.
 
 ---
 
@@ -60,27 +61,27 @@ This document is the single source of truth for building the customer vertical. 
 
 ```tsx
 import { dotColor } from '@shared/lib/design-system'
-<span className="inline-flex items-center gap-1.5">
+;<span className="inline-flex items-center gap-1.5">
   <span className={cn('h-2 w-2 rounded-full', dotColor('muted'))} />
   <span className="text-sm text-foreground">Prospect</span>
 </span>
 ```
 
-| Stage    | `dotColor()` arg | Rationale                          |
-| -------- | ---------------- | ---------------------------------- |
-| Prospect | `'muted'`        | Not yet a customer — neutral       |
-| New      | `'action'`       | Active, in-progress relationship   |
-| Repeat   | `'success'`      | Healthy, proven relationship       |
-| VIP      | `'warning'`      | Premium — needs attention/care     |
-| At-Risk  | `'error'`        | Relationship flagged               |
-| Archived | `'muted'`        | Inactive — same as Prospect        |
+| Stage    | `dotColor()` arg | Rationale                        |
+| -------- | ---------------- | -------------------------------- |
+| Prospect | `'muted'`        | Not yet a customer — neutral     |
+| New      | `'action'`       | Active, in-progress relationship |
+| Repeat   | `'success'`      | Healthy, proven relationship     |
+| VIP      | `'warning'`      | Premium — needs attention/care   |
+| At-Risk  | `'error'`        | Relationship flagged             |
+| Archived | `'muted'`        | Inactive — same as Prospect      |
 
 ### Health status — dot + text
 
-| Status   | `dotColor()` arg | Text color          |
-| -------- | ---------------- | ------------------- |
-| Active   | `'success'`      | `text-foreground`   |
-| At-Risk  | `'error'`        | `text-error`        |
+| Status  | `dotColor()` arg | Text color        |
+| ------- | ---------------- | ----------------- |
+| Active  | `'success'`      | `text-foreground` |
+| At-Risk | `'error'`        | `text-error`      |
 
 **No border box on health.** Dot + plain text only.
 
