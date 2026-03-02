@@ -137,9 +137,7 @@ export const rushTiers = pgTable(
 
     name: varchar('name', { length: 100 }).notNull(), // e.g. 'Next Day', 'Same Day'
     daysUnderStandard: integer('days_under_standard').notNull(), // tier activates when job needs to be done X days faster than standard
-    flatFee: numeric('flat_fee', { precision: 10, scale: 2, mode: 'number' })
-      .notNull()
-      .default(0),
+    flatFee: numeric('flat_fee', { precision: 10, scale: 2, mode: 'number' }).notNull().default(0),
     pctSurcharge: numeric('pct_surcharge', { precision: 5, scale: 4, mode: 'number' })
       .notNull()
       .default(0), // 0.10 = 10%

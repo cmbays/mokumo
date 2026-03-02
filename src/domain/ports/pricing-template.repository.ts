@@ -15,10 +15,7 @@ export type { PricingTemplate, PricingTemplateWithMatrix }
 
 export type IPricingTemplateRepository = {
   /** Returns the default template for a shop + service type, including all matrix cells. */
-  getDefaultTemplate(
-    shopId: string,
-    serviceType: string
-  ): Promise<PricingTemplateWithMatrix | null>
+  getDefaultTemplate(shopId: string, serviceType: string): Promise<PricingTemplateWithMatrix | null>
 
   /** Returns a specific template by ID, including all matrix cells. */
   getTemplateById(id: string): Promise<PricingTemplateWithMatrix | null>

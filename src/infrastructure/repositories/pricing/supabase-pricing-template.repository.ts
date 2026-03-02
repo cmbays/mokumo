@@ -3,7 +3,12 @@ import 'server-only'
 import { z } from 'zod'
 import { eq, and, asc } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
-import { pricingTemplates, printCostMatrix, garmentMarkupRules, rushTiers } from '@db/schema/pricing'
+import {
+  pricingTemplates,
+  printCostMatrix,
+  garmentMarkupRules,
+  rushTiers,
+} from '@db/schema/pricing'
 import { logger } from '@shared/lib/logger'
 import type { IPricingTemplateRepository } from '@domain/ports/pricing-template.repository'
 import type {
@@ -28,10 +33,7 @@ function isValidUuid(id: string): boolean {
 
 // ─── Internal: fetch all cells for a template ─────────────────────────────
 async function fetchCells(templateId: string) {
-  return db
-    .select()
-    .from(printCostMatrix)
-    .where(eq(printCostMatrix.templateId, templateId))
+  return db.select().from(printCostMatrix).where(eq(printCostMatrix.templateId, templateId))
 }
 
 export class SupabasePricingTemplateRepository implements IPricingTemplateRepository {
@@ -71,10 +73,7 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
       return null
     }
     try {
-      const [template] = await db
-        .select()
-        .from(pricingTemplates)
-        .where(eq(pricingTemplates.id, id))
+      const [template] = await db.select().from(pricingTemplates).where(eq(pricingTemplates.id, id))
       if (!template) return null
       const cells = await fetchCells(id)
       return { ...template, cells }

@@ -280,7 +280,13 @@ describe('computeUnitPrice', () => {
     // setupFee: $15.00 × 2 colors = $30.00 (per order, here per-unit simplification)
     // unitPrice = 10.00 + 4.00 + 30.00 = 44.00
     const result = computeUnitPrice(
-      { qty: 48, colorCount: 2, garmentCategory: 'tshirt', blankCost: 5.0, templateId: TEMPLATE_ID },
+      {
+        qty: 48,
+        colorCount: 2,
+        garmentCategory: 'tshirt',
+        blankCost: 5.0,
+        templateId: TEMPLATE_ID,
+      },
       makeTemplate(),
       MARKUP_RULES
     )
@@ -297,7 +303,13 @@ describe('computeUnitPrice', () => {
     // setupFee: $15.00 × 2 = $30.00
     // unitPrice = 18.00 + 5.13 + 30.00 = 53.13 (round2 applied)
     const result = computeUnitPrice(
-      { qty: 30, colorCount: 2, garmentCategory: 'hoodie', blankCost: 12.0, templateId: TEMPLATE_ID },
+      {
+        qty: 30,
+        colorCount: 2,
+        garmentCategory: 'hoodie',
+        blankCost: 12.0,
+        templateId: TEMPLATE_ID,
+      },
       makeTemplate(),
       MARKUP_RULES
     )
@@ -314,7 +326,13 @@ describe('computeUnitPrice', () => {
       cells: DTF_CELLS,
     })
     const result = computeUnitPrice(
-      { qty: 24, colorCount: null, garmentCategory: 'tshirt', blankCost: 5.0, templateId: TEMPLATE_ID },
+      {
+        qty: 24,
+        colorCount: null,
+        garmentCategory: 'tshirt',
+        blankCost: 5.0,
+        templateId: TEMPLATE_ID,
+      },
       dtfTemplate,
       MARKUP_RULES
     )
@@ -327,7 +345,13 @@ describe('computeUnitPrice', () => {
   it('applies correct rounding to 2 decimal places', () => {
     // Verify that intermediate precision does not bleed into results
     const result = computeUnitPrice(
-      { qty: 30, colorCount: 2, garmentCategory: 'tshirt', blankCost: 3.33, templateId: TEMPLATE_ID },
+      {
+        qty: 30,
+        colorCount: 2,
+        garmentCategory: 'tshirt',
+        blankCost: 3.33,
+        templateId: TEMPLATE_ID,
+      },
       makeTemplate({ setupFeePerColor: 0 }),
       MARKUP_RULES
     )
@@ -341,7 +365,13 @@ describe('computeUnitPrice', () => {
   it('throws PricingError for unknown garment category', () => {
     expect(() =>
       computeUnitPrice(
-        { qty: 24, colorCount: 1, garmentCategory: 'unknown', blankCost: 5.0, templateId: TEMPLATE_ID },
+        {
+          qty: 24,
+          colorCount: 1,
+          garmentCategory: 'unknown',
+          blankCost: 5.0,
+          templateId: TEMPLATE_ID,
+        },
         makeTemplate(),
         MARKUP_RULES
       )
@@ -351,7 +381,13 @@ describe('computeUnitPrice', () => {
   it('throws PricingError when no matching matrix cells', () => {
     expect(() =>
       computeUnitPrice(
-        { qty: 24, colorCount: 9, garmentCategory: 'tshirt', blankCost: 5.0, templateId: TEMPLATE_ID },
+        {
+          qty: 24,
+          colorCount: 9,
+          garmentCategory: 'tshirt',
+          blankCost: 5.0,
+          templateId: TEMPLATE_ID,
+        },
         makeTemplate(),
         MARKUP_RULES
       )

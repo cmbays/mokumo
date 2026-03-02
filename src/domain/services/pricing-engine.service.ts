@@ -155,9 +155,7 @@ export function computeUnitPrice(
 
   // Setup fee is per-color for screen print; DTF has no discrete color count
   const setupFee =
-    input.colorCount !== null
-      ? money(template.setupFeePerColor).times(input.colorCount)
-      : money(0)
+    input.colorCount !== null ? money(template.setupFeePerColor).times(input.colorCount) : money(0)
 
   const unitPrice = blankRevenue.plus(decorationCost).plus(setupFee)
 
