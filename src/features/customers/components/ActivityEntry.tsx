@@ -2,14 +2,14 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Clock, Bot, Mail, Phone, Globe, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { Pencil, Bot, Mail, Phone, Globe, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import type { CustomerActivity, ActivitySource } from '@domain/ports/customer-activity.port'
 
 // ─── Source icon map ──────────────────────────────────────────────────────────
 
 const SOURCE_ICON_MAP: Record<ActivitySource, React.ElementType> = {
-  manual: Clock,
+  manual: Pencil,
   system: Bot,
   email: Mail,
   sms: Phone,
@@ -70,9 +70,9 @@ function RelatedEntityBadge({
       href={href}
       className={cn(
         'inline-flex items-center gap-1 rounded px-1.5 py-0.5',
-        'text-xs font-medium text-action hover:text-action/80',
+        'text-xs font-medium text-action hover:text-action/80 active:text-action/70',
         'border border-action/20 bg-action/5',
-        'transition-colors'
+        'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
       )}
     >
       {displayLabel}

@@ -46,6 +46,13 @@ export {
   archiveCustomer,
   getAccountBalance,
   getPreferences,
+  // Wave 1 contact + address mutations
+  createContact,
+  updateContact,
+  deleteContact,
+  createAddress,
+  updateAddress,
+  deleteAddress,
 } from './repositories/customers'
 
 export { getQuotes, getQuoteById } from './repositories/quotes'

@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { logger } from '@shared/lib/logger'
 import { customerActivityService } from '@infra/repositories/customer-activity'
-import type { ActivityPage } from '@domain/ports/customer-activity.port'
+import type { ActivityPage, CustomerActivity } from '@domain/ports/customer-activity.port'
 import { activitySourceSchema } from '@domain/ports/customer-activity.port'
 import { verifySession } from '@infra/auth/session'
 
@@ -11,7 +11,7 @@ const log = logger.child({ domain: 'customers', action: 'activity' })
 
 // ─── Result type ──────────────────────────────────────────────────────────────
 
-export type ActivityError = { code: string; message: string }
+export type ActivityError = 'UNAUTHORIZED' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR'
 
 export type ActivityResult<T> = { ok: true; value: T } | { ok: false; error: ActivityError }
 
@@ -44,24 +44,18 @@ const loadMoreInputSchema = z.object({
  */
 export async function addCustomerNote(
   rawInput: unknown
-): Promise<ActivityResult<import('@domain/ports/customer-activity.port').CustomerActivity>> {
+): Promise<ActivityResult<CustomerActivity>> {
   const session = await verifySession()
   if (!session) {
     log.warn('Unauthenticated attempt to access customer activity')
-    return { ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }
+    return { ok: false, error: 'UNAUTHORIZED' }
   }
 
   const parsed = addNoteInputSchema.safeParse(rawInput)
 
   if (!parsed.success) {
     log.warn('addCustomerNote: validation failed', { error: parsed.error.message })
-    return {
-      ok: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      },
-    }
+    return { ok: false, error: 'VALIDATION_ERROR' }
   }
 
   const input = parsed.data
@@ -90,10 +84,7 @@ export async function addCustomerNote(
       error: Error.isError(err) ? err.message : String(err),
       customerId: input.customerId,
     })
-    return {
-      ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to save note. Please try again.' },
-    }
+    return { ok: false, error: 'INTERNAL_ERROR' }
   }
 }
 
@@ -109,20 +100,14 @@ export async function loadMoreActivities(rawInput: unknown): Promise<ActivityRes
   const session = await verifySession()
   if (!session) {
     log.warn('Unauthenticated attempt to access customer activity')
-    return { ok: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }
+    return { ok: false, error: 'UNAUTHORIZED' }
   }
 
   const parsed = loadMoreInputSchema.safeParse(rawInput)
 
   if (!parsed.success) {
     log.warn('loadMoreActivities: validation failed', { error: parsed.error.message })
-    return {
-      ok: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: parsed.error.issues[0]?.message ?? 'Invalid input',
-      },
-    }
+    return { ok: false, error: 'VALIDATION_ERROR' }
   }
 
   const { customerId, cursor, source, limit } = parsed.data
@@ -142,9 +127,6 @@ export async function loadMoreActivities(rawInput: unknown): Promise<ActivityRes
       error: Error.isError(err) ? err.message : String(err),
       customerId,
     })
-    return {
-      ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to load activities. Please try again.' },
-    }
+    return { ok: false, error: 'INTERNAL_ERROR' }
   }
 }

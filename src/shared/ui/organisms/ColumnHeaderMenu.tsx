@@ -63,7 +63,7 @@ export function ColumnHeaderMenu({
       )}
       aria-label={`Filter by ${label}`}
     >
-      <ListFilter className="size-3.5" />
+      <ListFilter className="size-4" />
     </button>
   ) : null
 
@@ -106,11 +106,11 @@ export function ColumnHeaderMenu({
           <DropdownMenuContent align="start" className="min-w-[160px]">
             <DropdownMenuLabel className="text-xs">Sort</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => onSort(sortKey, 'asc')}>
-              <ChevronUp className="size-3.5" />
+              <ChevronUp className="size-4" />
               Sort Ascending
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onSort(sortKey, 'desc')}>
-              <ChevronDown className="size-3.5" />
+              <ChevronDown className="size-4" />
               Sort Descending
             </DropdownMenuItem>
 

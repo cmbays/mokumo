@@ -1,8 +1,8 @@
 import 'server-only'
 
 import { eq, and, lt, desc } from 'drizzle-orm'
-import { z } from 'zod'
 import { db } from '@shared/lib/supabase/db'
+import { validateUUID } from '@infra/repositories/_shared/validation'
 import { customerActivities } from '@db/schema/customers'
 import type {
   ICustomerActivityRepository,
@@ -15,18 +15,6 @@ import { customerActivitySchema } from '@domain/ports/customer-activity.port'
 import { logger } from '@shared/lib/logger'
 
 const repoLogger = logger.child({ domain: 'supabase-customer-activity' })
-
-// ─── ID validation ────────────────────────────────────────────────────────────
-
-const uuidSchema = z.string().uuid()
-
-function validateUuid(id: string, fieldName: string): void {
-  const result = uuidSchema.safeParse(id)
-  if (!result.success) {
-    repoLogger.warn(`${fieldName} failed UUID validation`, { id })
-    throw new Error(`Invalid ${fieldName}: ${id}`)
-  }
-}
 
 // ─── Row mapper ───────────────────────────────────────────────────────────────
 
@@ -51,8 +39,8 @@ function mapRow(row: typeof customerActivities.$inferSelect): CustomerActivity {
 
 export const supabaseCustomerActivityRepository: ICustomerActivityRepository = {
   async insert(input: ActivityInput): Promise<CustomerActivity> {
-    validateUuid(input.customerId, 'customerId')
-    validateUuid(input.shopId, 'shopId')
+    if (!validateUUID(input.customerId)) throw new Error(`insert: invalid customerId "${input.customerId}"`)
+    if (!validateUUID(input.shopId)) throw new Error(`insert: invalid shopId "${input.shopId}"`)
 
     repoLogger.debug('Inserting customer activity', {
       customerId: input.customerId,
@@ -94,7 +82,7 @@ export const supabaseCustomerActivityRepository: ICustomerActivityRepository = {
       filter?: ActivityFilter
     }
   ): Promise<ActivityPage> {
-    validateUuid(customerId, 'customerId')
+    if (!validateUUID(customerId)) throw new Error(`listForCustomer: invalid customerId "${customerId}"`)
 
     const limit = Math.min(opts.limit ?? 20, 50)
     const cursor = opts.cursor ?? null

@@ -11,7 +11,7 @@ import {
   updateAddress as repoUpdateAddress,
   deleteAddress as repoDeleteAddress,
 } from '@infra/repositories/customers'
-import { addressInputSchema, addressRowSchema } from '@domain/ports/customer-contact.port'
+import { addressInputSchema } from '@domain/ports/customer-contact.port'
 import type { AddressRow } from '@domain/ports/customer-contact.port'
 
 const log = logger.child({ domain: 'customers' })
@@ -138,5 +138,3 @@ export async function deleteAddress(
   }
 }
 
-// Satisfy the import — addressRowSchema used for type derivation only.
-void addressRowSchema

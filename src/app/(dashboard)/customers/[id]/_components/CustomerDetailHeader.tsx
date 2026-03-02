@@ -40,7 +40,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       {copied ? (
         <Check className="size-3 text-success" />
       ) : (
-        <Copy className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Copy className="size-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
       )}
     </button>
   )

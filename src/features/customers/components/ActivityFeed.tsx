@@ -1,13 +1,22 @@
 'use client'
 
 import * as React from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MessageSquare } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Button } from '@shared/ui/primitives/button'
 import { Textarea } from '@shared/ui/primitives/textarea'
 import { ActivityEntry } from './ActivityEntry'
 import { addCustomerNote, loadMoreActivities } from '../actions/activity.actions'
+import type { ActivityError } from '../actions/activity.actions'
 import type { CustomerActivity, ActivitySource } from '@domain/ports/customer-activity.port'
+
+// ─── Error message map ────────────────────────────────────────────────────────
+
+const ACTIVITY_ERROR_MESSAGES: Record<ActivityError, string> = {
+  UNAUTHORIZED: 'You must be signed in to perform this action.',
+  VALIDATION_ERROR: 'Invalid input. Please check your entry and try again.',
+  INTERNAL_ERROR: 'Something went wrong. Please try again.',
+}
 
 // ─── Color resolution helpers ─────────────────────────────────────────────────
 
@@ -68,10 +77,10 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full px-3.5 py-1 text-sm transition-colors',
+        'min-h-(--mobile-touch-target) rounded-full px-3.5 py-1 text-sm transition-colors',
         active
           ? 'border border-action/60 bg-action/15 text-action font-medium'
-          : 'border border-border text-muted-foreground hover:text-foreground'
+          : 'border border-border bg-surface text-muted-foreground hover:text-foreground'
       )}
       aria-pressed={active}
     >
@@ -106,13 +115,13 @@ function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
       setContent('')
       onNoteSaved(result.value)
     } else {
-      setError(result.error.message)
+      setError(ACTIVITY_ERROR_MESSAGES[result.error])
     }
   }
 
-  // 360px fixed per design spec
+  // 360px fixed per design spec (stacks below timeline on mobile)
   return (
-    <div className="flex flex-col gap-3 border-l border-border pl-5 w-[360px] shrink-0">
+    <div className="flex flex-col gap-3 border-l border-border pl-5 w-full md:w-[360px] shrink-0">
       <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Quick Note
       </h3>
@@ -139,10 +148,7 @@ function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
           size="sm"
           disabled={!content.trim() || saving}
           onClick={handleSave}
-          className="relative"
-          style={
-            content.trim() && !saving ? { boxShadow: '4px 4px 0px rgba(0,0,0,0.5)' } : undefined
-          }
+          className={cn('relative', content.trim() && !saving && 'shadow-brutal shadow-black/50')}
         >
           {saving ? (
             <>
@@ -218,7 +224,7 @@ export function ActivityFeed({
         setHasMore(result.value.hasMore)
         setNextCursor(result.value.nextCursor)
       } else {
-        setLoadError(result.error.message)
+        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error])
       }
     }
 
@@ -250,7 +256,7 @@ export function ActivityFeed({
       setHasMore(result.value.hasMore)
       setNextCursor(result.value.nextCursor)
     } else {
-      setLoadError(result.error.message)
+      setLoadError(ACTIVITY_ERROR_MESSAGES[result.error])
     }
   }
 
@@ -260,7 +266,7 @@ export function ActivityFeed({
   }
 
   return (
-    <div className="flex gap-6 min-h-0">
+    <div className="flex flex-col gap-6 md:flex-row md:min-h-0">
       {/* Timeline column */}
       <div className="flex-1 min-w-0">
         {/* Filter chips */}
@@ -281,7 +287,13 @@ export function ActivityFeed({
 
         {/* Timeline entries */}
         {activities.length === 0 && !loadingMore && (
-          <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <MessageSquare className="size-6 text-muted-foreground/50" aria-hidden="true" />
+            <p className="text-sm font-medium text-foreground">No activity yet</p>
+            <p className="text-sm text-muted-foreground">
+              Add a note above to start the activity timeline.
+            </p>
+          </div>
         )}
 
         {activities.map((activity) => {

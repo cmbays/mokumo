@@ -11,7 +11,7 @@ import {
   updateContact as repoUpdateContact,
   deleteContact as repoDeleteContact,
 } from '@infra/repositories/customers'
-import { contactInputSchema, contactRowSchema } from '@domain/ports/customer-contact.port'
+import { contactInputSchema } from '@domain/ports/customer-contact.port'
 import type { ContactRow } from '@domain/ports/customer-contact.port'
 
 const log = logger.child({ domain: 'customers' })
@@ -139,5 +139,3 @@ export async function deleteContact(
   }
 }
 
-// Satisfy the import — contactRowSchema used for type derivation only.
-void contactRowSchema

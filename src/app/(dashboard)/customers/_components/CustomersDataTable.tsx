@@ -904,7 +904,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                   return (
                     <TableRow
                       key={customer.id}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="cursor-pointer hover:bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       onClick={() => router.push(`/customers/${customer.id}`)}
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -920,7 +920,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                         {customer.isArchived && (
                           <Badge
                             variant="ghost"
-                            className="ml-2 bg-muted text-muted-foreground text-xs"
+                            className="ml-2 bg-surface text-muted-foreground text-xs"
                           >
                             Archived
                           </Badge>
@@ -973,7 +973,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                   onClick={() => router.push(`/customers/${customer.id}`)}
                   className={cn(
                     'flex flex-col gap-2 rounded-lg border border-border bg-elevated p-4',
-                    'text-left transition-colors hover:bg-muted/50',
+                    'text-left transition-colors hover:bg-surface',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/50'
                   )}
                 >
@@ -1001,7 +1001,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                     <HealthBadge status={customer.healthStatus} />
                     <TypeTagBadges tags={customer.typeTags} />
                     {customer.isArchived && (
-                      <Badge variant="ghost" className="bg-muted text-muted-foreground text-xs">
+                      <Badge variant="ghost" className="bg-surface text-muted-foreground text-xs">
                         Archived
                       </Badge>
                     )}

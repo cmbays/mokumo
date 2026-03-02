@@ -12,6 +12,7 @@ import { contactSchema } from '@domain/entities/contact'
 import { addressSchema } from '@domain/entities/address'
 import { logger } from '@shared/lib/logger'
 import { validateUUID } from '@infra/repositories/_shared/validation'
+import { money, toNumber } from '@domain/lib/money'
 import type {
   ICustomerRepository,
   CustomerFilters,
@@ -44,10 +45,8 @@ type DbLifecycle = 'prospect' | 'new' | 'repeat' | 'vip' | 'at-risk' | 'archived
 
 // ─── ID validation ─────────────────────────────────────────────────────────────
 
-const uuidSchema = z.string().uuid()
-
 function assertValidUUID(id: string, context: string): void {
-  if (!uuidSchema.safeParse(id).success) {
+  if (!validateUUID(id)) {
     throw new Error(`${context}: invalid UUID "${id}"`)
   }
 }
@@ -81,9 +80,11 @@ function mapCustomerRow(row: typeof customersTable.$inferSelect): Customer {
     // safe: DB enum values are a strict subset of domain enum; Wave 3 will add proper Zod validation
     paymentTerms: (row.paymentTerms as Customer['paymentTerms']) ?? 'net-30',
     pricingTier: (row.pricingTier as Customer['pricingTier']) ?? 'standard',
-    // DB stores fraction (0.15 = 15%). Entity field is percentage (15).
+    // DB stores fraction (0.15 = 15%). Entity field is percentage (15). Use big.js to avoid IEEE 754 drift.
     discountPercentage:
-      row.discountPct != null && row.discountPct !== 0 ? row.discountPct * 100 : undefined,
+      row.discountPct != null && row.discountPct !== 0
+        ? toNumber(money(row.discountPct).times(100))
+        : undefined,
     taxExempt: row.taxExempt,
     taxExemptCertExpiry: row.taxExemptCertExpiry
       ? new Date(row.taxExemptCertExpiry).toISOString()
@@ -423,7 +424,7 @@ export const supabaseCustomerRepository: ICustomerRepository = {
         pricingTier: (customer?.pricingTier as Customer['pricingTier']) ?? 'standard',
         discountPct:
           customer?.discountPct != null && customer.discountPct !== 0
-            ? customer.discountPct * 100
+            ? toNumber(money(customer.discountPct).times(100))
             : 0,
         taxExempt: customer?.taxExempt ?? false,
       }
@@ -455,7 +456,7 @@ export const supabaseCustomerRepository: ICustomerRepository = {
           typeTags: input.typeTags,
           paymentTerms: input.paymentTerms,
           pricingTier: input.pricingTier,
-          discountPct: input.discountPercentage ? input.discountPercentage / 100 : 0,
+          discountPct: input.discountPercentage ? toNumber(money(input.discountPercentage).div(100)) : 0,
           taxExempt: input.taxExempt,
           taxExemptCertExpiry: input.taxExemptCertExpiry
             ? new Date(input.taxExemptCertExpiry).toISOString().split('T')[0]
@@ -495,7 +496,7 @@ export const supabaseCustomerRepository: ICustomerRepository = {
     if (input.paymentTerms !== undefined) updateFields.paymentTerms = input.paymentTerms
     if (input.pricingTier !== undefined) updateFields.pricingTier = input.pricingTier
     if (input.discountPercentage !== undefined)
-      updateFields.discountPct = input.discountPercentage / 100
+      updateFields.discountPct = toNumber(money(input.discountPercentage).div(100))
     if (input.taxExempt !== undefined) updateFields.taxExempt = input.taxExempt
     if (input.taxExemptCertExpiry !== undefined)
       updateFields.taxExemptCertExpiry = input.taxExemptCertExpiry
