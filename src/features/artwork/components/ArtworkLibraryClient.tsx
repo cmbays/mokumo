@@ -95,31 +95,14 @@ function PieceCard({ piece }: PieceCardProps) {
 // Empty state
 // ---------------------------------------------------------------------------
 
-function EmptyState({ onUpload }: { onUpload: () => void }) {
+function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-5 rounded-lg border border-border bg-elevated py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-surface">
-        <Layers className="text-muted-foreground" size={28} aria-hidden="true" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-foreground">No artwork yet</p>
-        <p className="max-w-xs text-xs text-muted-foreground">
-          Upload a file to create your first artwork piece. Files are stored once and reused across
-          quotes.
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onUpload}
-        className={cn(
-          'inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2',
-          'text-sm font-medium text-foreground transition-colors hover:bg-elevated',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
-        )}
-      >
-        <UploadCloud size={15} aria-hidden="true" />
-        Upload Artwork
-      </button>
+    <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+      <Layers className="text-muted-foreground/40" size={32} aria-hidden="true" />
+      <p className="text-sm font-medium text-foreground">No artwork yet</p>
+      <p className="max-w-xs text-xs text-muted-foreground">
+        Upload a file to create your first piece. Files are stored once and reused across quotes.
+      </p>
     </div>
   )
 }
@@ -191,7 +174,7 @@ export function ArtworkLibraryClient({ initialPieces }: ArtworkLibraryClientProp
       </div>
 
       {/* ── Empty state ─────────────────────────────────────────────────────── */}
-      {pieces.length === 0 && <EmptyState onUpload={() => setOpen(true)} />}
+      {pieces.length === 0 && <EmptyState />}
 
       {/* ── Piece grid ──────────────────────────────────────────────────────── */}
       {pieces.length > 0 && (
