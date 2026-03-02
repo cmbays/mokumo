@@ -23,7 +23,6 @@ import {
 } from '@infra/repositories/pricing'
 import type { TagTemplateMapping } from '@domain/entities/tag-template-mapping'
 import { getCustomersMutable } from '@infra/repositories/customers-mutable'
-const customers = getCustomersMutable()
 import {
   calculateTemplateHealth,
   calculateDTFTemplateHealth,
@@ -31,6 +30,11 @@ import {
 import type { PricingTemplate } from '@domain/entities/price-matrix'
 import type { DTFPricingTemplate } from '@domain/entities/dtf-pricing'
 import type { MarginIndicator } from '@domain/entities/price-matrix'
+
+// Phase 1 mock — getCustomersMutable() returns static in-memory data that does not change
+// at runtime, so module-scope initialization is safe here. Replace with a hook in Wave 2C
+// when customer data is server-driven.
+const customers = getCustomersMutable()
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -139,6 +143,9 @@ export default function PricingHubPage() {
   }
 
   const handleWizardSave = (template: PricingTemplate | DTFPricingTemplate) => {
+    // SetupWizard discriminates the union via serviceType before calling onSave,
+    // so the cast is safe. TODO(Wave2C): align PricingTemplate | DTFPricingTemplate
+    // into a single discriminated union to enable proper type narrowing here.
     if (template.serviceType === 'screen-print') {
       setSpTemplates((prev) => [...prev, template as PricingTemplate])
     } else {
@@ -268,11 +275,18 @@ export default function PricingHubPage() {
 
         {/* Template grid */}
         {activeTab === 'screen-print' && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredSPTemplates.map((template) => (
               <PricingTemplateCard
                 key={template.id}
-                template={template}
+                template={{
+                  id: template.id,
+                  name: template.name,
+                  // TODO(Wave2C): replace with real entity — old mock uses 'screen-print'
+                  serviceType: 'screen_print' as const,
+                  isDefault: template.isDefault,
+                  updatedAt: new Date(template.updatedAt ?? Date.now()),
+                }}
                 healthIndicator={spHealthMap.get(template.id) ?? 'caution'}
                 customersUsing={spCustomerCountMap.get(template.id) ?? 0}
                 onEdit={() => handleEditSP(template.id)}
@@ -299,13 +313,17 @@ export default function PricingHubPage() {
         )}
 
         {activeTab === 'dtf' && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredDTFTemplates.map((template) => (
               <PricingTemplateCard
                 key={template.id}
                 template={{
-                  ...template,
-                  pricingTier: template.isDefault ? 'default' : 'custom',
+                  id: template.id,
+                  name: template.name,
+                  // TODO(Wave2C): replace with real entity
+                  serviceType: 'dtf' as const,
+                  isDefault: template.isDefault,
+                  updatedAt: new Date(template.updatedAt ?? Date.now()),
                 }}
                 healthIndicator={dtfHealthMap.get(template.id) ?? 'caution'}
                 customersUsing={dtfCustomerCountMap.get(template.id) ?? 0}
