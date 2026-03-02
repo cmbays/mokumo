@@ -48,6 +48,8 @@ body:
         - Domain: Direct-to-Film
         - Domain: Screen Printing
         - Domain: Mobile
+        - Domain: Artwork
+        - Domain: Developer Experience
         - Tool: Work Orchestrator
         - Tool: Skills Framework
         - Tool: Agent System
@@ -55,6 +57,9 @@ body:
         - Tool: CI Pipeline
         - Tool: PM System
         - Tool: Database
+        - Tool: ZeroClaw
+        - Tool: Kata
+        - Tool: Methodology Engine
     validations:
       required: true
 
