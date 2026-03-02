@@ -33,6 +33,7 @@ interface Quote {
 ```
 
 **Rules**:
+
 - No `interface` declarations — use `type` or `z.infer<>` only
 - No `any` types — use Zod inference or explicit types
 - One schema validates forms, API payloads, and database rows
@@ -52,7 +53,7 @@ const total = round2(subtotal.plus(setupFee))
 const displayPrice = toNumber(total)
 
 // Bad — floating-point drift
-const total = garmentCost * quantity + setupFee  // 0.1 + 0.2 = 0.30000000000000004
+const total = garmentCost * quantity + setupFee // 0.1 + 0.2 = 0.30000000000000004
 ```
 
 - Use `big.js` via `lib/helpers/money.ts` — `money()`, `round2()`, `toNumber()`
@@ -115,10 +116,14 @@ const [status, setStatus] = useState('all')
 
 ```typescript
 // Good — server-verified, tamper-proof
-const { data: { user } } = await supabase.auth.getUser()
+const {
+  data: { user },
+} = await supabase.auth.getUser()
 
 // Bad — can return stale/spoofed session data
-const { data: { session } } = await supabase.auth.getSession()
+const {
+  data: { session },
+} = await supabase.auth.getSession()
 ```
 
 This is a security requirement, not a preference. `getSession()` reads from local storage without server verification.
@@ -143,28 +148,28 @@ log.error('Failed to send quote email', { error })
 
 Apply to all new code:
 
-| Pattern | Use | Instead of |
-|---------|-----|-----------|
-| `Error.isError(err)` | Error detection across VM realms | `err instanceof Error` |
-| `RegExp.escape(input)` | Safe regex from user input | Manual escaping |
-| `URLPattern` (global) | URL route matching | Manual parsing |
-| `await using` | Resource cleanup (files, HTTP clients) | try/finally |
-| `db.transaction()` | Drizzle atomicity (callback-based) | `await using tx` (not supported) |
+| Pattern                | Use                                    | Instead of                       |
+| ---------------------- | -------------------------------------- | -------------------------------- |
+| `Error.isError(err)`   | Error detection across VM realms       | `err instanceof Error`           |
+| `RegExp.escape(input)` | Safe regex from user input             | Manual escaping                  |
+| `URLPattern` (global)  | URL route matching                     | Manual parsing                   |
+| `await using`          | Resource cleanup (files, HTTP clients) | try/finally                      |
+| `db.transaction()`     | Drizzle atomicity (callback-based)     | `await using tx` (not supported) |
 
 ---
 
 ## Naming Conventions
 
-| Thing | Convention | Example |
-|-------|-----------|---------|
-| Files | kebab-case | `quote-builder.tsx` |
-| Components | PascalCase | `QuoteBuilder` |
-| Functions | camelCase | `calculateQuoteTotal` |
-| Zod schemas | camelCase + `Schema` suffix | `quoteSchema` |
-| Types (from Zod) | PascalCase | `Quote` |
-| Database columns | snake_case | `created_at` |
-| CSS variables | kebab-case with `--` prefix | `--background` |
-| Environment vars | SCREAMING_SNAKE | `NEXT_PUBLIC_SUPABASE_URL` |
+| Thing            | Convention                  | Example                    |
+| ---------------- | --------------------------- | -------------------------- |
+| Files            | kebab-case                  | `quote-builder.tsx`        |
+| Components       | PascalCase                  | `QuoteBuilder`             |
+| Functions        | camelCase                   | `calculateQuoteTotal`      |
+| Zod schemas      | camelCase + `Schema` suffix | `quoteSchema`              |
+| Types (from Zod) | PascalCase                  | `Quote`                    |
+| Database columns | snake_case                  | `created_at`               |
+| CSS variables    | kebab-case with `--` prefix | `--background`             |
+| Environment vars | SCREAMING_SNAKE             | `NEXT_PUBLIC_SUPABASE_URL` |
 
 ---
 

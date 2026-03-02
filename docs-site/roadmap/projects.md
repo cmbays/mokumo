@@ -18,13 +18,13 @@ The shared foundation that all verticals build on.
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Done | Auth patterns, deployment model, caching strategy |
-| M1: Database & Auth | Done | Supabase setup, Drizzle ORM, auth middleware, session management |
-| M2: API Patterns | Done | Server actions, route handlers, DAL/repository pattern, supplier adapter |
-| M3: Caching & Jobs | In Progress | Redis caching, background job strategy, cron alternatives |
-| M4: File Storage | Planned | Artwork/image upload pipeline, CDN, transformations |
+| Milestone           | Status      | Key Deliverables                                                         |
+| ------------------- | ----------- | ------------------------------------------------------------------------ |
+| M0: Research        | Done        | Auth patterns, deployment model, caching strategy                        |
+| M1: Database & Auth | Done        | Supabase setup, Drizzle ORM, auth middleware, session management         |
+| M2: API Patterns    | Done        | Server actions, route handlers, DAL/repository pattern, supplier adapter |
+| M3: Caching & Jobs  | In Progress | Redis caching, background job strategy, cron alternatives                |
+| M4: File Storage    | Planned     | Artwork/image upload pipeline, CDN, transformations                      |
 
 ### Research Needs
 
@@ -49,13 +49,13 @@ Real garment data from S&S Activewear. Shop curation (favorites, enabled/disable
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Done | S&S API research, multi-supplier architecture, color family taxonomy |
-| M1: Schema & Sync | Done | catalog_styles, catalog_colors, catalog_images tables, sync pipeline |
-| M2: Color System | Done | Color families, color groups, 3-tier taxonomy, filter grid |
-| M3: Inventory & Pricing | In Progress | Size availability badges, pricing tiers, batched products API |
-| M4: Polish | Planned | Performance optimization, image loading, mobile catalog UX |
+| Milestone               | Status      | Key Deliverables                                                     |
+| ----------------------- | ----------- | -------------------------------------------------------------------- |
+| M0: Research            | Done        | S&S API research, multi-supplier architecture, color family taxonomy |
+| M1: Schema & Sync       | Done        | catalog_styles, catalog_colors, catalog_images tables, sync pipeline |
+| M2: Color System        | Done        | Color families, color groups, 3-tier taxonomy, filter grid           |
+| M3: Inventory & Pricing | In Progress | Size availability badges, pricing tiers, batched products API        |
+| M4: Polish              | Planned     | Performance optimization, image loading, mobile catalog UX           |
 
 ### Key Decisions
 
@@ -77,13 +77,13 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Done | Competitive analysis, data model research |
-| M1: Schema & API | In Progress | Company/contact hierarchy, addresses, groups/tags, server actions |
-| M2: Core UI | In Progress | Customer detail tabs — overview, orders, artwork, contacts (Paper design sessions P1-P8) |
-| M3: Activity & Notes | Planned | Activity timeline (H1), notes feed, linked entities (quotes, jobs, invoices, artwork) |
-| M4: Preferences | Planned | Garment/color favorites per customer, preference cascading (company → contact) |
+| Milestone            | Status      | Key Deliverables                                                                         |
+| -------------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| M0: Research         | Done        | Competitive analysis, data model research                                                |
+| M1: Schema & API     | In Progress | Company/contact hierarchy, addresses, groups/tags, server actions                        |
+| M2: Core UI          | In Progress | Customer detail tabs — overview, orders, artwork, contacts (Paper design sessions P1-P8) |
+| M3: Activity & Notes | Planned     | Activity timeline (H1), notes feed, linked entities (quotes, jobs, invoices, artwork)    |
+| M4: Preferences      | Planned     | Garment/color favorites per customer, preference cascading (company → contact)           |
 
 ### Research Findings
 
@@ -114,12 +114,12 @@ Configurable pricing per service type. Quantity breaks, setup fees, margin indic
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Partially Done | Industry pricing patterns, competitor pricing UX, supplier pricing data |
-| M1: Schema & API | Planned | Pricing template tables, service-type variants, calculation engine (`big.js` pipeline) |
-| M2: Editor UI | Planned | Matrix editor (quantity × colors grid), margin indicators, setup fee config, preview |
-| M3: Integration | Planned | Wire pricing into quote builder, auto-calculation on quantity/color changes |
+| Milestone        | Status         | Key Deliverables                                                                       |
+| ---------------- | -------------- | -------------------------------------------------------------------------------------- |
+| M0: Research     | Partially Done | Industry pricing patterns, competitor pricing UX, supplier pricing data                |
+| M1: Schema & API | Planned        | Pricing template tables, service-type variants, calculation engine (`big.js` pipeline) |
+| M2: Editor UI    | Planned        | Matrix editor (quantity × colors grid), margin indicators, setup fee config, preview   |
+| M3: Integration  | Planned        | Wire pricing into quote builder, auto-calculation on quantity/color changes            |
 
 ### Research Findings
 
@@ -156,14 +156,14 @@ Customer-associated artwork storage with metadata, approval workflows, and autom
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Planned | Artwork management patterns, file formats, approval UX patterns |
-| M1: Storage & Schema | Planned | File upload pipeline (H2), artwork metadata table, customer association, tagging |
-| M2: Library UI | Planned | Browse, search, tag, preview artwork per customer. Grid and list views. |
-| M3: Quote Integration | Planned | Select artwork when building quote, auto-derive color count, preview on quote |
-| M4: Approval Workflow | Planned | Per-artwork approval, revision tracking, partial production start config |
-| M5: Mockup Generation | Planned | Automated artwork placement on supplier garment templates from catalog data |
+| Milestone             | Status  | Key Deliverables                                                                 |
+| --------------------- | ------- | -------------------------------------------------------------------------------- |
+| M0: Research          | Planned | Artwork management patterns, file formats, approval UX patterns                  |
+| M1: Storage & Schema  | Planned | File upload pipeline (H2), artwork metadata table, customer association, tagging |
+| M2: Library UI        | Planned | Browse, search, tag, preview artwork per customer. Grid and list views.          |
+| M3: Quote Integration | Planned | Select artwork when building quote, auto-derive color count, preview on quote    |
+| M4: Approval Workflow | Planned | Per-artwork approval, revision tracking, partial production start config         |
+| M5: Mockup Generation | Planned | Automated artwork placement on supplier garment templates from catalog data      |
 
 ### Research Findings
 
@@ -202,14 +202,14 @@ The pilot vertical. End-to-end screen print quoting with real garment data, pric
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | Quote entity model decision (separate vs. unified), quote builder wireframes, status flow design |
-| M1: Schema & API | Planned | Quote entity, line items, print locations, status transitions, revision history, server actions |
-| M2: Quote Builder | Planned | Customer select → garment search → size entry → print config → pricing calc → review → save |
-| M3: Lifecycle | Planned | Draft → sent → accepted/declined, revision tracking, quote board/list view |
-| M4: Send & Deliver | Planned | PDF generation (H4), email sending (H3), customer-facing approval page, approval webhook |
-| M5: Presets & Speed | Planned | Quote presets for common orders ("50 tees, 1-color front"), clone previous quotes, quick-quote flow |
+| Milestone             | Status  | Key Deliverables                                                                                    |
+| --------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| M0: Research & Design | Planned | Quote entity model decision (separate vs. unified), quote builder wireframes, status flow design    |
+| M1: Schema & API      | Planned | Quote entity, line items, print locations, status transitions, revision history, server actions     |
+| M2: Quote Builder     | Planned | Customer select → garment search → size entry → print config → pricing calc → review → save         |
+| M3: Lifecycle         | Planned | Draft → sent → accepted/declined, revision tracking, quote board/list view                          |
+| M4: Send & Deliver    | Planned | PDF generation (H4), email sending (H3), customer-facing approval page, approval webhook            |
+| M5: Presets & Speed   | Planned | Quote presets for common orders ("50 tees, 1-color front"), clone previous quotes, quick-quote flow |
 
 ### Research Findings
 
@@ -247,13 +247,13 @@ DTF-specific quoting with gang sheet builder, per-transfer pricing, and sheet co
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | DTF pricing model validation, gang sheet UX design, multi-process quote architecture |
-| M1: DTF Line Items | Planned | DTF-specific line item schema (artwork + size + quantity, no garment), size presets, service-type tab in quote builder |
-| M2: Gang Sheet Builder | Planned | Sheet optimization algorithm (shelf-pack/bin-pack), visual layout preview, cost comparison across sheet tiers |
-| M3: Pricing Integration | Planned | Wire DTF sheet tier pricing into quote calculator, margin display, material cost breakdown |
-| M4: Multi-Process | Planned | Combined screen print + DTF on same quote (tab-based), shared garment cost allocation |
+| Milestone               | Status  | Key Deliverables                                                                                                       |
+| ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| M0: Research & Design   | Planned | DTF pricing model validation, gang sheet UX design, multi-process quote architecture                                   |
+| M1: DTF Line Items      | Planned | DTF-specific line item schema (artwork + size + quantity, no garment), size presets, service-type tab in quote builder |
+| M2: Gang Sheet Builder  | Planned | Sheet optimization algorithm (shelf-pack/bin-pack), visual layout preview, cost comparison across sheet tiers          |
+| M3: Pricing Integration | Planned | Wire DTF sheet tier pricing into quote calculator, margin display, material cost breakdown                             |
+| M4: Multi-Process       | Planned | Combined screen print + DTF on same quote (tab-based), shared garment cost allocation                                  |
 
 ### Research Findings
 
@@ -293,11 +293,11 @@ Simplified quoting for customer-supplied transfers. The customer brings pre-made
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | Press-only pricing model, intake/QC workflow, waiver/disclaimer template |
-| M1: Schema & Pricing | Planned | DTF Press service type, per-garment flat-rate pricing, quantity tiers, multi-location pricing |
-| M2: Intake & QC | Planned | Transfer quality inspection checklist, test press workflow, customer waiver/sign-off |
+| Milestone             | Status  | Key Deliverables                                                                                              |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| M0: Research & Design | Planned | Press-only pricing model, intake/QC workflow, waiver/disclaimer template                                      |
+| M1: Schema & Pricing  | Planned | DTF Press service type, per-garment flat-rate pricing, quantity tiers, multi-location pricing                 |
+| M2: Intake & QC       | Planned | Transfer quality inspection checklist, test press workflow, customer waiver/sign-off                          |
 | M3: Quote Integration | Planned | DTF Press tab in quote builder, auto-disclaimer, garment sourcing toggle (customer-supplied vs. shop-sourced) |
 
 ### Research Findings
@@ -330,14 +330,14 @@ Quote-to-job conversion, task tracking, production board with real persistence, 
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Planned | Competitor production workflows, batch patterns, scheduling approaches |
-| M1: Schema & API | Planned | Job entity, task templates per service type, status transitions, server actions |
-| M2: Board & Views | Planned | Kanban board with persistence, calendar view, job detail with task checklist |
-| M3: Batch Production | Planned | Batch entity linking multiple jobs by design/ink color, shared screen tracking |
-| M4: Shop Floor | Planned | Barcode scanning (PWA camera + handheld), TV board display mode, print job tickets |
-| M5: Timeline View | Planned | Gantt-style timeline for deadline planning and capacity visibility (if low-lift) |
+| Milestone            | Status  | Key Deliverables                                                                   |
+| -------------------- | ------- | ---------------------------------------------------------------------------------- |
+| M0: Research         | Planned | Competitor production workflows, batch patterns, scheduling approaches             |
+| M1: Schema & API     | Planned | Job entity, task templates per service type, status transitions, server actions    |
+| M2: Board & Views    | Planned | Kanban board with persistence, calendar view, job detail with task checklist       |
+| M3: Batch Production | Planned | Batch entity linking multiple jobs by design/ink color, shared screen tracking     |
+| M4: Shop Floor       | Planned | Barcode scanning (PWA camera + handheld), TV board display mode, print job tickets |
+| M5: Timeline View    | Planned | Gantt-style timeline for deadline planning and capacity visibility (if low-lift)   |
 
 ### Research Findings
 
@@ -378,14 +378,14 @@ Invoice generation from completed jobs, tax handling, payment recording, reminde
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | Invoice entity model (tied to P6 quote entity decision), tax approach, payment flow design |
-| M1: Schema & API | Planned | Invoice entity, line items, tax calculations, payment records, status transitions, server actions |
-| M2: Invoice Builder | Planned | Job-to-invoice conversion (pre-populated), line item editing, tax display, totals |
-| M3: Send & Pay | Planned | PDF generation (H4), email delivery (H3), payment recording (manual), customer-facing invoice view |
+| Milestone                | Status  | Key Deliverables                                                                                          |
+| ------------------------ | ------- | --------------------------------------------------------------------------------------------------------- |
+| M0: Research & Design    | Planned | Invoice entity model (tied to P6 quote entity decision), tax approach, payment flow design                |
+| M1: Schema & API         | Planned | Invoice entity, line items, tax calculations, payment records, status transitions, server actions         |
+| M2: Invoice Builder      | Planned | Job-to-invoice conversion (pre-populated), line item editing, tax display, totals                         |
+| M3: Send & Pay           | Planned | PDF generation (H4), email delivery (H3), payment recording (manual), customer-facing invoice view        |
 | M4: Tracking & Reminders | Planned | Invoice list/board, aging buckets (30/60/90), overdue reminders (H5 for scheduled sends), payment history |
-| M5: Stripe Integration | Planned | Online payment via Stripe, payment confirmation webhooks, partial payments |
+| M5: Stripe Integration   | Planned | Online payment via Stripe, payment confirmation webhooks, partial payments                                |
 
 ### Research Findings
 
@@ -423,13 +423,13 @@ Real metrics replacing mock data. Production KPIs, revenue tracking, customer in
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | KPI definition, dashboard wireframes, role-based views |
-| M1: Morning View | Planned | Blocked jobs, today's shipments, recent activity — the "7 AM dashboard" |
-| M2: Financial Metrics | Planned | Revenue by period, AR aging buckets, quote conversion rate, customer concentration |
-| M3: Production Metrics | Planned | On-time delivery rate, turnaround time, defect rate, press utilization |
-| M4: Customer Analytics | Planned | Customer lifetime value, repeat rate, revenue by customer, health scoring |
+| Milestone                | Status  | Key Deliverables                                                                            |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------- |
+| M0: Research & Design    | Planned | KPI definition, dashboard wireframes, role-based views                                      |
+| M1: Morning View         | Planned | Blocked jobs, today's shipments, recent activity — the "7 AM dashboard"                     |
+| M2: Financial Metrics    | Planned | Revenue by period, AR aging buckets, quote conversion rate, customer concentration          |
+| M3: Production Metrics   | Planned | On-time delivery rate, turnaround time, defect rate, press utilization                      |
+| M4: Customer Analytics   | Planned | Customer lifetime value, repeat rate, revenue by customer, health scoring                   |
 | M5: dbt Mart Integration | Planned | Wire existing dbt pipeline to dashboard queries, dimensional models for production tracking |
 
 ### Research Findings
@@ -471,13 +471,13 @@ Real screen tracking linked to production jobs. Burn status, reclaim workflow, i
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Validation | Planned | Shop owner interview (would they use this daily?), workflow observation, friction assessment |
-| M1: Schema & Status Model | Planned | Expanded screen entity (11-state lifecycle), screen-to-job linking, rack location tracking |
-| M2: Screen Room Dashboard | Planned | Four-cart kanban view (Available/Drying/Burned/On Press), screen cards with job links |
-| M3: QR Scanning | Planned | Permanent QR labels on frames, phone/tablet scanning for status updates, one-tap transitions |
-| M4: Inventory Health | Planned | Screen count by status/mesh, inventory health indicator (4-5x daily usage formula), reorder alerts |
+| Milestone                 | Status  | Key Deliverables                                                                                   |
+| ------------------------- | ------- | -------------------------------------------------------------------------------------------------- |
+| M0: Research & Validation | Planned | Shop owner interview (would they use this daily?), workflow observation, friction assessment       |
+| M1: Schema & Status Model | Planned | Expanded screen entity (11-state lifecycle), screen-to-job linking, rack location tracking         |
+| M2: Screen Room Dashboard | Planned | Four-cart kanban view (Available/Drying/Burned/On Press), screen cards with job links              |
+| M3: QR Scanning           | Planned | Permanent QR labels on frames, phone/tablet scanning for status updates, one-tap transitions       |
+| M4: Inventory Health      | Planned | Screen count by status/mesh, inventory health indicator (4-5x daily usage formula), reorder alerts |
 
 ### Research Findings
 
@@ -517,14 +517,14 @@ Business configuration, API credential management (bring-your-own-token), notifi
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | Settings taxonomy, sidebar navigation structure, hardcoded-values audit |
-| M1: Shop Profile & Tax | Planned | Business info, address, logo, tax rate, business hours |
+| Milestone                   | Status  | Key Deliverables                                                                              |
+| --------------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| M0: Research & Design       | Planned | Settings taxonomy, sidebar navigation structure, hardcoded-values audit                       |
+| M1: Shop Profile & Tax      | Planned | Business info, address, logo, tax rate, business hours                                        |
 | M2: Service Types & Pricing | Planned | Active decoration methods, default pricing parameters, setup fee config, minimum order amount |
-| M3: Supplier Connections | Planned | S&S credential management, connection testing, sync frequency config |
-| M4: Notifications | Planned | Email notification preferences, in-app alert configuration |
-| M5: Team & Roles | Planned | User management, role assignment (owner/manager/operator/screen room), permission scoping |
+| M3: Supplier Connections    | Planned | S&S credential management, connection testing, sync frequency config                          |
+| M4: Notifications           | Planned | Email notification preferences, in-app alert configuration                                    |
+| M5: Team & Roles            | Planned | User management, role assignment (owner/manager/operator/screen room), permission scoping     |
 
 ### Research Findings
 
@@ -557,15 +557,15 @@ Customer-facing portal for artwork approval, job status viewing, invoice payment
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research & Design | Planned | Auth model decision, portal scope, data exposure rules, invitation flow design |
-| M1: Auth & Shell | Planned | Customer role in Supabase Auth, RLS policies, portal layout shell, invitation/onboarding flow |
-| M2: Order Visibility | Planned | Order history list, job status tracking, shipment tracking display |
-| M3: Artwork Approval | Planned | Per-artwork approval flow, revision tracking, approval history, notification triggers |
+| Milestone             | Status  | Key Deliverables                                                                                |
+| --------------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| M0: Research & Design | Planned | Auth model decision, portal scope, data exposure rules, invitation flow design                  |
+| M1: Auth & Shell      | Planned | Customer role in Supabase Auth, RLS policies, portal layout shell, invitation/onboarding flow   |
+| M2: Order Visibility  | Planned | Order history list, job status tracking, shipment tracking display                              |
+| M3: Artwork Approval  | Planned | Per-artwork approval flow, revision tracking, approval history, notification triggers           |
 | M4: Invoice & Payment | Planned | Invoice viewing, payment recording (manual confirmation), Stripe integration for online payment |
-| M5: Communication | Planned | Order-scoped message threads, file attachments, read receipts |
-| M6: Branding & Domain | Planned | Custom domain support (`portal.shopname.com`), white-labeled UI, shop logo/colors |
+| M5: Communication     | Planned | Order-scoped message threads, file attachments, read receipts                                   |
+| M6: Branding & Domain | Planned | Custom domain support (`portal.shopname.com`), white-labeled UI, shop logo/colors               |
 
 ### Research Findings
 
@@ -601,17 +601,18 @@ Deeper S&S integration (order placement, tracking, invoices), SanMar via PromoSt
 
 ### Milestones
 
-| Milestone | Status | Key Deliverables |
-|-----------|--------|-----------------|
-| M0: Research | Partially Done | S&S API surface mapped, SanMar SOAP evaluated, PromoStandards assessed |
-| M1: S&S Order Placement | Planned | `POST /v2/orders/` integration — order blanks from job detail page |
-| M2: S&S Tracking | Planned | Shipment tracking, delivery estimates, order status in job timeline |
-| M3: SanMar Integration | Planned | SanMar catalog via PromoStandards SOAP, pricing, inventory |
-| M4: Multi-Supplier UX | Planned | Source-scoped catalog, preferred supplier per shop, GTIN cross-referencing |
+| Milestone               | Status         | Key Deliverables                                                           |
+| ----------------------- | -------------- | -------------------------------------------------------------------------- |
+| M0: Research            | Partially Done | S&S API surface mapped, SanMar SOAP evaluated, PromoStandards assessed     |
+| M1: S&S Order Placement | Planned        | `POST /v2/orders/` integration — order blanks from job detail page         |
+| M2: S&S Tracking        | Planned        | Shipment tracking, delivery estimates, order status in job timeline        |
+| M3: SanMar Integration  | Planned        | SanMar catalog via PromoStandards SOAP, pricing, inventory                 |
+| M4: Multi-Supplier UX   | Planned        | Source-scoped catalog, preferred supplier per shop, GTIN cross-referencing |
 
 ### Research Findings (from March 2026 research)
 
 **S&S — Untapped API surface**:
+
 - `POST /v2/orders/` — full wholesale order placement (shipping, multi-warehouse, partial fulfillment)
 - `GET /v2/trackingdata/` — shipment tracking for placed orders
 - `GET /v2/daysintransit/` — delivery estimates by carrier/ZIP
@@ -621,12 +622,14 @@ Deeper S&S integration (order placement, tracking, invoices), SanMar via PromoSt
 - alphabroder merger: 100+ brands now accessible through existing S&S credentials (no code changes)
 
 **SanMar — Integration path**:
+
 - SOAP-first (no native REST). Three options: PSRESTful proxy ($100/year), PromoStandards SOAP directly ($0), SanMar native SOAP ($0)
 - **Preferred approach**: PromoStandards SOAP directly — avoids annual fee, covers 500+ suppliers, aligns with industry standard
 - Data model structurally identical to S&S (same pricing tiers, per-warehouse inventory)
 - Key gap: no `colorFamily` equivalent — GTIN is the only reliable cross-supplier key
 
 **PromoStandards**:
+
 - Industry SOAP/XML standard, 8 services (Product, Inventory, Pricing, Orders, Tracking, Invoices, etc.)
 - Both S&S and SanMar support the full suite
 - Implementing PromoStandards adapter unlocks many suppliers without per-supplier code

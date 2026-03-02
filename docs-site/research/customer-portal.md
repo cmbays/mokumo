@@ -52,13 +52,13 @@ Every competitor has basic customer management. None does it well.
 
 **What competitors lack that we're building**:
 
-| Capability | Competitors | Our Plan |
-|-----------|------------|----------|
-| Company/Contact hierarchy | InkSoft, YoPrint, DecoNetwork have it; Printavo doesn't | Core P3 requirement (Issue #700) |
-| Activity timeline | Nobody has a real one | P3 M3 — powered by H1 (Activity Events) |
-| Preference cascading | Nobody | P3 M4 — garment/color favorites at customer → company → contact levels |
-| Linked entities | Basic order history only | Full relationship view: quotes, jobs, invoices, artwork, activity |
-| Contact groups/tags | InkSoft (tags), others basic | P3 M1 — flexible grouping |
+| Capability                | Competitors                                             | Our Plan                                                               |
+| ------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Company/Contact hierarchy | InkSoft, YoPrint, DecoNetwork have it; Printavo doesn't | Core P3 requirement (Issue #700)                                       |
+| Activity timeline         | Nobody has a real one                                   | P3 M3 — powered by H1 (Activity Events)                                |
+| Preference cascading      | Nobody                                                  | P3 M4 — garment/color favorites at customer → company → contact levels |
+| Linked entities           | Basic order history only                                | Full relationship view: quotes, jobs, invoices, artwork, activity      |
+| Contact groups/tags       | InkSoft (tags), others basic                            | P3 M1 — flexible grouping                                              |
 
 **Issue #700 decision context**: The contact vs. company data model question matters because it determines how preferences cascade and how the customer detail page organizes information. InkSoft's model (organizations contain contacts) is the correct B2B pattern. Printavo's flat model is the cautionary tale — shops outgrow it and can't represent "3 buyers at the same school."
 
@@ -83,6 +83,7 @@ Every competitor has basic customer management. None does it well.
 - Shop gets in-app + email notification on any customer action.
 
 **UX flow for partial rejection**:
+
 1. Customer receives approval link
 2. Views each artwork file with zoom
 3. Approves Art A (front) ✓
@@ -114,11 +115,11 @@ Every competitor has basic customer management. None does it well.
 
 ### Portal Models
 
-| Model | How It Works | Who Uses It |
-|-------|-------------|-------------|
-| **URL per invoice** | Customer gets a unique link per order. No login. No history. | Printavo |
-| **Full portal with login** | Customer logs in, sees all orders, history, payments, artwork. | YoPrint |
-| **Online store + portal** | Storefront for ordering + portal for reorders and history. | InkSoft, DecoNetwork |
+| Model                      | How It Works                                                   | Who Uses It          |
+| -------------------------- | -------------------------------------------------------------- | -------------------- |
+| **URL per invoice**        | Customer gets a unique link per order. No login. No history.   | Printavo             |
+| **Full portal with login** | Customer logs in, sees all orders, history, payments, artwork. | YoPrint              |
+| **Online store + portal**  | Storefront for ordering + portal for reorders and history.     | InkSoft, DecoNetwork |
 
 ### YoPrint's Portal (The Best Example)
 
@@ -162,13 +163,13 @@ Not Phase 2 scope, but capturing research for roadmap visibility.
 
 ### Competitor Coverage
 
-| Feature | DecoNetwork | InkSoft | Printavo (Merch) | YoPrint |
-|---------|------------|---------|-----------------|---------|
-| Store count limit | 500 (Premium) | Unlimited | Unknown | None |
-| Store builder | Template + HTML/CSS | Template | Template | — |
-| Product designer | Built-in | Online Designer | No | — |
-| Order → production | Automatic | Automatic | Aggregated | — |
-| Fundraiser support | Yes | Yes | Unknown | — |
+| Feature            | DecoNetwork         | InkSoft         | Printavo (Merch) | YoPrint |
+| ------------------ | ------------------- | --------------- | ---------------- | ------- |
+| Store count limit  | 500 (Premium)       | Unlimited       | Unknown          | None    |
+| Store builder      | Template + HTML/CSS | Template        | Template         | —       |
+| Product designer   | Built-in            | Online Designer | No               | —       |
+| Order → production | Automatic           | Automatic       | Aggregated       | —       |
+| Fundraiser support | Yes                 | Yes             | Unknown          | —       |
 
 **For us**: P16 requires P6 (quoting engine for pricing) and P14 (customer-facing auth). The quoting engine must support "orders placed by external users flow into production" — this is an API design consideration for P6 even though stores are Phase 3.
 

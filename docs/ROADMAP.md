@@ -89,18 +89,18 @@ Each vertical passes through these stages. The KB tracks progress per vertical p
 
 ## Vertical Inventory
 
-| Vertical            | Phase 1 Status | Phase 2 Status | Pipeline Stage | Epic / BRIEF                     |
-| ------------------- | -------------- | -------------- | -------------- | -------------------------------- |
-| Dashboard           | Complete       | —              | Demo           | —                                |
-| Quoting             | Complete       | Planned        | Demo           | TODO                             |
-| Customer Management | Complete       | In Progress    | Build          | TODO                             |
-| Invoicing           | Complete       | Planned        | Demo           | TODO                             |
-| Price Matrix        | Complete       | —              | Demo           | TODO                             |
-| Jobs                | Complete       | Planned        | Demo           | TODO                             |
-| Screen Room         | Integrated     | Planned        | Demo           | TODO                             |
-| Garments            | Complete       | In Progress    | Build          | Epic #714                        |
-| Mobile Optimization | Complete       | —              | Demo           | —                                |
-| DTF Gang Sheet      | Complete       | —              | Demo           | PRs #232, #237, #249, #280, #284 |
+| Vertical            | Phase 1 Status | Phase 2 Status  | Pipeline Stage | Epic / BRIEF                     |
+| ------------------- | -------------- | --------------- | -------------- | -------------------------------- |
+| Dashboard           | Complete       | —               | Demo           | —                                |
+| Quoting             | Complete       | Planned         | Demo           | TODO                             |
+| Customer Management | Complete       | In Progress     | Build          | TODO                             |
+| Invoicing           | Complete       | Planned         | Demo           | TODO                             |
+| Price Matrix        | Complete       | —               | Demo           | TODO                             |
+| Jobs                | Complete       | Planned         | Demo           | TODO                             |
+| Screen Room         | Integrated     | Planned         | Demo           | TODO                             |
+| Garments            | Complete       | In Progress     | Build          | Epic #714                        |
+| Mobile Optimization | Complete       | —               | Demo           | —                                |
+| DTF Gang Sheet      | Complete       | —               | Demo           | PRs #232, #237, #249, #280, #284 |
 | **Artwork Library** | Mock entity    | **Research ✅** | **Research**   | **Epic #717**                    |
 
 ## Current Bets (What We're Working On)
@@ -134,16 +134,16 @@ These are shaped ideas waiting for a betting decision:
 
 Issues are tagged with a consistent multi-dimensional taxonomy:
 
-| Dimension    | Labels                                                                                                                              | Purpose                    |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| **Product**  | `product/quotes`, `product/jobs`, `product/invoices`, `product/customers`, `product/dashboard`, `product/artwork`                   | Things users DO            |
-| **Domain**   | `domain/garments`, `domain/screens`, `domain/pricing`, `domain/colors`, `domain/dtf`, `domain/screen-printing`, `domain/mobile`, `domain/artwork` | Things products USE |
-| **Tool**     | `tool/work-orchestrator`, `tool/skills-framework`, `tool/agent-system`, `tool/knowledge-base`, `tool/ci-pipeline`, `tool/pm-system` | How we BUILD               |
-| **Pipeline** | `pipeline/vertical`, `pipeline/polish`, `pipeline/horizontal`, `pipeline/bug-fix`                                                   | What kind of pipeline      |
-| **Type**     | `type/bug`, `type/feature`, `type/research`, `type/feedback`, `type/tech-debt`, `type/refactor`, `type/tooling`                     | What kind of thing is it?  |
-| **Priority** | `priority/now`, `priority/next`, `priority/later`, `priority/icebox`                                                                | When should we address it? |
-| **Source**   | `source/testing`, `source/interview`, `source/idea`, `source/review`, `source/cool-down`                                            | Where did it come from?    |
-| **Phase**    | `phase/1`, `phase/2`, `phase/3`                                                                                                     | Which development phase?   |
+| Dimension    | Labels                                                                                                                                            | Purpose                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| **Product**  | `product/quotes`, `product/jobs`, `product/invoices`, `product/customers`, `product/dashboard`, `product/artwork`                                 | Things users DO            |
+| **Domain**   | `domain/garments`, `domain/screens`, `domain/pricing`, `domain/colors`, `domain/dtf`, `domain/screen-printing`, `domain/mobile`, `domain/artwork` | Things products USE        |
+| **Tool**     | `tool/work-orchestrator`, `tool/skills-framework`, `tool/agent-system`, `tool/knowledge-base`, `tool/ci-pipeline`, `tool/pm-system`               | How we BUILD               |
+| **Pipeline** | `pipeline/vertical`, `pipeline/polish`, `pipeline/horizontal`, `pipeline/bug-fix`                                                                 | What kind of pipeline      |
+| **Type**     | `type/bug`, `type/feature`, `type/research`, `type/feedback`, `type/tech-debt`, `type/refactor`, `type/tooling`                                   | What kind of thing is it?  |
+| **Priority** | `priority/now`, `priority/next`, `priority/later`, `priority/icebox`                                                                              | When should we address it? |
+| **Source**   | `source/testing`, `source/interview`, `source/idea`, `source/review`, `source/cool-down`                                                          | Where did it come from?    |
+| **Phase**    | `phase/1`, `phase/2`, `phase/3`                                                                                                                   | Which development phase?   |
 
 See `docs/PM.md` Section 3 for full label definitions and litmus tests.
 

@@ -19,33 +19,19 @@
       "groups": [
         {
           "group": "Overview",
-          "pages": [
-            "introduction",
-            "product/product-design",
-            "product/prd"
-          ]
+          "pages": ["introduction", "product/product-design", "product/prd"]
         },
         {
           "group": "User Experience",
-          "pages": [
-            "product/user-journeys",
-            "product/interaction-design",
-            "product/design-vision"
-          ]
+          "pages": ["product/user-journeys", "product/interaction-design", "product/design-vision"]
         },
         {
           "group": "Domain",
-          "pages": [
-            "product/domain-glossary"
-          ]
+          "pages": ["product/domain-glossary"]
         },
         {
           "group": "Roadmap",
-          "pages": [
-            "product/roadmap",
-            "roadmap/phase-2",
-            "roadmap/projects"
-          ]
+          "pages": ["product/roadmap", "roadmap/phase-2", "roadmap/projects"]
         },
         {
           "group": "Research",
@@ -86,10 +72,7 @@
         },
         {
           "group": "Guides",
-          "pages": [
-            "engineering/guides/app-flow-standard",
-            "engineering/guides/ss-api-reference"
-          ]
+          "pages": ["engineering/guides/app-flow-standard", "engineering/guides/ss-api-reference"]
         }
       ]
     },
@@ -98,16 +81,11 @@
       "groups": [
         {
           "group": "How We Work",
-          "pages": [
-            "process/how-we-work",
-            "process/pm"
-          ]
+          "pages": ["process/how-we-work", "process/pm"]
         },
         {
           "group": "Changelog",
-          "pages": [
-            "process/changelog/changelog"
-          ]
+          "pages": ["process/changelog/changelog"]
         }
       ]
     }
