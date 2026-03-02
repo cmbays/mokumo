@@ -35,6 +35,7 @@ const CONTACT_ROLE_COLORS: Record<ContactRole, string> = {
   ordering: 'bg-action/10 text-action border border-action/20',
   'art-approver': 'bg-success/10 text-success border border-success/20',
   billing: 'bg-warning/10 text-warning border border-warning/20',
+  primary: 'bg-action/10 text-action border border-action/20',
   owner: 'bg-muted text-foreground border border-border',
   other: 'bg-muted text-muted-foreground',
 }
@@ -60,13 +61,18 @@ function ContactCard({ contact }: { contact: Contact }) {
             )}
           </div>
 
-          {/* Role badge */}
-          <Badge
-            variant="ghost"
-            className={cn('text-[10px] px-1.5 py-0', CONTACT_ROLE_COLORS[contact.role])}
-          >
-            {CONTACT_ROLE_LABELS[contact.role]}
-          </Badge>
+          {/* Role badges — contacts can hold multiple roles */}
+          <div className="flex flex-wrap gap-1">
+            {contact.role.map((r) => (
+              <Badge
+                key={r}
+                variant="ghost"
+                className={cn('text-[10px] px-1.5 py-0', CONTACT_ROLE_COLORS[r])}
+              >
+                {CONTACT_ROLE_LABELS[r]}
+              </Badge>
+            ))}
+          </div>
 
           {/* Contact info */}
           <div className="space-y-0.5">

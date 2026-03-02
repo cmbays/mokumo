@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { dtfLineItemSchema } from './dtf-line-item'
 import { sheetCalculationSchema } from './dtf-sheet-calculation'
+import { addressSnapshotSchema } from './address'
 
 export const quoteStatusEnum = z.enum(['draft', 'sent', 'accepted', 'declined', 'revised'])
 
@@ -50,6 +51,10 @@ export const quoteSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),
   sentAt: z.string().datetime().optional(),
+
+  // Address snapshots — frozen at quote creation, not live references
+  shippingAddressSnapshot: addressSnapshotSchema.optional(),
+  billingAddressSnapshot: addressSnapshotSchema.optional(),
 })
 
 export type QuoteStatus = z.infer<typeof quoteStatusEnum>

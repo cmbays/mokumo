@@ -1,4 +1,5 @@
 export * from './catalog'
 export * from './catalog-normalized'
+export * from './customers'
 export * from './raw'
 export * from './shops'

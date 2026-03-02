@@ -135,6 +135,10 @@ export const LIFECYCLE_STAGE_LABELS: Record<LifecycleStage, string> = {
   prospect: 'Prospect',
   new: 'New',
   repeat: 'Repeat',
+  vip: 'VIP',
+  'at-risk': 'At Risk',
+  archived: 'Archived',
+  // Legacy — Step 13: migrate to pricingTier === 'contract' then remove
   contract: 'Contract',
 }
 
@@ -142,6 +146,9 @@ export const LIFECYCLE_STAGE_DOT_COLORS: Record<LifecycleStage, string> = {
   prospect: dotColor('action'),
   new: dotColor('muted'),
   repeat: dotColor('success'),
+  vip: dotColor('warning'),
+  'at-risk': dotColor('error'),
+  archived: dotColor('muted'),
   contract: dotColor('warning'),
 }
 
@@ -163,6 +170,10 @@ export const CUSTOMER_TYPE_TAG_LABELS: Record<CustomerTypeTag, string> = {
   corporate: 'Corporate',
   'storefront-merch': 'Storefront/Merch',
   wholesale: 'Wholesale',
+  hospitality: 'Hospitality',
+  nonprofit: 'Nonprofit',
+  sports: 'Sports',
+  religious: 'Religious',
 }
 
 export const CUSTOMER_TYPE_TAG_COLORS: Record<CustomerTypeTag, string> = {
@@ -171,12 +182,17 @@ export const CUSTOMER_TYPE_TAG_COLORS: Record<CustomerTypeTag, string> = {
   corporate: 'bg-muted text-muted-foreground',
   'storefront-merch': 'bg-muted text-muted-foreground',
   wholesale: 'bg-muted text-muted-foreground',
+  hospitality: 'bg-muted text-muted-foreground',
+  nonprofit: 'bg-muted text-muted-foreground',
+  sports: 'bg-muted text-muted-foreground',
+  religious: 'bg-muted text-muted-foreground',
 }
 
 export const CONTACT_ROLE_LABELS: Record<ContactRole, string> = {
   ordering: 'Ordering',
   'art-approver': 'Art Approver',
   billing: 'Billing',
+  primary: 'Primary',
   owner: 'Owner',
   other: 'Other',
 }

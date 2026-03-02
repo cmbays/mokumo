@@ -51,7 +51,7 @@ function AddressBlock({ address }: { address: Address }) {
         )}
       </div>
       <div className="text-muted-foreground">
-        <p>{address.street}</p>
+        <p>{address.street1}</p>
         {address.street2 && <p>{address.street2}</p>}
         <p>
           {address.city}, {address.state} {address.zip}

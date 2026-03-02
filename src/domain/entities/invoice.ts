@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import Big from 'big.js'
 import { discountSchema } from './quote'
+import { addressSnapshotSchema } from './address'
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -135,6 +136,9 @@ export const invoiceSchema = z
 
     // Change tracking (snapshot from quote at invoice creation)
     pricingSnapshot: pricingSnapshotSchema.optional(),
+
+    // Address snapshot — frozen at invoice creation, not a live FK
+    billingAddressSnapshot: addressSnapshotSchema.optional(),
   })
   .refine(
     (inv) => {

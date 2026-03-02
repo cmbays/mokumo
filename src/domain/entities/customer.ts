@@ -10,7 +10,18 @@ import { addressSchema } from './address'
 // After migration, replace with lifecycleStage reads.
 export const customerTagEnum = z.enum(['new', 'repeat', 'contract'])
 
-export const lifecycleStageEnum = z.enum(['prospect', 'new', 'repeat', 'contract'])
+// Note: 'contract' is kept for backward compat with quoting code that checks lifecycleStage.
+// Step 13 migration: audit pricing.service.ts / QuoteForm to check pricingTier === 'contract'
+// instead, then remove 'contract' from this enum to match DB.
+export const lifecycleStageEnum = z.enum([
+  'prospect',
+  'new',
+  'repeat',
+  'vip',
+  'at-risk',
+  'archived',
+  'contract',
+])
 
 export const healthStatusEnum = z.enum(['active', 'potentially-churning', 'churned'])
 
@@ -20,6 +31,11 @@ export const customerTypeTagEnum = z.enum([
   'corporate',
   'storefront-merch',
   'wholesale',
+  // Common Austin-area print shop customer segments (added Wave 0)
+  'hospitality',
+  'nonprofit',
+  'sports',
+  'religious',
 ])
 
 export const paymentTermsEnum = z.enum(['cod', 'upfront', 'net-15', 'net-30', 'net-60'])
