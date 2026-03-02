@@ -101,11 +101,7 @@ async function sha256Hex(file: File): Promise<string> {
 // Helper: XHR PUT with progress tracking (returns a Promise)
 // ---------------------------------------------------------------------------
 
-function xhrPut(
-  url: string,
-  file: File,
-  onProgress: (percent: number) => void
-): Promise<void> {
+function xhrPut(url: string, file: File, onProgress: (percent: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', url, true)

@@ -11,11 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@shared/ui/primitives/dialog'
-import {
-  useFileUpload,
-  type UseFileUploadProps,
-  type ConfirmResult,
-} from '../hooks/useFileUpload'
+import { useFileUpload, type UseFileUploadProps, type ConfirmResult } from '../hooks/useFileUpload'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -171,11 +167,7 @@ export function ArtworkUploadModal({
           {/* Success state */}
           {isDone && (
             <>
-              <CheckCircle
-                className="text-success"
-                size={40}
-                aria-hidden="true"
-              />
+              <CheckCircle className="text-success" size={40} aria-hidden="true" />
               <p className="text-success text-sm font-medium">Upload complete</p>
             </>
           )}
@@ -183,11 +175,7 @@ export function ArtworkUploadModal({
           {/* Error state */}
           {isError && (
             <>
-              <AlertCircle
-                className="text-error"
-                size={40}
-                aria-hidden="true"
-              />
+              <AlertCircle className="text-error" size={40} aria-hidden="true" />
               <p className="text-error text-sm font-medium">{error}</p>
               <p className="text-muted-foreground text-xs">Click to try again</p>
             </>
@@ -211,7 +199,9 @@ export function ArtworkUploadModal({
                     Drop file here or{' '}
                     <span className="text-action underline underline-offset-2">browse</span>
                   </p>
-                  <p className="text-muted-foreground text-xs text-center">{ACCEPTED_TYPES_LABEL}</p>
+                  <p className="text-muted-foreground text-xs text-center">
+                    {ACCEPTED_TYPES_LABEL}
+                  </p>
                 </>
               )}
 

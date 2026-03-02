@@ -29,7 +29,14 @@ const {
     update: vi.fn(),
     delete: vi.fn(),
   }
-  return { mockVerifySession, mockCreatePresignedUploadUrl, mockConfirmUpload, mockDeleteFile, mockFileUploadService, mockDb }
+  return {
+    mockVerifySession,
+    mockCreatePresignedUploadUrl,
+    mockConfirmUpload,
+    mockDeleteFile,
+    mockFileUploadService,
+    mockDb,
+  }
 })
 
 vi.mock('@shared/lib/supabase/db', () => ({ db: mockDb }))
@@ -38,11 +45,21 @@ vi.mock('@infra/bootstrap', () => ({ fileUploadService: mockFileUploadService })
 
 vi.mock('@db/schema/artworks', () => ({
   artworkVersions: {
-    id: 'id', shopId: 'shop_id', originalPath: 'original_path',
-    thumbPath: 'thumb_path', previewPath: 'preview_path',
-    originalUrl: 'original_url', thumbUrl: 'thumb_url', previewUrl: 'preview_url',
-    contentHash: 'content_hash', mimeType: 'mime_type', sizeBytes: 'size_bytes',
-    filename: 'filename', status: 'status', createdAt: 'created_at', updatedAt: 'updated_at',
+    id: 'id',
+    shopId: 'shop_id',
+    originalPath: 'original_path',
+    thumbPath: 'thumb_path',
+    previewPath: 'preview_path',
+    originalUrl: 'original_url',
+    thumbUrl: 'thumb_url',
+    previewUrl: 'preview_url',
+    contentHash: 'content_hash',
+    mimeType: 'mime_type',
+    sizeBytes: 'size_bytes',
+    filename: 'filename',
+    status: 'status',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
   },
 }))
 
@@ -80,8 +97,11 @@ const CONTENT_HASH = 'a'.repeat(64)
 const SESSION = { userId: 'user-1', role: 'owner', shopId: SHOP_ID }
 
 const VALID_INITIATE_INPUT = {
-  shopId: SHOP_ID, filename: 'logo.png', mimeType: 'image/png',
-  sizeBytes: 1024, contentHash: CONTENT_HASH,
+  shopId: SHOP_ID,
+  filename: 'logo.png',
+  mimeType: 'image/png',
+  sizeBytes: 1024,
+  contentHash: CONTENT_HASH,
 }
 
 const PRESIGNED_RESULT = {
@@ -100,15 +120,19 @@ const CONFIRM_RESULT = {
 }
 
 const DB_ARTWORK_ROW = {
-  id: ARTWORK_ID, shopId: SHOP_ID,
+  id: ARTWORK_ID,
+  shopId: SHOP_ID,
   originalPath: 'artwork/shop-123/originals/uuid_logo.png',
   thumbPath: 'artwork/shop-123/thumbs/uuid_logo.webp',
   previewPath: 'artwork/shop-123/previews/uuid_logo.webp',
   originalUrl: 'https://storage.example.com/original',
   thumbUrl: 'https://storage.example.com/thumb',
   previewUrl: 'https://storage.example.com/preview',
-  contentHash: CONTENT_HASH, mimeType: 'image/png', sizeBytes: 1024,
-  filename: 'logo.png', status: 'ready' as const,
+  contentHash: CONTENT_HASH,
+  mimeType: 'image/png',
+  sizeBytes: 1024,
+  filename: 'logo.png',
+  status: 'ready' as const,
   createdAt: new Date('2026-03-02T00:00:00Z'),
   updatedAt: new Date('2026-03-02T00:00:00Z'),
 }
@@ -336,9 +360,11 @@ describe('initiateArtworkUpload', () => {
 describe('confirmArtworkUpload', () => {
   const VALID_CONFIRM_INPUT = { artworkId: ARTWORK_ID, shopId: SHOP_ID }
   const ARTWORK_FETCH_ROW = {
-    id: ARTWORK_ID, shopId: SHOP_ID,
+    id: ARTWORK_ID,
+    shopId: SHOP_ID,
     originalPath: 'artwork/shop-123/originals/uuid_logo.png',
-    mimeType: 'image/png', status: 'pending' as const,
+    mimeType: 'image/png',
+    status: 'pending' as const,
   }
 
   beforeEach(() => {
@@ -454,7 +480,8 @@ describe('confirmArtworkUpload', () => {
 describe('deleteArtwork', () => {
   const VALID_DELETE_INPUT = { artworkId: ARTWORK_ID, shopId: SHOP_ID }
   const ARTWORK_FOR_DELETE = {
-    id: ARTWORK_ID, shopId: SHOP_ID,
+    id: ARTWORK_ID,
+    shopId: SHOP_ID,
     originalPath: 'artwork/shop-123/originals/uuid_logo.png',
     thumbPath: 'artwork/shop-123/thumbs/uuid_logo.webp',
     previewPath: 'artwork/shop-123/previews/uuid_logo.webp',
@@ -467,9 +494,9 @@ describe('deleteArtwork', () => {
 
   describe('input validation', () => {
     it('throws on invalid artworkId', async () => {
-      await expect(
-        deleteArtwork({ artworkId: 'not-a-uuid', shopId: SHOP_ID })
-      ).rejects.toThrow('Invalid input')
+      await expect(deleteArtwork({ artworkId: 'not-a-uuid', shopId: SHOP_ID })).rejects.toThrow(
+        'Invalid input'
+      )
     })
 
     it('throws when session is null', async () => {
@@ -478,9 +505,9 @@ describe('deleteArtwork', () => {
     })
 
     it('throws when shopId does not match session', async () => {
-      await expect(
-        deleteArtwork({ ...VALID_DELETE_INPUT, shopId: OTHER_SHOP_ID })
-      ).rejects.toThrow('Forbidden')
+      await expect(deleteArtwork({ ...VALID_DELETE_INPUT, shopId: OTHER_SHOP_ID })).rejects.toThrow(
+        'Forbidden'
+      )
     })
   })
 

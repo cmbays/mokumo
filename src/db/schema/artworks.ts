@@ -33,7 +33,9 @@ export const artworkVersions = pgTable(
     filename: text('filename').notNull(),
 
     // 'pending' → renditions in progress; 'ready' → renditions done; 'error' → rendition failed
-    status: text('status', { enum: ['pending', 'ready', 'error'] }).notNull().default('pending'),
+    status: text('status', { enum: ['pending', 'ready', 'error'] })
+      .notNull()
+      .default('pending'),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),

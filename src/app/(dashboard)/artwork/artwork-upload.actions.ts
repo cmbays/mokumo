@@ -111,12 +111,7 @@ export async function initiateArtworkUpload(
     existing = await db
       .select({ id: artworkVersions.id, originalPath: artworkVersions.originalPath })
       .from(artworkVersions)
-      .where(
-        and(
-          eq(artworkVersions.shopId, shopId),
-          eq(artworkVersions.contentHash, contentHash)
-        )
-      )
+      .where(and(eq(artworkVersions.shopId, shopId), eq(artworkVersions.contentHash, contentHash)))
       .limit(1)
   } catch (err) {
     actionsLogger.error('initiateArtworkUpload: dedup query failed', {
