@@ -276,7 +276,8 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
         cs.style_number,
         (COALESCE(csp.is_enabled, true) AND COALESCE(cbp.is_enabled, true)) AS is_enabled,
         csp.is_favorite,
-        card_img.url AS card_image_url
+        card_img.url AS card_image_url,
+        price_agg.base_price
       FROM catalog_styles cs
       JOIN catalog_brands cb ON cb.id = cs.brand_id
       LEFT JOIN catalog_style_preferences csp
@@ -306,6 +307,11 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
           END
         LIMIT 1
       ) card_img ON true
+      LEFT JOIN (
+        SELECT style_id_external, MIN(piece_price)::float AS base_price
+        FROM raw.ss_activewear_products
+        GROUP BY style_id_external
+      ) price_agg ON price_agg.style_id_external = cs.external_id
       ORDER BY cs.style_number ASC
     `)
     rows = result as unknown[]
@@ -325,7 +331,9 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
       is_enabled: boolean | null
       is_favorite: boolean | null
       card_image_url: string | null
+      base_price: number | string | null
     }
+    const rawPrice = r.base_price
     parsed.push({
       id: r.id,
       brand: r.brand_canonical,
@@ -333,6 +341,7 @@ async function _fetchCatalogStylesSlim(shopId: string): Promise<CatalogStyleMeta
       isEnabled: r.is_enabled ?? true,
       isFavorite: r.is_favorite ?? false,
       cardImageUrl: r.card_image_url,
+      basePrice: rawPrice != null && rawPrice !== '' ? Number(rawPrice) : null,
     })
   }
   return parsed

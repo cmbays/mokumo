@@ -135,6 +135,17 @@ export function GarmentCatalogClient({
     [styleMetas]
   )
 
+  // SKU → basePrice — sourced from raw.ss_activewear_products via slim metadata join
+  const skuToBasePrice = useMemo(
+    () =>
+      new Map(
+        styleMetas
+          .filter((m) => m.basePrice != null)
+          .map((m) => [m.styleNumber, m.basePrice as number])
+      ),
+    [styleMetas]
+  )
+
   // styleNumber → Set<colorGroupName> — for color group filter matching
   const styleColorGroupsMap = useMemo(
     () => new Map(Object.entries(styleColorGroups).map(([k, v]) => [k, new Set(v)])),
@@ -471,6 +482,7 @@ export function GarmentCatalogClient({
               onClick={handleSelectGarment}
               frontImageUrl={skuToCardImageUrl.get(garment.sku)}
               normalizedColors={styleSwatches[garment.sku]}
+              overrideBasePrice={skuToBasePrice.get(garment.sku) ?? null}
             />
           ))}
         </div>
@@ -514,6 +526,7 @@ export function GarmentCatalogClient({
                   onToggleEnabled={handleToggleEnabled}
                   onToggleFavorite={handleToggleFavorite}
                   onClick={handleSelectGarment}
+                  overrideBasePrice={skuToBasePrice.get(garment.sku) ?? null}
                 />
               ))}
             </tbody>

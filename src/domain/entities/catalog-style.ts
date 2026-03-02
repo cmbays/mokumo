@@ -51,11 +51,11 @@ export type CatalogSize = z.infer<typeof catalogSizeSchema>
 /**
  * Slim catalog style for Tier 1 (initial page load).
  *
- * Contains only the 6 fields GarmentCatalogClient actually uses — no name, description,
+ * Contains only the fields GarmentCatalogClient actually uses — no name, description,
  * category, source, externalId (those are already on GarmentCatalog from the legacy table
  * and are Tier 2 drawer data anyway).
  *
- * ~250 bytes/style × 4,808 styles ≈ 1.2 MB — safely under Next.js unstable_cache's 2 MB limit.
+ * ~258 bytes/style × 4,808 styles ≈ 1.24 MB — safely under Next.js unstable_cache's 2 MB limit.
  */
 export const catalogStyleMetadataSchema = z.object({
   id: z.string().uuid(),
@@ -65,6 +65,8 @@ export const catalogStyleMetadataSchema = z.object({
   isFavorite: z.boolean(),
   /** Precomputed in SQL — best available image following CARD_IMAGE_PREFERENCE order. */
   cardImageUrl: z.string().url().nullable(),
+  /** MIN(piece_price) from raw.ss_activewear_products — null when sync hasn't run or style not in raw table. */
+  basePrice: z.number().nullable(),
 })
 
 export type CatalogStyleMetadata = z.infer<typeof catalogStyleMetadataSchema>

@@ -24,6 +24,8 @@ type GarmentCardProps = {
   frontImageUrl?: string
   /** Slim swatch data from Tier 1 supplement — name + hex1 per color. Falls back when absent or empty. */
   normalizedColors?: Array<{ name: string; hex1: string | null }>
+  /** Real base price from slim metadata (raw.ss_activewear_products) — overrides catalog_archived.base_price (always 0). */
+  overrideBasePrice?: number | null
 }
 
 function isNormalized(g: GarmentCatalog | NormalizedGarmentCatalog): g is NormalizedGarmentCatalog {
@@ -37,6 +39,7 @@ export function GarmentCard({
   onClick,
   frontImageUrl,
   normalizedColors,
+  overrideBasePrice,
 }: GarmentCardProps) {
   const garmentColors = useMemo(() => {
     if (isNormalized(garment)) return []
@@ -63,7 +66,12 @@ export function GarmentCard({
         ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
         : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
 
-  const hasBottomRow = (showPrice && !isNormalized(garment) && garment.basePrice > 0) || !garment.isEnabled
+  // Prefer the Tier 1 override price (from raw.ss_activewear_products) over catalog_archived.base_price (always 0).
+  // garment.basePrice only exists on GarmentCatalog, not NormalizedGarmentCatalog — use isNormalized guard.
+  const legacyBasePrice = !isNormalized(garment) && garment.basePrice > 0 ? garment.basePrice : null
+  const displayPrice = overrideBasePrice != null ? overrideBasePrice : legacyBasePrice
+
+  const hasBottomRow = (showPrice && !isNormalized(garment) && displayPrice != null) || !garment.isEnabled
 
   return (
     <div
@@ -119,9 +127,9 @@ export function GarmentCard({
         {/* Bottom row: price + disabled badge (only when relevant) */}
         {hasBottomRow && (
           <div className="flex items-center gap-1.5 pt-0.5">
-            {showPrice && !isNormalized(garment) && garment.basePrice > 0 && (
+            {showPrice && !isNormalized(garment) && displayPrice != null && (
               <span className="text-xs font-medium text-foreground">
-                {formatCurrency(garment.basePrice)}
+                {formatCurrency(displayPrice)}
               </span>
             )}
             {!garment.isEnabled && (
