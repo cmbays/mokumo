@@ -18,12 +18,12 @@ updated: 2026-03-02
 
 ## Places
 
-| #  | Place                    | Description                                                                   |
-| -- | ------------------------ | ----------------------------------------------------------------------------- |
-| P1 | Artwork Library (P5 M1)  | Consumer UI — artwork grid, upload entry point                                |
-| P2 | Upload Modal             | Blocking modal — file selection, XHR upload, progress, completion states      |
-| P3 | P5 M1 Server Actions     | `upload.action.ts` — orchestration, dedup check, artwork DB ops               |
-| P4 | H2 Service Layer         | `file-upload.service.ts`, `rendition.service.ts`, `supabase-storage.provider.ts` |
+| #   | Place                   | Description                                                                      |
+| --- | ----------------------- | -------------------------------------------------------------------------------- |
+| P1  | Artwork Library (P5 M1) | Consumer UI — artwork grid, upload entry point                                   |
+| P2  | Upload Modal            | Blocking modal — file selection, XHR upload, progress, completion states         |
+| P3  | P5 M1 Server Actions    | `upload.action.ts` — orchestration, dedup check, artwork DB ops                  |
+| P4  | H2 Service Layer        | `file-upload.service.ts`, `rendition.service.ts`, `supabase-storage.provider.ts` |
 
 > Supabase Storage is an external system (S2), not a Place — you cannot navigate to it.
 > The bootstrap script (`bootstrap-storage.ts`) is a one-time admin operation tagged to V1 prerequisite.
@@ -32,18 +32,18 @@ updated: 2026-03-02
 
 ## UI Affordances
 
-| #   | Place | Component       | Affordance                             | Control    | Wires Out | Returns To |
-| --- | ----- | --------------- | -------------------------------------- | ---------- | --------- | ---------- |
-| U1  | P1    | artwork-library | "Upload Artwork" button                | click      | → P2      | —          |
-| U2  | P1    | artwork-grid    | artwork thumbnail card                 | render     | —         | —          |
-| U3  | P2    | upload-modal    | file dropzone (drag-drop or click)     | drop/click | → N0      | —          |
-| U4  | P2    | upload-modal    | selected file info (name, size, type)  | render     | —         | —          |
-| U5  | P2    | upload-modal    | upload progress bar                    | render     | —         | —          |
-| U6  | P2    | upload-modal    | "processing renditions" skeleton       | render     | —         | —          |
-| U7  | P2    | upload-modal    | success — thumb preview + "Done"       | render     | —         | —          |
-| U8  | P2    | upload-modal    | error message (MIME / size / network)  | render     | —         | —          |
-| U9  | P2    | upload-modal    | duplicate notice ("artwork exists")    | render     | —         | —          |
-| U10 | P2    | upload-modal    | "Cancel" / "Close" button              | click      | → P1      | —          |
+| #   | Place | Component       | Affordance                            | Control    | Wires Out | Returns To |
+| --- | ----- | --------------- | ------------------------------------- | ---------- | --------- | ---------- |
+| U1  | P1    | artwork-library | "Upload Artwork" button               | click      | → P2      | —          |
+| U2  | P1    | artwork-grid    | artwork thumbnail card                | render     | —         | —          |
+| U3  | P2    | upload-modal    | file dropzone (drag-drop or click)    | drop/click | → N0      | —          |
+| U4  | P2    | upload-modal    | selected file info (name, size, type) | render     | —         | —          |
+| U5  | P2    | upload-modal    | upload progress bar                   | render     | —         | —          |
+| U6  | P2    | upload-modal    | "processing renditions" skeleton      | render     | —         | —          |
+| U7  | P2    | upload-modal    | success — thumb preview + "Done"      | render     | —         | —          |
+| U8  | P2    | upload-modal    | error message (MIME / size / network) | render     | —         | —          |
+| U9  | P2    | upload-modal    | duplicate notice ("artwork exists")   | render     | —         | —          |
+| U10 | P2    | upload-modal    | "Cancel" / "Close" button             | click      | → P1      | —          |
 
 ---
 
@@ -51,14 +51,15 @@ updated: 2026-03-02
 
 ### P2 — Client-side (Upload Modal)
 
-| #   | Place | Component    | Affordance                                                                                                                     | Control | Wires Out               | Returns To |
-| --- | ----- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ | ------- | ----------------------- | ---------- |
-| N0  | P2    | upload-modal | `handleFileUpload(file)` — client orchestrator: hash → initiate → XHR upload → confirm → route to outcome                    | call    | → N1, → N6, → N2, → N8 | —          |
-| N1  | P2    | upload-modal | `computeHash(file)` — Web Crypto `SHA-256` digest of `file.arrayBuffer()`                                                     | call    | —                       | → N0       |
-| N2  | P2    | upload-modal | `uploadToStorage(uploadUrl, token, file)` — direct `fetch PUT` to Supabase                                                    | call    | → S2, → S1              | → N0       |
-| S1  | P2    | upload-modal | upload progress store (0–100 integer)                                                                                          | write   | —                       | → U5       |
+| #   | Place | Component    | Affordance                                                                                                | Control | Wires Out              | Returns To |
+| --- | ----- | ------------ | --------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------- |
+| N0  | P2    | upload-modal | `handleFileUpload(file)` — client orchestrator: hash → initiate → XHR upload → confirm → route to outcome | call    | → N1, → N6, → N2, → N8 | —          |
+| N1  | P2    | upload-modal | `computeHash(file)` — Web Crypto `SHA-256` digest of `file.arrayBuffer()`                                 | call    | —                      | → N0       |
+| N2  | P2    | upload-modal | `uploadToStorage(uploadUrl, token, file)` — direct `fetch PUT` to Supabase                                | call    | → S2, → S1             | → N0       |
+| S1  | P2    | upload-modal | upload progress store (0–100 integer)                                                                     | write   | —                      | → U5       |
 
 > **N0 sequencing:**
+>
 > 1. Calls N1 → receives `contentHash`; populates U4 (file info)
 > 2. Calls N6 (`initiateUpload`) with hash + metadata
 >    - Dedup match → N6 returns `{isDuplicate: true}` → N0 shows U9, returns early
@@ -69,58 +70,63 @@ updated: 2026-03-02
 
 ### P3 — P5 M1 Server Actions
 
-| #   | Place | Component       | Affordance                                                                                                | Control | Wires Out    | Returns To    |
-| --- | ----- | --------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------------ | ------------- |
-| N6  | P3    | upload.action   | `initiateUpload({entity, shopId, filename, mimeType, sizeBytes, contentHash})`                            | call    | → N7, → N10  | → N0 (client) |
-| N7  | P3    | artwork.repo    | `artworkVersions.findFirst({where: eq(contentHash, hash)})` — dedup check                                | query   | → S3         | → N6          |
-| N8  | P3    | upload.action   | `confirmArtworkUpload({path, contentHash})`                                                               | call    | → N11, → N9  | → N0 (client) |
-| N9  | P3    | artwork.repo    | `artworkVersions.insert({originalUrl, thumbUrl, previewUrl, contentHash, shopId, status})`                | call    | → S3         | —             |
+| #   | Place | Component     | Affordance                                                                                 | Control | Wires Out   | Returns To    |
+| --- | ----- | ------------- | ------------------------------------------------------------------------------------------ | ------- | ----------- | ------------- |
+| N6  | P3    | upload.action | `initiateUpload({entity, shopId, filename, mimeType, sizeBytes, contentHash})`             | call    | → N7, → N10 | → N0 (client) |
+| N7  | P3    | artwork.repo  | `artworkVersions.findFirst({where: eq(contentHash, hash)})` — dedup check                  | query   | → S3        | → N6          |
+| N8  | P3    | upload.action | `confirmArtworkUpload({path, contentHash})`                                                | call    | → N11, → N9 | → N0 (client) |
+| N9  | P3    | artwork.repo  | `artworkVersions.insert({originalUrl, thumbUrl, previewUrl, contentHash, shopId, status})` | call    | → S3        | —             |
 
 > **N6 conditional logic:**
+>
 > - N7 returns match → `isDuplicate: true` → N6 returns early → N0 shows U9 (no N10 call)
 > - N7 returns no match → N6 calls N10 → receives `{path, uploadUrl, token}` → returns to N0
 >
 > **N8 logic:**
+>
 > - Calls N11 → receives `{originalUrl, thumbUrl, previewUrl, status}`
 > - Calls N9 to persist artwork record
 > - Returns artwork record to N0 → N0 updates UI (U6 → U7)
 
 ### P4 — H2 Service Layer
 
-| #   | Place | Component                 | Affordance                                                                                              | Control | Wires Out     | Returns To       |
-| --- | ----- | ------------------------- | ------------------------------------------------------------------------------------------------------- | ------- | ------------- | ---------------- |
-| N10 | P4    | file-upload.service       | `fileUploadService.createPresignedUploadUrl({entity, shopId, filename, mimeType, sizeBytes})`           | call    | → N12, → N13  | → N6 (P3)        |
-| N11 | P4    | file-upload.service       | `fileUploadService.confirmUpload({path, contentHash})`                                                  | call    | → N14, → N13  | → N8 (P3)        |
-| N12 | P4    | entity-configs            | `validateEntityConfig(entity, mimeType, sizeBytes)` — throws `UploadValidationError` on violation      | call    | —             | → N10            |
-| N13 | P4    | supabase-storage.provider | `SupabaseStorageProvider` **[CHUNK]** — presigned URL gen, direct download, upload, delete              | call    | → S2          | → N10, N11, N14  |
-| N14 | P4    | rendition.service         | `RenditionService.generate(originalPath)` **[CHUNK]** — Sharp thumb + preview pipeline                 | call    | → N13         | → N11            |
-| N16 | P4    | scripts/bootstrap-storage | `bootstrap-storage.ts` — idempotent bucket create + RLS policy apply (one-time admin, not consumer-facing) | invoke  | → S2      | —                |
+| #   | Place | Component                 | Affordance                                                                                                 | Control | Wires Out    | Returns To      |
+| --- | ----- | ------------------------- | ---------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------------- |
+| N10 | P4    | file-upload.service       | `fileUploadService.createPresignedUploadUrl({entity, shopId, filename, mimeType, sizeBytes})`              | call    | → N12, → N13 | → N6 (P3)       |
+| N11 | P4    | file-upload.service       | `fileUploadService.confirmUpload({path, contentHash})`                                                     | call    | → N14, → N13 | → N8 (P3)       |
+| N12 | P4    | entity-configs            | `validateEntityConfig(entity, mimeType, sizeBytes)` — throws `UploadValidationError` on violation          | call    | —            | → N10           |
+| N13 | P4    | supabase-storage.provider | `SupabaseStorageProvider` **[CHUNK]** — presigned URL gen, direct download, upload, delete                 | call    | → S2         | → N10, N11, N14 |
+| N14 | P4    | rendition.service         | `RenditionService.generate(originalPath)` **[CHUNK]** — Sharp thumb + preview pipeline                     | call    | → N13        | → N11           |
+| N16 | P4    | scripts/bootstrap-storage | `bootstrap-storage.ts` — idempotent bucket create + RLS policy apply (one-time admin, not consumer-facing) | invoke  | → S2         | —               |
 
 > **N10 conditional logic:**
+>
 > - N12 throws `UploadValidationError` → propagates through N10 → N6 → N0 → N0 shows U8
 > - N12 passes → N13 called for presigned URL → success path returns `{path, uploadUrl, token}`
 >
 > **N11 logic:**
+>
 > - Detects format by MIME type; Sharp-native → calls N14 (full renditions, `status: 'ready'`)
 > - PSD/AI/EPS/PDF → skips N14, returns `{thumbUrl: null, previewUrl: null, status: 'pending'}`
 > - Calls N13 for presigned download URLs of original + renditions
 >
 > **H2 public interface (full contract):**
+>
 > - `fileUploadService.createPresignedUploadUrl()` → N10
 > - `fileUploadService.confirmUpload()` → N11
 > - `fileUploadService.deleteFile(paths: string[])` → calls N13.delete — batch remove original + renditions
 >
-> *`deleteFile` is exercised during artwork version management (consumer calls it when a version is superseded), not the upload flow modeled in this breadboard. It is covered by H2 unit tests in implementation.*
+> _`deleteFile` is exercised during artwork version management (consumer calls it when a version is superseded), not the upload flow modeled in this breadboard. It is covered by H2 unit tests in implementation._
 
 ---
 
 ## Data Stores
 
-| #  | Store                       | Description                                                   | Writers | Readers     |
-| -- | --------------------------- | ------------------------------------------------------------- | ------- | ----------- |
-| S1 | Upload progress (client)    | Integer 0–100 during XHR upload                               | N2      | U5          |
-| S2 | Supabase Storage `artwork/` | External bucket — originals, thumbs, previews, frozen proofs  | N2, N13 | N13, U7, U2 |
-| S3 | `artwork_versions` table    | P5 M1 DB — artwork records with contentHash for dedup         | N9      | N7, U2      |
+| #   | Store                       | Description                                                  | Writers | Readers     |
+| --- | --------------------------- | ------------------------------------------------------------ | ------- | ----------- |
+| S1  | Upload progress (client)    | Integer 0–100 during XHR upload                              | N2      | U5          |
+| S2  | Supabase Storage `artwork/` | External bucket — originals, thumbs, previews, frozen proofs | N2, N13 | N13, U7, U2 |
+| S3  | `artwork_versions` table    | P5 M1 DB — artwork records with contentHash for dedup        | N9      | N7, U2      |
 
 ---
 
@@ -280,6 +286,7 @@ flowchart TB
 ```
 
 **Key behaviors:**
+
 - R1 uses `adminClient.storage.from(bucket).download(path)` — server-side code uses admin SDK direct download, not presigned URLs (presigned = browser client pattern; no HTTP round-trip needed here)
 - `fit: 'inside', withoutEnlargement: true` — preserves aspect ratio, never upscales small sources
 - SVG: rasterized to PNG by libvips/librsvg before WebP conversion (Sharp handles natively)
@@ -310,16 +317,20 @@ flowchart TB
 ```
 
 **Client upload pattern — bypass Vercel 4.5 MB limit:**
+
 ```
 Server: createPresignedUploadUrl → { path, uploadUrl, token }
 Client: fetch(uploadUrl, { method: 'PUT', body: file, headers: { Authorization: `Bearer ${token}` } })
 ```
+
 No file bytes transit the Vercel function. Client uploads directly to Supabase Storage.
 
 **Server-side read pattern — RenditionService (R1):**
+
 ```
 Server: download(path) → adminClient.storage.from(bucket).download(path) → Buffer
 ```
+
 No HTTP round-trip. No time-limited token management on the server. Direct admin SDK buffer access.
 
 ---
@@ -328,11 +339,11 @@ No HTTP round-trip. No time-limited token management on the server. Direct admin
 
 ### Slice Summary
 
-| #  | Slice                       | Parts (Shape A)   | Demo                                                                     |
-| -- | --------------------------- | ----------------- | ------------------------------------------------------------------------ |
-| V1 | Happy path upload           | A1–A9 (all parts) | "Upload a 300 DPI PNG — thumbnail appears in artwork grid within ~2 sec" |
-| V2 | Dedup short-circuit         | A4 (dedup branch) | "Upload same PNG again — duplicate notice, zero storage writes"          |
-| V3 | Validation errors           | A3, A4            | "Upload a .PDF at 400 MB — clear error message, no storage write"        |
+| #   | Slice               | Parts (Shape A)   | Demo                                                                     |
+| --- | ------------------- | ----------------- | ------------------------------------------------------------------------ |
+| V1  | Happy path upload   | A1–A9 (all parts) | "Upload a 300 DPI PNG — thumbnail appears in artwork grid within ~2 sec" |
+| V2  | Dedup short-circuit | A4 (dedup branch) | "Upload same PNG again — duplicate notice, zero storage writes"          |
+| V3  | Validation errors   | A3, A4            | "Upload a .PDF at 400 MB — clear error message, no storage write"        |
 
 > **V1 prerequisite:** `bootstrap-storage.ts` (N16) must run once before any upload is possible.
 > Include as Wave 0 step in implementation planning.
@@ -343,32 +354,32 @@ No HTTP round-trip. No time-limited token management on the server. Direct admin
 
 **Demo:** Upload a new 300 DPI PNG. Thumbnail and preview appear in artwork grid.
 
-| #   | Component                 | Affordance                                              | New in V1 |
-| --- | ------------------------- | ------------------------------------------------------- | --------- |
-| U1  | artwork-library           | "Upload Artwork" button                                 | ✓         |
-| U3  | upload-modal              | file dropzone                                           | ✓         |
-| U4  | upload-modal              | file info display                                       | ✓         |
-| U5  | upload-modal              | upload progress bar                                     | ✓         |
-| U6  | upload-modal              | rendition skeleton                                      | ✓         |
-| U7  | upload-modal              | success thumbnail preview                               | ✓         |
-| U10 | upload-modal              | Cancel button                                           | ✓         |
-| U2  | artwork-grid              | artwork thumbnail card                                  | ✓         |
-| N0  | upload-modal (client)     | `handleFileUpload(file)` orchestrator                   | ✓         |
-| N1  | upload-modal (client)     | `computeHash(file)`                                     | ✓         |
-| N2  | upload-modal (client)     | `uploadToStorage()` XHR                                 | ✓         |
-| S1  | upload-modal (client)     | upload progress store                                   | ✓         |
-| N6  | upload.action             | `initiateUpload()`                                      | ✓         |
-| N7  | artwork.repo              | `artworkVersions` dedup query                           | ✓         |
-| N8  | upload.action             | `confirmArtworkUpload()`                                | ✓         |
-| N9  | artwork.repo              | `artworkVersions.insert()`                              | ✓         |
-| N10 | file-upload.service       | `fileUploadService.createPresignedUploadUrl()`          | ✓         |
-| N11 | file-upload.service       | `fileUploadService.confirmUpload()`                     | ✓         |
-| N12 | entity-configs            | `validateEntityConfig()`                                | ✓         |
-| N13 | supabase-storage.provider | `SupabaseStorageProvider` (all methods)                 | ✓         |
-| N14 | rendition.service         | `RenditionService.generate()`                           | ✓         |
-| N16 | scripts/bootstrap-storage | `bootstrap-storage.ts` (prerequisite, run before demo)  | ✓         |
-| S2  | Supabase Storage          | artwork bucket                                          | ✓         |
-| S3  | DB                        | artwork_versions table                                  | ✓         |
+| #   | Component                 | Affordance                                             | New in V1 |
+| --- | ------------------------- | ------------------------------------------------------ | --------- |
+| U1  | artwork-library           | "Upload Artwork" button                                | ✓         |
+| U3  | upload-modal              | file dropzone                                          | ✓         |
+| U4  | upload-modal              | file info display                                      | ✓         |
+| U5  | upload-modal              | upload progress bar                                    | ✓         |
+| U6  | upload-modal              | rendition skeleton                                     | ✓         |
+| U7  | upload-modal              | success thumbnail preview                              | ✓         |
+| U10 | upload-modal              | Cancel button                                          | ✓         |
+| U2  | artwork-grid              | artwork thumbnail card                                 | ✓         |
+| N0  | upload-modal (client)     | `handleFileUpload(file)` orchestrator                  | ✓         |
+| N1  | upload-modal (client)     | `computeHash(file)`                                    | ✓         |
+| N2  | upload-modal (client)     | `uploadToStorage()` XHR                                | ✓         |
+| S1  | upload-modal (client)     | upload progress store                                  | ✓         |
+| N6  | upload.action             | `initiateUpload()`                                     | ✓         |
+| N7  | artwork.repo              | `artworkVersions` dedup query                          | ✓         |
+| N8  | upload.action             | `confirmArtworkUpload()`                               | ✓         |
+| N9  | artwork.repo              | `artworkVersions.insert()`                             | ✓         |
+| N10 | file-upload.service       | `fileUploadService.createPresignedUploadUrl()`         | ✓         |
+| N11 | file-upload.service       | `fileUploadService.confirmUpload()`                    | ✓         |
+| N12 | entity-configs            | `validateEntityConfig()`                               | ✓         |
+| N13 | supabase-storage.provider | `SupabaseStorageProvider` (all methods)                | ✓         |
+| N14 | rendition.service         | `RenditionService.generate()`                          | ✓         |
+| N16 | scripts/bootstrap-storage | `bootstrap-storage.ts` (prerequisite, run before demo) | ✓         |
+| S2  | Supabase Storage          | artwork bucket                                         | ✓         |
+| S3  | DB                        | artwork_versions table                                 | ✓         |
 
 ---
 
@@ -378,9 +389,9 @@ No HTTP round-trip. No time-limited token management on the server. Direct admin
 
 Builds on V1. New affordances only:
 
-| #  | Component    | Affordance                                                         | New in V2 |
-| -- | ------------ | ------------------------------------------------------------------ | --------- |
-| U9 | upload-modal | duplicate notice ("This artwork already exists — [view it]")       | ✓         |
+| #   | Component    | Affordance                                                   | New in V2 |
+| --- | ------------ | ------------------------------------------------------------ | --------- |
+| U9  | upload-modal | duplicate notice ("This artwork already exists — [view it]") | ✓         |
 
 **Wiring:** N7 returns match → N6 returns `{isDuplicate: true}` to N0 → N0 shows U9, returns early. N10 is never called. Zero storage writes.
 
@@ -394,11 +405,12 @@ No new server or storage code needed — this is a branch within N6 and N0 that 
 
 Builds on V1. New affordances:
 
-| #  | Component    | Affordance                                                         | New in V3 |
-| -- | ------------ | ------------------------------------------------------------------ | --------- |
-| U8 | upload-modal | error message (MIME invalid / file too large / network fail)       | ✓         |
+| #   | Component    | Affordance                                                   | New in V3 |
+| --- | ------------ | ------------------------------------------------------------ | --------- |
+| U8  | upload-modal | error message (MIME invalid / file too large / network fail) | ✓         |
 
 **Error wiring:**
+
 - `validateEntityConfig` throws `UploadValidationError` → propagates through N10 → N6 → N0 → N0 shows U8
 - `uploadToStorage` XHR network fail → N2 returns error to N0 → N0 shows U8
 - Validation happens in N12 **before** any storage call — no partial writes possible
@@ -409,19 +421,19 @@ Builds on V1. New affordances:
 
 ## Scope Coverage Verification
 
-| Req  | Requirement                                                    | Affordances                             | Covered? |
-| ---- | -------------------------------------------------------------- | --------------------------------------- | -------- |
-| R0   | Any vertical uploads without implementing storage plumbing     | N10, N11, N13, N14, N16                 | ✅       |
-| R1   | Client bypasses Vercel 4.5 MB limit via presigned URL          | N0 → N6 → N10 → N13 → N2 (XHR)        | ✅       |
-| R2   | Content-addressed dedup — no duplicate storage write           | N7, N6 (dedup branch), N0 → U9         | ✅       |
-| R3   | Per-entity file size + MIME enforcement                        | N12 (validateEntityConfig)              | ✅       |
-| R4   | Thumb (200×200 WebP) + preview (800×800 WebP) generated        | N14 (RenditionService chunk)            | ✅       |
-| R4.1 | PNG/JPEG/WebP/SVG/GIF/TIFF via Sharp natively                  | N14 (R2 branch in chunk)                | ✅       |
-| R4.2 | PSD/AI/EPS/PDF stored as-is; status = `pending`               | N14 (R7 branch in chunk)                | ✅       |
-| R5   | Storage provider abstraction — swap = config change only       | N13 (IStorageProvider interface)        | ✅       |
-| R6   | Path namespaced by entity + shop                               | N10 (path gen: `{entity}/{shopId}/...`) | ✅       |
-| R7   | P5 M1 works as first consumer on H2 day one                   | N6, N8 (P5 M1 server actions)           | ✅       |
-| R8   | Interface async-ready — `status: 'ready' \| 'processing'`     | N11 → N8 → N0 → client                  | ✅       |
+| Req  | Requirement                                                | Affordances                             | Covered? |
+| ---- | ---------------------------------------------------------- | --------------------------------------- | -------- |
+| R0   | Any vertical uploads without implementing storage plumbing | N10, N11, N13, N14, N16                 | ✅       |
+| R1   | Client bypasses Vercel 4.5 MB limit via presigned URL      | N0 → N6 → N10 → N13 → N2 (XHR)          | ✅       |
+| R2   | Content-addressed dedup — no duplicate storage write       | N7, N6 (dedup branch), N0 → U9          | ✅       |
+| R3   | Per-entity file size + MIME enforcement                    | N12 (validateEntityConfig)              | ✅       |
+| R4   | Thumb (200×200 WebP) + preview (800×800 WebP) generated    | N14 (RenditionService chunk)            | ✅       |
+| R4.1 | PNG/JPEG/WebP/SVG/GIF/TIFF via Sharp natively              | N14 (R2 branch in chunk)                | ✅       |
+| R4.2 | PSD/AI/EPS/PDF stored as-is; status = `pending`            | N14 (R7 branch in chunk)                | ✅       |
+| R5   | Storage provider abstraction — swap = config change only   | N13 (IStorageProvider interface)        | ✅       |
+| R6   | Path namespaced by entity + shop                           | N10 (path gen: `{entity}/{shopId}/...`) | ✅       |
+| R7   | P5 M1 works as first consumer on H2 day one                | N6, N8 (P5 M1 server actions)           | ✅       |
+| R8   | Interface async-ready — `status: 'ready' \| 'processing'`  | N11 → N8 → N0 → client                  | ✅       |
 
 All requirements covered. Zero gaps.
 
@@ -503,9 +515,9 @@ All requirements covered. Zero gaps.
 
 ### Pre-Loaded Questions — Answers
 
-| # | Question | Answer |
-| - | -------- | ------ |
-| 1 | Does `confirmArtworkUpload` reveal it's artwork-specific? Smell for a horizontal? | **Not a smell.** `confirmArtworkUpload` is in P3 (consumer server action), not P4 (H2). Artwork-specific naming is correct — it's the consumer's own action, not H2's. H2's method is `fileUploadService.confirmUpload()` which is generic. |
-| 2 | N7 (dedup query) in P3, not P4. Smell or correct? | **Not a smell.** Correct per Decision D3 in shaping. Consumer owns dedup state. H2 is stateless. The dedup query hits `artwork_versions` — a consumer table H2 has no access to. Correct placement. |
-| 3 | RenditionService downloads original by path rather than accepting a buffer. Smell? | **Partial smell.** The storage round-trip itself is unavoidable (file is in storage after the presigned XHR upload; RenditionService needs the buffer). But the mechanism was wrong — presigned URLs are a browser client pattern. Fixed in Smell 5: use admin SDK `download(path)` instead. |
-| 4 | `deleteFile` (N15) has no UI trigger. Smell or expected? | **Quality gate violation.** Fixed in Smell 4. `deleteFile` belongs to a different flow (version management) and was removed from this breadboard's affordance tables. |
+| #   | Question                                                                           | Answer                                                                                                                                                                                                                                                                                       |
+| --- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Does `confirmArtworkUpload` reveal it's artwork-specific? Smell for a horizontal?  | **Not a smell.** `confirmArtworkUpload` is in P3 (consumer server action), not P4 (H2). Artwork-specific naming is correct — it's the consumer's own action, not H2's. H2's method is `fileUploadService.confirmUpload()` which is generic.                                                  |
+| 2   | N7 (dedup query) in P3, not P4. Smell or correct?                                  | **Not a smell.** Correct per Decision D3 in shaping. Consumer owns dedup state. H2 is stateless. The dedup query hits `artwork_versions` — a consumer table H2 has no access to. Correct placement.                                                                                          |
+| 3   | RenditionService downloads original by path rather than accepting a buffer. Smell? | **Partial smell.** The storage round-trip itself is unavoidable (file is in storage after the presigned XHR upload; RenditionService needs the buffer). But the mechanism was wrong — presigned URLs are a browser client pattern. Fixed in Smell 5: use admin SDK `download(path)` instead. |
+| 4   | `deleteFile` (N15) has no UI trigger. Smell or expected?                           | **Quality gate violation.** Fixed in Smell 4. `deleteFile` belongs to a different flow (version management) and was removed from this breadboard's affordance tables.                                                                                                                        |
