@@ -115,50 +115,22 @@ These are shaped ideas waiting for a betting decision:
 - **Mockup integration** — Wire garment mockup thumbnails into Quote Detail, Job Detail, Kanban Board. Auto-attach mockups to quote emails. Will be absorbed into Artwork M7.
 - **Shop floor display** — Auto-refreshing Kanban board for TV/tablet (replaces physical whiteboard)
 
-## Resolved Strategic Questions
-
-- **Backend scope**: Horizontal foundation first, then vertical backends. Decided during PM Foundation (#91).
-- **Demo timing**: Demo Feb 21 with all 7 verticals built. Decided during 1:1 (2026-02-14).
-- **Mobile path**: Responsive web (Phase 1) → PWA (Phase 2) → Native (Phase 3, when scale justifies). Confirmed via mobile research.
-
 ## Open Strategic Questions
 
 - Multi-user: when does 4Ink need other employees using the system? This affects auth architecture timing.
 - DTF vs Screen Print quoting: will DTF Gang Sheet Builder require revisions to the existing quoting flow?
 
-## Label Taxonomy
+## Reference Documents
 
-Issues are tagged with a consistent multi-dimensional taxonomy:
+> This file is the fast-load primer read at every session start. When you need depth, reach into the docs-site — do not re-read this file expecting detail that isn't here.
 
-| Dimension    | Labels                                                                                                                                            | Purpose                    |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| **Product**  | `product/quotes`, `product/jobs`, `product/invoices`, `product/customers`, `product/dashboard`, `product/artwork`                                 | Things users DO            |
-| **Domain**   | `domain/garments`, `domain/screens`, `domain/pricing`, `domain/colors`, `domain/dtf`, `domain/screen-printing`, `domain/mobile`, `domain/artwork` | Things products USE        |
-| **Tool**     | `tool/work-orchestrator`, `tool/skills-framework`, `tool/agent-system`, `tool/knowledge-base`, `tool/ci-pipeline`, `tool/pm-system`               | How we BUILD               |
-| **Pipeline** | `pipeline/vertical`, `pipeline/polish`, `pipeline/horizontal`, `pipeline/bug-fix`                                                                 | What kind of pipeline      |
-| **Type**     | `type/bug`, `type/feature`, `type/research`, `type/feedback`, `type/tech-debt`, `type/refactor`, `type/tooling`                                   | What kind of thing is it?  |
-| **Priority** | `priority/now`, `priority/next`, `priority/later`, `priority/icebox`                                                                              | When should we address it? |
-| **Source**   | `source/testing`, `source/interview`, `source/idea`, `source/review`, `source/cool-down`                                                          | Where did it come from?    |
-| **Phase**    | `phase/1`, `phase/2`, `phase/3`                                                                                                                   | Which development phase?   |
-
-See `docs/PM.md` Section 3 for full label definitions and litmus tests.
-
-## Information Hierarchy
-
-```
-ROADMAP.md (this file)          — Strategic: where are we going?
-docs/verticals/{name}/BRIEF.md  — Per-vertical: what do we know?
-GitHub Issues (labeled)          — Tactical: what specific work is identified?
-KB Sessions                      — Historical: what happened and why?
-```
-
-Each layer answers a different question. Fresh Claude sessions read top-down for context.
-
-## Related Documents
-
-- `PROGRESS.md` — What's been built (updated after PR merges)
-- `docs/IMPLEMENTATION_PLAN.md` — Phase 1 build record + demo week plan (updated 2026-02-14)
-- `docs/PRD.md` — Feature definitions and acceptance criteria
-- `docs/APP_FLOW.md` — Routes and navigation paths
-- `docs/TECH_STACK.md` — Tool choices, versions, decisions
-- `knowledge-base/src/content/sessions/` — Historical session records
+| When you need... | Read |
+| ---------------- | ---- |
+| Per-project milestones, research findings, locked decisions | `docs-site/roadmap/projects.md` |
+| Phase 2 dependency map, critical path, sequencing risks | `docs-site/roadmap/phase-2.md` |
+| Current build status, PR history | `PROGRESS.md` |
+| Routes and navigation paths | `docs/APP_FLOW.md` |
+| Feature definitions and acceptance criteria | `docs/PRD.md` |
+| Tool choices, versions, decisions | `docs/TECH_STACK.md` |
+| PM workflows, label taxonomy, issue templates | `docs/PM.md` |
+| Decision history and rationale | `knowledge-base/src/content/pipelines/` |

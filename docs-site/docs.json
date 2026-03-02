@@ -30,8 +30,8 @@
           "pages": ["product/domain-glossary"]
         },
         {
-          "group": "Roadmap",
-          "pages": ["product/roadmap", "roadmap/phase-2", "roadmap/projects"]
+          "group": "Planning",
+          "pages": ["roadmap/phase-2", "roadmap/projects"]
         },
         {
           "group": "Research",
