@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { db } from '@shared/lib/supabase/db'
 import { artworkPieces } from '@db/schema/artworks'
 import { eq, and, desc } from 'drizzle-orm'
