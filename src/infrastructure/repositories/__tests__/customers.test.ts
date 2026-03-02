@@ -16,9 +16,13 @@ const mockSupabaseRepo = vi.hoisted(() => ({
   getArtworks: vi.fn().mockResolvedValue([]),
   getInvoices: vi.fn().mockResolvedValue([]),
   listCustomers: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-  getListStats: vi.fn().mockResolvedValue({ total: 0, activeCount: 0, atRiskCount: 0, newThisMonth: 0 }),
+  getListStats: vi
+    .fn()
+    .mockResolvedValue({ total: 0, activeCount: 0, atRiskCount: 0, newThisMonth: 0 }),
   searchCustomers: vi.fn().mockResolvedValue([]),
-  getCustomerDefaults: vi.fn().mockResolvedValue({ paymentTerms: 'net-30', pricingTier: 'standard', taxExempt: false }),
+  getCustomerDefaults: vi
+    .fn()
+    .mockResolvedValue({ paymentTerms: 'net-30', pricingTier: 'standard', taxExempt: false }),
   createCustomer: vi.fn().mockResolvedValue({}),
   updateCustomer: vi.fn().mockResolvedValue({}),
   archiveCustomer: vi.fn().mockResolvedValue(undefined),
