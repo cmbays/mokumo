@@ -382,6 +382,12 @@ describe('setDefaultPricingTemplate', () => {
     expect(mockVerifySession).not.toHaveBeenCalled()
   })
 
+  it('returns error for empty service type', async () => {
+    const result = await setDefaultPricingTemplate(TEMPLATE_ID, '')
+    expect(result).toEqual({ data: null, error: 'Invalid service type' })
+    expect(mockVerifySession).not.toHaveBeenCalled()
+  })
+
   it('returns Unauthorized when session is null', async () => {
     mockVerifySession.mockResolvedValueOnce(null)
     const result = await setDefaultPricingTemplate(TEMPLATE_ID, 'screen_print')

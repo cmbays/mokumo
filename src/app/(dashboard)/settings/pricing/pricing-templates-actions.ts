@@ -190,6 +190,7 @@ export async function setDefaultPricingTemplate(
   serviceType: string
 ): Promise<ActionResult<null>> {
   if (!uuidSchema.safeParse(id).success) return err('Invalid template ID')
+  if (!serviceType || serviceType.trim().length === 0) return err('Invalid service type')
 
   const session = await verifySession()
   if (!session) return err('Unauthorized')
