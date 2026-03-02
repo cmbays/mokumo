@@ -55,7 +55,30 @@ This is architecturally correct: server actions are the wiring layer that belong
 - 40 action tests (covers all 11 actions + auth, shopId injection, error envelope)
 - Total: 76 new tests
 
+## Self-Review Findings (Review Orchestration — 2 iterations)
+
+### Iteration 1: FAIL — 4 criticals fixed
+All were BOLA (Broken Object Level Authorization) — authenticate but not authorize:
+
+1. **`getPricingTemplate`**: fetched by id with no shop check → added `if (data && data.shopId !== session.shopId) return err('Template not found')`
+2. **`savePricingMatrix`**: no ownership check before cell write → added `getTemplateById` verification before `upsertMatrixCells`
+3. **`upsertTemplate` (repo)**: UPDATE `WHERE id` only → changed to `WHERE id AND shopId`
+4. **`setDefaultTemplate` (repo)**: second TX UPDATE `WHERE id` only → changed to `WHERE id AND shopId`
+
+### Iteration 1: 5 majors also fixed
+- Added `getDefaultPricingTemplate` action (missing primary read path)
+- Renamed `getMarkupRulesAction`/`getRushTiersAction` → `getMarkupRules`/`getRushTiers` (no `Action` suffix; used import alias to avoid collision with facade)
+- Added `serviceType` validation to `setDefaultPricingTemplate` (consistent with `getDefaultPricingTemplate`)
+- Replaced `as never` test assertions with `CREATE_DATA` fixture
+- Fixed `(tx: unknown)` mock type → `MockTx` with proper type for `delete/insert/update`
+
+### Iteration 2: PASS_WITH_WARNINGS
+- 2 warnings deferred as GitHub Issues:
+  - #758: `savePricingMatrix` TOCTOU (check+write not in same transaction)
+  - #759: `upsertTemplate` missing `isValidUuid(data.shopId)` guard (theoretical risk only)
+
 ## Quality Gates
 - `npx tsc --noEmit` → 0 errors
 - `npm run lint` → 0 errors (24 pre-existing warnings)
-- `npm run test:coverage` → 2121 tests passing, thresholds met
+- `npm run test` → 2130 tests passing, thresholds met
+- PR: #760
