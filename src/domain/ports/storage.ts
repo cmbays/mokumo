@@ -17,7 +17,14 @@ export type CreatePresignedUploadUrlInput = {
   mimeType: string
   sizeBytes: number
   contentHash: string
+  /** When true, signals the consumer already has this file — skip storage write. */
   isDuplicate?: boolean
+  /**
+   * The canonical storage path of the existing file.
+   * Required when `isDuplicate` is true — must come from the DB record, not
+   * reconstructed here. The real path format is `{entity}/{shopId}/originals/{versionId}_{filename}`.
+   */
+  existingPath?: string
 }
 
 export type PresignedUploadResult =

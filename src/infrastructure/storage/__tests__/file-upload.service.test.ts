@@ -119,14 +119,24 @@ describe('FileUploadService', () => {
   })
 
   describe('createPresignedUploadUrl — isDuplicate short-circuit', () => {
-    it('returns isDuplicate:true without calling provider', async () => {
+    const EXISTING_PATH = 'artwork/shop-123/originals/prev-uuid_design.png'
+
+    it('returns isDuplicate:true with the supplied existingPath', async () => {
       const result = await service.createPresignedUploadUrl({
         ...BASE_INPUT,
         isDuplicate: true,
+        existingPath: EXISTING_PATH,
       })
 
       expect(result.isDuplicate).toBe(true)
+      expect(result.path).toBe(EXISTING_PATH)
       expect(provider.createPresignedUploadUrl).not.toHaveBeenCalled()
+    })
+
+    it('throws if existingPath is missing when isDuplicate is true', async () => {
+      await expect(
+        service.createPresignedUploadUrl({ ...BASE_INPUT, isDuplicate: true })
+      ).rejects.toThrow('existingPath is required when isDuplicate is true')
     })
   })
 

@@ -39,14 +39,20 @@ export class FileUploadService implements IFileUploadService {
   async createPresignedUploadUrl(
     input: CreatePresignedUploadUrlInput
   ): Promise<PresignedUploadResult> {
-    const { entity, shopId, filename, mimeType, sizeBytes, contentHash, isDuplicate } = input
+    const { entity, shopId, filename, mimeType, sizeBytes, contentHash, isDuplicate, existingPath } =
+      input
 
     // Validate entity, MIME type, and size — throws UploadValidationError on failure
     validateEntityConfig(entity, mimeType, sizeBytes)
 
-    // Caller signals this is a duplicate — return early without storage write
+    // Caller signals this is a duplicate — return early without a storage write.
+    // The caller MUST supply the canonical path from its DB record; we do not
+    // reconstruct it here because real paths have the form {versionId}_{filename}
+    // which is not derivable from contentHash alone.
     if (isDuplicate === true) {
-      const existingPath = `${entity}/${shopId}/originals/${contentHash}`
+      if (!existingPath) {
+        throw new Error('existingPath is required when isDuplicate is true')
+      }
       uploadLog.info('Duplicate upload short-circuited', { entity, shopId, contentHash })
       return { isDuplicate: true, path: existingPath }
     }

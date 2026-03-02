@@ -139,8 +139,13 @@ export class SupabaseStorageProvider implements IStorageProvider {
     }
     return (data ?? []).map((obj) => ({
       name: `${bucket}/${key ? `${key}/` : ''}${obj.name}`,
-      size: (obj.metadata?.size as number | undefined) ?? 0,
-      mimeType: (obj.metadata?.mimetype as string | undefined) ?? 'application/octet-stream',
+      // Supabase Storage metadata fields are typed as `Record<string, unknown>`.
+      // Runtime guards here are safer than type assertions.
+      size: typeof obj.metadata?.size === 'number' ? obj.metadata.size : 0,
+      mimeType:
+        typeof obj.metadata?.mimetype === 'string'
+          ? obj.metadata.mimetype
+          : 'application/octet-stream',
     }))
   }
 }
