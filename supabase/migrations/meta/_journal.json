@@ -92,6 +92,13 @@
       "when": 1772433806479,
       "tag": "0023_bitter_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1772464834864,
+      "tag": "0024_cold_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

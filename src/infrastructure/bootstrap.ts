@@ -92,6 +92,18 @@ export { getStyleInventory, getStylesInventory, getColorInventory } from './repo
 
 export { fileUploadService } from './storage'
 
+export {
+  getDefaultTemplate,
+  getTemplateById,
+  listTemplates,
+  upsertTemplate,
+  upsertMatrixCells,
+  getMarkupRules,
+  upsertMarkupRules,
+  getRushTiers,
+  upsertRushTiers,
+} from './repositories/pricing-templates'
+
 // -- Compile-time assertions --------------------------------------------------
 // Verify that concrete implementations satisfy their port contracts.
 // These objects are never called — they exist only for TypeScript structural
