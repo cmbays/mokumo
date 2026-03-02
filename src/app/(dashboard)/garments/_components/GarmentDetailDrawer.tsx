@@ -64,6 +64,8 @@ type GarmentDetailDrawerProps = {
   isLoadingColors?: boolean
   /** Real front image URL from catalog_images — shown in GarmentImage when no normalized colors available. */
   frontImageUrl?: string
+  /** Real base price from raw.ss_activewear_products — overrides catalog_archived.base_price (which is always 0). */
+  overrideBasePrice?: number | null
 }
 
 export function GarmentDetailDrawer({
@@ -79,6 +81,7 @@ export function GarmentDetailDrawer({
   normalizedSizes,
   isLoadingColors = false,
   frontImageUrl,
+  overrideBasePrice,
 }: GarmentDetailDrawerProps) {
   const [selectedColorId, setSelectedColorId] = useState<string | null>(
     garment.availableColors[0] ?? null
@@ -206,6 +209,12 @@ export function GarmentDetailDrawer({
     [normalizedSizes, garment.availableSizes]
   )
 
+  // Prefer the Tier 2 fetched price over catalog_archived.base_price (which is always 0).
+  // null = price data unavailable (show "—"). 0 is treated as unavailable since catalog_archived
+  // never populates base_price for normalized styles.
+  const effectiveBasePrice =
+    overrideBasePrice != null ? overrideBasePrice : garment.basePrice > 0 ? garment.basePrice : null
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full md:max-w-md p-0 flex flex-col">
@@ -267,7 +276,7 @@ export function GarmentDetailDrawer({
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground">Base Price</span>
                   <span className="text-lg font-semibold text-foreground">
-                    {formatCurrency(garment.basePrice)}
+                    {effectiveBasePrice != null ? formatCurrency(effectiveBasePrice) : '—'}
                   </span>
                 </div>
               ) : (
@@ -528,7 +537,7 @@ export function GarmentDetailDrawer({
                       {[...garment.availableSizes]
                         .sort((a, b) => a.order - b.order)
                         .map((size) => {
-                          const finalPrice = money(garment.basePrice).plus(size.priceAdjustment)
+                          const finalPrice = money(effectiveBasePrice ?? 0).plus(size.priceAdjustment)
                           return (
                             <tr key={size.name} className="border-b border-border last:border-b-0">
                               <td className="px-3 py-2 font-medium text-foreground">{size.name}</td>

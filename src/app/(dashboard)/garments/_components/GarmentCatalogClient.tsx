@@ -196,12 +196,13 @@ export function GarmentCatalogClient({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const selectedGarment = catalog.find((g) => g.id === selectedGarmentId) ?? null
 
-  // Tier 2 lazy state — colors + images + sizes loaded on drawer open, cached per style
+  // Tier 2 lazy state — colors + images + sizes + basePrice loaded on drawer open, cached per style
   const styleDetailsCacheRef = useRef(
-    new Map<string, { colors: CatalogColor[]; sizes: CatalogSize[] }>()
+    new Map<string, { colors: CatalogColor[]; sizes: CatalogSize[]; basePrice: number | null }>()
   )
   const [drawerColors, setDrawerColors] = useState<CatalogColor[] | undefined>(undefined)
   const [drawerSizes, setDrawerSizes] = useState<CatalogSize[] | undefined>(undefined)
+  const [drawerBasePrice, setDrawerBasePrice] = useState<number | null>(null)
   const [isLoadingColors, setIsLoadingColors] = useState(false)
 
   // handleSelectGarment — opens drawer and triggers Tier 2 fetch if not cached
@@ -218,6 +219,7 @@ export function GarmentCatalogClient({
       if (cached) {
         setDrawerColors(cached.colors)
         setDrawerSizes(cached.sizes)
+        setDrawerBasePrice(cached.basePrice)
         setIsLoadingColors(false)
         return
       }
@@ -225,6 +227,7 @@ export function GarmentCatalogClient({
       // No cache: show skeleton while fetching Tier 2
       setDrawerColors(undefined)
       setDrawerSizes(undefined)
+      setDrawerBasePrice(null)
       setIsLoadingColors(true)
 
       const styleId = skuToStyleId.get(garment.sku)
@@ -241,11 +244,13 @@ export function GarmentCatalogClient({
         styleDetailsCacheRef.current.set(garment.sku, detail)
         setDrawerColors(detail.colors)
         setDrawerSizes(detail.sizes)
+        setDrawerBasePrice(detail.basePrice)
       } catch (err) {
         clientLogger.error('fetchStyleDetail failed', { styleId, err })
         toast.error("Couldn't load color details — try again")
         setDrawerColors(undefined)
         setDrawerSizes(undefined)
+        setDrawerBasePrice(null)
       } finally {
         setIsLoadingColors(false)
       }
@@ -582,6 +587,7 @@ export function GarmentCatalogClient({
           normalizedSizes={drawerSizes}
           isLoadingColors={isLoadingColors}
           frontImageUrl={skuToCardImageUrl.get(selectedGarment.sku)}
+          overrideBasePrice={drawerBasePrice}
         />
       )}
     </>

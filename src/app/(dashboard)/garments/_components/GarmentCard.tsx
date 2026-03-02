@@ -63,7 +63,7 @@ export function GarmentCard({
         ? garment.colors.map((c) => ({ name: c.name, hex1: c.hex1 }))
         : garmentColors.map((c) => ({ name: c.name, hex: c.hex, family: c.family }))
 
-  const hasBottomRow = (showPrice && !isNormalized(garment)) || !garment.isEnabled
+  const hasBottomRow = (showPrice && !isNormalized(garment) && garment.basePrice > 0) || !garment.isEnabled
 
   return (
     <div
@@ -119,7 +119,7 @@ export function GarmentCard({
         {/* Bottom row: price + disabled badge (only when relevant) */}
         {hasBottomRow && (
           <div className="flex items-center gap-1.5 pt-0.5">
-            {showPrice && !isNormalized(garment) && (
+            {showPrice && !isNormalized(garment) && garment.basePrice > 0 && (
               <span className="text-xs font-medium text-foreground">
                 {formatCurrency(garment.basePrice)}
               </span>

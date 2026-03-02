@@ -154,24 +154,30 @@ export function GarmentCatalogToolbar({
   )
 
   // --- Active filters (for pills — excludes color swatches which get their own row) ---
-  const activeFilters: { key: string; label: string; value: string }[] = []
+  // Each filter carries its own onRemove so category (local state) and URL params
+  // can each be cleared through the correct mechanism.
+  const activeFilters: { key: string; label: string; onRemove: () => void }[] = []
 
   if (category !== 'all') {
     const cat = CATEGORIES.find((c) => c.value === category)
     activeFilters.push({
       key: 'category',
       label: cat?.label ?? category,
-      value: category,
+      onRemove: () => onCategoryChange('all'),
     })
   }
   if (query) {
-    activeFilters.push({ key: 'q', label: `"${query}"`, value: query })
+    activeFilters.push({ key: 'q', label: `"${query}"`, onRemove: () => updateParam('q', null) })
   }
   if (brand) {
-    activeFilters.push({ key: 'brand', label: brand, value: brand })
+    activeFilters.push({ key: 'brand', label: brand, onRemove: () => updateParam('brand', null) })
   }
   if (inStock) {
-    activeFilters.push({ key: 'inStock', label: 'In stock', value: 'true' })
+    activeFilters.push({
+      key: 'inStock',
+      label: 'In stock',
+      onRemove: () => updateParam('inStock', null),
+    })
   }
 
   const hasAnyFilter = activeFilters.length > 0 || selectedColorGroups.length > 0
@@ -351,7 +357,7 @@ export function GarmentCatalogToolbar({
                 {filter.label}
                 <button
                   type="button"
-                  onClick={() => updateParam(filter.key, null)}
+                  onClick={filter.onRemove}
                   className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10"
                   aria-label={`Remove ${filter.label} filter`}
                 >
