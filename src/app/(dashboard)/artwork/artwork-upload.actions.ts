@@ -4,7 +4,7 @@ import 'server-only'
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
-import { artworkVersions, type ArtworkVersion } from '@db/schema/artworks'
+import { artworkVersions, artworkPieces, artworkVariants, type ArtworkVersion } from '@db/schema/artworks'
 import { fileUploadService } from '@infra/bootstrap'
 import { verifySession } from '@infra/auth/session'
 import { logger } from '@shared/lib/logger'
@@ -23,6 +23,16 @@ const initiateArtworkUploadSchema = z.object({
   mimeType: z.string().min(1),
   sizeBytes: z.number().int().positive(),
   contentHash: z.string().regex(/^[0-9a-f]{64}$/, 'Must be a SHA-256 hex string'),
+  // Optional — links the new artwork_version row to an existing artwork_variant.
+  // When provided, the version is created pre-linked; no subsequent UPDATE needed.
+  variantId: z.string().uuid().optional(),
+})
+
+const createArtworkPieceAndVariantSchema = z.object({
+  shopId: z.string().min(1),
+  customerId: z.string().uuid().optional(),
+  pieceName: z.string().min(1).max(255),
+  variantName: z.string().min(1).max(255),
 })
 
 const confirmArtworkUploadSchema = z.object({
@@ -85,7 +95,7 @@ export async function initiateArtworkUpload(
     throw new Error('Unauthorized')
   }
 
-  const { shopId, filename, mimeType, sizeBytes, contentHash } = parsed.data
+  const { shopId, filename, mimeType, sizeBytes, contentHash, variantId } = parsed.data
 
   // Verify the caller's shopId matches the authenticated session shopId
   if (shopId !== session.shopId) {
@@ -155,6 +165,7 @@ export async function initiateArtworkUpload(
       .insert(artworkVersions)
       .values({
         shopId,
+        variantId: variantId ?? null,
         originalPath: uploadResult.path,
         contentHash,
         mimeType,
@@ -415,4 +426,81 @@ export async function deleteArtwork(
   })
 
   return { success: true }
+}
+
+// ---------------------------------------------------------------------------
+// createArtworkPieceAndVariant
+// ---------------------------------------------------------------------------
+
+export type CreateArtworkPieceAndVariantResult = {
+  pieceId: string
+  variantId: string
+}
+
+/**
+ * Creates a new artwork_piece + artwork_variant in a single transaction.
+ *
+ * Called by the upload sheet before the file upload starts, so the
+ * artwork_version row is created pre-linked (no extra UPDATE needed).
+ *
+ * customerId null → piece belongs to the shop library (not customer-scoped).
+ *
+ * Auth: AUTHENTICATED — requires valid session.
+ */
+export async function createArtworkPieceAndVariant(
+  input: z.input<typeof createArtworkPieceAndVariantSchema>
+): Promise<CreateArtworkPieceAndVariantResult> {
+  const parsed = createArtworkPieceAndVariantSchema.safeParse(input)
+  if (!parsed.success) {
+    throw new Error(`Invalid input: ${parsed.error.message}`)
+  }
+
+  const session = await verifySession()
+  if (!session) {
+    throw new Error('Unauthorized')
+  }
+
+  const { shopId, customerId, pieceName, variantName } = parsed.data
+
+  if (shopId !== session.shopId) {
+    throw new Error('Forbidden: shopId mismatch')
+  }
+
+  let pieceId: string
+  let variantId: string
+
+  try {
+    await db.transaction(async (tx) => {
+      const [piece] = await tx
+        .insert(artworkPieces)
+        .values({ shopId, customerId: customerId ?? null, name: pieceName })
+        .returning({ id: artworkPieces.id })
+
+      if (!piece) throw new Error('Failed to create artwork piece')
+      pieceId = piece.id
+
+      const [variant] = await tx
+        .insert(artworkVariants)
+        .values({ pieceId: piece.id, name: variantName })
+        .returning({ id: artworkVariants.id })
+
+      if (!variant) throw new Error('Failed to create artwork variant')
+      variantId = variant.id
+    })
+  } catch (err) {
+    actionsLogger.error('createArtworkPieceAndVariant: transaction failed', {
+      shopIdPrefix: shopId.slice(0, 8),
+      pieceName,
+      err,
+    })
+    throw new Error('Failed to create artwork piece and variant')
+  }
+
+  actionsLogger.info('createArtworkPieceAndVariant: created', {
+    pieceId: pieceId!,
+    variantId: variantId!,
+    shopIdPrefix: shopId.slice(0, 8),
+  })
+
+  return { pieceId: pieceId!, variantId: variantId! }
 }

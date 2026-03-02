@@ -1,21 +1,21 @@
 import { db } from '@shared/lib/supabase/db'
-import { artworkVersions } from '@db/schema/artworks'
+import { artworkPieces } from '@db/schema/artworks'
 import { eq, desc } from 'drizzle-orm'
 import { Topbar } from '@shared/ui/layouts/topbar'
 import { buildBreadcrumbs } from '@shared/lib/breadcrumbs'
 import { ArtworkLibraryClient } from '@features/artwork/components/ArtworkLibraryClient'
 
 export default async function ArtworkPage() {
-  const artworks = await db
+  const pieces = await db
     .select()
-    .from(artworkVersions)
-    .where(eq(artworkVersions.shopId, 'shop_4ink'))
-    .orderBy(desc(artworkVersions.createdAt))
+    .from(artworkPieces)
+    .where(eq(artworkPieces.shopId, 'shop_4ink'))
+    .orderBy(desc(artworkPieces.createdAt))
 
   return (
     <>
       <Topbar breadcrumbs={buildBreadcrumbs({ label: 'Artwork', href: '/artwork' })} />
-      <ArtworkLibraryClient initialArtworks={artworks} />
+      <ArtworkLibraryClient initialPieces={pieces} />
     </>
   )
 }

@@ -113,6 +113,13 @@
       "when": 1772470555887,
       "tag": "0026_lumpy_micromax",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1772481731206,
+      "tag": "0027_familiar_captain_america",
+      "breakpoints": true
     }
   ]
 }
