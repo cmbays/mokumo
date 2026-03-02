@@ -48,7 +48,6 @@ type GarmentCatalogToolbarProps = {
   onToggleColorGroup: (colorGroupName: string) => void
   onClearColorGroups: () => void
   garmentCount: number
-  onBrandClick?: (brandName: string) => void
   /** Per-category counts from the catalog minus the category filter — hides tabs with zero inventory */
   categoryHits: Partial<Record<GarmentCategory, number>>
   /** Controlled category state — managed by parent to avoid router.replace re-renders */
@@ -72,7 +71,6 @@ export function GarmentCatalogToolbar({
   onToggleColorGroup,
   onClearColorGroups,
   garmentCount,
-  onBrandClick,
   categoryHits,
   category,
   onCategoryChange,
@@ -84,9 +82,10 @@ export function GarmentCatalogToolbar({
   const router = useRouter()
   const pathname = usePathname()
 
-  // --- Read URL state (search + brand only — category/view are now local state in parent) ---
+  // --- Read URL state (search + brand + inStock — category/view are now local state in parent) ---
   const query = searchParams.get('q') ?? ''
   const brand = searchParams.get('brand') ?? ''
+  const inStock = searchParams.get('inStock') === 'true'
 
   // --- Price toggle (localStorage) ---
   const [showPrices, setShowPrices] = useState(() => {
@@ -145,6 +144,9 @@ export function GarmentCatalogToolbar({
   }
   if (brand) {
     activeFilters.push({ key: 'brand', label: brand, value: brand })
+  }
+  if (inStock) {
+    activeFilters.push({ key: 'inStock', label: 'In stock', value: 'true' })
   }
 
   const hasAnyFilter = activeFilters.length > 0 || selectedColorGroups.length > 0
@@ -270,6 +272,25 @@ export function GarmentCatalogToolbar({
           {/* Divider */}
           <div className="h-4 w-px bg-border/50" />
 
+          {/* In-stock Toggle */}
+          <div className="flex items-center gap-1.5">
+            <Switch
+              id="instock-toggle"
+              size="sm"
+              checked={inStock}
+              onCheckedChange={(checked) => updateParam('inStock', checked ? 'true' : null)}
+            />
+            <Label
+              htmlFor="instock-toggle"
+              className="cursor-pointer text-xs text-muted-foreground"
+            >
+              In stock
+            </Label>
+          </div>
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-border/50" />
+
           {/* Price Toggle */}
           <div className="flex items-center gap-1.5">
             <Switch
@@ -299,18 +320,7 @@ export function GarmentCatalogToolbar({
           <>
             {activeFilters.map((filter) => (
               <Badge key={filter.key} variant="outline" className="gap-1 pl-2 pr-1 text-xs">
-                {/* Fix #3: Brand pill is clickable when onBrandClick is provided */}
-                {filter.key === 'brand' && onBrandClick ? (
-                  <button
-                    type="button"
-                    className="hover:text-action hover:underline focus-visible:outline-none focus-visible:text-action"
-                    onClick={() => onBrandClick(filter.value)}
-                  >
-                    {filter.label}
-                  </button>
-                ) : (
-                  filter.label
-                )}
+                {filter.label}
                 <button
                   type="button"
                   onClick={() => updateParam(filter.key, null)}

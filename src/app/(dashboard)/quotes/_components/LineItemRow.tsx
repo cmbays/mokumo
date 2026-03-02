@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Trash2, ChevronDown, Check, ChevronsUpDown } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Trash2, ChevronDown, Check, ChevronsUpDown, AlertTriangle, X } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Button } from '@shared/ui/primitives/button'
 import { Input } from '@shared/ui/primitives/input'
@@ -159,7 +159,34 @@ export function LineItemRow({
   const [colorOpen, setColorOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory>('t-shirts')
 
+  // Low-stock warning state — fetched lazily when a garment is selected
+  const [hasLowStock, setHasLowStock] = useState<boolean | null>(null)
+  const [warningDismissed, setWarningDismissed] = useState(false)
+
   const selectedGarment = garmentCatalog.find((g) => g.id === data.garmentId)
+
+  // Fetch low-stock status when garment selection changes.
+  // Resets dismissed state so the warning re-appears for each newly-selected garment.
+  // Graceful: null result = unknown → no warning shown.
+  useEffect(() => {
+    setHasLowStock(null)
+    setWarningDismissed(false)
+    if (!selectedGarment) return
+    let cancelled = false
+    async function loadLowStock() {
+      try {
+        const { fetchInventoryForSku } = await import('@/app/(dashboard)/garments/actions')
+        const result = await fetchInventoryForSku(selectedGarment!.sku)
+        if (!cancelled) setHasLowStock(result?.hasLowStock ?? null)
+      } catch {
+        if (!cancelled) setHasLowStock(null)
+      }
+    }
+    void loadLowStock()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedGarment?.sku]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredGarmentCatalog = useMemo(
     () => garmentCatalog.filter((g) => g.baseCategory === selectedCategory),
@@ -512,6 +539,27 @@ export function LineItemRow({
             )
           })}
         </div>
+
+        {/* Low-stock warning — one per line item, dismissible, resets on garment change */}
+        {hasLowStock === true && !warningDismissed && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2"
+          >
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+            <p className="flex-1 text-xs text-warning">
+              Some sizes may have limited availability. Check stock levels before finalizing.
+            </p>
+            <button
+              type="button"
+              onClick={() => setWarningDismissed(true)}
+              className="flex min-h-(--mobile-touch-target) min-w-(--mobile-touch-target) shrink-0 items-center justify-center rounded-sm text-warning/70 hover:text-warning focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-0 md:min-w-0 md:p-0.5"
+              aria-label="Dismiss low-stock warning"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Pricing Breakdown */}
         <div className="space-y-1 rounded-md bg-surface px-3 py-2">

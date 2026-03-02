@@ -4,7 +4,7 @@ sources:
   - name: catalog
     description: >
       Normalized catalog tables in the public schema, populated by the
-      catalog sync service (run-image-sync.ts and pricing sync).
+      products sync service (POST /api/catalog/sync-products).
       This source is the OLTP foundation for the garments analytics mart.
       Note: catalog_colors is read directly (not via raw append-only tables)
       because it already provides one deduplicated row per (style, color).

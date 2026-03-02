@@ -149,7 +149,7 @@ describe('GarmentCatalogClient — toggle persistence', () => {
     vi.clearAllMocks()
     mockToggleStyleEnabled.mockResolvedValue({ success: true, isEnabled: false })
     mockToggleStyleFavorite.mockResolvedValue({ success: true, isFavorite: true })
-    mockFetchStyleDetail.mockResolvedValue([])
+    mockFetchStyleDetail.mockResolvedValue({ colors: [], sizes: [] })
     setupSearchParams({})
   })
 
@@ -168,9 +168,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -202,9 +202,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -235,9 +235,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -266,9 +266,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -303,9 +303,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -341,9 +341,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -373,9 +373,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -403,9 +403,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 
@@ -434,9 +434,9 @@ describe('GarmentCatalogClient — toggle persistence', () => {
           styleSwatches={{}}
           styleColorGroups={{}}
           colorGroups={[]}
-          catalogColors={[]}
           initialFavoriteColorIds={[]}
           initialFavoriteColorGroupNames={[]}
+          inStockStyleIds={[]}
         />
       )
 

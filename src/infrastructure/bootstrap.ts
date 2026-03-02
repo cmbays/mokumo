@@ -23,6 +23,7 @@ import type {
   IScreenRepository,
   ISettingsRepository,
   ISupplierPricingRepository,
+  IInventoryRepository,
 } from '@domain/ports'
 
 export {
@@ -77,6 +78,8 @@ export {
 
 export { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
 
+export { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
+
 // -- Compile-time assertions --------------------------------------------------
 // Verify that concrete implementations satisfy their port contracts.
 // These objects are never called — they exist only for TypeScript structural
@@ -123,6 +126,7 @@ import {
   getDtfSheetTiers,
 } from './repositories/settings'
 import { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
+import { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
 
 const _portChecks = {
   customer: {
@@ -193,6 +197,12 @@ const _portChecks = {
     getStylePricing: getStylePricing,
     getStylesPricing: getStylesPricing,
   } satisfies ISupplierPricingRepository,
+
+  inventory: {
+    getForStyle: getStyleInventory,
+    getForStyles: getStylesInventory,
+    getForColor: getColorInventory,
+  } satisfies IInventoryRepository,
 }
 
 void _portChecks

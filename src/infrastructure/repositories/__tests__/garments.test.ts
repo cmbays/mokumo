@@ -33,7 +33,9 @@ vi.mock('@infra/repositories/_providers/supabase/catalog', () => ({
     .mockResolvedValue([{ id: 'normalized-1', source: 'ss-activewear' }]),
   getCatalogStylesSlim: vi.fn().mockResolvedValue([{ id: 'slim-1', styleNumber: 'BC3001' }]),
   getCatalogColorSupplement: vi.fn().mockResolvedValue([{ id: 'supp-1', name: 'Black' }]),
-  getCatalogStyleDetail: vi.fn().mockResolvedValue([{ id: 'detail-1', name: 'Black' }]),
+  getCatalogStyleDetail: vi
+    .fn()
+    .mockResolvedValue({ colors: [{ id: 'detail-1', name: 'Black' }], sizes: [] }),
 }))
 
 afterEach(() => {
@@ -161,25 +163,25 @@ describe('garments repository router', () => {
     expect(result[0]).toMatchObject({ name: 'Black' })
   })
 
-  it('getCatalogStyleDetail returns [] for empty styleId (validation)', async () => {
+  it('getCatalogStyleDetail returns { colors: [], sizes: [] } for empty styleId (validation)', async () => {
     vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
     const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
     const result = await getCatalogStyleDetail('')
-    expect(result).toEqual([])
+    expect(result).toEqual({ colors: [], sizes: [] })
   })
 
-  it('getCatalogStyleDetail returns [] when not supabase-catalog', async () => {
+  it('getCatalogStyleDetail returns { colors: [], sizes: [] } when not supabase-catalog', async () => {
     vi.stubEnv('SUPPLIER_ADAPTER', '')
     const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
     const result = await getCatalogStyleDetail('style-123')
-    expect(result).toEqual([])
+    expect(result).toEqual({ colors: [], sizes: [] })
   })
 
   it('getCatalogStyleDetail delegates to catalog module when supabase-catalog', async () => {
     vi.stubEnv('SUPPLIER_ADAPTER', 'supabase-catalog')
     const { getCatalogStyleDetail } = await import('@infra/repositories/garments')
     const result = await getCatalogStyleDetail('style-123')
-    expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({ name: 'Black' })
+    expect(result.colors).toHaveLength(1)
+    expect(result.colors[0]).toMatchObject({ name: 'Black' })
   })
 })

@@ -2,7 +2,15 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Palette, Ruler } from 'lucide-react'
+import {
+  ExternalLink,
+  Palette,
+  Ruler,
+  AlertTriangle,
+  XCircle,
+  Package,
+  CheckCircle2,
+} from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import {
   Sheet,
@@ -19,15 +27,24 @@ import { ImageTypeCarousel } from '@shared/ui/organisms/ImageTypeCarousel'
 import { FavoriteStar } from '@shared/ui/organisms/FavoriteStar'
 import { FavoritesColorSection } from '@features/garments/components/FavoritesColorSection'
 import { cn } from '@shared/lib/cn'
+import { logger } from '@shared/lib/logger'
 import { money, toNumber, formatCurrency } from '@domain/lib/money'
+import { LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
+import { sortByAppropriateOrder } from '@domain/lib/size-order'
+
 import { getColorById } from '@domain/rules/garment.rules'
 import { resolveEffectiveFavorites } from '@domain/rules/customer.rules'
 import { getColorsMutable } from '@infra/repositories/colors'
 import { getCustomersMutable } from '@infra/repositories/customers'
 import { getBrandPreferencesMutable } from '@infra/repositories/settings'
 import type { GarmentCatalog } from '@domain/entities/garment'
-import type { CatalogColor } from '@domain/entities/catalog-style'
+import type { CatalogColor, CatalogSize } from '@domain/entities/catalog-style'
 import type { Color } from '@domain/entities/color'
+
+// Wave 4: 1.5× buffer on domain threshold for the drawer — makes "low" more visible.
+// Shop-configurable in a future wave; named constant here so it's easy to find and extract.
+const DRAWER_LOW_STOCK_BUFFER = 1.5
+const drawerLogger = logger.child({ domain: 'garment-drawer' })
 
 type GarmentDetailDrawerProps = {
   garment: GarmentCatalog
@@ -37,12 +54,12 @@ type GarmentDetailDrawerProps = {
   linkedJobs: Array<{ id: string; jobNumber: string; customerName: string }>
   onToggleEnabled: (garmentId: string) => void
   onToggleFavorite: (garmentId: string) => void
-  /** Stub for V4 brand drawer wiring — opens brand detail drawer */
-  onBrandClick?: (brandName: string) => void
   /** Phase 1: always 'global'. V4 adds 'brand'/'customer' for context-aware writes */
   favoriteContext?: { context: 'global' | 'brand' | 'customer'; contextId?: string }
   /** Normalized colors with images — from catalog_colors + catalog_images tables. Optional: carousel renders when present, GarmentImage fallback when absent. */
   normalizedColors?: CatalogColor[]
+  /** Normalized sizes from catalog_sizes — used for availability badges when garment.availableSizes is empty (normalized styles). */
+  normalizedSizes?: CatalogSize[]
   /** True while Tier 2 style detail is loading — shows pulse skeleton in image + colors sections. */
   isLoadingColors?: boolean
   /** Real front image URL from catalog_images — shown in GarmentImage when no normalized colors available. */
@@ -57,9 +74,9 @@ export function GarmentDetailDrawer({
   linkedJobs,
   onToggleEnabled,
   onToggleFavorite,
-  onBrandClick,
   favoriteContext = { context: 'global' },
   normalizedColors,
+  normalizedSizes,
   isLoadingColors = false,
   frontImageUrl,
 }: GarmentDetailDrawerProps) {
@@ -81,6 +98,38 @@ export function GarmentDetailDrawer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedColors])
+
+  // Size-level inventory for the selected color — keyed by size name (e.g. "S" → 42).
+  // Null = data not yet loaded or unavailable. Empty map = no inventory rows (show no badges).
+  const [colorInventory, setColorInventory] = useState<Map<string, number> | null>(null)
+
+  // Fetch inventory when the selected normalized color changes.
+  // Only runs in the normalized path (when we have a real catalog colorId UUID).
+  // Graceful: on auth failure or error, leaves colorInventory null → no badges shown.
+  useEffect(() => {
+    if (!selectedCatalogColorId) {
+      setColorInventory(null)
+      return
+    }
+    let cancelled = false
+    async function loadInventory() {
+      try {
+        const { fetchColorInventoryByName } = await import('../actions')
+        const rows = await fetchColorInventoryByName(selectedCatalogColorId!)
+        if (!cancelled) setColorInventory(new Map(rows.map((r) => [r.sizeName, r.quantity])))
+      } catch (err) {
+        drawerLogger.warn('fetchColorInventoryByName failed', {
+          colorId: selectedCatalogColorId,
+          err,
+        })
+        if (!cancelled) setColorInventory(null)
+      }
+    }
+    void loadInventory()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedCatalogColorId])
 
   // Version counter — forces re-render after mock data isFavorite mutation
   const [favoriteVersion, setFavoriteVersion] = useState(0)
@@ -129,9 +178,10 @@ export function GarmentDetailDrawer({
       // Also select the toggled color for display (U14)
       setSelectedColorId(colorId)
     } else {
-      console.warn(
-        `[GarmentDetailDrawer] Color ${colorId} not found in catalog for garment ${garment.sku} — stale palette reference`
-      )
+      drawerLogger.warn('Color not found in catalog — stale palette reference', {
+        colorId,
+        sku: garment.sku,
+      })
     }
   }
 
@@ -144,23 +194,24 @@ export function GarmentDetailDrawer({
     ? (normalizedColors.find((c) => c.id === selectedCatalogColorId) ?? normalizedColors[0] ?? null)
     : null
 
+  // Pre-sorted sizes for the Availability section.
+  // normalizedSizes (CatalogSize, sortOrder) takes priority over legacy garment.availableSizes (GarmentSize, order).
+  // sortByAppropriateOrder falls back to canonical apparel order (XS→S→M→…) when all sortOrders are 0,
+  // which happens because S&S sizeIndex field is not reliably populated in /v2/products/ responses.
+  const displaySizes = useMemo<Array<{ name: string }>>(
+    () =>
+      normalizedSizes
+        ? sortByAppropriateOrder(normalizedSizes)
+        : [...garment.availableSizes].sort((a, b) => a.order - b.order),
+    [normalizedSizes, garment.availableSizes]
+  )
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full md:max-w-md p-0 flex flex-col">
         <SheetHeader className="border-b border-border px-4 py-3">
           <SheetTitle className="text-base">
-            {onBrandClick ? (
-              <button
-                type="button"
-                className="text-action hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                onClick={() => onBrandClick(garment.brand)}
-              >
-                {garment.brand}
-              </button>
-            ) : (
-              <span>{garment.brand}</span>
-            )}{' '}
-            {garment.sku}
+            <span>{garment.brand}</span> {garment.sku}
           </SheetTitle>
           <SheetDescription className="sr-only">Detail view for {garment.name}</SheetDescription>
         </SheetHeader>
@@ -320,6 +371,136 @@ export function GarmentDetailDrawer({
                 </>
               )}
             </div>
+
+            {/* Size Availability — shown whenever we have normalized color data + size list.
+                Does not require inventory data to be loaded: shows a loading skeleton while
+                colorInventory is null, and "–" (no data yet) when inventory hasn't been synced. */}
+            {normalizedColors && displaySizes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <Package size={14} aria-hidden="true" />
+                  Availability
+                </h3>
+
+                {/* Skeleton while inventory fetch is in-flight */}
+                {colorInventory === null ? (
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    aria-busy="true"
+                    aria-label="Loading availability"
+                  >
+                    {displaySizes.map((size) => (
+                      <div
+                        key={size.name}
+                        className="flex min-h-10 min-w-10 flex-col items-center justify-center gap-0.5 rounded-md border border-border bg-surface px-2.5 py-1 animate-pulse"
+                      >
+                        <span className="text-sm font-medium text-foreground">{size.name}</span>
+                        <span className="h-3 w-6 rounded bg-surface" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      role="group"
+                      aria-label="Size availability"
+                    >
+                      {displaySizes.map((size) => {
+                        const qty = colorInventory.get(size.name)
+                        const noData = qty === undefined
+                        const isOutOfStock = qty === 0
+                        const isLowStock =
+                          qty !== undefined &&
+                          qty > 0 &&
+                          qty < LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
+                        const isInStock =
+                          qty !== undefined && qty >= LOW_STOCK_THRESHOLD * DRAWER_LOW_STOCK_BUFFER
+
+                        return (
+                          <div
+                            key={size.name}
+                            role="img"
+                            className={cn(
+                              'relative flex min-h-10 min-w-10 flex-col items-center justify-center gap-0.5 rounded-md border px-2.5 py-1',
+                              isOutOfStock
+                                ? 'border-error/30 bg-error/5 opacity-60'
+                                : isLowStock
+                                  ? 'border-warning/30 bg-warning/5'
+                                  : isInStock
+                                    ? 'border-success/30 bg-success/5'
+                                    : 'border-border'
+                            )}
+                            aria-label={
+                              noData
+                                ? `${size.name} — no data`
+                                : isOutOfStock
+                                  ? `${size.name} — out of stock`
+                                  : isLowStock
+                                    ? `${size.name} — low stock (${qty})`
+                                    : `${size.name} — in stock (${qty})`
+                            }
+                          >
+                            <span className="text-sm font-medium text-foreground">{size.name}</span>
+                            <span
+                              className={cn(
+                                'text-xs tabular-nums',
+                                isOutOfStock
+                                  ? 'text-error/70'
+                                  : isLowStock
+                                    ? 'text-warning'
+                                    : isInStock
+                                      ? 'text-success'
+                                      : 'text-muted-foreground'
+                              )}
+                            >
+                              {noData ? '–' : qty === 0 ? '0' : qty.toLocaleString()}
+                            </span>
+                            {isLowStock && (
+                              <AlertTriangle
+                                size={12}
+                                className="absolute -right-1.5 -top-1.5 text-warning"
+                                aria-hidden="true"
+                              />
+                            )}
+                            {isOutOfStock && (
+                              <XCircle
+                                size={12}
+                                className="absolute -right-1.5 -top-1.5 text-error"
+                                aria-hidden="true"
+                              />
+                            )}
+                            {isInStock && (
+                              <CheckCircle2
+                                size={12}
+                                className="absolute -right-1.5 -top-1.5 text-success"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      <CheckCircle2
+                        size={12}
+                        className="mr-0.5 inline text-success"
+                        aria-hidden="true"
+                      />
+                      In stock&nbsp;&nbsp;
+                      <AlertTriangle
+                        size={12}
+                        className="mr-0.5 inline text-warning"
+                        aria-hidden="true"
+                      />
+                      Low&nbsp;&nbsp;
+                      <XCircle size={12} className="mr-0.5 inline text-error" aria-hidden="true" />
+                      Out of stock
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Size & Pricing table */}
             {showPrice && garment.availableSizes.length > 0 && (

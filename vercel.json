@@ -1,3 +1,13 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/catalog/sync-inventory",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/catalog/sync-pipeline",
+      "schedule": "0 2 * * 0"
+    }
+  ]
 }
