@@ -60,7 +60,7 @@ export function BoardLane({
       <div
         className={cn(
           'flex items-center justify-between gap-2 px-3 py-2',
-          'sticky top-[var(--board-toolbar-h,6rem)] z-[9]',
+          'sticky top-[var(--board-toolbar-h,6rem)] z-10',
           'rounded-t-lg border-b border-border/50 bg-background',
           'transition-colors',
           isOver && 'border-b-action/40'

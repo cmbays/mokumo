@@ -4,8 +4,8 @@ description: 'Design tokens, component patterns, animation, accessibility, and l
 category: reference
 status: active
 phase: all
-last_updated: 2026-02-07
-last_verified: 2026-02-07
+last_updated: 2026-03-02
+last_verified: 2026-03-02
 depends_on:
   - docs/TECH_STACK.md
 ---
@@ -103,86 +103,106 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jet
 
 ## Color System
 
-### Design Philosophy: Monochrome + Status
+### Two-Pool Architecture
 
-**Base Layer**: Near-black monochrome with opacity-based text hierarchy (Linear-inspired)
-**Attention Layer**: Vibrant status colors for elements that need attention (Neobrutalist)
+Colors are divided into two isolated pools to prevent semantic collision.
 
-### Design Tokens
+**Status Palette** — state, urgency, feedback (filled badges, text indicators):
 
-Defined in `app/globals.css` via `@theme inline`:
+| Token   | Hex       | Tailwind       | Semantic Use                   |
+| ------- | --------- | -------------- | ------------------------------ |
+| action  | `#2ab9ff` | `text-action`  | Primary CTAs, in-progress      |
+| success | `#54ca74` | `text-success` | Completions, approved, healthy |
+| error   | `#d23e08` | `text-error`   | Failures, rejected             |
+| warning | `#ffc663` | `text-warning` | Cautions, pending              |
 
-```css
-@theme inline {
-  /* Background - Ghostty Niji warm dark */
-  --color-bg-primary: #141515;
-  --color-bg-secondary: #111213;
-  --color-bg-elevated: #1c1d1e;
-  --color-bg-surface: #232425;
+**Categorical Palette** — entity/service identity (outline badges, left borders):
 
-  /* Text - Opacity-based hierarchy */
-  --color-text-primary: rgba(255, 255, 255, 0.87);
-  --color-text-secondary: rgba(255, 255, 255, 0.6);
-  --color-text-muted: rgba(255, 255, 255, 0.38);
+| Token   | Hex       | Tailwind       | Assigned To  |
+| ------- | --------- | -------------- | ------------ |
+| purple  | `#a855f7` | `text-purple`  | Jobs         |
+| magenta | `#ff50da` | `text-magenta` | Quotes       |
+| teal    | `#2dd4bf` | `text-teal`    | Screen Print |
+| emerald | `#10b981` | `text-emerald` | Invoices     |
+| lime    | `#84cc16` | `text-lime`    | Embroidery   |
+| brown   | `#c47a3a` | `text-brown`   | DTF          |
 
-  /* Borders */
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-border-default: rgba(255, 255, 255, 0.12);
-  --color-border-strong: rgba(255, 255, 255, 0.2);
+Each color has `-hover` and `-bold` variants.
 
-  /* Status colors - Niji palette attention layer */
-  --color-action: #2ab9ff; /* Niji blue - primary CTAs */
-  --color-action-hover: #1da0e0;
-  --color-success: #54ca74; /* Niji green - completions */
-  --color-success-hover: #43a860;
-  --color-error: #d23e08; /* Niji red - failures */
-  --color-error-hover: #b33407;
-  --color-warning: #ffc663; /* Niji gold - cautions */
-  --color-warning-hover: #e6b050;
+### Encoding Channel Rules
 
-  /* Effects */
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-blur: blur(12px);
+| Dimension            | Color Pool  | Badge Shape | Example                      |
+| -------------------- | ----------- | ----------- | ---------------------------- |
+| Status (quote, lane) | Status      | Filled      | Draft=muted, Sent=action     |
+| Entity identity      | Categorical | Left border | Job=purple, Invoice=emerald  |
+| Service type         | Categorical | Outline     | Screen Print=teal, DTF=brown |
+| Lifecycle/health     | Status      | Dot + text  | Repeat=success dot           |
+| Customer type tag    | None (mono) | Muted pill  | Retail, Corporate            |
 
-  /* Neobrutalist */
-  --shadow-brutal: 4px 4px 0px;
+### Badge Pattern — Three Variants
 
-  /* Radii */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-}
+```tsx
+import { statusBadge, categoryBadge, dotColor, MUTED_BADGE } from '@shared/lib/design-system'
+
+// 1. Filled badge (STATUS) — bg/10 + text + border/20
+<Badge className={statusBadge('success')}>Paid</Badge>
+<Badge className={MUTED_BADGE}>Draft</Badge>
+
+// 2. Outline badge (CATEGORY) — border + text, no fill
+<Badge className={categoryBadge('teal')}>Screen Print</Badge>
+
+// 3. Dot indicator (LIFECYCLE/HEALTH)
+<span className="inline-flex items-center gap-1.5">
+  <span className={cn('h-2 w-2 rounded-full', dotColor('success'))} />
+  <span className="text-sm text-foreground">Repeat</span>
+</span>
 ```
+
+### Opacity Pattern
+
+Filled badges follow a consistent opacity convention:
+
+- **Fill**: `bg-{color}/10` (10% opacity background)
+- **Border**: `border-{color}/20` (20% opacity border)
+- **Text**: `text-{color}` (full color text)
+
+### Hover State Tokens
+
+Every categorical and status color has a `-hover` variant for interactive states:
+
+- `text-action` → `text-action-hover` on hover
+- `text-teal` → `text-teal-hover` on hover
+
+### Canvas/SVG Tokens
+
+For technical diagrams (gang sheet viewer, screen room layout), use `--canvas-*` CSS custom properties defined in globals.css. These provide opacity-calibrated colors for labels, borders, zones, and spacing indicators.
 
 ### Color Usage
 
-| Use Case        | Tailwind Class              | Notes               |
-| --------------- | --------------------------- | ------------------- |
-| Page background | `bg-background`             | Niji dark (#141515) |
-| Card/panel      | `bg-card`                   | Elevated (#1c1d1e)  |
-| Body text       | `text-foreground`           | 87% opacity white   |
-| Secondary text  | `text-muted-foreground`     | 60% opacity white   |
-| Primary CTA     | `text-action` / `bg-action` | Niji blue           |
-| Success         | `text-success`              | Niji green          |
-| Error           | `text-error`                | Niji red            |
-| Warning         | `text-warning`              | Niji gold           |
+| Use Case        | Tailwind Class            | Notes                 |
+| --------------- | ------------------------- | --------------------- |
+| Page background | `bg-background`           | Niji dark (#141515)   |
+| Card/panel      | `bg-card` / `bg-elevated` | Elevated (#1c1d1e)    |
+| Surface         | `bg-surface`              | Interactive (#232425) |
+| Body text       | `text-foreground`         | 87% opacity white     |
+| Secondary text  | `text-muted-foreground`   | 60% opacity white     |
 
 ### When to Use Color
 
 **Use monochrome for:**
 
-- All non-interactive text
-- Borders and dividers
-- Backgrounds
-- Secondary buttons
+- All non-interactive text, borders, backgrounds, secondary buttons, classification tags (customer type)
 
 **Use status colors for:**
 
+- State badges (quote status, invoice status, lane status)
+- Production state indicators, risk indicators
 - Primary action buttons (Niji blue)
-- Production state badges (varies by state)
-- Error messages (Niji red)
-- Warnings and pending states (Niji gold)
-- Completions and shipped states (green)
+
+**Use categorical colors for:**
+
+- Entity identity (left borders, nav icons)
+- Service type indicators (outline badges, border accents)
 
 ---
 
@@ -304,24 +324,24 @@ Three card treatments matching design layers:
 
 #### Status Badges
 
-Map production states to colors via constants:
+Use `statusBadge()` and `MUTED_BADGE` from `@shared/lib/design-system` for all status indicators. The badge recipe utilities ensure consistent opacity patterns and Tailwind JIT compatibility.
 
 ```tsx
-// From lib/constants.ts
-const PRODUCTION_STATE_COLORS: Record<ProductionState, string> = {
-  design: 'text-muted-foreground',
-  approval: 'text-warning',
-  burning: 'text-action',
-  press: 'text-action',
-  finishing: 'text-success',
-  shipped: 'text-success',
-}
+import { statusBadge, MUTED_BADGE } from '@shared/lib/design-system'
 
-// Usage
-;<Badge variant="outline" className={PRODUCTION_STATE_COLORS[job.status]}>
+// Filled status badge
+<Badge className={statusBadge('success')}>Paid</Badge>
+
+// Muted/draft badge
+<Badge className={MUTED_BADGE}>Draft</Badge>
+
+// Production state text (not badge — uses text-only color)
+<span className={PRODUCTION_STATE_COLORS[job.status]}>
   {PRODUCTION_STATE_LABELS[job.status]}
-</Badge>
+</span>
 ```
+
+See `.claude/skills/design-system/skill.md` for the complete encoding channel rules.
 
 ---
 
@@ -520,7 +540,8 @@ shadcn/ui handles dark mode token mapping automatically. Custom elements should 
 
 ## Version History
 
-| Date       | Change                                                            |
-| ---------- | ----------------------------------------------------------------- |
-| 2026-02-04 | Initial guidelines (dbt-playground context)                       |
-| 2026-02-07 | Adapted for Screen Print Pro: Tailwind v4 + shadcn/ui + next/font |
+| Date       | Change                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| 2026-02-04 | Initial guidelines (dbt-playground context)                                                                |
+| 2026-02-07 | Adapted for Screen Print Pro: Tailwind v4 + shadcn/ui + next/font                                          |
+| 2026-03-02 | Two-pool color architecture, badge variants, encoding channel rules, categorical palette (+teal, +emerald) |

@@ -1,3 +1,4 @@
+import { statusBadge, MUTED_BADGE, dotColor } from '@domain/lib/design-system'
 import type { ProductionState, Priority, Lane, RiskLevel } from '@domain/entities/job'
 import type { BurnStatus } from '@domain/entities/screen'
 import type { QuoteStatus, ServiceType } from '@domain/entities/quote'
@@ -71,11 +72,11 @@ export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
 }
 
 export const QUOTE_STATUS_BADGE_COLORS: Record<QuoteStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  sent: 'bg-action/10 text-action border border-action/20',
-  accepted: 'bg-success/10 text-success border border-success/20',
-  declined: 'bg-error/10 text-error border border-error/20',
-  revised: 'bg-warning/10 text-warning border border-warning/20',
+  draft: MUTED_BADGE,
+  sent: statusBadge('action'),
+  accepted: statusBadge('success'),
+  declined: statusBadge('error'),
+  revised: statusBadge('warning'),
 }
 
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
@@ -85,7 +86,7 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
 }
 
 export const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
-  'screen-print': 'text-action',
+  'screen-print': 'text-teal',
   dtf: 'text-brown',
   embroidery: 'text-lime',
 }
@@ -137,11 +138,11 @@ export const LIFECYCLE_STAGE_LABELS: Record<LifecycleStage, string> = {
   contract: 'Contract',
 }
 
-export const LIFECYCLE_STAGE_COLORS: Record<LifecycleStage, string> = {
-  prospect: 'bg-action/10 text-action border border-action/20',
-  new: 'bg-muted text-muted-foreground',
-  repeat: 'bg-success/10 text-success border border-success/20',
-  contract: 'bg-warning/10 text-warning border border-warning/20',
+export const LIFECYCLE_STAGE_DOT_COLORS: Record<LifecycleStage, string> = {
+  prospect: dotColor('action'),
+  new: dotColor('muted'),
+  repeat: dotColor('success'),
+  contract: dotColor('warning'),
 }
 
 export const HEALTH_STATUS_LABELS: Record<HealthStatus, string> = {
@@ -150,10 +151,10 @@ export const HEALTH_STATUS_LABELS: Record<HealthStatus, string> = {
   churned: 'Inactive',
 }
 
-export const HEALTH_STATUS_COLORS: Record<HealthStatus, string> = {
-  active: '',
-  'potentially-churning': 'bg-warning/10 text-warning border border-warning/20',
-  churned: 'bg-error/10 text-error border border-error/20',
+export const HEALTH_STATUS_DOT_COLORS: Record<HealthStatus, string> = {
+  active: dotColor('success'),
+  'potentially-churning': dotColor('warning'),
+  churned: dotColor('error'),
 }
 
 export const CUSTOMER_TYPE_TAG_LABELS: Record<CustomerTypeTag, string> = {
@@ -166,10 +167,10 @@ export const CUSTOMER_TYPE_TAG_LABELS: Record<CustomerTypeTag, string> = {
 
 export const CUSTOMER_TYPE_TAG_COLORS: Record<CustomerTypeTag, string> = {
   retail: 'bg-muted text-muted-foreground',
-  'sports-school': 'bg-action/10 text-action border border-action/20',
-  corporate: 'bg-success/10 text-success border border-success/20',
-  'storefront-merch': 'bg-warning/10 text-warning border border-warning/20',
-  wholesale: 'bg-muted text-foreground border border-border',
+  'sports-school': 'bg-muted text-muted-foreground',
+  corporate: 'bg-muted text-muted-foreground',
+  'storefront-merch': 'bg-muted text-muted-foreground',
+  wholesale: 'bg-muted text-muted-foreground',
 }
 
 export const CONTACT_ROLE_LABELS: Record<ContactRole, string> = {
@@ -224,11 +225,11 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
 }
 
 export const INVOICE_STATUS_BADGE_COLORS: Record<InvoiceStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  sent: 'bg-action/10 text-action border border-action/20',
-  partial: 'bg-warning/10 text-warning border border-warning/20',
-  paid: 'bg-success/10 text-success border border-success/20',
-  void: 'bg-error/10 text-error border border-error/20',
+  draft: MUTED_BADGE,
+  sent: statusBadge('action'),
+  partial: statusBadge('warning'),
+  paid: statusBadge('success'),
+  void: statusBadge('error'),
 }
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -287,11 +288,11 @@ export const LANE_COLORS: Record<Lane, string> = {
 }
 
 export const LANE_BADGE_COLORS: Record<Lane, string> = {
-  ready: 'bg-muted text-muted-foreground',
-  in_progress: 'bg-action/10 text-action border border-action/20',
-  review: 'bg-warning/10 text-warning border border-warning/20',
-  blocked: 'bg-error/10 text-error border border-error/20',
-  done: 'bg-success/10 text-success border border-success/20',
+  ready: MUTED_BADGE,
+  in_progress: statusBadge('action'),
+  review: statusBadge('warning'),
+  blocked: statusBadge('error'),
+  done: statusBadge('success'),
 }
 
 // ---------------------------------------------------------------------------
@@ -315,7 +316,7 @@ export const RISK_LABELS: Record<RiskLevel, string> = {
 }
 
 export const RISK_COLORS: Record<RiskLevel, string> = {
-  on_track: '',
+  on_track: 'text-success',
   getting_tight: 'text-warning',
   at_risk: 'text-error',
 }
@@ -325,14 +326,14 @@ export const RISK_COLORS: Record<RiskLevel, string> = {
 // ---------------------------------------------------------------------------
 
 export const SERVICE_TYPE_BORDER_COLORS: Record<ServiceType, string> = {
-  'screen-print': 'border-action',
-  dtf: 'border-warning',
+  'screen-print': 'border-teal',
+  dtf: 'border-brown',
   embroidery: 'border-lime',
 }
 
 export const SERVICE_TYPE_LEFT_BORDER_COLORS: Record<ServiceType, string> = {
-  'screen-print': 'border-l-action',
-  dtf: 'border-l-warning',
+  'screen-print': 'border-l-teal',
+  dtf: 'border-l-brown',
   embroidery: 'border-l-lime',
 }
 
