@@ -47,7 +47,7 @@ import type {
 } from '@domain/entities/board-card'
 import type { Lane, Job } from '@domain/entities/job'
 import type { ScratchNote } from '@domain/entities/scratch-note'
-import { getCustomersMutable } from '@infra/repositories/customers'
+import { getCustomersMutable } from '@infra/repositories/customers-mutable'
 import { getInvoicesMutable } from '@infra/repositories/invoices'
 import { getGarmentCatalogMutable } from '@infra/repositories/garments-phase1'
 import { getArtworksMutable } from '@infra/repositories/artworks'
