@@ -25,8 +25,13 @@ export type ArtworkUploadSheetProps = {
   /**
    * Creates the artwork_piece + artwork_variant before the file upload starts.
    * Returns { pieceId, variantId } which is threaded into onInitiate.
+   * colorCount is optional — blank means Gary will confirm after upload.
    */
-  onCreatePieceAndVariant: (pieceName: string, variantName: string) => Promise<{ variantId: string }>
+  onCreatePieceAndVariant: (
+    pieceName: string,
+    variantName: string,
+    colorCount: string
+  ) => Promise<{ variantId: string }>
   onInitiate: UseFileUploadProps['onInitiate']
   onConfirm: UseFileUploadProps['onConfirm']
 }
@@ -35,76 +40,118 @@ export type ArtworkUploadSheetProps = {
 // Step 1: Metadata form
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Shared field styles
+// ---------------------------------------------------------------------------
+
+const fieldInput = cn(
+  'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground',
+  'placeholder:text-muted-foreground/60',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:border-transparent',
+  'disabled:opacity-50 disabled:cursor-not-allowed',
+  'transition-colors'
+)
+
+function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+    >
+      {children}
+    </label>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 1: Metadata form
+// ---------------------------------------------------------------------------
+
 type MetadataFormProps = {
-  onSubmit: (pieceName: string, variantName: string) => void
+  onSubmit: (pieceName: string, variantName: string, colorCount: string) => void
   isSubmitting: boolean
 }
 
 function MetadataForm({ onSubmit, isSubmitting }: MetadataFormProps) {
   const [pieceName, setPieceName] = React.useState('')
   const [variantName, setVariantName] = React.useState('')
+  const [colorCount, setColorCount] = React.useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!pieceName.trim() || !variantName.trim()) return
-    onSubmit(pieceName.trim(), variantName.trim())
+    onSubmit(pieceName.trim(), variantName.trim(), colorCount.trim())
   }
 
   const canSubmit = pieceName.trim().length > 0 && variantName.trim().length > 0 && !isSubmitting
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {/* Artwork Piece name */}
+      {/* Artwork Piece */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="piece-name" className="text-sm font-medium text-foreground">
-          Artwork Piece
-        </label>
+        <FieldLabel htmlFor="piece-name">Artwork Piece</FieldLabel>
         <input
           id="piece-name"
           type="text"
           value={pieceName}
           onChange={(e) => setPieceName(e.target.value)}
-          placeholder="e.g. Front Logo, Back Print"
+          placeholder="e.g. Front Logo"
           disabled={isSubmitting}
-          className={cn(
-            'rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action',
-            'disabled:opacity-50'
-          )}
+          autoFocus
+          className={fieldInput}
         />
         <p className="text-xs text-muted-foreground">
-          A named concept shared across colorways (e.g. the design location on the garment)
+          The named location or concept — shared across colorways
         </p>
       </div>
 
-      {/* Design / variant name */}
+      {/* Design Name */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="variant-name" className="text-sm font-medium text-foreground">
-          Design Name
-        </label>
+        <FieldLabel htmlFor="variant-name">Design Name</FieldLabel>
         <input
           id="variant-name"
           type="text"
           value={variantName}
           onChange={(e) => setVariantName(e.target.value)}
-          placeholder="e.g. Navy on White, Full Color"
+          placeholder="e.g. Navy on White"
           disabled={isSubmitting}
-          className={cn(
-            'rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action',
-            'disabled:opacity-50'
-          )}
+          className={fieldInput}
         />
-        <p className="text-xs text-muted-foreground">The specific colorway or treatment for this file</p>
+        <p className="text-xs text-muted-foreground">
+          The specific colorway or treatment for this file
+        </p>
+      </div>
+
+      {/* Colors */}
+      <div className="flex flex-col gap-1.5">
+        <FieldLabel htmlFor="color-count">Colors</FieldLabel>
+        <input
+          id="color-count"
+          type="number"
+          min="1"
+          max="16"
+          value={colorCount}
+          onChange={(e) => setColorCount(e.target.value)}
+          placeholder="e.g. 3"
+          disabled={isSubmitting}
+          className={fieldInput}
+        />
+        <p className="text-xs text-muted-foreground">
+          Ink color count — affects pricing. Leave blank to confirm after upload.
+        </p>
       </div>
 
       <button
         type="submit"
         disabled={!canSubmit}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-md bg-action px-4 py-2 text-sm font-medium text-black',
-          'transition-colors hover:bg-action/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
+          'mt-1 inline-flex min-h-(--mobile-touch-target) items-center justify-center gap-2 md:min-h-0',
+          'rounded-lg bg-action px-4 py-2.5 text-sm font-medium text-black',
+          'shadow-[4px_4px_0px_rgba(0,0,0,0.4)]',
+          'transition-all hover:bg-action/90',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          'active:translate-x-[2px] active:translate-y-[2px] active:shadow-none',
+          'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none'
         )}
       >
         {isSubmitting && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
@@ -129,7 +176,13 @@ type FileUploadZoneProps = {
   onConfirm: UseFileUploadProps['onConfirm']
 }
 
-function FileUploadZone({ shopId, variantId, onSuccess, onInitiate, onConfirm }: FileUploadZoneProps) {
+function FileUploadZone({
+  shopId,
+  variantId,
+  onSuccess,
+  onInitiate,
+  onConfirm,
+}: FileUploadZoneProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = React.useState(false)
 
@@ -236,7 +289,10 @@ function FileUploadZone({ shopId, variantId, onSuccess, onInitiate, onConfirm }:
         {!isDone && !isError && (
           <>
             <Upload
-              className={cn('size-6 transition-colors', isDragging ? 'text-action' : 'text-muted-foreground')}
+              className={cn(
+                'size-6 transition-colors',
+                isDragging ? 'text-action' : 'text-muted-foreground'
+              )}
               aria-hidden="true"
             />
 
@@ -253,9 +309,7 @@ function FileUploadZone({ shopId, variantId, onSuccess, onInitiate, onConfirm }:
             {state === 'hashing' && (
               <p className="text-muted-foreground text-sm">Computing checksum…</p>
             )}
-            {state === 'validating' && (
-              <p className="text-muted-foreground text-sm">Validating…</p>
-            )}
+            {state === 'validating' && <p className="text-muted-foreground text-sm">Validating…</p>}
             {state === 'confirming' && (
               <p className="text-muted-foreground text-sm">Confirming upload…</p>
             )}
@@ -329,11 +383,15 @@ export function ArtworkUploadSheet({
     onOpenChange(nextOpen)
   }
 
-  async function handleMetadataSubmit(pieceName: string, variantNameValue: string) {
+  async function handleMetadataSubmit(
+    pieceName: string,
+    variantNameValue: string,
+    colorCount: string
+  ) {
     setIsCreating(true)
     setCreateError(null)
     try {
-      const result = await onCreatePieceAndVariant(pieceName, variantNameValue)
+      const result = await onCreatePieceAndVariant(pieceName, variantNameValue, colorCount)
       setVariantId(result.variantId)
       setStep('upload')
     } catch {
@@ -350,7 +408,10 @@ export function ArtworkUploadSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md bg-elevated border-border flex flex-col gap-0 p-0">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md bg-elevated border-border flex flex-col gap-0 p-0"
+      >
         <SheetHeader className="px-6 py-5 border-b border-border">
           <SheetTitle className="text-foreground">Upload Artwork</SheetTitle>
           <SheetDescription className="text-muted-foreground">
@@ -364,9 +425,7 @@ export function ArtworkUploadSheet({
           {step === 'metadata' && (
             <>
               <MetadataForm onSubmit={handleMetadataSubmit} isSubmitting={isCreating} />
-              {createError && (
-                <p className="mt-3 text-xs text-error">{createError}</p>
-              )}
+              {createError && <p className="mt-3 text-xs text-error">{createError}</p>}
             </>
           )}
 

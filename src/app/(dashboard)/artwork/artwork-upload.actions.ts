@@ -4,7 +4,12 @@ import 'server-only'
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
-import { artworkVersions, artworkPieces, artworkVariants, type ArtworkVersion } from '@db/schema/artworks'
+import {
+  artworkVersions,
+  artworkPieces,
+  artworkVariants,
+  type ArtworkVersion,
+} from '@db/schema/artworks'
 import { fileUploadService } from '@infra/bootstrap'
 import { verifySession } from '@infra/auth/session'
 import { logger } from '@shared/lib/logger'
@@ -34,6 +39,7 @@ const createArtworkPieceAndVariantSchema = z.object({
   customerId: z.string().uuid().optional(),
   pieceName: z.string().min(1).max(255),
   variantName: z.string().min(1).max(255),
+  colorCount: z.number().int().min(1).max(16).optional(),
 })
 
 const confirmArtworkUploadSchema = z.object({
@@ -461,7 +467,7 @@ export async function createArtworkPieceAndVariant(
     throw new Error('Unauthorized')
   }
 
-  const { shopId, scope, customerId, pieceName, variantName } = parsed.data
+  const { shopId, scope, customerId, pieceName, variantName, colorCount } = parsed.data
 
   if (shopId !== session.shopId) {
     throw new Error('Forbidden: shopId mismatch')
@@ -490,7 +496,7 @@ export async function createArtworkPieceAndVariant(
 
       const [variant] = await tx
         .insert(artworkVariants)
-        .values({ pieceId: piece.id, name: variantName })
+        .values({ pieceId: piece.id, name: variantName, colorCount: colorCount ?? null })
         .returning({ id: artworkVariants.id })
 
       if (!variant) throw new Error('Failed to create artwork variant')

@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Image as ImageIcon, UploadCloud, Layers } from 'lucide-react'
+import { Image as ImageIcon, UploadCloud, Layers, Star } from 'lucide-react'
 
 import { cn } from '@shared/lib/cn'
 import { ArtworkUploadSheet } from './ArtworkUploadSheet'
@@ -22,23 +22,25 @@ type ArtworkLibraryClientProps = {
 }
 
 // ---------------------------------------------------------------------------
-// Internal status badge (shown when piece has variant data in future)
+// Internal status badge
 // ---------------------------------------------------------------------------
 
-type InternalStatusBadgeProps = {
-  status: 'received' | 'in_progress' | 'proof_sent' | 'approved'
-}
+type InternalStatus = 'received' | 'in_progress' | 'proof_sent' | 'approved'
 
-function InternalStatusBadge({ status }: InternalStatusBadgeProps) {
-  const map: Record<InternalStatusBadgeProps['status'], { label: string; className: string }> = {
+type StatusBadgeProps = { status: InternalStatus }
+
+function StatusBadge({ status }: StatusBadgeProps) {
+  const styles: Record<InternalStatus, { label: string; className: string }> = {
     received: { label: 'Received', className: 'bg-surface text-muted-foreground' },
     in_progress: { label: 'In Progress', className: 'bg-warning/10 text-warning' },
     proof_sent: { label: 'Proof Sent', className: 'bg-action/10 text-action' },
     approved: { label: 'Approved', className: 'bg-success/10 text-success' },
   }
-  const { label, className } = map[status]
+  const { label, className } = styles[status]
   return (
-    <span className={cn('rounded px-1.5 py-0.5 text-xs', className)}>{label}</span>
+    <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-medium leading-none', className)}>
+      {label}
+    </span>
   )
 }
 
@@ -46,38 +48,78 @@ function InternalStatusBadge({ status }: InternalStatusBadgeProps) {
 // Piece card
 // ---------------------------------------------------------------------------
 
-type PieceCardProps = {
-  piece: ArtworkPiece
-}
+type PieceCardProps = { piece: ArtworkPiece }
 
 function PieceCard({ piece }: PieceCardProps) {
-  const formattedDate = new Date(piece.createdAt).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-elevated p-3">
-      {/* Thumbnail placeholder — will show first variant's preview once versions are linked */}
-      <div
-        className="flex w-full items-center justify-center rounded-lg bg-surface"
-        style={{ aspectRatio: '1 / 1' }}
-        aria-hidden="true"
+    <div
+      className={cn(
+        'group flex flex-col overflow-hidden rounded-lg border border-border bg-elevated',
+        'cursor-pointer transition-colors hover:border-action/30'
+      )}
+    >
+      {/* Thumbnail */}
+      <div className="relative w-full bg-surface" style={{ aspectRatio: '1 / 1' }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <ImageIcon
+            className="text-muted-foreground/30 transition-colors group-hover:text-muted-foreground/50"
+            size={32}
+            aria-hidden="true"
+          />
+        </div>
+
+        {/* Favorite star — top-right */}
+        {piece.isFavorite && (
+          <div className="absolute right-2 top-2">
+            <Star className="fill-warning text-warning" size={14} aria-label="Favorited" />
+          </div>
+        )}
+      </div>
+
+      {/* Card body */}
+      <div className="flex flex-col gap-2 p-3">
+        <p className="truncate text-sm font-semibold text-foreground" title={piece.name}>
+          {piece.name}
+        </p>
+
+        <div className="flex items-center justify-between gap-2">
+          <StatusBadge status="received" />
+          <span className="shrink-0 text-[11px] text-muted-foreground">0 designs</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+function EmptyState({ onUpload }: { onUpload: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-5 rounded-lg border border-border bg-elevated py-20 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-surface">
+        <Layers className="text-muted-foreground" size={28} aria-hidden="true" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-semibold text-foreground">No artwork yet</p>
+        <p className="max-w-xs text-xs text-muted-foreground">
+          Upload a file to create your first artwork piece. Files are stored once and reused across
+          quotes.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onUpload}
+        className={cn(
+          'inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2',
+          'text-sm font-medium text-foreground transition-colors hover:bg-elevated',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action'
+        )}
       >
-        <ImageIcon className="text-muted-foreground" size={32} />
-      </div>
-
-      {/* Piece name */}
-      <p className="truncate text-sm font-medium text-foreground" title={piece.name}>
-        {piece.name}
-      </p>
-
-      {/* Status + date */}
-      <div className="flex items-center justify-between gap-2">
-        <InternalStatusBadge status="received" />
-        <span className="text-xs text-muted-foreground">{formattedDate}</span>
-      </div>
+        <UploadCloud size={15} aria-hidden="true" />
+        Upload Artwork
+      </button>
     </div>
   )
 }
@@ -92,71 +134,75 @@ export function ArtworkLibraryClient({ initialPieces }: ArtworkLibraryClientProp
   const [pieces, setPieces] = React.useState<ArtworkPiece[]>(initialPieces)
   const [open, setOpen] = React.useState(false)
 
-  async function handleCreatePieceAndVariant(pieceName: string, variantName: string) {
+  async function handleCreatePieceAndVariant(
+    pieceName: string,
+    variantName: string,
+    colorCount: string
+  ) {
+    const parsed = colorCount ? parseInt(colorCount, 10) : undefined
     const result = await createArtworkPieceAndVariant({
       shopId: SHOP_ID,
       scope: 'shop',
       pieceName,
       variantName,
+      colorCount: parsed && !isNaN(parsed) ? parsed : undefined,
     })
     return { variantId: result.variantId }
   }
 
   function handleSuccess(_result: ConfirmResult) {
-    // Upload succeeded — refetch or optimistically add. For now we re-fetch by
-    // triggering a router refresh. The server component will re-query pieces.
-    // TODO: optimistic update once we have the full piece shape from the action.
+    // Reload to pick up the new piece from the server component query.
+    // Optimistic update deferred until we have a full piece shape returned from the action.
     window.location.reload()
   }
 
+  const pieceCount = pieces.length
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h1 className="text-2xl font-semibold text-foreground">Artwork Library</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Artwork Library</h1>
           <p className="text-sm text-muted-foreground">
-            {pieces.length > 0
-              ? `${pieces.length} piece${pieces.length === 1 ? '' : 's'}`
-              : 'No artwork yet'}
+            {pieceCount > 0
+              ? `${pieceCount} piece${pieceCount === 1 ? '' : 's'} · Shop library`
+              : 'Shop library'}
           </p>
         </div>
+
         <button
           type="button"
           onClick={() => setOpen(true)}
           className={cn(
-            'inline-flex items-center gap-2 rounded-lg bg-action px-4 py-2 text-sm font-medium text-black',
+            // Mobile: full-width touch target; desktop: auto-width
+            'flex w-full items-center justify-center gap-2 md:w-auto',
+            'min-h-(--mobile-touch-target) md:min-h-0',
+            'rounded-lg bg-action px-4 py-2 text-sm font-medium text-black',
             'shadow-[4px_4px_0px_rgba(0,0,0,0.5)]',
-            'transition-colors hover:bg-action/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            'active:shadow-none active:translate-x-[2px] active:translate-y-[2px]'
+            'transition-all hover:bg-action/90',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+            'active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
           )}
         >
           <UploadCloud size={16} aria-hidden="true" />
-          Upload
+          Upload Artwork
         </button>
       </div>
 
-      {/* Empty state */}
-      {pieces.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-elevated py-20">
-          <Layers className="text-muted-foreground" size={40} aria-hidden="true" />
-          <p className="text-sm font-medium text-foreground">No artwork yet</p>
-          <p className="text-xs text-muted-foreground">
-            Upload your first artwork file to get started
-          </p>
-        </div>
-      )}
+      {/* ── Empty state ─────────────────────────────────────────────────────── */}
+      {pieces.length === 0 && <EmptyState onUpload={() => setOpen(true)} />}
 
-      {/* Piece grid */}
+      {/* ── Piece grid ──────────────────────────────────────────────────────── */}
       {pieces.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
           {pieces.map((piece) => (
             <PieceCard key={piece.id} piece={piece} />
           ))}
         </div>
       )}
 
-      {/* Upload sheet — conditionally rendered to reset state on close */}
+      {/* ── Upload sheet ────────────────────────────────────────────────────── */}
       {open && (
         <ArtworkUploadSheet
           open={open}
