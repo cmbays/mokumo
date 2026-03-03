@@ -285,7 +285,7 @@ export default function PricingHubPage() {
                   // TODO(Wave2C): replace with real entity — old mock uses 'screen-print'
                   serviceType: 'screen_print' as const,
                   isDefault: template.isDefault,
-                  updatedAt: new Date(template.updatedAt ?? Date.now()),
+                  updatedAt: new Date(template.updatedAt ?? 0),
                 }}
                 healthIndicator={spHealthMap.get(template.id) ?? 'caution'}
                 customersUsing={spCustomerCountMap.get(template.id) ?? 0}
@@ -323,7 +323,7 @@ export default function PricingHubPage() {
                   // TODO(Wave2C): replace with real entity
                   serviceType: 'dtf' as const,
                   isDefault: template.isDefault,
-                  updatedAt: new Date(template.updatedAt ?? Date.now()),
+                  updatedAt: new Date(template.updatedAt ?? 0),
                 }}
                 healthIndicator={dtfHealthMap.get(template.id) ?? 'caution'}
                 customersUsing={dtfCustomerCountMap.get(template.id) ?? 0}

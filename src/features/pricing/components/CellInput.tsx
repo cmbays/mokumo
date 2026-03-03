@@ -34,11 +34,6 @@ export function CellInput({
   // Prevents double-commit: Enter/Escape set this before blur fires
   const skipBlurRef = useRef(false)
 
-  // Sync draft when parent value changes externally (e.g., after save)
-  useEffect(() => {
-    if (!editing) setDraft(String(value))
-  }, [value, editing])
-
   useEffect(() => {
     if (editing) inputRef.current?.focus()
   }, [editing])
