@@ -15,6 +15,7 @@ phase: build
 > and rush tiers. This is step 2 of the critical path to the Quote Builder.
 >
 > What Gary needs to configure (the 3 editor surfaces):
+>
 > 1. Decoration cost matrix — a grid (rows = qty anchors, cols = color count) where each
 >    cell is a price per piece. Gary liked PrintLife's UI for this. Toggle:
 >    interpolation_mode: linear | step. Service types: screen print (1–N colors),

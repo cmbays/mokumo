@@ -6,6 +6,7 @@ import type { Job } from '@domain/entities/job'
 import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
 import type { Address } from '@domain/entities/address'
+import type { ContactInput, ContactRow, AddressInput, AddressRow } from './customer-contact.port'
 
 // ─── Filter / Sort / Pagination types ─────────────────────────────────────────
 
@@ -93,4 +94,26 @@ export type ICustomerRepository = {
 
   /** All garment/color preferences for the Preferences tab */
   getPreferences(customerId: string): Promise<unknown> // typed in Wave 2 when preferences schema is stable
+
+  // ── Wave 1a — Contact mutations ──
+
+  /** Create a new contact linked to the given customer */
+  createContact(input: ContactInput): Promise<ContactRow>
+
+  /** Update mutable fields on an existing contact */
+  updateContact(id: string, input: Partial<ContactInput>): Promise<ContactRow>
+
+  /** Permanently delete a contact */
+  deleteContact(id: string): Promise<void>
+
+  // ── Wave 1a — Address mutations ──
+
+  /** Create a new address linked to the given customer */
+  createAddress(input: AddressInput): Promise<AddressRow>
+
+  /** Update mutable fields on an existing address */
+  updateAddress(id: string, input: Partial<AddressInput>): Promise<AddressRow>
+
+  /** Permanently delete an address */
+  deleteAddress(id: string): Promise<void>
 }

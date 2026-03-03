@@ -14,6 +14,7 @@
 
 import type {
   ICustomerRepository,
+  ICustomerActivityRepository,
   IQuoteRepository,
   IJobRepository,
   IInvoiceRepository,
@@ -45,6 +46,13 @@ export {
   archiveCustomer,
   getAccountBalance,
   getPreferences,
+  // Wave 1 contact + address mutations
+  createContact,
+  updateContact,
+  deleteContact,
+  createAddress,
+  updateAddress,
+  deleteAddress,
 } from './repositories/customers'
 
 export { getQuotes, getQuoteById } from './repositories/quotes'
@@ -104,6 +112,8 @@ export {
   upsertRushTiers,
 } from './repositories/pricing-templates'
 
+export { customerActivityService, listCustomerActivities } from './repositories/customer-activity'
+
 // -- Compile-time assertions --------------------------------------------------
 // Verify that concrete implementations satisfy their port contracts.
 // These objects are never called — they exist only for TypeScript structural
@@ -128,6 +138,12 @@ import {
   archiveCustomer,
   getAccountBalance,
   getPreferences,
+  createContact,
+  updateContact,
+  deleteContact,
+  createAddress,
+  updateAddress,
+  deleteAddress,
 } from './repositories/customers'
 import { getQuotes, getQuoteById } from './repositories/quotes'
 import {
@@ -160,6 +176,7 @@ import {
 } from './repositories/settings'
 import { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
 import { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
+import { supabaseCustomerActivityRepository } from './repositories/_providers/supabase/customer-activity'
 
 const _portChecks = {
   customer: {
@@ -180,6 +197,12 @@ const _portChecks = {
     archiveCustomer,
     getAccountBalance,
     getPreferences,
+    createContact,
+    updateContact,
+    deleteContact,
+    createAddress,
+    updateAddress,
+    deleteAddress,
   } satisfies ICustomerRepository,
 
   quote: {
@@ -245,6 +268,13 @@ const _portChecks = {
     getForStyles: getStylesInventory,
     getForColor: getColorInventory,
   } satisfies IInventoryRepository,
+
+  customerActivity: {
+    insert: supabaseCustomerActivityRepository.insert.bind(supabaseCustomerActivityRepository),
+    listForCustomer: supabaseCustomerActivityRepository.listForCustomer.bind(
+      supabaseCustomerActivityRepository
+    ),
+  } satisfies ICustomerActivityRepository,
 }
 
 void _portChecks

@@ -9,6 +9,7 @@ import {
   getCustomerArtworks,
   getCustomerNotes,
 } from '@infra/repositories/customers'
+import { listCustomerActivities } from '@infra/repositories/customer-activity'
 import { getColors } from '@infra/repositories/colors'
 import { getGarmentCatalog } from '@infra/repositories/garments'
 import { money, round2, toNumber } from '@domain/lib/money'
@@ -50,6 +51,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     allCustomers,
     colors,
     garmentCatalog,
+    initialActivityPage,
   ] = await Promise.all([
     getCustomerQuotes(id),
     getCustomerJobs(id),
@@ -59,6 +61,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     getCustomers(),
     getColors(),
     getGarmentCatalog(),
+    listCustomerActivities(id, { limit: 20 }),
   ])
 
   // Compute stats for the header
@@ -105,6 +108,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           notes={notes}
           colors={colors}
           garmentCatalog={garmentCatalog}
+          initialActivities={initialActivityPage.items}
+          initialHasMore={initialActivityPage.hasMore}
+          initialNextCursor={initialActivityPage.nextCursor}
         />
       </div>
     </>

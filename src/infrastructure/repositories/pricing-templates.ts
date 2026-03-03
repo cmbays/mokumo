@@ -25,7 +25,10 @@ export async function getTemplateById(id: string): Promise<PricingTemplateWithMa
   return repo.getTemplateById(id)
 }
 
-export async function listTemplates(shopId: string, serviceType?: string): Promise<PricingTemplate[]> {
+export async function listTemplates(
+  shopId: string,
+  serviceType?: string
+): Promise<PricingTemplate[]> {
   return repo.listTemplates(shopId, serviceType)
 }
 

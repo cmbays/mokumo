@@ -22,7 +22,7 @@ import {
   tagTemplateMappings,
 } from '@infra/repositories/pricing'
 import type { TagTemplateMapping } from '@domain/entities/tag-template-mapping'
-import { getCustomersMutable } from '@infra/repositories/customers'
+import { getCustomersMutable } from '@infra/repositories/customers-mutable'
 const customers = getCustomersMutable()
 import {
   calculateTemplateHealth,

@@ -15,6 +15,12 @@ import type {
   SortDirection,
   CustomerSortField,
 } from '@domain/ports/customer.repository'
+import type {
+  ContactInput,
+  ContactRow,
+  AddressInput,
+  AddressRow,
+} from '@domain/ports/customer-contact.port'
 
 export async function getCustomers(): Promise<Customer[]> {
   return customers.map((c) => structuredClone(c))
@@ -128,4 +134,36 @@ export async function getAccountBalance(_customerId: string): Promise<number> {
 
 export async function getPreferences(_customerId: string): Promise<unknown> {
   return {}
+}
+
+// ── Wave 1a stubs — Contact / Address mutations ───────────────────────────────
+
+export async function createContact(_input: ContactInput): Promise<ContactRow> {
+  throw new Error('createContact: not implemented in mock provider')
+}
+
+export async function updateContact(
+  _id: string,
+  _input: Partial<ContactInput>
+): Promise<ContactRow> {
+  throw new Error('updateContact: not implemented in mock provider')
+}
+
+export async function deleteContact(_id: string): Promise<void> {
+  throw new Error('deleteContact: not implemented in mock provider')
+}
+
+export async function createAddress(_input: AddressInput): Promise<AddressRow> {
+  throw new Error('createAddress: not implemented in mock provider')
+}
+
+export async function updateAddress(
+  _id: string,
+  _input: Partial<AddressInput>
+): Promise<AddressRow> {
+  throw new Error('updateAddress: not implemented in mock provider')
+}
+
+export async function deleteAddress(_id: string): Promise<void> {
+  throw new Error('deleteAddress: not implemented in mock provider')
 }

@@ -240,9 +240,7 @@ describe('createPricingTemplate', () => {
   it('injects shopId from session — never from caller', async () => {
     mockUpsertTemplate.mockResolvedValueOnce(TEMPLATE_ROW)
     await createPricingTemplate(CREATE_DATA)
-    expect(mockUpsertTemplate).toHaveBeenCalledWith(
-      expect.objectContaining({ shopId: SHOP_ID })
-    )
+    expect(mockUpsertTemplate).toHaveBeenCalledWith(expect.objectContaining({ shopId: SHOP_ID }))
   })
 
   it('returns created template', async () => {
@@ -479,7 +477,15 @@ describe('getRushTiers', () => {
 
   it('calls getRushTiers with shopId from session', async () => {
     const tiers = [
-      { id: 't1', shopId: SHOP_ID, name: 'Next Day', daysUnderStandard: 6, flatFee: 30, pctSurcharge: 0.1, displayOrder: 1 },
+      {
+        id: 't1',
+        shopId: SHOP_ID,
+        name: 'Next Day',
+        daysUnderStandard: 6,
+        flatFee: 30,
+        pctSurcharge: 0.1,
+        displayOrder: 1,
+      },
     ]
     mockGetRushTiers.mockResolvedValueOnce(tiers)
     const result = await getRushTiers()
@@ -503,7 +509,14 @@ describe('saveRushTiers', () => {
   it('calls upsertRushTiers with shopId from session', async () => {
     mockUpsertRushTiers.mockResolvedValueOnce(undefined)
     const tiers = [
-      { shopId: SHOP_ID, name: 'Rush', daysUnderStandard: 3, flatFee: 50, pctSurcharge: 0.2, displayOrder: 1 },
+      {
+        shopId: SHOP_ID,
+        name: 'Rush',
+        daysUnderStandard: 3,
+        flatFee: 50,
+        pctSurcharge: 0.2,
+        displayOrder: 1,
+      },
     ]
     await saveRushTiers(tiers)
     expect(mockUpsertRushTiers).toHaveBeenCalledWith(SHOP_ID, tiers)

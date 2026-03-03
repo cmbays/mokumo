@@ -19,7 +19,7 @@ import {
   getAutoPropagationConfigMutable,
   getBrandPreferencesMutable,
 } from '@infra/repositories/settings'
-import { getCustomersMutable } from '@infra/repositories/customers'
+import { getCustomersMutable } from '@infra/repositories/customers-mutable'
 import {
   propagateAddition,
   getImpactPreview,
