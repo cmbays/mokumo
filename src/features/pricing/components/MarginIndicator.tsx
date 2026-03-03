@@ -5,7 +5,8 @@ import type { MarginIndicator as MarginIndicatorType } from '@domain/entities/pr
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 
 type MarginIndicatorProps = {
-  percentage: number
+  /** Margin percentage for the tooltip label. Omit when the exact % is unavailable (e.g. hub card list view). */
+  percentage?: number
   indicator: MarginIndicatorType
   size?: 'sm' | 'md'
 }
@@ -23,7 +24,11 @@ const indicatorLabels: Record<MarginIndicatorType, string> = {
 }
 
 export function MarginIndicator({ percentage, indicator, size = 'sm' }: MarginIndicatorProps) {
-  const formattedPercent = `${Math.round(percentage * 10) / 10}%`
+  const label = indicatorLabels[indicator]
+  const ariaLabel =
+    percentage !== undefined
+      ? `Margin: ${Math.round(percentage * 10) / 10}% (${label})`
+      : `Margin: ${label}`
 
   return (
     <Tooltip>
@@ -35,13 +40,21 @@ export function MarginIndicator({ percentage, indicator, size = 'sm' }: MarginIn
             size === 'sm' ? 'size-2' : 'size-2.5'
           )}
           role="img"
-          aria-label={`Margin: ${formattedPercent} (${indicatorLabels[indicator]})`}
+          aria-label={ariaLabel}
         />
       </TooltipTrigger>
       <TooltipContent>
         <span className="text-xs">
-          Margin: {formattedPercent}
-          <span className="text-muted-foreground ml-1">({indicatorLabels[indicator]})</span>
+          {percentage !== undefined ? (
+            <>
+              Margin: {Math.round(percentage * 10) / 10}%
+              <span className="text-muted-foreground ml-1">({label})</span>
+            </>
+          ) : (
+            <>
+              Margin: <span className="text-muted-foreground ml-1">{label}</span>
+            </>
+          )}
         </span>
       </TooltipContent>
     </Tooltip>

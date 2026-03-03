@@ -14,6 +14,7 @@ export const CRUMBS = {
   quotes: { label: 'Quotes', href: '/quotes' },
   invoices: { label: 'Invoices', href: '/invoices' },
   customers: { label: 'Customers', href: '/customers' },
+  artwork: { label: 'Artwork', href: '/artwork' },
   garments: { label: 'Garment Catalog', href: '/garments' },
   garmentFavorites: { label: 'Garment Favorites', href: '/garments/favorites' },
   settings: { label: 'Settings', href: '/settings/pricing' },

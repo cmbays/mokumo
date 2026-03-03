@@ -31,12 +31,12 @@ export function formatShortDate(dateStr: string): string {
 }
 
 /**
- * Format a date string as a compact relative time: "just now", "5m ago", "3h ago", "2d ago".
+ * Format a date or date string as a compact relative time: "just now", "5m ago", "3h ago", "2d ago".
  * Falls back to "Feb 12" for dates older than a week.
  */
-export function formatRelativeTime(dateStr: string): string {
+export function formatRelativeTime(dateInput: Date | string): string {
   const now = new Date()
-  const date = parseDate(dateStr)
+  const date = typeof dateInput === 'string' ? parseDate(dateInput) : dateInput
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)

@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         hostname: 'cdn.ssactivewear.com',
         pathname: '/**',
       },
+      // Supabase Storage — artwork thumbnails and presigned download URLs
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/**',
+      },
     ],
   },
   async headers() {
