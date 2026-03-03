@@ -81,6 +81,9 @@
   --color-emerald: var(--emerald);
   --color-emerald-hover: var(--emerald-hover);
   --color-emerald-bold: var(--emerald-bold);
+  --color-yellow: var(--yellow);
+  --color-yellow-hover: var(--yellow-hover);
+  --color-yellow-bold: var(--yellow-bold);
 
   /* Design system: surface colors */
   --color-surface: var(--surface);
@@ -197,6 +200,10 @@
   --emerald: #10b981;
   --emerald-hover: #059669;
   --emerald-bold: #34d399;
+
+  --yellow: #f5e642;
+  --yellow-hover: #dccc28;
+  --yellow-bold: #fef3a0;
 
   /* Charts — Niji rainbow */
   --chart-1: #2ab9ff;

@@ -86,6 +86,9 @@ export const customerSchema = z.object({
   taxExempt: z.boolean().default(false),
   taxExemptCertExpiry: z.string().datetime().optional(),
 
+  // Credit limit — null = no limit set (bar not displayed)
+  creditLimit: z.number().nonnegative().optional(),
+
   // Deposit defaults
   defaultDepositPercent: z.number().min(0).max(100).optional(),
   contractDepositAmount: z.number().nonnegative().optional(),

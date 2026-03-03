@@ -20,14 +20,15 @@ Colors are divided into two isolated pools. **Never cross-pollinate** — a stat
 
 ### Categorical Palette — entity/service identity
 
-| Token   | Hex       | Tailwind       | Assigned To          |
-| ------- | --------- | -------------- | -------------------- |
-| purple  | `#a855f7` | `text-purple`  | Jobs                 |
-| magenta | `#ff50da` | `text-magenta` | Quotes               |
-| teal    | `#2dd4bf` | `text-teal`    | Screen Print service |
-| emerald | `#10b981` | `text-emerald` | Invoices             |
-| lime    | `#84cc16` | `text-lime`    | Embroidery service   |
-| brown   | `#c47a3a` | `text-brown`   | DTF service          |
+| Token   | Hex       | Tailwind       | Assigned To                                            |
+| ------- | --------- | -------------- | ------------------------------------------------------ |
+| purple  | `#a855f7` | `text-purple`  | Jobs                                                   |
+| magenta | `#ff50da` | `text-magenta` | Quotes                                                 |
+| teal    | `#2dd4bf` | `text-teal`    | Screen Print service                                   |
+| emerald | `#10b981` | `text-emerald` | Invoices                                               |
+| lime    | `#84cc16` | `text-lime`    | Embroidery service                                     |
+| brown   | `#c47a3a` | `text-brown`   | DTF service                                            |
+| yellow  | `#f5e642` | `text-yellow`  | Communication channels (email, SMS, portal, voicemail) |
 
 Each categorical color has `-hover` and `-bold` variants (e.g., `text-teal-hover`, `text-teal-bold`).
 
@@ -85,17 +86,18 @@ import { dotColor } from '@shared/lib/design-system'
 
 ## Encoding Channel Rules
 
-| Semantic Dimension   | Color Pool   | Badge Shape    | Example                                           |
-| -------------------- | ------------ | -------------- | ------------------------------------------------- |
-| Quote/invoice status | Status       | Filled         | Draft (muted), Sent (action), Paid (success)      |
-| Lane status          | Status       | Filled         | Ready (muted), In Progress (action)               |
-| Production state     | Status       | Text-only      | Design (muted), Press (action), Shipped (success) |
-| Risk/urgency         | Status       | Text-only      | On Track (success), At Risk (error)               |
-| Entity identity      | Categorical  | Left border    | Job (purple), Quote (magenta), Invoice (emerald)  |
-| Service type         | Categorical  | Outline/border | Screen Print (teal), DTF (brown)                  |
-| Customer type tag    | None (mono)  | Muted pill     | Retail, Corporate, Wholesale                      |
-| Lifecycle stage      | Status (dot) | Dot + text     | Prospect (action dot), Repeat (success dot)       |
-| Health status        | Status (dot) | Dot + text     | Active (success dot), Churned (error dot)         |
+| Semantic Dimension    | Color Pool   | Badge Shape    | Example                                           |
+| --------------------- | ------------ | -------------- | ------------------------------------------------- |
+| Quote/invoice status  | Status       | Filled         | Draft (muted), Sent (action), Paid (success)      |
+| Lane status           | Status       | Filled         | Ready (muted), In Progress (action)               |
+| Production state      | Status       | Text-only      | Design (muted), Press (action), Shipped (success) |
+| Risk/urgency          | Status       | Text-only      | On Track (success), At Risk (error)               |
+| Entity identity       | Categorical  | Left border    | Job (purple), Quote (magenta), Invoice (emerald)  |
+| Service type          | Categorical  | Outline/border | Screen Print (teal), DTF (brown)                  |
+| Communication channel | Categorical  | Left border    | Email (yellow), SMS (yellow), Portal (yellow)     |
+| Customer type tag     | None (mono)  | Muted pill     | Retail, Corporate, Wholesale                      |
+| Lifecycle stage       | Status (dot) | Dot + text     | Prospect (action dot), Repeat (success dot)       |
+| Health status         | Status (dot) | Dot + text     | Active (success dot), Churned (error dot)         |
 
 ---
 
@@ -180,11 +182,12 @@ For technical diagrams (gang sheet viewer, screen room layout):
 
 ### Categorical Colors — Entity/Service Assignments
 
-| Color   | Entity  | Nav Icon | Left Border | Service      |
-| ------- | ------- | -------- | ----------- | ------------ |
-| purple  | Job     | Yes      | Yes         | —            |
-| magenta | Quote   | Yes      | Yes         | —            |
-| emerald | Invoice | Yes      | Yes         | —            |
-| teal    | —       | —        | —           | Screen Print |
-| lime    | —       | —        | —           | Embroidery   |
-| brown   | —       | —        | —           | DTF          |
+| Color   | Entity  | Nav Icon | Left Border | Service                |
+| ------- | ------- | -------- | ----------- | ---------------------- |
+| purple  | Job     | Yes      | Yes         | —                      |
+| magenta | Quote   | Yes      | Yes         | —                      |
+| emerald | Invoice | Yes      | Yes         | —                      |
+| teal    | —       | —        | —           | Screen Print           |
+| lime    | —       | —        | —           | Embroidery             |
+| brown   | —       | —        | —           | DTF                    |
+| yellow  | —       | —        | Yes         | Communication channels |

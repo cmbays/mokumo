@@ -1,50 +1,50 @@
 'use client'
 
 import * as React from 'react'
-import { Loader2, MessageSquare } from 'lucide-react'
-import { cn } from '@shared/lib/cn'
+import { MessageSquare, Loader2 } from 'lucide-react'
 import { Button } from '@shared/ui/primitives/button'
-import { Textarea } from '@shared/ui/primitives/textarea'
 import { ActivityEntry } from './ActivityEntry'
-import {
-  addCustomerNote,
-  loadMoreActivities,
-} from '@/app/(dashboard)/customers/actions/activity.actions'
-import type { ActivityError } from '@/app/(dashboard)/customers/actions/activity.actions'
-import type { CustomerActivity, ActivitySource } from '@domain/ports/customer-activity.port'
-
-// ─── Error message map ────────────────────────────────────────────────────────
-
-const ACTIVITY_ERROR_MESSAGES: Record<ActivityError, string> = {
-  UNAUTHORIZED: 'You must be signed in to perform this action.',
-  VALIDATION_ERROR: 'Invalid input. Please check your entry and try again.',
-  INTERNAL_ERROR: 'Something went wrong. Please try again.',
-}
+import { FilterChip } from './FilterChip'
+import { QuickNoteRail } from './QuickNoteRail'
+import type {
+  CustomerActivity,
+  ActivitySource,
+  ActivityPage,
+} from '@domain/ports/customer-activity.port'
+import type { ActivityError, ActivityResult } from '@features/customers/lib/activity-types'
+import { ACTIVITY_ERROR_MESSAGES } from '@features/customers/lib/activity-error-messages'
 
 // ─── Color resolution helpers ─────────────────────────────────────────────────
 
 /**
  * Derives the left-border Tailwind class and status metadata for a given activity.
  *
- * For Wave 1b (manual notes + system events only) we use source-based coloring.
- * Wave 3 (cross-vertical wiring) will enrich with invoice/quote status.
+ * Border color encoding rules (must stay in sync with design-system.ts two-pool rule):
+ *   - Entity-linked entries (Wave 3): categorical color for the entity type
+ *     (quote → border-magenta, job → border-purple, invoice → border-emerald)
+ *   - Communication channels (email/sms/portal/voicemail): border-yellow
+ *   - Manual notes (unlinked staff notes): border-border (neutral — no entity identity)
+ *   - System events: border-border (neutral — automated, no identity)
+ *
+ * border-action is NOT used here — it belongs to the status pool (CTAs, in-progress),
+ * not the identity channel.
  */
 function resolveEntryAppearance(activity: CustomerActivity): {
   borderColorClass: string
   statusLabel?: string
   statusColorClass?: string
 } {
-  // System events — muted border
-  if (activity.source === 'system') {
-    return { borderColorClass: 'border-border' }
+  // Communication channels — yellow border (categorical: "a message was sent/received")
+  if (
+    activity.source === 'email' ||
+    activity.source === 'sms' ||
+    activity.source === 'portal' ||
+    activity.source === 'voicemail'
+  ) {
+    return { borderColorClass: 'border-yellow' }
   }
 
-  // Manual notes — action blue border
-  if (activity.source === 'manual') {
-    return { borderColorClass: 'border-action' }
-  }
-
-  // Email / portal / sms / voicemail — muted border
+  // Manual notes and system events — neutral border (no entity identity to signal)
   return { borderColorClass: 'border-border' }
 }
 
@@ -64,109 +64,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   { label: 'Portal', value: 'portal' },
 ]
 
-// ─── FilterChip ───────────────────────────────────────────────────────────────
-
-function FilterChip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'min-h-(--mobile-touch-target) rounded-full px-3.5 py-1 text-sm transition-colors',
-        active
-          ? 'border border-action/60 bg-action/15 text-action font-medium'
-          : 'border border-border bg-surface text-muted-foreground hover:text-foreground'
-      )}
-      aria-pressed={active}
-    >
-      {label}
-    </button>
-  )
-}
-
-// ─── QuickNoteRail ────────────────────────────────────────────────────────────
-
-type QuickNoteRailProps = {
-  customerId: string
-  onNoteSaved: (activity: CustomerActivity) => void
-}
-
-function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
-  const [content, setContent] = React.useState('')
-  const [saving, setSaving] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-
-  async function handleSave() {
-    if (!content.trim()) return
-
-    setSaving(true)
-    setError(null)
-
-    const result = await addCustomerNote({ customerId, content: content.trim() })
-
-    setSaving(false)
-
-    if (result.ok) {
-      setContent('')
-      onNoteSaved(result.value)
-    } else {
-      setError(ACTIVITY_ERROR_MESSAGES[result.error])
-    }
-  }
-
-  // 360px fixed per design spec (stacks below timeline on mobile)
-  return (
-    <div className="flex flex-col gap-3 border-l border-border pl-5 w-full md:w-[360px] shrink-0">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        Quick Note
-      </h3>
-
-      <Textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Add a note about this customer…"
-        rows={4}
-        className="resize-none text-sm bg-elevated border border-border rounded-md min-h-[88px]"
-        disabled={saving}
-        aria-label="Quick note content"
-      />
-
-      {error && (
-        <p className="text-xs text-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {/* Footer: save button */}
-      <div className="flex justify-end">
-        <Button
-          size="sm"
-          disabled={!content.trim() || saving}
-          onClick={handleSave}
-          className={cn('relative', content.trim() && !saving && 'shadow-brutal shadow-black/50')}
-        >
-          {saving ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Saving…
-            </>
-          ) : (
-            'Save Note'
-          )}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 // ─── ActivityFeed ─────────────────────────────────────────────────────────────
 
 export type ActivityFeedProps = {
@@ -177,6 +74,18 @@ export type ActivityFeedProps = {
   initialHasMore: boolean
   /** Cursor for the next page (ISO datetime string) */
   initialNextCursor: string | null
+  /** Injected from app/ layer — adds a manual note to the timeline */
+  onAddNote: (params: {
+    customerId: string
+    content: string
+  }) => Promise<ActivityResult<CustomerActivity>>
+  /** Injected from app/ layer — fetches the next page of activities */
+  onLoadMore: (params: {
+    customerId: string
+    cursor: string | null
+    source: ActivitySource | null
+    limit: number
+  }) => Promise<ActivityResult<ActivityPage>>
 }
 
 /**
@@ -195,6 +104,8 @@ export function ActivityFeed({
   initialActivities,
   initialHasMore,
   initialNextCursor,
+  onAddNote,
+  onLoadMore,
 }: ActivityFeedProps) {
   const [activities, setActivities] = React.useState<CustomerActivity[]>(initialActivities)
   const [hasMore, setHasMore] = React.useState(initialHasMore)
@@ -202,16 +113,22 @@ export function ActivityFeed({
   const [activeFilter, setActiveFilter] = React.useState<ActivitySource | 'all'>('all')
   const [loadingMore, setLoadingMore] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
+  const isFirstRender = React.useRef(true)
 
-  // When filter changes, re-fetch from scratch (no cursor)
+  // When filter changes, re-fetch from scratch (no cursor).
+  // Skip initial mount — SSR already provides the first page of activities.
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
     let cancelled = false
 
     async function refetch() {
       setLoadingMore(true)
       setLoadError(null)
 
-      const result = await loadMoreActivities({
+      const result = await onLoadMore({
         customerId,
         cursor: null,
         source: activeFilter === 'all' ? null : activeFilter,
@@ -227,7 +144,7 @@ export function ActivityFeed({
         setHasMore(result.value.hasMore)
         setNextCursor(result.value.nextCursor)
       } else {
-        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error])
+        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
       }
     }
 
@@ -236,7 +153,7 @@ export function ActivityFeed({
     return () => {
       cancelled = true
     }
-  }, [activeFilter, customerId])
+  }, [activeFilter, customerId, onLoadMore])
 
   async function handleLoadMore() {
     if (!hasMore || loadingMore) return
@@ -244,7 +161,7 @@ export function ActivityFeed({
     setLoadingMore(true)
     setLoadError(null)
 
-    const result = await loadMoreActivities({
+    const result = await onLoadMore({
       customerId,
       cursor: nextCursor,
       source: activeFilter === 'all' ? null : activeFilter,
@@ -258,7 +175,7 @@ export function ActivityFeed({
       setHasMore(result.value.hasMore)
       setNextCursor(result.value.nextCursor)
     } else {
-      setLoadError(ACTIVITY_ERROR_MESSAGES[result.error])
+      setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
     }
   }
 
@@ -343,7 +260,7 @@ export function ActivityFeed({
       </div>
 
       {/* Quick Note right rail */}
-      <QuickNoteRail customerId={customerId} onNoteSaved={handleNoteSaved} />
+      <QuickNoteRail customerId={customerId} onNoteSaved={handleNoteSaved} onSave={onAddNote} />
     </div>
   )
 }

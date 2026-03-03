@@ -19,6 +19,7 @@ import { CustomerDetailsPanel } from './CustomerDetailsPanel'
 import { CustomerScreensTab } from './CustomerScreensTab'
 import { CustomerPreferencesTab } from './CustomerPreferencesTab'
 import { NotesPanel } from '@features/quotes/components/NotesPanel'
+import { addCustomerNote, loadMoreActivities } from '../../actions/activity.actions'
 import { deriveScreensFromJobs } from '@domain/rules/screen.rules'
 import type { Customer } from '@domain/entities/customer'
 import type { CustomerActivity } from '@domain/ports/customer-activity.port'
@@ -118,8 +119,8 @@ export function CustomerTabs({
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
       {/* Desktop: all 10 tabs visible */}
-      <div className="hidden md:block overflow-x-auto scrollbar-none">
-        <TabsList variant="line" className="w-full justify-start gap-0 border-b border-border pb-0">
+      <div className="hidden md:block overflow-x-auto scrollbar-none border-b border-border">
+        <TabsList variant="line" className="w-max min-w-full justify-start gap-0 pb-0">
           <TabsTrigger value="activity" className={triggerClass}>
             Activity
           </TabsTrigger>
@@ -205,6 +206,8 @@ export function CustomerTabs({
           initialActivities={initialActivities}
           initialHasMore={initialHasMore}
           initialNextCursor={initialNextCursor}
+          onAddNote={addCustomerNote}
+          onLoadMore={loadMoreActivities}
         />
       </TabsContent>
 

@@ -7,13 +7,12 @@ import type { ActivityPage, CustomerActivity } from '@domain/ports/customer-acti
 import { activitySourceSchema } from '@domain/ports/customer-activity.port'
 import { verifySession } from '@infra/auth/session'
 
+import type { ActivityError, ActivityResult } from '@features/customers/lib/activity-types'
+
+// Re-export so app/-layer callers can import types from here directly.
+export type { ActivityError, ActivityResult }
+
 const log = logger.child({ domain: 'customers', action: 'activity' })
-
-// ─── Result type ──────────────────────────────────────────────────────────────
-
-export type ActivityError = 'UNAUTHORIZED' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR'
-
-export type ActivityResult<T> = { ok: true; value: T } | { ok: false; error: ActivityError }
 
 // ─── Input schemas ────────────────────────────────────────────────────────────
 

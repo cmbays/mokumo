@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@shared/lib/cn'
 import { DollarSign, ShoppingBag, TrendingUp, Clock, Users } from 'lucide-react'
 import { MoneyAmount } from '@shared/ui/organisms/MoneyAmount'
+import { money, toNumber, formatCompactMoney } from '@domain/lib/money'
 
 export type CustomerStats = {
   lifetimeRevenue: number
@@ -9,6 +10,10 @@ export type CustomerStats = {
   avgOrderValue: number
   lastOrderDate: string | null
   referralCount?: number
+  /** Customer credit limit — undefined = no limit, bar not shown */
+  creditLimit?: number
+  /** Outstanding balance (sum of unpaid invoices) — 0 until Wave 2a */
+  outstandingBalance?: number
 }
 
 type CustomerQuickStatsProps = {
@@ -30,6 +35,26 @@ function formatDaysAgo(dateString: string | null): string {
   if (days === 0) return 'Today'
   if (days === 1) return '1 day ago'
   return `${days} days ago`
+}
+
+/** Compact relative date for the inline stats strip: "3d", "14d", "Jan 12", "today", "—" */
+function formatDaysShort(dateString: string | null): string {
+  if (!dateString) return '—'
+  const date = new Date(dateString)
+  const diffMs = Date.now() - date.getTime()
+  const days = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60 * 24))
+  if (diffMs < 0) return 'upcoming'
+  if (days === 0) return 'today'
+  if (days < 30) return `${days}d`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function StatDot() {
+  return (
+    <span className="mx-2 text-border select-none" aria-hidden="true">
+      ·
+    </span>
+  )
 }
 
 const statItems = [
@@ -65,6 +90,10 @@ const statItems = [
 
 export function CustomerQuickStats({ stats, variant = 'bar', className }: CustomerQuickStatsProps) {
   const showReferrals = stats.referralCount !== undefined && stats.referralCount > 0
+  const showCreditBar =
+    stats.creditLimit !== undefined &&
+    stats.creditLimit > 0 &&
+    stats.outstandingBalance !== undefined
 
   if (variant === 'bar') {
     return (
@@ -90,33 +119,75 @@ export function CustomerQuickStats({ stats, variant = 'bar', className }: Custom
     )
   }
 
-  // variant === "header" — more prominent, for customer detail page
+  // variant === "header" — inline compact dot-separated strip matching design spec
+  // Format: $284.6K lifetime · $23.7K avg order · 12 orders · 3d last order · 3 referrals
   return (
     <div
-      className={cn(
-        'grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-center md:gap-6',
-        className
-      )}
+      className={cn('flex flex-wrap items-baseline text-sm', className)}
       aria-label="Customer statistics"
     >
-      {statItems.map(({ key, label, icon: Icon, format }) => (
-        <div key={key} className="flex flex-col gap-0.5">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Icon className="size-4" aria-hidden="true" />
-            {label}
-          </span>
-          <span className="text-sm font-semibold text-foreground">{format(stats)}</span>
-        </div>
-      ))}
+      <MoneyAmount value={stats.lifetimeRevenue} format="compact" className="font-medium" />
+      <span className="ml-1 text-xs text-muted-foreground">lifetime</span>
+
+      <StatDot />
+
+      <MoneyAmount value={stats.avgOrderValue} format="compact" className="font-medium" />
+      <span className="ml-1 text-xs text-muted-foreground">avg order</span>
+
+      <StatDot />
+
+      <span className="font-medium text-foreground">{stats.totalOrders}</span>
+      <span className="ml-1 text-xs text-muted-foreground">orders</span>
+
+      <StatDot />
+
+      <span className="font-medium text-foreground">{formatDaysShort(stats.lastOrderDate)}</span>
+      <span className="ml-1 text-xs text-muted-foreground">last order</span>
+
       {showReferrals && (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Users className="size-4" aria-hidden="true" />
-            Referrals
-          </span>
-          <span className="text-sm font-semibold text-foreground">{stats.referralCount}</span>
-        </div>
+        <>
+          <StatDot />
+          <span className="font-medium text-foreground">{stats.referralCount}</span>
+          <span className="ml-1 text-xs text-muted-foreground">referrals</span>
+        </>
+      )}
+
+      {showCreditBar && (
+        <>
+          <StatDot />
+          <CreditBar outstanding={stats.outstandingBalance ?? 0} limit={stats.creditLimit ?? 0} />
+        </>
       )}
     </div>
+  )
+}
+
+// ─── CreditBar ────────────────────────────────────────────────────────────────
+
+function CreditBar({ outstanding, limit }: { outstanding: number; limit: number }) {
+  const rawPct = limit > 0 ? toNumber(money(outstanding).div(limit).times(100)) : 0
+  const pct = Math.max(0, Math.min(100, rawPct))
+  const isNearLimit = pct >= 80
+
+  return (
+    <span
+      className="flex items-center gap-1.5"
+      aria-label={`Credit: ${formatCompactMoney(outstanding)} of ${formatCompactMoney(limit)} used`}
+    >
+      <span className="text-xs text-muted-foreground">credit</span>
+      <span className="w-16 h-1.5 rounded-full bg-border overflow-hidden shrink-0">
+        <span
+          className={cn(
+            'h-full rounded-full transition-all',
+            isNearLimit ? 'bg-warning' : 'bg-success'
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </span>
+      <span className={cn('font-medium', isNearLimit ? 'text-warning' : 'text-foreground')}>
+        {formatCompactMoney(outstanding)}
+      </span>
+      <span className="text-xs text-muted-foreground">/ {formatCompactMoney(limit)}</span>
+    </span>
   )
 }

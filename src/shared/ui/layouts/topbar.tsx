@@ -46,9 +46,10 @@ export function Topbar({ breadcrumbs, actions }: TopbarProps) {
             type="submit"
             className="inline-flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             title="Sign out"
+            aria-label="Sign out"
           >
-            <LogOut size={16} />
-            <span>Sign out</span>
+            <LogOut size={16} aria-hidden="true" />
+            <span className="hidden md:inline">Sign out</span>
           </button>
         </form>
       </div>

@@ -1,3 +1,6 @@
+# test coverage output
+coverage/
+
 # dependencies
 node_modules/
 .pnp

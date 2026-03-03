@@ -88,6 +88,8 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     avgOrderValue,
     lastOrderDate,
     referralCount,
+    creditLimit: customer.creditLimit,
+    outstandingBalance: 0, // Wave 2a: wire to getAccountBalance() when invoices cross-join is ready
   }
 
   return (

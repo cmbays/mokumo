@@ -53,4 +53,21 @@ export function formatCurrencyCompact(amount: number): string {
   }).format(amount)
 }
 
+/**
+ * Format a number as a compact USD label for stats display: "$8.4K", "$15K", "$200".
+ * Uses big.js for division and rounding to avoid IEEE 754 errors.
+ * Negative values (e.g. credit memos, overpayments) fall back to full formatCurrency.
+ */
+export function formatCompactMoney(value: number): string {
+  if (value < 0) {
+    return formatCurrency(toNumber(round2(money(value))))
+  }
+  if (value >= 1000) {
+    const kBig = money(value).div(1000).round(1, Big.roundHalfUp)
+    const isWhole = kBig.mod(new Big(1)).eq(0)
+    return `$${isWhole ? toNumber(kBig) : kBig.toFixed(1)}K`
+  }
+  return formatCurrencyCompact(toNumber(round2(money(value))))
+}
+
 export { Big }
