@@ -88,7 +88,6 @@ const statItems = [
   },
 ]
 
-
 export function CustomerQuickStats({ stats, variant = 'bar', className }: CustomerQuickStatsProps) {
   const showReferrals = stats.referralCount !== undefined && stats.referralCount > 0
   const showCreditBar =
@@ -178,7 +177,10 @@ function CreditBar({ outstanding, limit }: { outstanding: number; limit: number 
       <span className="text-xs text-muted-foreground">credit</span>
       <span className="w-16 h-1.5 rounded-full bg-border overflow-hidden shrink-0">
         <span
-          className={cn('h-full rounded-full transition-all', isNearLimit ? 'bg-warning' : 'bg-success')}
+          className={cn(
+            'h-full rounded-full transition-all',
+            isNearLimit ? 'bg-warning' : 'bg-success'
+          )}
           style={{ width: `${pct}%` }}
         />
       </span>

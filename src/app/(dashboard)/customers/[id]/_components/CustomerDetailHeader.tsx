@@ -76,7 +76,6 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
 
           {/* Type tags — monochrome muted pill */}
           {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
-
         </div>
 
         {/* Action buttons — always right-aligned, never wrap */}
@@ -191,8 +190,12 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
       <CustomerQuickStats stats={stats} variant="header" />
 
       {/* ---- Modals --------------------------------------------------------- */}
-      {editOpen && <EditCustomerSheet customer={customer} open={editOpen} onOpenChange={setEditOpen} />}
-      {archiveOpen && <ArchiveDialog customer={customer} open={archiveOpen} onOpenChange={setArchiveOpen} />}
+      {editOpen && (
+        <EditCustomerSheet customer={customer} open={editOpen} onOpenChange={setEditOpen} />
+      )}
+      {archiveOpen && (
+        <ArchiveDialog customer={customer} open={archiveOpen} onOpenChange={setArchiveOpen} />
+      )}
     </div>
   )
 }
