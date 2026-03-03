@@ -48,7 +48,7 @@ export function Topbar({ breadcrumbs, actions }: TopbarProps) {
             title="Sign out"
           >
             <LogOut size={16} />
-            <span>Sign out</span>
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </form>
       </div>

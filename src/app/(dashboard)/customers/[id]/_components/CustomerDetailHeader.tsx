@@ -60,51 +60,54 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
   return (
     <div className="space-y-3">
       {/* ---- Section 2: Company row ----------------------------------------- */}
-      {/* All on one line: name · lifecycle · health · type tags · [spacer] · Archive · Edit */}
-      <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight shrink-0">
-          {customer.company}
-        </h1>
+      {/* Left group (name + badges) can wrap freely; right group (buttons) never wraps */}
+      <div className="flex items-start gap-3">
+        {/* Name + badges — wrappable flex-1 group */}
+        <div className="flex-1 min-w-0 flex items-center flex-wrap gap-3">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight shrink-0">
+            {customer.company}
+          </h1>
 
-        {/* Lifecycle dot indicator */}
-        <LifecycleBadge stage={customer.lifecycleStage} />
+          {/* Lifecycle dot indicator */}
+          <LifecycleBadge stage={customer.lifecycleStage} />
 
-        {/* Health dot indicator */}
-        <HealthBadge status={customer.healthStatus} />
+          {/* Health dot indicator */}
+          <HealthBadge status={customer.healthStatus} />
 
-        {/* Type tags — monochrome muted pill */}
-        {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
+          {/* Type tags — monochrome muted pill */}
+          {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
 
-        {/* Seasonal pattern chip — conditional, only shown if field exists */}
-        {(customer as Customer & { seasonalPattern?: string }).seasonalPattern && (
-          <span className="inline-flex items-center rounded px-2 py-0.5 text-xs border border-border text-muted-foreground shrink-0">
-            Orders typically {(customer as Customer & { seasonalPattern?: string }).seasonalPattern}
-          </span>
-        )}
+          {/* Seasonal pattern chip — conditional, only shown if field exists */}
+          {(customer as Customer & { seasonalPattern?: string }).seasonalPattern && (
+            <span className="inline-flex items-center rounded px-2 py-0.5 text-xs border border-border text-muted-foreground shrink-0">
+              Orders typically {(customer as Customer & { seasonalPattern?: string }).seasonalPattern}
+            </span>
+          )}
+        </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Action buttons — always right-aligned, never wrap */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Archive button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setArchiveOpen(true)}
+            className="text-error/70 border-error/30 hover:text-error hover:border-error/50 hover:bg-error/5 focus-visible:ring-error/50"
+          >
+            <Archive className="size-4" />
+            <span className="hidden sm:inline">Archive</span>
+          </Button>
 
-        {/* Archive button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setArchiveOpen(true)}
-          className="shrink-0 text-error/70 border-error/30 hover:text-error hover:border-error/50 hover:bg-error/5 focus-visible:ring-error/50"
-        >
-          <Archive className="size-4" />
-          <span className="hidden sm:inline">Archive</span>
-        </Button>
-
-        {/* Edit Customer button — action blue, neobrutalist shadow */}
-        <Button
-          size="sm"
-          onClick={() => setEditOpen(true)}
-          className="shrink-0 bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-        >
-          <Pencil className="size-4" />
-          Edit Customer
-        </Button>
+          {/* Edit Customer button — action blue, neobrutalist shadow */}
+          <Button
+            size="sm"
+            onClick={() => setEditOpen(true)}
+            className="bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            <Pencil className="size-4" />
+            Edit Customer
+          </Button>
+        </div>
       </div>
 
       {/* ---- Section 3: Contacts row ---------------------------------------- */}

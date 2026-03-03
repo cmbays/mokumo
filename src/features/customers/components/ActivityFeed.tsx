@@ -124,7 +124,7 @@ function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
 
   // 360px fixed per design spec (stacks below timeline on mobile)
   return (
-    <div className="flex flex-col gap-3 border-l border-border pl-5 w-full md:w-[360px] shrink-0">
+    <div className="flex flex-col gap-3 border-l border-border pl-5 w-full lg:w-[360px] shrink-0">
       <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Quick Note
       </h3>
@@ -274,7 +274,7 @@ export function ActivityFeed({
   }
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row md:min-h-0">
+    <div className="flex flex-col gap-6 lg:flex-row lg:min-h-0">
       {/* Timeline column */}
       <div className="flex-1 min-w-0">
         {/* Filter chips */}
