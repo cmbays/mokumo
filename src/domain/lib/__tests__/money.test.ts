@@ -6,6 +6,7 @@ import {
   toFixed2,
   formatCurrency,
   formatCurrencyCompact,
+  formatCompactMoney,
   Big,
 } from '../money'
 
@@ -163,5 +164,63 @@ describe('formatCurrencyCompact()', () => {
 
   it('formats zero as "$0"', () => {
     expect(formatCurrencyCompact(0)).toBe('$0')
+  })
+})
+
+describe('formatCompactMoney()', () => {
+  // ≥1000 — K suffix
+  it('formats a whole-K value without decimal ($15,000 → "$15K")', () => {
+    expect(formatCompactMoney(15000)).toBe('$15K')
+  })
+
+  it('formats a fractional-K value with one decimal ($8,400 → "$8.4K")', () => {
+    expect(formatCompactMoney(8400)).toBe('$8.4K')
+  })
+
+  it('uses big.js half-up rounding for the K decimal ($1,850 → "$1.9K")', () => {
+    // 1850 / 1000 = 1.85 — half-up rounds to 1.9
+    expect(formatCompactMoney(1850)).toBe('$1.9K')
+  })
+
+  it('avoids IEEE 754 error: $8,400.10 formats as "$8.4K" not "$8.400100000...K"', () => {
+    // Native: 8400.10 / 1000 = 8.400099999999999 — big.js gives 8.4
+    expect(formatCompactMoney(8400.1)).toBe('$8.4K')
+  })
+
+  it('formats exactly $1,000 as "$1K"', () => {
+    expect(formatCompactMoney(1000)).toBe('$1K')
+  })
+
+  // <1000 — compact integer
+  it('formats sub-$1000 as a rounded dollar amount ($725 → "$725")', () => {
+    expect(formatCompactMoney(725)).toBe('$725')
+  })
+
+  it('rounds sub-$1000 fractional values to the nearest dollar ($99.50 → "$100")', () => {
+    expect(formatCompactMoney(99.5)).toBe('$100')
+  })
+
+  it('formats zero as "$0"', () => {
+    expect(formatCompactMoney(0)).toBe('$0')
+  })
+
+  // Boundary: sub-1000 value that rounds UP to a whole dollar (does not cross to K suffix)
+  it('rounds $999.50 to "$1,000" via compact rounding — does not produce K suffix', () => {
+    // formatCurrencyCompact rounds 999.5 → 1000, displayed as "$1,000" not "$1K"
+    // The K-suffix path only triggers when the raw input is >= 1000
+    expect(formatCompactMoney(999.5)).toBe('$1,000')
+  })
+
+  // Negative — falls back to full formatCurrency
+  it('falls back to full formatCurrency for negative values (credit memo: -$50 → "-$50.00")', () => {
+    expect(formatCompactMoney(-50)).toBe('-$50.00')
+  })
+
+  it('falls back to full formatCurrency for large negative values (-$1,500 → "-$1,500.00")', () => {
+    expect(formatCompactMoney(-1500)).toBe('-$1,500.00')
+  })
+
+  it('falls back to full formatCurrency for sub-cent negative values (-$0.001 → "-$0.00")', () => {
+    expect(formatCompactMoney(-0.001)).toBe('-$0.00')
   })
 })

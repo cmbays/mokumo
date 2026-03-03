@@ -8,6 +8,7 @@ import {
   addresses as addressesTable,
 } from '@db/schema/customers'
 import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
+import type { HealthStatus } from '@domain/entities/customer'
 import { contactSchema } from '@domain/entities/contact'
 import { addressSchema } from '@domain/entities/address'
 import { logger } from '@shared/lib/logger'
@@ -58,7 +59,10 @@ function assertValidUUID(id: string, context: string): void {
  * The DB schema intentionally omits legacy Phase 1 fields (name, email, phone, address)
  * that are derived from contacts. We supply safe defaults here until Wave 3 removes them.
  */
-function mapCustomerRow(row: typeof customersTable.$inferSelect): Customer {
+function mapCustomerRow(
+  row: typeof customersTable.$inferSelect,
+  contacts: Contact[] = []
+): Customer {
   return customerSchema.parse({
     id: row.id,
     company: row.company,
@@ -73,7 +77,7 @@ function mapCustomerRow(row: typeof customersTable.$inferSelect): Customer {
     healthStatus: row.healthStatus,
     isArchived: row.isArchived,
     typeTags: row.typeTags,
-    contacts: [],
+    contacts,
     groups: [],
     billingAddress: undefined,
     shippingAddresses: [],
@@ -89,6 +93,8 @@ function mapCustomerRow(row: typeof customersTable.$inferSelect): Customer {
     taxExemptCertExpiry: row.taxExemptCertExpiry
       ? new Date(row.taxExemptCertExpiry).toISOString()
       : undefined,
+    // Drizzle returns numeric columns as strings — convert to number.
+    creditLimit: row.creditLimit != null ? Number(row.creditLimit) : undefined,
     referredByCustomerId: row.referralByCustomerId ?? undefined,
     favoriteGarments: [],
     favoriteColors: [],
@@ -174,9 +180,16 @@ export const supabaseCustomerRepository: ICustomerRepository = {
       return null
     }
     try {
-      const rows = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1)
+      const [rows, contactRows] = await Promise.all([
+        db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1),
+        db
+          .select()
+          .from(contactsTable)
+          .where(eq(contactsTable.customerId, id))
+          .orderBy(desc(contactsTable.isPrimary), asc(contactsTable.firstName)),
+      ])
       if (rows.length === 0) return null
-      return mapCustomerRow(rows[0])
+      return mapCustomerRow(rows[0], contactRows.map(mapContactRow))
     } catch (err) {
       repoLogger.error('getById failed', { id, err })
       throw err
@@ -261,7 +274,6 @@ export const supabaseCustomerRepository: ICustomerRepository = {
 
     // Health status filter
     if (filters.healthStatus && filters.healthStatus.length > 0) {
-      type HealthStatus = z.infer<typeof healthStatusEnum>
       const parsed = filters.healthStatus
         .map((s) => healthStatusEnum.safeParse(s))
         .filter((r): r is { success: true; data: HealthStatus } => r.success)

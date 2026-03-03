@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@shared/lib/cn'
 import { DollarSign, ShoppingBag, TrendingUp, Clock, Users } from 'lucide-react'
 import { MoneyAmount } from '@shared/ui/organisms/MoneyAmount'
+import { money, toNumber, formatCompactMoney } from '@domain/lib/money'
 
 export type CustomerStats = {
   lifetimeRevenue: number
@@ -9,6 +10,10 @@ export type CustomerStats = {
   avgOrderValue: number
   lastOrderDate: string | null
   referralCount?: number
+  /** Customer credit limit — undefined = no limit, bar not shown */
+  creditLimit?: number
+  /** Outstanding balance (sum of unpaid invoices) — 0 until Wave 2a */
+  outstandingBalance?: number
 }
 
 type CustomerQuickStatsProps = {
@@ -83,8 +88,13 @@ const statItems = [
   },
 ]
 
+
 export function CustomerQuickStats({ stats, variant = 'bar', className }: CustomerQuickStatsProps) {
   const showReferrals = stats.referralCount !== undefined && stats.referralCount > 0
+  const showCreditBar =
+    stats.creditLimit !== undefined &&
+    stats.creditLimit > 0 &&
+    stats.outstandingBalance !== undefined
 
   if (variant === 'bar') {
     return (
@@ -142,6 +152,40 @@ export function CustomerQuickStats({ stats, variant = 'bar', className }: Custom
           <span className="ml-1 text-xs text-muted-foreground">referrals</span>
         </>
       )}
+
+      {showCreditBar && (
+        <>
+          <StatDot />
+          <CreditBar outstanding={stats.outstandingBalance ?? 0} limit={stats.creditLimit ?? 0} />
+        </>
+      )}
     </div>
+  )
+}
+
+// ─── CreditBar ────────────────────────────────────────────────────────────────
+
+function CreditBar({ outstanding, limit }: { outstanding: number; limit: number }) {
+  const rawPct = limit > 0 ? toNumber(money(outstanding).div(limit).times(100)) : 0
+  const pct = Math.max(0, Math.min(100, rawPct))
+  const isNearLimit = pct >= 80
+
+  return (
+    <span
+      className="flex items-center gap-1.5"
+      aria-label={`Credit: ${formatCompactMoney(outstanding)} of ${formatCompactMoney(limit)} used`}
+    >
+      <span className="text-xs text-muted-foreground">credit</span>
+      <span className="w-16 h-1.5 rounded-full bg-border overflow-hidden shrink-0">
+        <span
+          className={cn('h-full rounded-full transition-all', isNearLimit ? 'bg-warning' : 'bg-success')}
+          style={{ width: `${pct}%` }}
+        />
+      </span>
+      <span className={cn('font-medium', isNearLimit ? 'text-warning' : 'text-foreground')}>
+        {formatCompactMoney(outstanding)}
+      </span>
+      <span className="text-xs text-muted-foreground">/ {formatCompactMoney(limit)}</span>
+    </span>
   )
 }

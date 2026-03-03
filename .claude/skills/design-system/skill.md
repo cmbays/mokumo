@@ -28,6 +28,7 @@ Colors are divided into two isolated pools. **Never cross-pollinate** — a stat
 | emerald | `#10b981` | `text-emerald` | Invoices             |
 | lime    | `#84cc16` | `text-lime`    | Embroidery service   |
 | brown   | `#c47a3a` | `text-brown`   | DTF service          |
+| yellow  | `#f5e642` | `text-yellow`  | Communication channels (email, SMS, portal, voicemail) |
 
 Each categorical color has `-hover` and `-bold` variants (e.g., `text-teal-hover`, `text-teal-bold`).
 
@@ -93,6 +94,7 @@ import { dotColor } from '@shared/lib/design-system'
 | Risk/urgency         | Status       | Text-only      | On Track (success), At Risk (error)               |
 | Entity identity      | Categorical  | Left border    | Job (purple), Quote (magenta), Invoice (emerald)  |
 | Service type         | Categorical  | Outline/border | Screen Print (teal), DTF (brown)                  |
+| Communication channel | Categorical | Left border    | Email (yellow), SMS (yellow), Portal (yellow)     |
 | Customer type tag    | None (mono)  | Muted pill     | Retail, Corporate, Wholesale                      |
 | Lifecycle stage      | Status (dot) | Dot + text     | Prospect (action dot), Repeat (success dot)       |
 | Health status        | Status (dot) | Dot + text     | Active (success dot), Churned (error dot)         |
@@ -188,3 +190,4 @@ For technical diagrams (gang sheet viewer, screen room layout):
 | teal    | —       | —        | —           | Screen Print |
 | lime    | —       | —        | —           | Embroidery   |
 | brown   | —       | —        | —           | DTF          |
+| yellow  | —       | —        | Yes         | Communication channels |
