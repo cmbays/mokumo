@@ -85,10 +85,11 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
             variant="outline"
             size="sm"
             onClick={() => setArchiveOpen(true)}
+            aria-label="Archive customer"
             className="text-error/70 border-error/30 hover:text-error hover:border-error/50 hover:bg-error/5 focus-visible:ring-error/50"
           >
-            <Archive className="size-4" />
-            <span className="hidden sm:inline">Archive</span>
+            <Archive className="size-4" aria-hidden="true" />
+            <span className="hidden md:inline">Archive</span>
           </Button>
 
           {/* Edit Customer button — action blue, neobrutalist shadow */}
