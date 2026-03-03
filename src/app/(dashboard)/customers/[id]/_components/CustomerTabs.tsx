@@ -19,6 +19,7 @@ import { CustomerDetailsPanel } from './CustomerDetailsPanel'
 import { CustomerScreensTab } from './CustomerScreensTab'
 import { CustomerPreferencesTab } from './CustomerPreferencesTab'
 import { NotesPanel } from '@features/quotes/components/NotesPanel'
+import { addCustomerNote, loadMoreActivities } from '../../actions/activity.actions'
 import { deriveScreensFromJobs } from '@domain/rules/screen.rules'
 import type { Customer } from '@domain/entities/customer'
 import type { CustomerActivity } from '@domain/ports/customer-activity.port'
@@ -205,6 +206,8 @@ export function CustomerTabs({
           initialActivities={initialActivities}
           initialHasMore={initialHasMore}
           initialNextCursor={initialNextCursor}
+          onAddNote={addCustomerNote}
+          onLoadMore={loadMoreActivities}
         />
       </TabsContent>
 

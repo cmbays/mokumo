@@ -1,4 +1,4 @@
-import type { ActivityError } from '@features/customers/actions/activity.actions'
+import type { ActivityError } from '@features/customers/lib/activity-types'
 
 export const ACTIVITY_ERROR_MESSAGES: Record<ActivityError, string> = {
   UNAUTHORIZED: 'You must be signed in to perform this action.',

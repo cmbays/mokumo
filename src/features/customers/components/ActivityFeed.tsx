@@ -6,9 +6,12 @@ import { Button } from '@shared/ui/primitives/button'
 import { ActivityEntry } from './ActivityEntry'
 import { FilterChip } from './FilterChip'
 import { QuickNoteRail } from './QuickNoteRail'
-import { loadMoreActivities } from '@features/customers/actions/activity.actions'
-import type { ActivityError } from '@features/customers/actions/activity.actions'
-import type { CustomerActivity, ActivitySource } from '@domain/ports/customer-activity.port'
+import type {
+  CustomerActivity,
+  ActivitySource,
+  ActivityPage,
+} from '@domain/ports/customer-activity.port'
+import type { ActivityError, ActivityResult } from '@features/customers/lib/activity-types'
 import { ACTIVITY_ERROR_MESSAGES } from '@features/customers/lib/activity-error-messages'
 
 // ─── Color resolution helpers ─────────────────────────────────────────────────
@@ -71,6 +74,18 @@ export type ActivityFeedProps = {
   initialHasMore: boolean
   /** Cursor for the next page (ISO datetime string) */
   initialNextCursor: string | null
+  /** Injected from app/ layer — adds a manual note to the timeline */
+  onAddNote: (params: {
+    customerId: string
+    content: string
+  }) => Promise<ActivityResult<CustomerActivity>>
+  /** Injected from app/ layer — fetches the next page of activities */
+  onLoadMore: (params: {
+    customerId: string
+    cursor: string | null
+    source: ActivitySource | null
+    limit: number
+  }) => Promise<ActivityResult<ActivityPage>>
 }
 
 /**
@@ -89,6 +104,8 @@ export function ActivityFeed({
   initialActivities,
   initialHasMore,
   initialNextCursor,
+  onAddNote,
+  onLoadMore,
 }: ActivityFeedProps) {
   const [activities, setActivities] = React.useState<CustomerActivity[]>(initialActivities)
   const [hasMore, setHasMore] = React.useState(initialHasMore)
@@ -111,7 +128,7 @@ export function ActivityFeed({
       setLoadingMore(true)
       setLoadError(null)
 
-      const result = await loadMoreActivities({
+      const result = await onLoadMore({
         customerId,
         cursor: null,
         source: activeFilter === 'all' ? null : activeFilter,
@@ -127,7 +144,7 @@ export function ActivityFeed({
         setHasMore(result.value.hasMore)
         setNextCursor(result.value.nextCursor)
       } else {
-        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error])
+        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
       }
     }
 
@@ -136,7 +153,7 @@ export function ActivityFeed({
     return () => {
       cancelled = true
     }
-  }, [activeFilter, customerId])
+  }, [activeFilter, customerId, onLoadMore])
 
   async function handleLoadMore() {
     if (!hasMore || loadingMore) return
@@ -144,7 +161,7 @@ export function ActivityFeed({
     setLoadingMore(true)
     setLoadError(null)
 
-    const result = await loadMoreActivities({
+    const result = await onLoadMore({
       customerId,
       cursor: nextCursor,
       source: activeFilter === 'all' ? null : activeFilter,
@@ -158,7 +175,7 @@ export function ActivityFeed({
       setHasMore(result.value.hasMore)
       setNextCursor(result.value.nextCursor)
     } else {
-      setLoadError(ACTIVITY_ERROR_MESSAGES[result.error])
+      setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
     }
   }
 
@@ -243,7 +260,7 @@ export function ActivityFeed({
       </div>
 
       {/* Quick Note right rail */}
-      <QuickNoteRail customerId={customerId} onNoteSaved={handleNoteSaved} />
+      <QuickNoteRail customerId={customerId} onNoteSaved={handleNoteSaved} onSave={onAddNote} />
     </div>
   )
 }

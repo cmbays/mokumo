@@ -5,16 +5,21 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 import { Button } from '@shared/ui/primitives/button'
 import { Textarea } from '@shared/ui/primitives/textarea'
-import { addCustomerNote } from '@features/customers/actions/activity.actions'
 import type { CustomerActivity } from '@domain/ports/customer-activity.port'
+import type { ActivityError, ActivityResult } from '@features/customers/lib/activity-types'
 import { ACTIVITY_ERROR_MESSAGES } from '@features/customers/lib/activity-error-messages'
 
 type QuickNoteRailProps = {
   customerId: string
   onNoteSaved: (activity: CustomerActivity) => void
+  /** Injected from app/ layer — persists the note and returns the created activity */
+  onSave: (params: {
+    customerId: string
+    content: string
+  }) => Promise<ActivityResult<CustomerActivity>>
 }
 
-export function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
+export function QuickNoteRail({ customerId, onNoteSaved, onSave }: QuickNoteRailProps) {
   const [content, setContent] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -25,7 +30,7 @@ export function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
     setSaving(true)
     setError(null)
 
-    const result = await addCustomerNote({ customerId, content: content.trim() })
+    const result = await onSave({ customerId, content: content.trim() })
 
     setSaving(false)
 
@@ -33,7 +38,7 @@ export function QuickNoteRail({ customerId, onNoteSaved }: QuickNoteRailProps) {
       setContent('')
       onNoteSaved(result.value)
     } else {
-      setError(ACTIVITY_ERROR_MESSAGES[result.error])
+      setError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
     }
   }
 
