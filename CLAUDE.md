@@ -242,7 +242,8 @@ Before building any vertical, run these skills in sequence:
 1. `shaping` → `docs/workspace/{pipeline-id}/frame.md` + `shaping.md`
 2. `breadboarding` → `docs/workspace/{pipeline-id}/breadboard.md` (with parallelization windows marked)
 3. `breadboard-reflection` → audits breadboard for design smells
-4. `implementation-planning` → execution manifest + waves
+4. **Paper design session** (Paper MCP) → mockups for all UI Places → design sign-off required before Step 5 (skip for backend-only milestones with no UI)
+5. `implementation-planning` → execution manifest + waves (session prompts reference approved mockups)
 
 For complex screens: add a `spike-{topic}.md` in the workspace dir before breadboarding.
 
@@ -350,6 +351,7 @@ See `.claude/agents/AGENTS.md` for full orchestration patterns and calling conve
 | `shaping`                | After interview, before breadboarding     | R × S methodology — requirements, shapes, fit checks, spikes    |
 | `breadboarding`          | After shaping, before impl-planning       | Affordances, wiring, vertical slices                            |
 | `breadboard-reflection`  | After breadboarding, before impl-planning | Smell detection, naming test, wiring verification               |
+| Paper MCP session        | After reflection, before impl-planning    | paper.design mockups for all UI Places — design sign-off gate (not a skill) |
 | `screen-builder`         | Starting Steps 1–10                       | Build screens with design system + quality checklist            |
 | `quality-gate`           | After completing a screen                 | 10-category quality checklist with pass/fail report             |
 | `pre-build-interrogator` | Before complex features                   | Exhaustive questioning to eliminate assumptions                 |
