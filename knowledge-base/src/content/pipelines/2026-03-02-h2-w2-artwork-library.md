@@ -34,6 +34,7 @@ The original W1A schema stored uploaded files in a flat `artwork_versions` table
 - `artwork_versions` — content-addressed file store (SHA-256 dedup), now FK'd to `artwork_variants.id`
 
 **Migrations:**
+
 - `0027` — added `artwork_pieces`, `artwork_variants`, `artwork_versions.variant_id` FK
 - `0028` — added explicit `scope` discriminator column + biconditional CHECK constraint
 
@@ -80,7 +81,7 @@ This eliminates orphaned version rows and aligns the data model: you know the pi
 
 The `/artwork` page initially had `db` as a top-level import. Even with `export const dynamic = 'force-dynamic'`, the build crashed with `DATABASE_URL is not set`:
 
-**Root cause**: Next.js evaluates the page module to *read* the `dynamic` export. If the module throws during evaluation (because `db.ts` throws synchronously when `DATABASE_URL` is absent), `force-dynamic` is never reached.
+**Root cause**: Next.js evaluates the page module to _read_ the `dynamic` export. If the module throws during evaluation (because `db.ts` throws synchronously when `DATABASE_URL` is absent), `force-dynamic` is never reached.
 
 **Fix**: Move `db`, `artworkPieces`, and `drizzle-orm` imports inside the async function body using `await import()`. The throw is deferred to request time when `DATABASE_URL` is guaranteed present. This is the established pattern in `garments/page.tsx` (with an explanatory comment).
 
@@ -116,12 +117,12 @@ export default async function ArtworkPage() {
 
 Three journey slices, all adapted for the two-step Sheet flow:
 
-| Journey | What's tested |
-|---------|---------------|
-| **V1** | Upload button visible, sheet opens with metadata form, submit disabled until both fields filled, step 2 idle drop zone renders correctly |
-| **V2** | `.txt` file → "Unsupported file type" error + error border; retry with PNG clears error |
-| **V3** | >50 MB file → "File exceeds 50 MB limit" error + error border; retry clears error |
-| **V1 extended** | Valid PNG transitions state machine away from idle; full success card test (skips gracefully if no live Supabase) |
+| Journey         | What's tested                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **V1**          | Upload button visible, sheet opens with metadata form, submit disabled until both fields filled, step 2 idle drop zone renders correctly |
+| **V2**          | `.txt` file → "Unsupported file type" error + error border; retry with PNG clears error                                                  |
+| **V3**          | >50 MB file → "File exceeds 50 MB limit" error + error border; retry clears error                                                        |
+| **V1 extended** | Valid PNG transitions state machine away from idle; full success card test (skips gracefully if no live Supabase)                        |
 
 Key pattern: `advanceToFileStep()` fills and submits the metadata form before any file input interaction. Tests that can't reach step 2 (server action unavailable in CI) skip rather than error — clean CI dashboards.
 
