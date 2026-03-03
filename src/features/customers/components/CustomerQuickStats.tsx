@@ -32,6 +32,26 @@ function formatDaysAgo(dateString: string | null): string {
   return `${days} days ago`
 }
 
+/** Compact relative date for the inline stats strip: "3d", "14d", "Jan 12", "today", "—" */
+function formatDaysShort(dateString: string | null): string {
+  if (!dateString) return '—'
+  const date = new Date(dateString)
+  const diffMs = Date.now() - date.getTime()
+  const days = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60 * 24))
+  if (diffMs < 0) return 'upcoming'
+  if (days === 0) return 'today'
+  if (days < 30) return `${days}d`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function StatDot() {
+  return (
+    <span className="mx-2 text-border select-none" aria-hidden="true">
+      ·
+    </span>
+  )
+}
+
 const statItems = [
   {
     key: 'revenue' as const,
@@ -90,32 +110,37 @@ export function CustomerQuickStats({ stats, variant = 'bar', className }: Custom
     )
   }
 
-  // variant === "header" — more prominent, for customer detail page
+  // variant === "header" — inline compact dot-separated strip matching design spec
+  // Format: $284.6K lifetime · $23.7K avg order · 12 orders · 3d last order · 3 referrals
   return (
     <div
-      className={cn(
-        'grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-center md:gap-6',
-        className
-      )}
+      className={cn('flex flex-wrap items-baseline text-sm', className)}
       aria-label="Customer statistics"
     >
-      {statItems.map(({ key, label, icon: Icon, format }) => (
-        <div key={key} className="flex flex-col gap-0.5">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Icon className="size-4" aria-hidden="true" />
-            {label}
-          </span>
-          <span className="text-sm font-semibold text-foreground">{format(stats)}</span>
-        </div>
-      ))}
+      <MoneyAmount value={stats.lifetimeRevenue} format="compact" className="font-medium" />
+      <span className="ml-1 text-xs text-muted-foreground">lifetime</span>
+
+      <StatDot />
+
+      <MoneyAmount value={stats.avgOrderValue} format="compact" className="font-medium" />
+      <span className="ml-1 text-xs text-muted-foreground">avg order</span>
+
+      <StatDot />
+
+      <span className="font-medium text-foreground">{stats.totalOrders}</span>
+      <span className="ml-1 text-xs text-muted-foreground">orders</span>
+
+      <StatDot />
+
+      <span className="font-medium text-foreground">{formatDaysShort(stats.lastOrderDate)}</span>
+      <span className="ml-1 text-xs text-muted-foreground">last order</span>
+
       {showReferrals && (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Users className="size-4" aria-hidden="true" />
-            Referrals
-          </span>
-          <span className="text-sm font-semibold text-foreground">{stats.referralCount}</span>
-        </div>
+        <>
+          <StatDot />
+          <span className="font-medium text-foreground">{stats.referralCount}</span>
+          <span className="ml-1 text-xs text-muted-foreground">referrals</span>
+        </>
       )}
     </div>
   )

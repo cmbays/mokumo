@@ -80,10 +80,10 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'min-h-(--mobile-touch-target) rounded-full px-3.5 py-1 text-sm transition-colors',
+        'min-h-(--mobile-touch-target) md:min-h-0 rounded-full px-3.5 py-[5px] text-sm transition-colors',
         active
           ? 'border border-action/60 bg-action/15 text-action font-medium'
-          : 'border border-border bg-surface text-muted-foreground hover:text-foreground'
+          : 'border border-border text-muted-foreground hover:text-foreground'
       )}
       aria-pressed={active}
     >
