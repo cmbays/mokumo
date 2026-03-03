@@ -25,13 +25,14 @@ Waves 1A and 1B of P4 M2 — the shared component library that all pricing edito
 
 A reusable 2D pricing matrix editor for screen print (rows = quantity tiers, columns = ink color counts).
 
-| File | Change |
-| ---- | ------ |
-| `src/features/pricing/components/MatrixCellGrid.tsx` | 618-line component with full add/remove row/column, big.js cell tinting |
-| `src/features/pricing/components/__tests__/MatrixCellGrid.test.ts` | 28 pure-function tests |
-| `docs/workspace/20260302-p4-m2-pricing-editor/matrix-cell-grid-notes.md` | Design notes (deleted in wrap-up) |
+| File                                                                     | Change                                                                  |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `src/features/pricing/components/MatrixCellGrid.tsx`                     | 618-line component with full add/remove row/column, big.js cell tinting |
+| `src/features/pricing/components/__tests__/MatrixCellGrid.test.ts`       | 28 pure-function tests                                                  |
+| `docs/workspace/20260302-p4-m2-pricing-editor/matrix-cell-grid-notes.md` | Design notes (deleted in wrap-up)                                       |
 
 **Exported pure helpers** (all tested):
+
 - `buildInitialCells(template)` — flattens price matrix to flat cell array
 - `addQtyRow(cells, anchor)` / `removeQtyRow(cells, anchor)` — row operations with duplicate guard
 - `addColorColumn(cells, count)` / `removeColorColumn(cells, count)` — column operations with duplicate guard
@@ -42,17 +43,18 @@ A reusable 2D pricing matrix editor for screen print (rows = quantity tiers, col
 
 Three editors consumed by the pricing hub page.
 
-| File | Change |
-| ---- | ------ |
-| `src/features/pricing/components/CellInput.tsx` | Click-to-edit inline cell with keyboard navigation |
-| `src/features/pricing/components/GarmentMarkupEditor.tsx` | Per-category multiplier table, big.js clamping, save action |
-| `src/features/pricing/components/RushTierEditor.tsx` | Add/remove rush tiers, big.js precision, save action |
-| `src/features/pricing/components/PricingTemplateCard.tsx` | Adapted to accept `MarginIndicator`, `customersUsing` |
-| `src/features/pricing/components/__tests__/GarmentMarkupEditor.test.ts` | 23 pure-function tests |
-| `src/features/pricing/components/__tests__/RushTierEditor.test.ts` | 20 pure-function tests |
-| `docs/workspace/20260302-p4-m2-pricing-editor/w1b-hub-surfaces-notes.md` | Design notes (deleted in wrap-up) |
+| File                                                                     | Change                                                      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `src/features/pricing/components/CellInput.tsx`                          | Click-to-edit inline cell with keyboard navigation          |
+| `src/features/pricing/components/GarmentMarkupEditor.tsx`                | Per-category multiplier table, big.js clamping, save action |
+| `src/features/pricing/components/RushTierEditor.tsx`                     | Add/remove rush tiers, big.js precision, save action        |
+| `src/features/pricing/components/PricingTemplateCard.tsx`                | Adapted to accept `MarginIndicator`, `customersUsing`       |
+| `src/features/pricing/components/__tests__/GarmentMarkupEditor.test.ts`  | 23 pure-function tests                                      |
+| `src/features/pricing/components/__tests__/RushTierEditor.test.ts`       | 20 pure-function tests                                      |
+| `docs/workspace/20260302-p4-m2-pricing-editor/w1b-hub-surfaces-notes.md` | Design notes (deleted in wrap-up)                           |
 
 **Exported pure helpers** (all tested):
+
 - `GarmentMarkupEditor`: `buildRulesMap`, `applyMultiplierChange`, `markupPctLabel`, `rulesMapToInserts`
 - `RushTierEditor`: `tiersToRows`, `rowsToInserts`, `addTierRow`, `removeTierRow`, `updateTierField`
 
@@ -166,17 +168,17 @@ The `@eslint-react/hooks-extra` plugin (added by another PR that landed on `main
 
 ### CodeRabbit — 8 Comments Addressed
 
-| Location | Severity | Fix |
-| -------- | -------- | --- |
-| `CellInput.tsx:74` | Major | Added `skipBlurRef` to prevent Enter→blur double-commit |
-| `CellInput.tsx` display button | Minor | Added `type="button"` |
-| `GarmentMarkupEditor.tsx` save | Major | Wrapped `startTransition` body in try/catch |
-| `GarmentMarkupEditor.tsx` input | Major | Added `min-h-11 md:min-h-0` to number input |
-| `MatrixCellGrid.tsx` addQtyRow | Major | Added duplicate guard |
-| `MatrixCellGrid.tsx` addColorColumn | Major | Added duplicate guard |
-| `MatrixCellGrid.tsx` buttons | Major | Added `min-h-11 md:min-h-0` to 4 button groups |
-| `RushTierEditor.tsx` save | Major | Wrapped `startTransition` body in try/catch |
-| `RushTierEditor.tsx` ARIA | Minor | Removed `role="gridcell"` (native `<td>` semantics) |
+| Location                            | Severity | Fix                                                     |
+| ----------------------------------- | -------- | ------------------------------------------------------- |
+| `CellInput.tsx:74`                  | Major    | Added `skipBlurRef` to prevent Enter→blur double-commit |
+| `CellInput.tsx` display button      | Minor    | Added `type="button"`                                   |
+| `GarmentMarkupEditor.tsx` save      | Major    | Wrapped `startTransition` body in try/catch             |
+| `GarmentMarkupEditor.tsx` input     | Major    | Added `min-h-11 md:min-h-0` to number input             |
+| `MatrixCellGrid.tsx` addQtyRow      | Major    | Added duplicate guard                                   |
+| `MatrixCellGrid.tsx` addColorColumn | Major    | Added duplicate guard                                   |
+| `MatrixCellGrid.tsx` buttons        | Major    | Added `min-h-11 md:min-h-0` to 4 button groups          |
+| `RushTierEditor.tsx` save           | Major    | Wrapped `startTransition` body in try/catch             |
+| `RushTierEditor.tsx` ARIA           | Minor    | Removed `role="gridcell"` (native `<td>` semantics)     |
 
 ### Deferred Issues (in-scope P4 M2, all in Milestone 1)
 
@@ -188,13 +190,13 @@ The `@eslint-react/hooks-extra` plugin (added by another PR that landed on `main
 
 ## Test Coverage at Merge
 
-| Suite | Tests |
-| ----- | ----- |
-| `MatrixCellGrid.test.ts` | 28 |
-| `GarmentMarkupEditor.test.ts` | 23 |
-| `RushTierEditor.test.ts` | 20 |
-| **Wave 1 total** | **71** |
-| **Project total** | **2243** |
+| Suite                         | Tests    |
+| ----------------------------- | -------- |
+| `MatrixCellGrid.test.ts`      | 28       |
+| `GarmentMarkupEditor.test.ts` | 23       |
+| `RushTierEditor.test.ts`      | 20       |
+| **Wave 1 total**              | **71**   |
+| **Project total**             | **2243** |
 
 - `npx tsc --noEmit` → 0 errors
 - `npm run lint` → 0 errors
@@ -221,14 +223,17 @@ claude --resume 0a1b62cb-84e6-46ff-b178-9021bb5a09ae
 ## What's Next
 
 **Before Wave 2 can start:**
+
 1. Paper design sessions for P1 (Pricing Hub), P2 (SP Editor), P3 (DTF Editor) — post budget reset (~March 5)
 2. Design sign-off from user
 3. Re-run `implementation-planning` to update manifest session prompts with approved mockup references
 
 **Wave 2 sessions** (from manifest, pending Paper sign-off):
+
 - `sp-editor-rebuild` — async RSC + `SpEditorClient` wrapping `MatrixCellGrid` in `mode="sp"`
 - `dtf-editor-rebuild` — same pattern in DTF mode
 - `pricing-hub-rebuild` — `PricingHubClient` extracting client logic from `page.tsx`, plus `NewTemplateDialog` replacing `SetupWizard`
 
 **Also in P4 M2 scope (deferred):**
+
 - #767, #768, #771, #772, #773 (all Milestone 1) — see deferred issues above
