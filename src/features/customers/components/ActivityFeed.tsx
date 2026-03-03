@@ -202,9 +202,15 @@ export function ActivityFeed({
   const [activeFilter, setActiveFilter] = React.useState<ActivitySource | 'all'>('all')
   const [loadingMore, setLoadingMore] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
+  const isFirstRender = React.useRef(true)
 
-  // When filter changes, re-fetch from scratch (no cursor)
+  // When filter changes, re-fetch from scratch (no cursor).
+  // Skip initial mount — SSR already provides the first page of activities.
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
     let cancelled = false
 
     async function refetch() {
