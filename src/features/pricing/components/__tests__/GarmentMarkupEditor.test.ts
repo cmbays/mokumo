@@ -20,10 +20,7 @@ import {
 const TEMPLATE_SHOP_ID = 'aaaaaaaa-0000-4000-8000-000000000001'
 const RULE_ID = 'bbbbbbbb-0000-4000-8000-000000000002'
 
-function makeRule(
-  garmentCategory: string,
-  markupMultiplier: number
-): GarmentMarkupRule {
+function makeRule(garmentCategory: string, markupMultiplier: number): GarmentMarkupRule {
   return {
     id: RULE_ID,
     shopId: TEMPLATE_SHOP_ID,
@@ -60,7 +57,9 @@ describe('buildRulesMap', () => {
   it('includes all 6 expected categories', () => {
     const map = buildRulesMap([])
     const keys = [...map.keys()]
-    expect(keys).toEqual(expect.arrayContaining(['tshirt', 'hoodie', 'hat', 'tank', 'polo', 'jacket']))
+    expect(keys).toEqual(
+      expect.arrayContaining(['tshirt', 'hoodie', 'hat', 'tank', 'polo', 'jacket'])
+    )
   })
 })
 
@@ -142,9 +141,7 @@ describe('rulesMapToInserts', () => {
     const map = buildRulesMap([])
     const inserts = rulesMapToInserts(map)
     expect(inserts).toHaveLength(GARMENT_CATEGORIES.length)
-    expect(inserts.map((i) => i.garmentCategory)).toEqual(
-      GARMENT_CATEGORIES.map(({ key }) => key)
-    )
+    expect(inserts.map((i) => i.garmentCategory)).toEqual(GARMENT_CATEGORIES.map(({ key }) => key))
   })
 
   it('carries the multiplier value from the map', () => {

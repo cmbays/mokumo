@@ -21,13 +21,14 @@ All arithmetic uses `money()` from `@domain/lib/money`:
 
 ```ts
 const bigCosts = filledCells.map((c) => money(c.costPerPiece))
-const minCost  = bigCosts.reduce((a, b) => (a.lt(b) ? a : b))
-const maxCost  = bigCosts.reduce((a, b) => (a.gt(b) ? a : b))
-const range    = maxCost.minus(minCost)
-const tint     = toNumber(money(c.costPerPiece).minus(minCost).div(range))
+const minCost = bigCosts.reduce((a, b) => (a.lt(b) ? a : b))
+const maxCost = bigCosts.reduce((a, b) => (a.gt(b) ? a : b))
+const range = maxCost.minus(minCost)
+const tint = toNumber(money(c.costPerPiece).minus(minCost).div(range))
 ```
 
 **Key decisions:**
+
 - Empty cells (`costPerPiece = 0`) are excluded from the min/max range and always receive ratio 0 (no tint). This prevents a zero baseline from compressing the range of real prices into a tiny band near 1.0.
 - When all filled cells share the same cost (`range.eq(0)`), every cell receives 0.5 so the grid isn't all-green or all-amber.
 - The min-cost cell receives ratio 0 → `bg-success/10` (green).
@@ -35,6 +36,7 @@ const tint     = toNumber(money(c.costPerPiece).minus(minCost).div(range))
 - Mid-range cells (0.4 < ratio < 0.7) receive no background — neutral surface lets the two extremes carry the signal without creating noise.
 
 **Tint classes (discrete 3-band):**
+
 ```ts
 ratio <= 0.4  → 'bg-success/10'   // cheapest tier
 0.4–0.7       → ''                 // neutral
@@ -52,6 +54,7 @@ The plan required "controlled input" prompts (not `window.prompt()`).
 **Approach:** Local state `addingRow: boolean` / `addingCol: boolean` toggles an inline table row/header that renders a `<input type="number">` directly in the DOM. The input is auto-focused via `useEffect` when the state flips.
 
 **UX flow:**
+
 1. User clicks "Add Qty" → `setAddingRow(true)` → inline row appears at bottom of tbody with number input.
 2. User types the qty anchor and presses Enter (or clicks ✓) → `handleConfirmAddRow()` → `addQtyRow(cells, qty)` → `onChange(...)` → `setAddingRow(false)`.
 3. Escape or ✗ cancels without mutating cells.

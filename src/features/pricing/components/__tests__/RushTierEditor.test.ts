@@ -21,9 +21,7 @@ import {
 
 const SHOP_ID = 'aaaaaaaa-0000-4000-8000-000000000001'
 
-function makeTier(
-  overrides: Partial<RushTier> & { id?: string } = {}
-): RushTier {
+function makeTier(overrides: Partial<RushTier> & { id?: string } = {}): RushTier {
   return {
     id: overrides.id ?? 'tier-aaa',
     shopId: SHOP_ID,
@@ -115,7 +113,11 @@ describe('rowsToInserts', () => {
   })
 
   it('sets displayOrder to array index position', () => {
-    const rows = [makeRow({ localKey: 'a' }), makeRow({ localKey: 'b' }), makeRow({ localKey: 'c' })]
+    const rows = [
+      makeRow({ localKey: 'a' }),
+      makeRow({ localKey: 'b' }),
+      makeRow({ localKey: 'c' }),
+    ]
     const inserts = rowsToInserts(rows)
     expect(inserts[0].displayOrder).toBe(0)
     expect(inserts[1].displayOrder).toBe(1)

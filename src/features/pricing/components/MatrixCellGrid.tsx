@@ -163,9 +163,7 @@ export function commitCellValue(
   // money() strips JS float noise; round2() clamps to cent boundary; toNumber() converts back for storage
   const safeValue = toNumber(round2(money(value)))
 
-  const idx = cells.findIndex(
-    (c) => c.qtyAnchor === qtyAnchor && c.colorCount === colorCount
-  )
+  const idx = cells.findIndex((c) => c.qtyAnchor === qtyAnchor && c.colorCount === colorCount)
 
   if (idx !== -1) {
     return cells.map((c, i) => (i === idx ? { ...c, costPerPiece: safeValue } : c))
@@ -231,12 +229,7 @@ export function computeTintLevel(cells: PrintCostMatrixCell[]): Map<string, numb
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function MatrixCellGrid({
-  cells,
-  mode,
-  onChange,
-  readOnly = false,
-}: MatrixCellGridProps) {
+export function MatrixCellGrid({ cells, mode, onChange, readOnly = false }: MatrixCellGridProps) {
   const [activeCell, setActiveCell] = useState<ActiveCell | null>(null)
   const [editValue, setEditValue] = useState<string>('')
 
@@ -270,9 +263,7 @@ export function MatrixCellGrid({
   // Derived display data
   const qtyAnchors = getUniqueQtyAnchors(cells)
   const colorCounts =
-    mode === 'sp'
-      ? (getUniqueColorCounts(cells).filter((v): v is number => v !== null))
-      : []
+    mode === 'sp' ? getUniqueColorCounts(cells).filter((v): v is number => v !== null) : []
   const tints = computeTintLevel(cells)
 
   function getCell(qtyAnchor: number, colorCount: number | null): PrintCostMatrixCell | undefined {
@@ -342,8 +333,7 @@ export function MatrixCellGrid({
 
   function renderCell(qtyAnchor: number, colorCount: number | null) {
     const cell = getCell(qtyAnchor, colorCount)
-    const isEditing =
-      activeCell?.qtyAnchor === qtyAnchor && activeCell?.colorCount === colorCount
+    const isEditing = activeCell?.qtyAnchor === qtyAnchor && activeCell?.colorCount === colorCount
     const filled = cell && cell.costPerPiece > 0
     const tintRatio = filled ? (tints.get(cellKey(qtyAnchor, colorCount)) ?? 0) : 0
     const bg = filled ? tintClass(tintRatio) : ''
@@ -383,7 +373,8 @@ export function MatrixCellGrid({
           'border-r border-b border-border',
           bg,
           !readOnly && 'cursor-pointer hover:bg-surface active:bg-surface/80 transition-colors',
-          !readOnly && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action'
+          !readOnly &&
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action'
         )}
         onClick={() => handleCellClick(qtyAnchor, colorCount)}
         role="gridcell"
@@ -409,7 +400,11 @@ export function MatrixCellGrid({
 
   return (
     <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full border-collapse text-sm" role="grid" aria-label="Decoration cost matrix">
+      <table
+        className="w-full border-collapse text-sm"
+        role="grid"
+        aria-label="Decoration cost matrix"
+      >
         <thead>
           <tr className="bg-elevated">
             {/* Row header column */}
@@ -447,10 +442,7 @@ export function MatrixCellGrid({
 
                 {/* Add color column — shows input or button */}
                 {!readOnly && (
-                  <th
-                    scope="col"
-                    className="px-2 py-2 border-b border-border w-20"
-                  >
+                  <th scope="col" className="px-2 py-2 border-b border-border w-20">
                     {addingCol ? (
                       <div className="flex items-center gap-1">
                         <input
@@ -516,7 +508,10 @@ export function MatrixCellGrid({
           {qtyAnchors.map((qty) => (
             <tr key={qty} className="group/row hover:bg-elevated/50 transition-colors">
               {/* Row header */}
-              <th scope="row" className="px-3 py-2 border-r border-b border-border text-xs text-muted-foreground font-normal">
+              <th
+                scope="row"
+                className="px-3 py-2 border-r border-b border-border text-xs text-muted-foreground font-normal"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{qty}</span>
                   <span className="text-muted-foreground/70">pcs</span>

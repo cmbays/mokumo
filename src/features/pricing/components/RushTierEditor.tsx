@@ -249,10 +249,7 @@ export function RushTierEditor({ initialTiers }: RushTierEditorProps) {
             {rows.map((row, idx) => (
               <tr
                 key={row.localKey}
-                className={cn(
-                  'group/row',
-                  idx < rows.length - 1 && 'border-b border-border'
-                )}
+                className={cn('group/row', idx < rows.length - 1 && 'border-b border-border')}
               >
                 {/* Name */}
                 <td className="px-4 py-2">

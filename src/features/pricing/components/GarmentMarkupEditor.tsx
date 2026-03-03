@@ -73,9 +73,7 @@ export function markupPctLabel(multiplier: number): string {
  * Convert the editor's rulesMap back into the insert shape for the server action.
  * shopId is not needed here — the server action derives it from session.
  */
-export function rulesMapToInserts(
-  rulesMap: Map<string, number>
-): GarmentMarkupRuleInsert[] {
+export function rulesMapToInserts(rulesMap: Map<string, number>): GarmentMarkupRuleInsert[] {
   return GARMENT_CATEGORIES.map(({ key }) => ({
     shopId: '', // server action overwrites from session
     garmentCategory: key,
@@ -228,9 +226,7 @@ export function GarmentMarkupEditor({ initialRules }: GarmentMarkupEditorProps) 
                 </td>
 
                 {/* Markup % display */}
-                <td
-                  className="px-4 py-2.5 text-right text-xs text-muted-foreground tabular-nums"
-                                  >
+                <td className="px-4 py-2.5 text-right text-xs text-muted-foreground tabular-nums">
                   {markupPctLabel(multiplier)}
                 </td>
               </tr>

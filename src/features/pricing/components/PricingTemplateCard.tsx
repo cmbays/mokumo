@@ -99,9 +99,7 @@ export function PricingTemplateCard({
         <div className="flex flex-col gap-1 min-w-0">
           {/* Title row: health dot + title */}
           <div className="flex min-w-0 items-center gap-2">
-            {healthIndicator && (
-              <MarginIndicator indicator={healthIndicator} size="md" />
-            )}
+            {healthIndicator && <MarginIndicator indicator={healthIndicator} size="md" />}
             <CardTitle className="truncate text-sm min-w-0">{template.name}</CardTitle>
           </div>
 
