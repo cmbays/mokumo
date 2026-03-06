@@ -544,5 +544,5 @@ shadcn/ui handles dark mode token mapping automatically. Custom elements should 
 | Date       | Change                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------- |
 | 2026-02-04 | Initial guidelines (dbt-playground context)                                                                |
-| 2026-02-07 | Adapted for Mokumo: Tailwind v4 + shadcn/ui + next/font                                          |
+| 2026-02-07 | Adapted for Mokumo: Tailwind v4 + shadcn/ui + next/font                                                    |
 | 2026-03-02 | Two-pool color architecture, badge variants, encoding channel rules, categorical palette (+teal, +emerald) |

@@ -136,7 +136,7 @@ POST-FLOW: Quote Tracking Dashboard (/quotes)
 
 ## Key Differences from Print Life
 
-| Aspect              | Print Life (6 Steps)                          | Mokumo (1 Page)                 |
+| Aspect              | Print Life (6 Steps)                          | Mokumo (1 Page)                           |
 | ------------------- | --------------------------------------------- | ----------------------------------------- |
 | **Flow**            | 6 mandatory sequential steps                  | Single scrollable form with sections      |
 | **Steps**           | Can't skip unused steps                       | Only show what's needed                   |

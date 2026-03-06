@@ -52,7 +52,7 @@ DDD has two halves:
 
 ### Why the Industry Uses It
 
-| Problem DDD Solves       | How                                                                        | Mokumo Relevance                                                                                                      |
+| Problem DDD Solves       | How                                                                        | Mokumo Relevance                                                                                                                |
 | ------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Ambiguous vocabulary** | Ubiquitous Language — one term, one meaning, everywhere                    | "Screen" means a mesh frame in production, but a UI view in dev. "Job" means a production order, not a background task.         |
 | **God objects**          | Bounded Contexts separate models that mean different things                | A `Customer` in quoting (contact + pricing tier) is different from a `Customer` in invoicing (billing address + payment terms). |
@@ -113,7 +113,7 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 
 ### Entities, Value Objects, and Aggregates
 
-| DDD Concept             | Definition                                                                                       | Mokumo Examples                                                                              |
+| DDD Concept             | Definition                                                                                       | Mokumo Examples                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | **Entity**              | Has a unique identity; two instances with the same data are still different objects              | `Quote`, `Job`, `Customer`, `Invoice`, `Screen`                                                        |
 | **Value Object**        | Defined by its attributes, not identity; immutable, interchangeable                              | `Address`, `Money` (via big.js), `PrintLocationDetail`, `GarmentSize`, `QuantityTier`                  |

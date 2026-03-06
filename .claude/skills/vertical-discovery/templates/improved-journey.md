@@ -75,11 +75,11 @@ END: [RESULT]
 ## Key Differences from [COMPETITOR]
 
 | Aspect    | [COMPETITOR] | Mokumo |
-| --------- | ------------ | ---------------- |
-| **Flow**  |              |                  |
-| **Steps** |              |                  |
-| **Speed** |              |                  |
-| **State** |              |                  |
+| --------- | ------------ | ------ |
+| **Flow**  |              |        |
+| **Steps** |              |        |
+| **Speed** |              |        |
+| **State** |              |        |
 
 ---
 

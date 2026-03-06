@@ -169,13 +169,13 @@ Documentation, package structure (exports, TypeScript types), README, CI/CD, npm
 
 ## Decision Log
 
-| Date       | Decision                                               | Rationale                                                                              |
-| ---------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| 2026-02-21 | Separate package from mokumo (repo: `cmbays/kata`) | Independent release cadence, extraction as reusable framework                          |
-| 2026-02-21 | Execution-layer agnostic (manifests, not agent code)   | Works with any agent tool (Claude CLI, Composio, manual)                               |
-| 2026-02-21 | Three-tier learning model                              | Balances automation (Tier 1) with specialization (Tier 2) and personalization (Tier 3) |
-| 2026-02-21 | Shape A: Clean architecture + Zod-first design         | Testability, type safety, extensibility from day one                                   |
-| 2026-02-22 | JSON-file persistence (no database)                    | Simplicity for initial release, easy migration path later                              |
+| Date       | Decision                                             | Rationale                                                                              |
+| ---------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 2026-02-21 | Separate package from mokumo (repo: `cmbays/kata`)   | Independent release cadence, extraction as reusable framework                          |
+| 2026-02-21 | Execution-layer agnostic (manifests, not agent code) | Works with any agent tool (Claude CLI, Composio, manual)                               |
+| 2026-02-21 | Three-tier learning model                            | Balances automation (Tier 1) with specialization (Tier 2) and personalization (Tier 3) |
+| 2026-02-21 | Shape A: Clean architecture + Zod-first design       | Testability, type safety, extensibility from day one                                   |
+| 2026-02-22 | JSON-file persistence (no database)                  | Simplicity for initial release, easy migration path later                              |
 
 ## Status
 

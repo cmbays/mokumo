@@ -576,8 +576,8 @@ Configure PgBouncer before Phase 2 load testing, not before initial development.
 
 Key files examined for this audit:
 
-| File                                                                                           | Factors Assessed |
-| ---------------------------------------------------------------------------------------------- | ---------------- |
+| File                                                                                       | Factors Assessed |
+| ------------------------------------------------------------------------------------------ | ---------------- |
 | `/Users/cmbays/Github/mokumo/package.json`                                                 | II, V            |
 | `/Users/cmbays/Github/mokumo/package-lock.json`                                            | II               |
 | `/Users/cmbays/Github/mokumo/vercel.json`                                                  | I, V             |

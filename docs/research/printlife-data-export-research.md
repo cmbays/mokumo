@@ -521,15 +521,15 @@ For users migrating from Print Life who sync to QuickBooks:
 
 ## Competitive Feature Analysis
 
-| Feature              | YoPrint    | Printavo   | InkSoft    | Print Life | Mokumo (Target) |
-| -------------------- | ---------- | ---------- | ---------- | ---------- | ------------------------- |
-| CSV Export           | ✅ Yes     | ✅ Yes     | ❓ Unknown | ❌ No      | ✅ **Must Have**          |
-| CSV Import           | ✅ Yes     | ✅ Yes     | ❓ Unknown | ❌ No      | ✅ **Must Have**          |
-| Pricing Templates    | ✅ Yes     | ✅ Yes     | ✅ Yes     | ❓ Unknown | ✅ **Must Have**          |
-| Guided Setup Wizard  | ❓ Unknown | ❓ Unknown | ❓ Unknown | ❌ No      | ✅ **Differentiation**    |
-| Real-time Validation | ❓ Unknown | ❓ Unknown | ❓ Unknown | ❌ No      | ✅ **Differentiation**    |
-| QB Integration       | ✅ Yes     | ✅ Yes     | ✅ Yes     | ✅ Yes     | 🚧 Phase 2                |
-| API Access           | ❓ Likely  | ❓ Likely  | ❓ Likely  | ❌ No      | 🚧 Phase 3                |
+| Feature              | YoPrint    | Printavo   | InkSoft    | Print Life | Mokumo (Target)        |
+| -------------------- | ---------- | ---------- | ---------- | ---------- | ---------------------- |
+| CSV Export           | ✅ Yes     | ✅ Yes     | ❓ Unknown | ❌ No      | ✅ **Must Have**       |
+| CSV Import           | ✅ Yes     | ✅ Yes     | ❓ Unknown | ❌ No      | ✅ **Must Have**       |
+| Pricing Templates    | ✅ Yes     | ✅ Yes     | ✅ Yes     | ❓ Unknown | ✅ **Must Have**       |
+| Guided Setup Wizard  | ❓ Unknown | ❓ Unknown | ❓ Unknown | ❌ No      | ✅ **Differentiation** |
+| Real-time Validation | ❓ Unknown | ❓ Unknown | ❓ Unknown | ❌ No      | ✅ **Differentiation** |
+| QB Integration       | ✅ Yes     | ✅ Yes     | ✅ Yes     | ✅ Yes     | 🚧 Phase 2             |
+| API Access           | ❓ Likely  | ❓ Likely  | ❓ Likely  | ❌ No      | 🚧 Phase 3             |
 
 **Key Insight**: Mokumo can **differentiate** by providing the **best manual setup experience** since competitors focus on import but don't optimize first-time setup UX.
 

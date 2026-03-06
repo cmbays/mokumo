@@ -107,6 +107,6 @@ Added `"knowledge-base"` to `tsconfig.json` `exclude` array. The root tsconfig's
 
 ## GitHub Issues Created
 
-| Issue                                                 | Title                                               |
-| ----------------------------------------------------- | --------------------------------------------------- |
+| Issue                                             | Title                                               |
+| ------------------------------------------------- | --------------------------------------------------- |
 | [#70](https://github.com/cmbays/mokumo/issues/70) | Refactor: Derive JobBoardCard props from Zod schema |

@@ -132,10 +132,10 @@ END: [RESULT]
 ## Success Metrics for Redesign
 
 | Metric               | [COMPETITOR] (Actual) | Mokumo (Target) | Improvement |
-| -------------------- | --------------------- | ------------------------- | ----------- |
-| Simple [TASK] time   | [X] min               | [X] min                   | [X]% faster |
-| Complex [TASK] time  | [X] min               | [X] min                   | [X]% faster |
-| Simple [TASK] clicks | [X]                   | [X]                       | [X]% fewer  |
+| -------------------- | --------------------- | --------------- | ----------- |
+| Simple [TASK] time   | [X] min               | [X] min         | [X]% faster |
+| Complex [TASK] time  | [X] min               | [X] min         | [X]% faster |
+| Simple [TASK] clicks | [X]                   | [X]             | [X]% fewer  |
 
 ---
 

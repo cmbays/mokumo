@@ -652,7 +652,7 @@ _Actions are the safety net. The `work` CLI is the agent happy path._
 
 | Action                   | Trigger                                            | What it does                                                                   | File                                                    |
 | ------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| **Auto-add to project**  | Issue opened, PR opened/ready_for_review           | Adds to [Mokumo](https://github.com/users/cmbays/projects/4) board   | `.github/workflows/auto-project.yml`                    |
+| **Auto-add to project**  | Issue opened, PR opened/ready_for_review           | Adds to [Mokumo](https://github.com/users/cmbays/projects/4) board             | `.github/workflows/auto-project.yml`                    |
 | **PR Labeler**           | PR opened/synchronized (via `pull_request_target`) | Applies `product/*` / `domain/*` / `tool/*` labels based on changed file paths | `.github/workflows/labeler.yml` + `.github/labeler.yml` |
 | **Template auto-labels** | Issue created via template                         | Applies `type/*` label from template's `labels:` field                         | `.github/ISSUE_TEMPLATE/*.yml`                          |
 | **CI**                   | Push/PR                                            | Build, test, typecheck                                                         | `.github/workflows/ci.yml`                              |

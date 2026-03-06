@@ -79,8 +79,8 @@ Sibling job creation requires job schema changes, Kanban board updates, and job 
 
 ## Deferred Items (GitHub Issues)
 
-| Issue                                                   | Title                                                               | Priority |
-| ------------------------------------------------------- | ------------------------------------------------------------------- | -------- |
+| Issue                                               | Title                                                               | Priority |
+| --------------------------------------------------- | ------------------------------------------------------------------- | -------- |
 | [#211](https://github.com/cmbays/mokumo/issues/211) | Sibling jobs + shipping gate for multi-service-type quotes          | Next     |
 | [#212](https://github.com/cmbays/mokumo/issues/212) | Artwork model overhaul — service-type-specific metadata per artwork | Next     |
 | [#213](https://github.com/cmbays/mokumo/issues/213) | DTF + Press service type — garment selection + pressing workflow    | Later    |

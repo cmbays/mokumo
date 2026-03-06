@@ -190,17 +190,17 @@ END: Quote built → invoice → phone call
 
 ## Success Metrics for Redesign
 
-| Metric                 | Print Life (Actual) | Mokumo (Target) | Improvement     |
-| ---------------------- | ------------------- | ------------------------- | --------------- |
-| Simple quote time      | 10 min              | 3-4 min                   | 60-70% faster   |
-| Complex quote time     | 15-20 min           | 6-8 min                   | 50-60% faster   |
-| Simple quote clicks    | 20-30               | 8-12                      | 60% fewer       |
-| Complex quote clicks   | 40-60               | 20-30                     | 50% fewer       |
-| Mandatory unused steps | 2                   | 0                         | Eliminated      |
-| Recalculation blocking | Every field         | Never                     | 100% eliminated |
-| Quote reuse            | Not possible        | 1-click duplicate         | New capability  |
-| Quote tracking         | None                | Full dashboard            | New capability  |
-| Customer self-service  | No approval gate    | Hybrid with approval      | Differentiator  |
+| Metric                 | Print Life (Actual) | Mokumo (Target)      | Improvement     |
+| ---------------------- | ------------------- | -------------------- | --------------- |
+| Simple quote time      | 10 min              | 3-4 min              | 60-70% faster   |
+| Complex quote time     | 15-20 min           | 6-8 min              | 50-60% faster   |
+| Simple quote clicks    | 20-30               | 8-12                 | 60% fewer       |
+| Complex quote clicks   | 40-60               | 20-30                | 50% fewer       |
+| Mandatory unused steps | 2                   | 0                    | Eliminated      |
+| Recalculation blocking | Every field         | Never                | 100% eliminated |
+| Quote reuse            | Not possible        | 1-click duplicate    | New capability  |
+| Quote tracking         | None                | Full dashboard       | New capability  |
+| Customer self-service  | No approval gate    | Hybrid with approval | Differentiator  |
 
 ---
 

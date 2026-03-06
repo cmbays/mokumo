@@ -225,7 +225,7 @@ On mobile: Sidebar hidden. No navigation alternative. Dead end.
 
 ## Key Differences: Competitors vs Mokumo
 
-| Aspect           | Competitors                   | Mokumo (Mobile)                |
+| Aspect           | Competitors                   | Mokumo (Mobile)                          |
 | ---------------- | ----------------------------- | ---------------------------------------- |
 | Navigation       | Hidden sidebar or hamburger   | Bottom tab bar (always visible)          |
 | Lists            | Desktop tables, pinch-to-zoom | Card layout, scannable, tappable         |

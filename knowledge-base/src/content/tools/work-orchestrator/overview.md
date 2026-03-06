@@ -32,12 +32,12 @@ Then use `work <subcommand>` for all session lifecycle operations.
 
 ### Config
 
-| Variable                  | Default                         | Purpose                     |
-| ------------------------- | ------------------------------- | --------------------------- |
+| Variable                  | Default                     | Purpose                     |
+| ------------------------- | --------------------------- | --------------------------- |
 | `PRINT4INK_REPO`          | `~/Github/mokumo`           | Main repo (stays on `main`) |
 | `PRINT4INK_WORKTREES`     | `~/Github/mokumo-worktrees` | Worktree parent directory   |
-| `PRINT4INK_MAX_WORKTREES` | 15                              | Safety limit                |
-| `PRINT4INK_PORT_MIN/MAX`  | 3001-3015                       | Dev server port range       |
+| `PRINT4INK_MAX_WORKTREES` | 15                          | Safety limit                |
+| `PRINT4INK_PORT_MIN/MAX`  | 3001-3015                   | Dev server port range       |
 
 ## Key Commands
 

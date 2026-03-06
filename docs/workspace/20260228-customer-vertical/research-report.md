@@ -212,24 +212,24 @@ Relevant because Mokumo customers are S&S dealers/buyers.
 
 ## Cross-Competitor Feature Matrix
 
-| Feature                    | Printavo | YoPrint  | Print Life | ShopWorks | DecoNetwork | InkSoft    | shopVOX | **Mokumo (Planned)** |
-| -------------------------- | -------- | -------- | ---------- | --------- | ----------- | ---------- | ------- | ------------------------------ |
-| Company-Contact hierarchy  | Weak     | Weak     | None       | Yes       | **Yes**     | **Yes**    | Partial | **Yes**                        |
-| Multiple contacts + roles  | Yes      | Yes      | ?          | Yes       | Yes         | Yes        | Yes     | **Yes (role-based)**           |
-| Labeled addresses          | No       | **Yes**  | Basic      | Yes       | Yes         | Yes        | Yes     | **Yes**                        |
-| Payment terms              | **Yes**  | **Yes**  | ?          | Yes       | Yes         | No         | ?       | **Yes**                        |
-| Credit limits              | No       | No       | No         | ?         | **Yes**     | No         | No      | **Yes**                        |
-| Per-state tax exemption    | No       | No       | No         | ?         | Partial     | No         | No      | **Yes**                        |
-| Custom fields              | No       | No       | No         | Yes       | **Yes**     | No         | No      | **Yes (JSONB)**                |
-| Tags/categories            | **Yes**  | No       | No         | Yes       | Limited     | **Yes**    | **Yes** | **Yes**                        |
-| Pricing tiers per customer | No       | No       | No         | Yes       | **Yes**     | Limited    | Yes     | **Yes**                        |
-| Customer portal            | Yes      | **Best** | Yes        | Yes       | Yes         | Via stores | No      | **Planned**                    |
-| Activity timeline          | No       | Limited  | No         | **Yes**   | Limited     | No         | Yes     | **Yes (auto-logged)**          |
-| Garment preferences        | No       | No       | No         | No        | No          | No         | No      | **Yes (unique)**               |
-| Seasonal detection         | No       | No       | No         | No        | No          | No         | No      | **Yes (unique)**               |
-| Referral system            | No       | No       | No         | No        | No          | No         | No      | **Yes**                        |
-| Reorder from history       | No       | No       | **Yes**    | No        | No          | Via store  | No      | **Planned**                    |
-| Communication integration  | Basic    | Good     | Basic      | **Good**  | Basic       | Basic      | Good    | **Planned (email/SMS/VM)**     |
+| Feature                    | Printavo | YoPrint  | Print Life | ShopWorks | DecoNetwork | InkSoft    | shopVOX | **Mokumo (Planned)**       |
+| -------------------------- | -------- | -------- | ---------- | --------- | ----------- | ---------- | ------- | -------------------------- |
+| Company-Contact hierarchy  | Weak     | Weak     | None       | Yes       | **Yes**     | **Yes**    | Partial | **Yes**                    |
+| Multiple contacts + roles  | Yes      | Yes      | ?          | Yes       | Yes         | Yes        | Yes     | **Yes (role-based)**       |
+| Labeled addresses          | No       | **Yes**  | Basic      | Yes       | Yes         | Yes        | Yes     | **Yes**                    |
+| Payment terms              | **Yes**  | **Yes**  | ?          | Yes       | Yes         | No         | ?       | **Yes**                    |
+| Credit limits              | No       | No       | No         | ?         | **Yes**     | No         | No      | **Yes**                    |
+| Per-state tax exemption    | No       | No       | No         | ?         | Partial     | No         | No      | **Yes**                    |
+| Custom fields              | No       | No       | No         | Yes       | **Yes**     | No         | No      | **Yes (JSONB)**            |
+| Tags/categories            | **Yes**  | No       | No         | Yes       | Limited     | **Yes**    | **Yes** | **Yes**                    |
+| Pricing tiers per customer | No       | No       | No         | Yes       | **Yes**     | Limited    | Yes     | **Yes**                    |
+| Customer portal            | Yes      | **Best** | Yes        | Yes       | Yes         | Via stores | No      | **Planned**                |
+| Activity timeline          | No       | Limited  | No         | **Yes**   | Limited     | No         | Yes     | **Yes (auto-logged)**      |
+| Garment preferences        | No       | No       | No         | No        | No          | No         | No      | **Yes (unique)**           |
+| Seasonal detection         | No       | No       | No         | No        | No          | No         | No      | **Yes (unique)**           |
+| Referral system            | No       | No       | No         | No        | No          | No         | No      | **Yes**                    |
+| Reorder from history       | No       | No       | **Yes**    | No        | No          | Via store  | No      | **Planned**                |
+| Communication integration  | Basic    | Good     | Basic      | **Good**  | Basic       | Basic      | Good    | **Planned (email/SMS/VM)** |
 
 ---
 

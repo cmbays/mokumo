@@ -319,7 +319,7 @@ Use this table to audit each screen:
 
 ## Version History
 
-| Date       | Change                                                                       |
-| ---------- | ---------------------------------------------------------------------------- |
-| 2026-02-05 | Initial heuristics (dbt-playground context)                                  |
+| Date       | Change                                                             |
+| ---------- | ------------------------------------------------------------------ |
+| 2026-02-05 | Initial heuristics (dbt-playground context)                        |
 | 2026-02-07 | Adapted for Mokumo: replaced all examples, updated audit scorecard |

@@ -32,7 +32,7 @@ type Session = {
 | Choice                                | Rationale                                                                                                                                               |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `userId` as string, not UUID type     | Supabase returns UUID strings; stable across mock and real auth                                                                                         |
-| `role: 'owner' \| 'operator'`         | Mokumo is a single-shop tool. `owner` = Gary (full access). `operator` = future employee (read + limited write).                              |
+| `role: 'owner' \| 'operator'`         | Mokumo is a single-shop tool. `owner` = Gary (full access). `operator` = future employee (read + limited write).                                        |
 | `shopId` included                     | Multi-tenancy safety valve. Even if we never add a second shop, the field prevents queries from ever returning cross-shop data in Phase 2 RLS policies. |
 | Returns `Session \| null` (not throw) | Callers distinguish "unauthenticated user" from "server error" cleanly.                                                                                 |
 

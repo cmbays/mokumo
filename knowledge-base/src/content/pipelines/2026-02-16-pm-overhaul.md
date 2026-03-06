@@ -51,8 +51,8 @@ Shape B organizes 10 tasks into 3 waves based on the dependency graph:
 
 ### Wave 2: Infrastructure (Parallel — File Changes → PRs)
 
-| Task                    | PR                                                    | What It Produced                                                                                                                                                                             |
-| ----------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task                    | PR                                                | What It Produced                                                                                                                                                                             |
+| ----------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **2.1 Issue Templates** | [#268](https://github.com/cmbays/mokumo/pull/268) | 4 YAML issue forms (Feature Request, Bug Report, Research Task, Tracking Issue) + PR template + config disabling blank issues. Templates auto-apply `type/*` labels.                         |
 | **2.2 Auto-Add Action** | [#275](https://github.com/cmbays/mokumo/pull/275) | GitHub Action that auto-adds new issues and PRs to project board #4 using `actions/add-to-project@v1.0.2`.                                                                                   |
 | **2.3 PR Auto-Labeler** | [#267](https://github.com/cmbays/mokumo/pull/267) | PR labeler config mapping file paths to `vertical/*` labels (quoting, jobs, garments, price-matrix, colors, devx). Uses `actions/labeler@v5`.                                                |
@@ -60,15 +60,15 @@ Shape B organizes 10 tasks into 3 waves based on the dependency graph:
 
 ### Wave 3: Convergence (Serial — Human-Interactive)
 
-| Task                     | PR                                                    | What It Produced                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **3.1 Backlog Grooming** | N/A (API ops)                                         | 98 issues groomed: all correctly labeled (`type/*` + `priority/*` + `vertical/*`), 4 issues closed (#85, #73, #134, #117), `priority/next` triaged from 36 down to 16 (target of 8-10 relaxed based on user decisions), all 63 surviving issues added to project board #4. Created `vertical/dtf` label. Deleted `enhancement` and `type/ux-review` labels. |
+| Task                     | PR                                                | What It Produced                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **3.1 Backlog Grooming** | N/A (API ops)                                     | 98 issues groomed: all correctly labeled (`type/*` + `priority/*` + `vertical/*`), 4 issues closed (#85, #73, #134, #117), `priority/next` triaged from 36 down to 16 (target of 8-10 relaxed based on user decisions), all 63 surviving issues added to project board #4. Created `vertical/dtf` label. Deleted `enhancement` and `type/ux-review` labels. |
 | **3.2 PM Doc**           | [#283](https://github.com/cmbays/mokumo/pull/283) | `docs/PM.md` — 10-section canonical document covering issue lifecycle, label taxonomy, templates, dependencies, epic pattern, pipeline flow, agent conventions, milestones, and automation. Added to CLAUDE.md canonical doc table.                                                                                                                         |
 
 ### Pipeline Shaping Docs
 
-| Doc                          | PR                                                    |
-| ---------------------------- | ----------------------------------------------------- |
+| Doc                          | PR                                                |
+| ---------------------------- | ------------------------------------------------- |
 | Shaping + Breadboard + Spike | [#266](https://github.com/cmbays/mokumo/pull/266) |
 
 ## Key Decisions
@@ -85,8 +85,8 @@ Shape B organizes 10 tasks into 3 waves based on the dependency graph:
 
 ## Merged PRs
 
-| PR                                                    | Description                                                                  |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| PR                                                | Description                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [#266](https://github.com/cmbays/mokumo/pull/266) | Shaping pipeline: frame, shaping doc, breadboard, spike, interview notes     |
 | [#267](https://github.com/cmbays/mokumo/pull/267) | PR auto-labeler: `.github/labeler.yml` + workflow                            |
 | [#268](https://github.com/cmbays/mokumo/pull/268) | Issue templates: 4 YAML forms + PR template + config                         |

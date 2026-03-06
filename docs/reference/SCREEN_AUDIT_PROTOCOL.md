@@ -321,7 +321,7 @@ For **every element** on the screen, ask these five questions:
 
 ## Version History
 
-| Date       | Change                                                                    |
-| ---------- | ------------------------------------------------------------------------- |
-| 2026-02-04 | Initial protocol (as PLAYGROUND_AUDIT_PROTOCOL.md)                        |
+| Date       | Change                                                          |
+| ---------- | --------------------------------------------------------------- |
+| 2026-02-04 | Initial protocol (as PLAYGROUND_AUDIT_PROTOCOL.md)              |
 | 2026-02-07 | Adapted for Mokumo: renamed, updated examples, fixed references |

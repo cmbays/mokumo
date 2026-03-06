@@ -100,7 +100,7 @@ For now, **zeroclaw is independent and builds its own stability story**.
 | Date       | Decision                                 | Rationale                                               |
 | ---------- | ---------------------------------------- | ------------------------------------------------------- |
 | 2026-02-21 | Fork ZeroClaw, not build from scratch    | TCO: 4 weeks fork vs. 8+ weeks greenfield               |
-| 2026-02-22 | Separate repository (cmbays/zeroclaw)    | Decouple mokumo from R&D cadence                    |
+| 2026-02-22 | Separate repository (cmbays/zeroclaw)    | Decouple mokumo from R&D cadence                        |
 | 2026-02-22 | Bounded module approach (~1,100 LOC)     | Minimize upstream merge conflicts, preserve update path |
 | 2026-02-22 | Ollama + Qwen 3 14B (local, no API keys) | Gary's M4 Mac, zero inference cost, privacy-first       |
 

@@ -25,7 +25,7 @@ depends-on:
 
 ### Architecture Philosophy
 
-| Dimension               | Printavo                                 | PrintLife                   | Mokumo (Our Plan)                          |
+| Dimension               | Printavo                                 | PrintLife                   | Mokumo (Our Plan)                                    |
 | ----------------------- | ---------------------------------------- | --------------------------- | ---------------------------------------------------- |
 | **Core model**          | Status-based pipeline                    | 4-lane Kanban               | Universal-lane board with service type awareness     |
 | **Default view**        | Calendar (monthly)                       | Invoice Dashboard (Kanban)  | Production Board (2-week horizon)                    |

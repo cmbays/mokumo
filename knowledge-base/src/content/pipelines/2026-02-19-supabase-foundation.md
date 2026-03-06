@@ -157,8 +157,8 @@ The review findings confirmed this: the missing `source` column and `shop_id` we
 
 ### Merged PRs
 
-| PR                                                    | Title                                  | Wave    |
-| ----------------------------------------------------- | -------------------------------------- | ------- |
+| PR                                                | Title                                  | Wave    |
+| ------------------------------------------------- | -------------------------------------- | ------- |
 | [#531](https://github.com/cmbays/mokumo/pull/531) | Supabase + Drizzle foundation          | Wave 0  |
 | [#534](https://github.com/cmbays/mokumo/pull/534) | Drizzle schema migration drift checks  | Wave 1C |
 | [#535](https://github.com/cmbays/mokumo/pull/535) | V2 sync - wire S&S catalog to Supabase | Wave 1B |

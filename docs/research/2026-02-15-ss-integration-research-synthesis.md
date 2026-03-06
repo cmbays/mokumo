@@ -35,7 +35,7 @@ Four parallel research agents investigated the full scope of integrating S&S Act
 
 **Key endpoints**:
 
-| Endpoint          | Purpose                                                         | Mokumo Use                      |
+| Endpoint          | Purpose                                                         | Mokumo Use                                |
 | ----------------- | --------------------------------------------------------------- | ----------------------------------------- |
 | `/v2/styles/`     | Style-level catalog data                                        | Garment catalog browsing                  |
 | `/v2/products/`   | Full SKU-level data (colors, sizes, pricing, images, inventory) | Garment selection, pricing, mockup images |

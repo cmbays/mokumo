@@ -701,7 +701,7 @@ _Source: [Printavo Customizing Statuses](https://support.printavo.com/hc/en-us/a
 
 ### Summary of Additional Findings
 
-| Insight                                                                | Impact on Mokumo                                                       |
+| Insight                                                                | Impact on Mokumo                                                                 |
 | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | OnSite tracks screen data as job metadata, not asset inventory         | Confirms the "screen as first-class entity" approach is novel                    |
 | Printavo's status trigger system is the market's best workflow pattern | Adopt for screen lifecycle transitions (status change → notification/automation) |
