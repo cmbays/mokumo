@@ -106,5 +106,5 @@ feature/session branches ──PR──→ main ──merge──→ production
 | KB pipeline | `memory/kb-pipeline.md` |
 | Canonical docs | `memory/canonical-docs.md` |
 | Worktree workflow | `memory/worktree-workflow.md` |
-| V1 vision + milestones | `~/Github/ops/vision/mokumo/ROADMAP.md` |
-| Product manifest | `~/Github/ops/products/mokumo/MANIFEST.md` |
+| V1 vision + milestones | Resolve "V1 roadmap" from MEMORY.md registry |
+| Product manifest | Resolve "Product manifest" from MEMORY.md registry |

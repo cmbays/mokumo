@@ -32,7 +32,7 @@ Read these before starting (do NOT skip any):
 1. Interview notes or research docs for this topic
 2. Existing breadboards if upgrading a vertical (in `docs/workspace/{pipeline-id}/breadboard.md` for new work, or `docs/breadboards/` for Phase 1 legacy)
 3. `CLAUDE.md` — project standards, design system, quality checklist
-4. `~/Github/ops/vision/mokumo/ROADMAP.md` — strategic context, current bets
+4. V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry) — strategic context, current bets
 
 ### Outputs
 

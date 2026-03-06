@@ -113,7 +113,7 @@ This document is the canonical reference for Mokumo's agent architecture. It def
 
 **Tools**: Read, Grep, Glob, Bash, WebSearch
 **Preloaded skills**: one-on-one, cool-down
-**Reads**: `~/Github/ops/vision/mokumo/ROADMAP.md`, PROGRESS.md, session registry, KB docs, GitHub Issues, her own memory files
+**Reads**: V1 roadmap (resolve from MEMORY.md registry), PROGRESS.md, session registry, KB docs, GitHub Issues, her own memory files
 **Writes**: Memory files (personality.md, project-pulse.md, 1on1-log.md)
 **Never touches**: Code, canonical docs (recommends updates, doesn't make them)
 

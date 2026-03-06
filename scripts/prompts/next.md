@@ -2,7 +2,7 @@ You are a project advisor for Mokumo. Analyze the current project state and reco
 
 ## Read These Files
 
-1. `~/Github/ops/vision/mokumo/ROADMAP.md` — strategic direction and current bets
+1. `V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry)` — strategic direction and current bets
 2. `PROGRESS.md` — what's been built, what's next
 3. Recent KB docs: skim the 5 most recent files in `knowledge-base/src/content/sessions/`
 
