@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Mokumo is production management software for a screen-printing shop. Full garment lifecycle: Quote → Artwork Approval → Screen Room → Production → Shipping. Primary user is the shop owner/operator. See `PROGRESS.md` for current phase status.
+Mokumo is production management software for decorated apparel shops (screen printing, DTF, embroidery). Full garment lifecycle: Quote → Artwork Approval → Production → Shipping → Invoice. Target: 1-10 employee shops doing $50K-$2M/year. See `docs/ROADMAP.md` for V1 vision and milestones.
 
 ## Commands
 
@@ -98,10 +98,13 @@ Phase 4 Clean Architecture migration complete (2026-02-17). Layer structure: `do
 
 ## Domain Context
 
-- **Quote Matrix**: Pricing = f(quantity, colors, print locations). Line items with setup fees.
+- **Service Types**: Screen printing, DTF, and embroidery as first-class decoration services. Architecture supports adding heat transfer, sublimation, etc. Each service type has distinct pricing axes, production stages, and artwork metadata.
+- **Quote Matrix**: Pricing = f(quantity, colors/size/stitch-count, print locations) — axes vary by service type. Line items with setup fees. Multi-service quotes supported (screen print tees + embroidered hats in one quote).
 - **Garment Sourcing**: SKU selection by style/brand/color, sizes as record (S: 10, M: 25, L: 15).
-- **Screen Room**: Track mesh count, emulsion type, burn status per screen, linked to jobs.
+- **Screen Room**: Track mesh count, emulsion type, burn status per screen, linked to jobs. Screen print only.
 - **Production States**: `design → approval → burning → press → finishing → shipped`
+- **Customer Portal**: External customer-facing portal for quote approval, invoice viewing, job status, and online store ordering.
+- **Online Stores**: Shop creates a store link for an organization (school, team). Customers order through the link. Aggregated as a bulk order for the shop.
 
 ## Design System
 
@@ -303,7 +306,7 @@ git -C ~/Github/mokumo fetch origin && git -C ~/Github/mokumo push origin origin
 | Document                      | Purpose                                                                  | Update When                                                     |
 | ----------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
 | `CLAUDE.md`                   | AI operating rules, loaded every session                                 | Any pattern/rule changes                                        |
-| `docs/ROADMAP.md`             | Vision, phases, bets, forward planning                                   | Cycle transitions, betting decisions                            |
+| `docs/ROADMAP.md`             | V1 product vision, milestones, strategy, competitive context             | Vision changes, milestone transitions, betting decisions        |
 | `.claude/agents/AGENTS.md`    | Agent registry, orchestration, calling conventions                       | Adding/retiring agents                                          |
 | `docs/TECH_STACK.md`          | Tool choices, versions, decision context                                 | Adding/removing/upgrading deps                                  |
 | `docs/PRD.md`                 | Features, scope, acceptance criteria                                     | Scope changes or new features                                   |
@@ -313,7 +316,9 @@ git -C ~/Github/mokumo fetch origin && git -C ~/Github/mokumo push origin origin
 | `docs/PM.md`                  | PM workflows, labels, templates                                          | PM infrastructure changes                                       |
 | `docs/HOW_WE_WORK.md`         | Methodology, Shape Up philosophy                                         | Process or tooling changes                                      |
 
-**Before starting work**: read `ROADMAP.md` (strategy) + `APP_FLOW.md` (routes) + `IMPLEMENTATION_PLAN.md` (current step). Before adding a dependency, check `TECH_STACK.md`. Before placing a new feature in nav or Settings, check `APP_IA.md` (governing IA principles — where features go, inline vs settings, scope model).
+**Before starting work**: read `ROADMAP.md` (V1 vision + milestones) + `APP_FLOW.md` (routes) + `IMPLEMENTATION_PLAN.md` (current step). Before adding a dependency, check `TECH_STACK.md`. Before placing a new feature in nav or Settings, check `APP_IA.md` (governing IA principles — where features go, inline vs settings, scope model).
+
+> **Retired**: `docs/PROJECT_BIBLE.md` — superseded by `CLAUDE.md` + `docs/ROADMAP.md`. Historical reference only.
 
 ## Reference Documents
 

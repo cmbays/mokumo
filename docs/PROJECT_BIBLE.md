@@ -1,15 +1,30 @@
 ---
 title: 'PROJECT_BIBLE'
-description: 'Original project context document. Domain workflows, core business logic, and initial tech stack decisions. Superseded by CLAUDE.md for daily use.'
+description: 'RETIRED. Original Phase 1 project context. Superseded by CLAUDE.md (operating rules) + docs/ROADMAP.md (V1 vision + strategy).'
 category: reference
-status: active
-phase: all
-last_updated: 2026-02-07
-last_verified: 2026-02-07
+status: retired
+phase: 1
+last_updated: 2026-03-06
+last_verified: 2026-03-06
+retired_date: 2026-03-06
+superseded_by:
+  - CLAUDE.md
+  - docs/ROADMAP.md
 depends_on: []
 ---
 
-# **Mokumo \- Project Bible**
+# PROJECT_BIBLE (Retired)
+
+> **This document is retired as of 2026-03-06.**
+> - For operating rules and coding standards: see `CLAUDE.md`
+> - For V1 product vision, strategy, and milestones: see `docs/ROADMAP.md`
+> - For domain context and DDD strategy: see `docs/DDD_STRATEGY.md`
+>
+> The content below is preserved for historical context only.
+
+---
+
+# **Mokumo \- Project Bible** (Historical)
 
 ## **1\. Project Overview**
 
