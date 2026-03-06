@@ -8,7 +8,7 @@ Use between verticals, after demos, or whenever the user wants to step back and 
 
 ## Prerequisites
 
-- `docs/ROADMAP.md` exists with current strategic context
+- V1 roadmap exists (resolve path from MEMORY.md Cross-Repo Registry) with current strategic context
 - GitHub Issues populated with labels (product/_, domain/_, tool/_, type/_, priority/_, source/_)
 - `PROGRESS.md` reflects recent work
 - KB sessions exist for recent build work

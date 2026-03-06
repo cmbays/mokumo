@@ -7,7 +7,7 @@ Step back from building and assess the project holistically. Update the ROADMAP,
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project context
-2. Read `docs/ROADMAP.md` for current priorities
+2. Read `V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry)` for current priorities
 3. Read `PROGRESS.md` for what's been built
 4. Read recent KB docs across all verticals
 5. Check open GitHub Issues: `gh issue list --repo cmbays/mokumo --state open`
@@ -22,7 +22,7 @@ Step back from building and assess the project holistically. Update the ROADMAP,
 
 ## Output
 
-- Updated `docs/ROADMAP.md` with current state
+- Updated `V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry)` with current state
 - Issue triage summary (closed stale issues, re-prioritized)
 - Recommendation for next build cycle focus
 
