@@ -8,7 +8,7 @@ Conduct comprehensive research on how competing and adjacent products handle the
 
 1. Read `CLAUDE.md` for project context and coding standards
 2. Read `docs/PRD.md` for feature scope and acceptance criteria
-3. Read `docs/ROADMAP.md` for current priorities
+3. Read `~/Github/ops/vision/mokumo/ROADMAP.md` for current priorities
 4. Check prior KB docs for this vertical: {PRIOR_KB_DOCS}
 
 ## Skills to Use

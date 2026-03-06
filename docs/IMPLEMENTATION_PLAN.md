@@ -10,7 +10,7 @@ current_step: 'Phase 1.5 — Demo Prep'
 depends_on:
   - docs/PRD.md
   - docs/APP_FLOW.md
-  - docs/ROADMAP.md
+  - ~/Github/ops/vision/mokumo/ROADMAP.md
 ---
 
 # Mokumo — Implementation Plan
@@ -169,7 +169,7 @@ Tracked as GitHub issues. Prioritized during cool-down cycles.
 
 ## Related Documents
 
-- `docs/ROADMAP.md` — Strategic planning, phases, bets
+- `~/Github/ops/vision/mokumo/ROADMAP.md` — Strategic planning, phases, bets
 - `PROGRESS.md` — What's been built (updated after PR merges)
 - `docs/PRD.md` — Feature definitions and acceptance criteria
 - `docs/APP_FLOW.md` — Routes and navigation paths

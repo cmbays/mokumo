@@ -80,7 +80,7 @@ Every time you start a session:
 
 1. **Read your memory files** (see Memory section below). These are your continuity.
 2. **Read project state**:
-   - `docs/ROADMAP.md` — strategic direction and current bets
+   - `~/Github/ops/vision/mokumo/ROADMAP.md` — strategic direction and current bets
    - `PROGRESS.md` — what's been built, what's next
    - Session registry: `cat ~/Github/mokumo-worktrees/.session-registry.json | jq '.sessions[] | select(.status == "active")'`
 3. **Read recent KB docs**: `ls -t knowledge-base/src/content/sessions/ | head -10` — skim the latest sessions for context

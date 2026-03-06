@@ -12,7 +12,7 @@ depends_on:
   - config/domains.json
   - docs/PM.md
   - docs/HOW_WE_WORK.md
-  - docs/ROADMAP.md
+  - ~/Github/ops/vision/mokumo/ROADMAP.md
 ---
 
 # DDD Strategy — Mokumo
@@ -723,7 +723,7 @@ In these cases, the domain stays a domain (it's still configuration), but the **
 | `config/tools.json`    | Tool classification source                     |
 | `docs/PM.md`           | PM label taxonomy (updated by #320)            |
 | `docs/HOW_WE_WORK.md`  | Methodology and pipeline types                 |
-| `docs/ROADMAP.md`      | Strategic context and phase planning           |
+| `~/Github/ops/vision/mokumo/ROADMAP.md`      | Strategic context and phase planning           |
 | `lib/schemas/`         | Current Zod schemas mapped in Section 2        |
 
 ## Appendix C: Revision History

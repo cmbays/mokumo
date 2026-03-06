@@ -21,7 +21,7 @@ The whole check-in should take 5-10 minutes. Don't pad sections — be concise a
 Read these in order (skip what you've already read in your startup sequence):
 
 1. Your memory files: `personality.md`, `project-pulse.md`, `1on1-log.md`
-2. `docs/ROADMAP.md` — current bets and strategic direction
+2. `~/Github/ops/vision/mokumo/ROADMAP.md` — current bets and strategic direction
 3. `PROGRESS.md` — what's been built recently
 4. Session registry: `jq '.' ~/Github/mokumo-worktrees/.session-registry.json`
 5. Recent PRs: `gh pr list --repo cmbays/mokumo --state all --limit 10`
