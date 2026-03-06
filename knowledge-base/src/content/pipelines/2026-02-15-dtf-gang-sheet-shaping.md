@@ -79,17 +79,17 @@ Sibling job creation requires job schema changes, Kanban board updates, and job 
 
 ## Deferred Items (GitHub Issues)
 
-| Issue                                                   | Title                                                               | Priority |
-| ------------------------------------------------------- | ------------------------------------------------------------------- | -------- |
-| [#211](https://github.com/cmbays/print-4ink/issues/211) | Sibling jobs + shipping gate for multi-service-type quotes          | Next     |
-| [#212](https://github.com/cmbays/print-4ink/issues/212) | Artwork model overhaul — service-type-specific metadata per artwork | Next     |
-| [#213](https://github.com/cmbays/print-4ink/issues/213) | DTF + Press service type — garment selection + pressing workflow    | Later    |
+| Issue                                               | Title                                                               | Priority |
+| --------------------------------------------------- | ------------------------------------------------------------------- | -------- |
+| [#211](https://github.com/cmbays/mokumo/issues/211) | Sibling jobs + shipping gate for multi-service-type quotes          | Next     |
+| [#212](https://github.com/cmbays/mokumo/issues/212) | Artwork model overhaul — service-type-specific metadata per artwork | Next     |
+| [#213](https://github.com/cmbays/mokumo/issues/213) | DTF + Press service type — garment selection + pressing workflow    | Later    |
 
 ## Artifacts
 
-- Frame: [`docs/shaping/dtf-gang-sheet/frame.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/dtf-gang-sheet/frame.md)
-- Shaping doc: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
-- Spike doc: [`docs/spikes/spike-dtf-gang-sheet-builder.md`](https://github.com/cmbays/print-4ink/blob/main/docs/spikes/spike-dtf-gang-sheet-builder.md)
+- Frame: [`docs/shaping/dtf-gang-sheet/frame.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/dtf-gang-sheet/frame.md)
+- Shaping doc: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
+- Spike doc: [`docs/spikes/spike-dtf-gang-sheet-builder.md`](https://github.com/cmbays/mokumo/blob/main/docs/spikes/spike-dtf-gang-sheet-builder.md)
 
 ## Next Step
 
@@ -97,6 +97,6 @@ Breadboarding — map Shape D's 6 parts into concrete affordances, wiring, and v
 
 ## Sources
 
-- Pre-build interview (2026-02-15, 17 questions): [KB doc](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/pipelines/2026-02-15-dtf-gang-sheet-interview.md)
-- Competitive research (5 competitors): [KB doc](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/pipelines/2026-02-15-dtf-gang-sheet-research.md)
+- Pre-build interview (2026-02-15, 17 questions): [KB doc](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/pipelines/2026-02-15-dtf-gang-sheet-interview.md)
+- Competitive research (5 competitors): [KB doc](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/pipelines/2026-02-15-dtf-gang-sheet-research.md)
 - Shaping skill: R x S methodology adapted from [rjs/shaping-skills](https://github.com/rjs/shaping-skills)

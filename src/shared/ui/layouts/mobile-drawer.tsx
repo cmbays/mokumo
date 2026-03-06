@@ -17,7 +17,7 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
         <SheetHeader className="border-b border-sidebar-border px-4 py-3">
           <SheetTitle className="flex items-center gap-2 text-sidebar-foreground">
             <Layers className="h-5 w-5 text-action" />
-            Screen Print Pro
+            Mokumo Print
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 p-2" aria-label="Additional navigation">

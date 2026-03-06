@@ -19,7 +19,7 @@ status: complete
 
 The NanoClaw pipeline (conversational PM bot for Slack-driven Linear management) progressed through shaping and implementation planning. The architectural decision made: **fork ZeroClaw (Rust platform, 394k LOC), isolate NanoClaw changes to ~1,100 LOC in bounded modules, and develop in a separate repository** (`cmbays/zeroclaw`).
 
-This separates concerns — print-4ink remains the production application, zeroclaw is the tooling/research platform.
+This separates concerns — mokumo remains the production application, zeroclaw is the tooling/research platform.
 
 ## Pipeline Milestones
 
@@ -46,20 +46,20 @@ This separates concerns — print-4ink remains the production application, zeroc
 
 ### Rationale
 
-1. **Separation of Concerns**: print-4ink is production software; zeroclaw is R&D tooling. Different release cadences, stability requirements, audiences.
+1. **Separation of Concerns**: mokumo is production software; zeroclaw is R&D tooling. Different release cadences, stability requirements, audiences.
 
 2. **Fork Manageability**: Isolating changes to bounded modules (`src/modes/`, new files) reduces upstream merge conflict risk. Separate repo eliminates daily build coupling.
 
-3. **Parallel Development**: NanoClaw development doesn't block print-4ink iterations. Teams can work independently.
+3. **Parallel Development**: NanoClaw development doesn't block mokumo iterations. Teams can work independently.
 
-4. **Deployment Model**: zeroclaw runs as a Docker Compose stack on dev machine; print-4ink is cloud-hosted Next.js. Orthogonal infrastructure.
+4. **Deployment Model**: zeroclaw runs as a Docker Compose stack on dev machine; mokumo is cloud-hosted Next.js. Orthogonal infrastructure.
 
 ### Integration Path (Future)
 
 After zeroclaw is mature (Waves 1–7 complete, tested):
 
 1. **Print-4Ink Integration**: Print-4Ink could pull zeroclaw as an NPM/container dependency for enhanced PM features
-2. **Slack Bridge**: Linear issues created by zeroclaw could feed back into print-4ink's workflow
+2. **Slack Bridge**: Linear issues created by zeroclaw could feed back into mokumo's workflow
 3. **Agent Ecosystem**: zeroclaw could run other agents (support, ops, analytics) via Mode layer, not just PM
 
 For now, **zeroclaw is independent and builds its own stability story**.
@@ -73,7 +73,7 @@ For now, **zeroclaw is independent and builds its own stability story**.
 - **Dev branch**: `dev` (main development branch)
 - **CLAUDE.md**: Added to zeroclaw repo with instructions for isolated development
 
-**CI**: Separate GitHub Actions workflows for zeroclaw (not coupled to print-4ink CI).
+**CI**: Separate GitHub Actions workflows for zeroclaw (not coupled to mokumo CI).
 
 ## Next Steps
 
@@ -85,7 +85,7 @@ For now, **zeroclaw is independent and builds its own stability story**.
    - First PR: repo ready for Waves 1–7
 
 2. **Print-4Ink Linkage** (optional, post-demo):
-   - Document in `knowledge-base/` how zeroclaw complements print-4ink PM workflows
+   - Document in `knowledge-base/` how zeroclaw complements mokumo PM workflows
    - Create placeholder for "Agents" section in KB (zeroclaw, future agents)
 
 ## Artifacts
@@ -100,7 +100,7 @@ For now, **zeroclaw is independent and builds its own stability story**.
 | Date       | Decision                                 | Rationale                                               |
 | ---------- | ---------------------------------------- | ------------------------------------------------------- |
 | 2026-02-21 | Fork ZeroClaw, not build from scratch    | TCO: 4 weeks fork vs. 8+ weeks greenfield               |
-| 2026-02-22 | Separate repository (cmbays/zeroclaw)    | Decouple print-4ink from R&D cadence                    |
+| 2026-02-22 | Separate repository (cmbays/zeroclaw)    | Decouple mokumo from R&D cadence                        |
 | 2026-02-22 | Bounded module approach (~1,100 LOC)     | Minimize upstream merge conflicts, preserve update path |
 | 2026-02-22 | Ollama + Qwen 3 14B (local, no API keys) | Gary's M4 Mac, zero inference cost, privacy-first       |
 

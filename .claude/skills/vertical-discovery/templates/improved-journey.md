@@ -1,5 +1,5 @@
 ---
-title: 'Screen Print Pro — Improved [VERTICAL] Journey'
+title: 'Mokumo — Improved [VERTICAL] Journey'
 description: 'Redesigned [VERTICAL] workflow addressing all friction points from competitor analysis'
 category: strategy
 status: draft
@@ -12,7 +12,7 @@ depends-on:
   - docs/workspace/{pipeline-id}/scope.md
 ---
 
-# Screen Print Pro — Improved [VERTICAL] Journey
+# Mokumo — Improved [VERTICAL] Journey
 
 **Purpose**: Design the 10x better [VERTICAL] workflow based on competitor analysis and user interview
 **Input**: Playwright exploration, user interview, competitive analysis, scope definition
@@ -74,12 +74,12 @@ END: [RESULT]
 
 ## Key Differences from [COMPETITOR]
 
-| Aspect    | [COMPETITOR] | Screen Print Pro |
-| --------- | ------------ | ---------------- |
-| **Flow**  |              |                  |
-| **Steps** |              |                  |
-| **Speed** |              |                  |
-| **State** |              |                  |
+| Aspect    | [COMPETITOR] | Mokumo |
+| --------- | ------------ | ------ |
+| **Flow**  |              |        |
+| **Steps** |              |        |
+| **Speed** |              |        |
+| **State** |              |        |
 
 ---
 

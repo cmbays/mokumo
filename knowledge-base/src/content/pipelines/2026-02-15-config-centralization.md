@@ -11,7 +11,7 @@ stage: build
 tags: [build, decision]
 sessionId: '48e010ca-a08f-4c6e-b64b-63bcfc798f5b'
 branch: 'session/0215-config-audit'
-pr: 'https://github.com/cmbays/print-4ink/pull/195'
+pr: 'https://github.com/cmbays/mokumo/pull/195'
 status: complete
 ---
 

@@ -53,4 +53,4 @@ Replaced the legacy `CustomerTag` badge with the `LifecycleBadge` component in t
 
 ## PR
 
-[#28 — feat: Enhanced CustomerCombobox with lifecycle badges and enriched context](https://github.com/cmbays/print-4ink/pull/28)
+[#28 — feat: Enhanced CustomerCombobox with lifecycle badges and enriched context](https://github.com/cmbays/mokumo/pull/28)

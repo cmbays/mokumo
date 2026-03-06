@@ -103,7 +103,7 @@ The generated schemas support `.extend()`, `.merge()`, `.refine()` — all stand
 **What we gain**: Single source of truth. Schema change → migration + types update atomically.
 **What we give up**: Pure DDD separation. The domain entity layer becomes a thin re-export wrapper rather than an independent definition.
 
-**For Screen Print Pro at Phase 2**: The DDD purity tradeoff is worth the simplicity. We already use Zod-first types — this is the same pattern, just anchored to the DB schema instead of hand-written.
+**For Mokumo at Phase 2**: The DDD purity tradeoff is worth the simplicity. We already use Zod-first types — this is the same pattern, just anchored to the DB schema instead of hand-written.
 
 **Plan**: Migrate `src/domain/entities/` schemas to derive from Drizzle tables. Keep the entity files as re-export + extension points (`.extend()` for computed/derived fields that don't live in the DB).
 

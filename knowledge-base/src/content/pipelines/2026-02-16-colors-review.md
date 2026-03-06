@@ -94,9 +94,9 @@ Audited against three reference documents:
 
 2. **Missing test coverage for removal functions** — `removeFromAll`, `removeFromLevelOnly`, `removeFromSelected` had zero tests despite being core N16/N17/N18 breadboard affordances. Added 9 new tests with proper mock data snapshot/restore pattern. Test count: 617 → 626.
 
-3. **`useDebounce` hook extraction** — General-purpose debounce hook was defined inline in `settings/colors/page.tsx`. Extracted to generic `lib/hooks/useDebounce.ts`. ([#241](https://github.com/cmbays/print-4ink/issues/241) — closed)
+3. **`useDebounce` hook extraction** — General-purpose debounce hook was defined inline in `settings/colors/page.tsx`. Extracted to generic `lib/hooks/useDebounce.ts`. ([#241](https://github.com/cmbays/mokumo/issues/241) — closed)
 
-4. **DRY keyboard navigation** — Arrow key grid navigation duplicated between `ColorSwatchPicker` and `ColorFilterGrid`. Extracted to shared `lib/hooks/useGridKeyboardNav.ts` hook. ([#242](https://github.com/cmbays/print-4ink/issues/242) — closed)
+4. **DRY keyboard navigation** — Arrow key grid navigation duplicated between `ColorSwatchPicker` and `ColorFilterGrid`. Extracted to shared `lib/hooks/useGridKeyboardNav.ts` hook. ([#242](https://github.com/cmbays/mokumo/issues/242) — closed)
 
 ## Cross-Vertical Observations
 
@@ -112,7 +112,7 @@ Audited against three reference documents:
 
 ## Smoke Test Findings
 
-User walkthrough revealed 8 UX issues tracked under [#258 — Colors & Garments UX Refactor](https://github.com/cmbays/print-4ink/issues/258):
+User walkthrough revealed 8 UX issues tracked under [#258 — Colors & Garments UX Refactor](https://github.com/cmbays/mokumo/issues/258):
 
 | #    | Issue                                                                                      | Severity |
 | ---- | ------------------------------------------------------------------------------------------ | -------- |
@@ -130,8 +130,8 @@ Key takeaway: the inheritance model works correctly under the hood, but the UI d
 ## Artifacts
 
 - **Branch**: `session/0216-colors-review`
-- **PR**: [#243](https://github.com/cmbays/print-4ink/pull/243) (merged)
-- **GitHub Issues**: [#241](https://github.com/cmbays/print-4ink/issues/241) (closed), [#242](https://github.com/cmbays/print-4ink/issues/242) (closed), [#258](https://github.com/cmbays/print-4ink/issues/258) (open — 8 sub-issues)
+- **PR**: [#243](https://github.com/cmbays/mokumo/pull/243) (merged)
+- **GitHub Issues**: [#241](https://github.com/cmbays/mokumo/issues/241) (closed), [#242](https://github.com/cmbays/mokumo/issues/242) (closed), [#258](https://github.com/cmbays/mokumo/issues/258) (open — 8 sub-issues)
 - **Files modified**: `docs/APP_FLOW.md`, `lib/helpers/__tests__/color-preferences.test.ts`, `lib/hooks/useDebounce.ts` (new), `lib/hooks/useGridKeyboardNav.ts` (new), `components/features/ColorSwatchPicker.tsx`, `app/(dashboard)/garments/_components/ColorFilterGrid.tsx`, `app/(dashboard)/settings/colors/page.tsx`
 - **Breadboard reference**: `docs/breadboards/color-preference-breadboard.md`
 - **Prior session**: [2026-02-15 Colors Foundation](/pipelines/2026-02-15-colors-foundation)

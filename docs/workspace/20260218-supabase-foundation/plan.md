@@ -41,7 +41,7 @@ npm install -D drizzle-kit supabase
 
 | File                                | Purpose                                                                         |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
-| `supabase/config.toml`              | Local CLI config (`project_id = "screen-print-pro"`)                            |
+| `supabase/config.toml`              | Local CLI config (`project_id = "mokumo"`)                                      |
 | `supabase/migrations/.gitkeep`      | Placeholder — migrations added in Wave 1                                        |
 | `src/shared/lib/supabase/client.ts` | `createBrowserClient()` factory — browser/client components only                |
 | `src/shared/lib/supabase/server.ts` | `createServerClient()` + cookie adapter — server components + actions           |

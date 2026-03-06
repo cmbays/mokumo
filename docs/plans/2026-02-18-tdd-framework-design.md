@@ -1,4 +1,4 @@
-# TDD Framework Design — Screen Print Pro
+# TDD Framework Design — Mokumo
 
 **Date:** 2026-02-18
 **Issue:** #122
@@ -11,7 +11,7 @@
 Stand up a project-specific TDD framework that:
 
 1. Uses the existing `superpowers:test-driven-development` skill for methodology (Red-Green-Refactor)
-2. Adds Screen Print Pro–specific rules: which layers require tests, mandatory 100% targets, coverage thresholds
+2. Adds Mokumo–specific rules: which layers require tests, mandatory 100% targets, coverage thresholds
 3. Wires up Vitest coverage enforcement with per-path thresholds
 4. Configures Playwright for E2E tests on critical user flows
 5. Integrates both into CI so enforcement is automated, not just documented

@@ -11,7 +11,7 @@ stage: build
 tags: [build, decision]
 sessionId: '0ba68ef8-1b02-40be-a039-2c63d6d15cd1'
 branch: 'session/0216-deploy-strategy'
-pr: 'https://github.com/cmbays/print-4ink/pull/314'
+pr: 'https://github.com/cmbays/mokumo/pull/314'
 status: complete
 ---
 
@@ -19,7 +19,7 @@ status: complete
 
 High commit velocity (179 commits to `main` in 16 days, 85 in the last 3 days) was hitting Vercel's Hobby plan rate limits (100 deployments/day, 32 builds/hour). Every push to `main` triggered a production deployment, and every PR push triggered a preview deployment. With concurrent Claude Code agent sessions generating frequent commits across multiple worktrees, the default Vercel Git integration was unsustainable.
 
-Related: [Issue #304](https://github.com/cmbays/print-4ink/issues/304)
+Related: [Issue #304](https://github.com/cmbays/mokumo/issues/304)
 
 ## Decision
 
@@ -79,8 +79,8 @@ Two options for updating the live app:
 gh pr create --base production --head main --title "Release: <description>"
 
 # Option B: Fast-forward directly (no branch checkout needed)
-git -C ~/Github/print-4ink fetch origin
-git -C ~/Github/print-4ink push origin origin/main:production
+git -C ~/Github/mokumo fetch origin
+git -C ~/Github/mokumo push origin origin/main:production
 ```
 
 Option B uses `origin/main:production` refspec to push the remote `main` tip directly to `production` without checking out any branches locally. This respects the worktree rule that the main repo always stays on `main`.
@@ -120,8 +120,8 @@ Architecture and code review identified these items (all addressed before merge)
 
 ## Files Changed
 
-- [`vercel.json`](https://github.com/cmbays/print-4ink/blob/main/vercel.json) (created)
-- [`.github/workflows/ci.yml`](https://github.com/cmbays/print-4ink/blob/main/.github/workflows/ci.yml) (modified)
-- [`CLAUDE.md`](https://github.com/cmbays/print-4ink/blob/main/CLAUDE.md) (modified)
-- [`docs/HOW_WE_WORK.md`](https://github.com/cmbays/print-4ink/blob/main/docs/HOW_WE_WORK.md) (modified)
-- [PR #314](https://github.com/cmbays/print-4ink/pull/314)
+- [`vercel.json`](https://github.com/cmbays/mokumo/blob/main/vercel.json) (created)
+- [`.github/workflows/ci.yml`](https://github.com/cmbays/mokumo/blob/main/.github/workflows/ci.yml) (modified)
+- [`CLAUDE.md`](https://github.com/cmbays/mokumo/blob/main/CLAUDE.md) (modified)
+- [`docs/HOW_WE_WORK.md`](https://github.com/cmbays/mokumo/blob/main/docs/HOW_WE_WORK.md) (modified)
+- [PR #314](https://github.com/cmbays/mokumo/pull/314)

@@ -14,7 +14,7 @@ status: complete
 
 ## Context
 
-Screen Print Pro has 7 config JSON files in `config/` that define the system's taxonomy — domains, products, tools, stages, tags, pipeline types, and pipeline gates. These files are consumed by the Knowledge Base (Astro) and will be consumed by the Next.js app, automation plugins, and CI tooling as the project matures.
+Mokumo has 7 config JSON files in `config/` that define the system's taxonomy — domains, products, tools, stages, tags, pipeline types, and pipeline gates. These files are consumed by the Knowledge Base (Astro) and will be consumed by the Next.js app, automation plugins, and CI tooling as the project matures.
 
 Today, consumers import raw JSON and derive typed data inline. There is no schema validation on the config files themselves. A malformed config file would produce confusing errors far downstream rather than failing at the source.
 
@@ -133,7 +133,7 @@ References between config files must resolve:
 
 These catch broken references that no single-file schema can detect.
 
-## Applied to Screen Print Pro
+## Applied to Mokumo
 
 ### Module Structure
 

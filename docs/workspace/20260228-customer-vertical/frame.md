@@ -32,7 +32,7 @@ shaping: true
 
 ## Problem
 
-Screen Print Pro has a Phase 1 customer management skeleton — presentation-only UI backed by
+Mokumo has a Phase 1 customer management skeleton — presentation-only UI backed by
 3 mock customers. No mutations persist, no real database exists. Gary cannot use it to manage
 actual customer relationships. Meanwhile, every other vertical (quoting, jobs, invoicing) needs
 a real customer entity to link against. The customer vertical is a prerequisite for the entire

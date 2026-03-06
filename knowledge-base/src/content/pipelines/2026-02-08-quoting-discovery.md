@@ -51,7 +51,7 @@ Single-page form replaces 6-step wizard. Instant client-side pricing. S&S-style 
 | No quote reuse / duplication           | High     | Duplicate Quote button                |
 | No quote tracking or status            | High     | Full status dashboard                 |
 
-## Print Life vs Screen Print Pro
+## Print Life vs Mokumo
 
 ### Print Life (Current)
 
@@ -63,7 +63,7 @@ Single-page form replaces 6-step wizard. Instant client-side pricing. S&S-style 
 - Quote = invoice immediately
 - Price by phone call only
 
-### Screen Print Pro (Target)
+### Mokumo (Target)
 
 - Single scrollable page
 - Instant client-side pricing
@@ -81,10 +81,10 @@ Color swatches should match S&S Activewear's supplier UI: dense palette with swa
 
 ## Documents Created
 
-- [docs/competitive-analysis/print-life-quoting-analysis.md](https://github.com/cmbays/print-4ink/blob/main/docs/competitive-analysis/print-life-quoting-analysis.md)
-- [docs/competitive-analysis/print-life-journey-quoting.md](https://github.com/cmbays/print-4ink/blob/main/docs/competitive-analysis/print-life-journey-quoting.md)
-- [docs/strategy/screen-print-pro-journey-quoting.md](https://github.com/cmbays/print-4ink/blob/main/docs/strategy/screen-print-pro-journey-quoting.md)
-- [docs/strategy/quoting-scope-definition.md](https://github.com/cmbays/print-4ink/blob/main/docs/strategy/quoting-scope-definition.md)
+- [docs/competitive-analysis/print-life-quoting-analysis.md](https://github.com/cmbays/mokumo/blob/main/docs/competitive-analysis/print-life-quoting-analysis.md)
+- [docs/competitive-analysis/print-life-journey-quoting.md](https://github.com/cmbays/mokumo/blob/main/docs/competitive-analysis/print-life-journey-quoting.md)
+- [docs/strategy/mokumo-journey-quoting.md](https://github.com/cmbays/mokumo/blob/main/docs/strategy/mokumo-journey-quoting.md)
+- [docs/strategy/quoting-scope-definition.md](https://github.com/cmbays/mokumo/blob/main/docs/strategy/quoting-scope-definition.md)
 
 ## Next: Build Phase
 

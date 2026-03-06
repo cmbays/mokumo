@@ -16,7 +16,7 @@ status: complete
 
 ## Overview
 
-Set up Vercel deployment for Screen Print Pro with password protection using an access code stored securely in Vercel's environment variables. This allows secure demo access to 4Ink without exposing the app publicly.
+Set up Vercel deployment for Mokumo with password protection using an access code stored securely in Vercel's environment variables. This allows secure demo access to 4Ink without exposing the app publicly.
 
 **Security Note:** The actual access code is stored in the `DEMO_ACCESS_CODE` environment variable in Vercel. Never commit the code to git. To view it:
 
@@ -50,7 +50,7 @@ vercel env list
 
 ## How It Works
 
-1. User visits deployed app (e.g., `print-4ink.vercel.app`)
+1. User visits deployed app (e.g., `mokumo.vercel.app`)
 2. Middleware checks for `demo-access` cookie
 3. If missing, redirect to `/demo-login`
 4. User enters access code
@@ -60,10 +60,10 @@ vercel env list
 
 ## Files Changed
 
-- [middleware.ts (created)](https://github.com/cmbays/print-4ink/blob/main/middleware.ts)
-- [app/demo-login/page.tsx (created)](https://github.com/cmbays/print-4ink/blob/main/app/demo-login/page.tsx)
-- [app/api/demo-login/route.ts (created)](https://github.com/cmbays/print-4ink/blob/main/app/api/demo-login/route.ts)
-- [PR #4](https://github.com/cmbays/print-4ink/pull/4)
+- [middleware.ts (created)](https://github.com/cmbays/mokumo/blob/main/middleware.ts)
+- [app/demo-login/page.tsx (created)](https://github.com/cmbays/mokumo/blob/main/app/demo-login/page.tsx)
+- [app/api/demo-login/route.ts (created)](https://github.com/cmbays/mokumo/blob/main/app/api/demo-login/route.ts)
+- [PR #4](https://github.com/cmbays/mokumo/pull/4)
 
 ## Next Steps
 

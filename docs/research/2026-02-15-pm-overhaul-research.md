@@ -59,7 +59,7 @@ This document investigates how to build a PM system for a solo developer working
 gh auth refresh -s project
 
 # Create project
-gh project create --owner "@me" --title "Screen Print Pro"
+gh project create --owner "@me" --title "Mokumo"
 
 # Create custom fields
 gh project field-create 1 --owner "@me" --name "Product" \
@@ -68,7 +68,7 @@ gh project field-create 1 --owner "@me" --name "Product" \
 
 # Add issue to project
 gh project item-add 1 --owner "@me" \
-  --url https://github.com/cmbays/print-4ink/issues/42
+  --url https://github.com/cmbays/mokumo/issues/42
 
 # Set field (requires internal IDs — friction point for agents)
 gh project item-edit --id <item-id> --field-id <field-id> \
@@ -155,11 +155,11 @@ gh api graphql -H "GraphQL-Features: sub_issues" \
   -f query='mutation { addSubIssue(input: {issueId: "PARENT_ID", subIssueId: "CHILD_ID"}) { issue { id } } }'
 
 # Add dependency (REST)
-gh api repos/cmbays/print-4ink/issues/42/dependencies/blocked_by \
+gh api repos/cmbays/mokumo/issues/42/dependencies/blocked_by \
   -f blocking_issue_number=38
 
 # Remove dependency (REST)
-gh api -X DELETE repos/cmbays/print-4ink/issues/42/dependencies/blocked_by/38
+gh api -X DELETE repos/cmbays/mokumo/issues/42/dependencies/blocked_by/38
 ```
 
 ### Recommended Pattern

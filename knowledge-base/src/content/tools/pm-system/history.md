@@ -11,7 +11,7 @@ status: current
 
 ### 2026-02-14: PM Foundation
 
-**Pipeline:** [PM Foundation](https://github.com/cmbays/print-4ink/pull/91) | **PR:** [#91](https://github.com/cmbays/print-4ink/pull/91)
+**Pipeline:** [PM Foundation](https://github.com/cmbays/mokumo/pull/91) | **PR:** [#91](https://github.com/cmbays/mokumo/pull/91)
 
 Established the PM philosophy and initial taxonomy:
 
@@ -25,7 +25,7 @@ Established the PM philosophy and initial taxonomy:
 
 ### 2026-02-16: PM Overhaul
 
-**Pipeline:** [PM Overhaul](/pipelines/2026-02-16-pm-overhaul) | **PRs:** [#266](https://github.com/cmbays/print-4ink/pull/266), [#267](https://github.com/cmbays/print-4ink/pull/267), [#268](https://github.com/cmbays/print-4ink/pull/268), [#269](https://github.com/cmbays/print-4ink/pull/269), [#275](https://github.com/cmbays/print-4ink/pull/275), [#283](https://github.com/cmbays/print-4ink/pull/283) | **Issue:** [#216](https://github.com/cmbays/print-4ink/issues/216)
+**Pipeline:** [PM Overhaul](/pipelines/2026-02-16-pm-overhaul) | **PRs:** [#266](https://github.com/cmbays/mokumo/pull/266), [#267](https://github.com/cmbays/mokumo/pull/267), [#268](https://github.com/cmbays/mokumo/pull/268), [#269](https://github.com/cmbays/mokumo/pull/269), [#275](https://github.com/cmbays/mokumo/pull/275), [#283](https://github.com/cmbays/mokumo/pull/283) | **Issue:** [#216](https://github.com/cmbays/mokumo/issues/216)
 
 Full infrastructure build across 10 tasks in 3 waves:
 

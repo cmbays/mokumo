@@ -10,7 +10,7 @@
 
 ## 1. Problem Statement
 
-Screen Print Pro currently has a Phase 1 customer management skeleton — presentation-only UI components backed by mock data with 3 seed customers. No mutations persist, no real database exists, and the customer vertical cannot support the workflows that a production screen printing shop needs.
+Mokumo currently has a Phase 1 customer management skeleton — presentation-only UI components backed by mock data with 3 seed customers. No mutations persist, no real database exists, and the customer vertical cannot support the workflows that a production screen printing shop needs.
 
 The shop owner (Gary) needs to:
 

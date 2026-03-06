@@ -9,7 +9,7 @@
 **Tech Stack:** TypeScript, Zod v4, Vitest, existing `DalError` from `lib/dal/_shared/errors.ts`
 
 **Issue:** #159
-**Worktree:** `~/Github/print-4ink-worktrees/session-0217-supplier-adapter/`
+**Worktree:** `~/Github/mokumo-worktrees/session-0217-supplier-adapter/`
 **Branch:** `session/0217-supplier-adapter`
 **Dev server:** `PORT=3003 npm run dev`
 

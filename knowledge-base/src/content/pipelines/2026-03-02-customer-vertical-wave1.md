@@ -139,26 +139,26 @@ Three CI failures were fixed before merge:
 
 Customer detail page wiring — the display layer that sits above Wave 1 infra:
 
-| File | Role |
-| --- | --- |
-| `src/app/(dashboard)/customers/[id]/page.tsx` | Server component — parallel-fetches customer + quotes + jobs + invoices + artworks + notes + activities |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerDetailHeader.tsx` | Company name, badges, contact rows, QuickStats strip, Edit/Archive actions |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerTabs.tsx` | 10-tab component — desktop all visible, mobile primary + "More" dropdown |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerQuotesTable.tsx` | Quotes tab table |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerJobsTable.tsx` | Jobs tab table |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerInvoicesTable.tsx` | Invoices tab table |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerScreensTab.tsx` | Screens tab (derived from jobs via `deriveScreensFromJobs`) |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerPreferencesTab.tsx` | Preferences tab |
-| `src/app/(dashboard)/customers/[id]/_components/ContactHierarchy.tsx` | Contacts tab |
-| `src/app/(dashboard)/customers/[id]/_components/CustomerDetailsPanel.tsx` | Details tab |
-| `src/app/(dashboard)/customers/actions/activity.actions.ts` | `addCustomerNote` + `loadMoreActivities` server actions (app/ layer — full infra wiring) |
-| `src/features/customers/lib/activity-types.ts` | NEW — `ActivityError` + `ActivityResult<T>` shared types (no infra deps) |
-| `src/features/customers/lib/activity-error-messages.ts` | User-facing error messages keyed by `ActivityError` |
-| `src/features/customers/components/ActivityFeed.tsx` | Activity tab — filter chips + timeline + pagination (DI via props) |
-| `src/features/customers/components/ActivityEntry.tsx` | Single timeline entry |
-| `src/features/customers/components/QuickNoteRail.tsx` | Quick note textarea rail (DI via `onSave` prop) |
-| `src/features/customers/components/FilterChip.tsx` | Filter chip primitive |
-| `src/features/customers/components/CustomerQuickStats.tsx` | Stats strip (lifetime value, open quotes, etc.) |
+| File                                                                        | Role                                                                                                    |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `src/app/(dashboard)/customers/[id]/page.tsx`                               | Server component — parallel-fetches customer + quotes + jobs + invoices + artworks + notes + activities |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerDetailHeader.tsx`   | Company name, badges, contact rows, QuickStats strip, Edit/Archive actions                              |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerTabs.tsx`           | 10-tab component — desktop all visible, mobile primary + "More" dropdown                                |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerQuotesTable.tsx`    | Quotes tab table                                                                                        |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerJobsTable.tsx`      | Jobs tab table                                                                                          |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerInvoicesTable.tsx`  | Invoices tab table                                                                                      |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerScreensTab.tsx`     | Screens tab (derived from jobs via `deriveScreensFromJobs`)                                             |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerPreferencesTab.tsx` | Preferences tab                                                                                         |
+| `src/app/(dashboard)/customers/[id]/_components/ContactHierarchy.tsx`       | Contacts tab                                                                                            |
+| `src/app/(dashboard)/customers/[id]/_components/CustomerDetailsPanel.tsx`   | Details tab                                                                                             |
+| `src/app/(dashboard)/customers/actions/activity.actions.ts`                 | `addCustomerNote` + `loadMoreActivities` server actions (app/ layer — full infra wiring)                |
+| `src/features/customers/lib/activity-types.ts`                              | NEW — `ActivityError` + `ActivityResult<T>` shared types (no infra deps)                                |
+| `src/features/customers/lib/activity-error-messages.ts`                     | User-facing error messages keyed by `ActivityError`                                                     |
+| `src/features/customers/components/ActivityFeed.tsx`                        | Activity tab — filter chips + timeline + pagination (DI via props)                                      |
+| `src/features/customers/components/ActivityEntry.tsx`                       | Single timeline entry                                                                                   |
+| `src/features/customers/components/QuickNoteRail.tsx`                       | Quick note textarea rail (DI via `onSave` prop)                                                         |
+| `src/features/customers/components/FilterChip.tsx`                          | Filter chip primitive                                                                                   |
+| `src/features/customers/components/CustomerQuickStats.tsx`                  | Stats strip (lifetime value, open quotes, etc.)                                                         |
 
 ### Critical Architecture Decision — ESLint Import Boundary + DI Pattern
 
@@ -169,6 +169,7 @@ Customer detail page wiring — the display layer that sits above Wave 1 infra:
 **Resolution — Dependency Injection via props**:
 
 1. Created `src/features/customers/lib/activity-types.ts` as a **pure type anchor** — no imports, no infra deps:
+
    ```typescript
    export type ActivityError = 'UNAUTHORIZED' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR'
    export type ActivityResult<T> = { ok: true; value: T } | { ok: false; error: ActivityError }
@@ -177,6 +178,7 @@ Customer detail page wiring — the display layer that sits above Wave 1 infra:
 2. Moved the full server action implementation to `src/app/(dashboard)/customers/actions/activity.actions.ts` (app/ layer — infra imports allowed here).
 
 3. `ActivityFeed` and `QuickNoteRail` declare what they need via **typed callback props** — no knowledge of infra:
+
    ```typescript
    // ActivityFeed props
    onAddNote: (params: { customerId: string; content: string }) => Promise<ActivityResult<CustomerActivity>>
@@ -191,21 +193,21 @@ Customer detail page wiring — the display layer that sits above Wave 1 infra:
 
 Two icon-only buttons were using `hidden sm:inline` (640px breakpoint) instead of `hidden md:inline` (768px — the project standard). Also missing `aria-label` on buttons where the text label is hidden at mobile.
 
-| File | Change |
-| --- | --- |
-| `CustomerDetailHeader.tsx` | Archive button: `sm:inline` → `md:inline`, added `aria-label="Archive customer"`, `aria-hidden="true"` on icon |
-| `src/shared/ui/layouts/topbar.tsx` | Sign-out button: `sm:inline` → `md:inline`, added `aria-label="Sign out"`, `aria-hidden="true"` on icon |
+| File                               | Change                                                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `CustomerDetailHeader.tsx`         | Archive button: `sm:inline` → `md:inline`, added `aria-label="Archive customer"`, `aria-hidden="true"` on icon |
+| `src/shared/ui/layouts/topbar.tsx` | Sign-out button: `sm:inline` → `md:inline`, added `aria-label="Sign out"`, `aria-hidden="true"` on icon        |
 
 **Rule**: Whenever text is hidden at mobile via `hidden md:inline`, the parent button MUST have an explicit `aria-label`. The icon alone is not sufficient for screen readers.
 
 ### Deferred Issues Filed
 
-| Issue | Description | Priority |
-| --- | --- | --- |
-| #778 | Split `customers.ts` provider router — too many responsibilities | low |
-| #779 | `CustomerStats` Zod inference instead of manual type | low |
-| #780 | Audit remaining `sm:` breakpoints across the codebase | medium |
-| #781 | `isFirstRender` ref pattern breaks under React Strict Mode double-mount (dev-only) | low |
+| Issue | Description                                                                        | Priority |
+| ----- | ---------------------------------------------------------------------------------- | -------- |
+| #778  | Split `customers.ts` provider router — too many responsibilities                   | low      |
+| #779  | `CustomerStats` Zod inference instead of manual type                               | low      |
+| #780  | Audit remaining `sm:` breakpoints across the codebase                              | medium   |
+| #781  | `isFirstRender` ref pattern breaks under React Strict Mode double-mount (dev-only) | low      |
 
 ### CI Lessons from This Session
 

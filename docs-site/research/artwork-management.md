@@ -245,7 +245,7 @@ type ScreenRequirement = {
 }
 ```
 
-**Critical decision**: Screen Print Pro should NOT perform color separations — that's Photoshop + UltraSeps/Sep Studio territory. Be the **system of record** for separation metadata and the orchestrator connecting art department outputs to screen room inputs.
+**Critical decision**: Mokumo should NOT perform color separations — that's Photoshop + UltraSeps/Sep Studio territory. Be the **system of record** for separation metadata and the orchestrator connecting art department outputs to screen room inputs.
 
 ---
 

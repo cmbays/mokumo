@@ -28,7 +28,7 @@ created: 2026-02-08
 
 ### Opening (2 min)
 
-"Thanks for taking time for this. I want to deeply understand how you currently create quotes in Print Life, where you're experiencing friction, and what an ideal quoting experience would look like. This will help us design a significantly better workflow for Screen Print Pro."
+"Thanks for taking time for this. I want to deeply understand how you currently create quotes in Print Life, where you're experiencing friction, and what an ideal quoting experience would look like. This will help us design a significantly better workflow for Mokumo."
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Phase 2 Roadmap
-description: Projects, milestones, dependencies, and delivery strategy for Phase 2 of Screen Print Pro.
+description: Projects, milestones, dependencies, and delivery strategy for Phase 2 of Mokumo.
 ---
 
 # Phase 2 Roadmap
@@ -10,7 +10,7 @@ description: Projects, milestones, dependencies, and delivery strategy for Phase
 
 ## Phase 2 Goal
 
-Transform Screen Print Pro from a validated mockup into a functioning production system. The shop owner can use it to run their day-to-day operations with real data, real pricing, and real persistence.
+Transform Mokumo from a validated mockup into a functioning production system. The shop owner can use it to run their day-to-day operations with real data, real pricing, and real persistence.
 
 ## Delivery Strategy
 

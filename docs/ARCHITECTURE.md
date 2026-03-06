@@ -1,6 +1,6 @@
 ---
 title: 'ARCHITECTURE.md'
-description: 'Clean Architecture layer definitions, import rules, and SOLID/12-Factor standards for Screen Print Pro.'
+description: 'Clean Architecture layer definitions, import rules, and SOLID/12-Factor standards for Mokumo.'
 category: canonical
 status: active
 phase: all
@@ -9,7 +9,7 @@ last_verified: 2026-02-17
 depends_on: []
 ---
 
-# Screen Print Pro — Architecture
+# Mokumo — Architecture
 
 > **Status**: Phase 4 Clean Architecture migration complete (2026-02-17). All layers in place, ESLint boundaries enforced.
 > See `docs/strategy/solid-audit.md` and `docs/strategy/twelve-factor-audit.md` for audit findings.

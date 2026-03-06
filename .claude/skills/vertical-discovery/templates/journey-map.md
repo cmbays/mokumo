@@ -10,7 +10,7 @@ last-verified: [DATE]
 
 # [COMPETITOR] — [VERTICAL] Journey Map
 
-**Purpose**: Document [COMPETITOR]'s actual [VERTICAL] workflow with friction points to inform Screen Print Pro design
+**Purpose**: Document [COMPETITOR]'s actual [VERTICAL] workflow with friction points to inform Mokumo design
 **Input**: Playwright exploration + user interview
 **Status**: [Draft / Complete]
 
@@ -131,11 +131,11 @@ END: [RESULT]
 
 ## Success Metrics for Redesign
 
-| Metric               | [COMPETITOR] (Actual) | Screen Print Pro (Target) | Improvement |
-| -------------------- | --------------------- | ------------------------- | ----------- |
-| Simple [TASK] time   | [X] min               | [X] min                   | [X]% faster |
-| Complex [TASK] time  | [X] min               | [X] min                   | [X]% faster |
-| Simple [TASK] clicks | [X]                   | [X]                       | [X]% fewer  |
+| Metric               | [COMPETITOR] (Actual) | Mokumo (Target) | Improvement |
+| -------------------- | --------------------- | --------------- | ----------- |
+| Simple [TASK] time   | [X] min               | [X] min         | [X]% faster |
+| Complex [TASK] time  | [X] min               | [X] min         | [X]% faster |
+| Simple [TASK] clicks | [X]                   | [X]             | [X]% fewer  |
 
 ---
 

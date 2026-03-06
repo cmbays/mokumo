@@ -103,10 +103,10 @@ Added `"knowledge-base"` to `tsconfig.json` `exclude` array. The root tsconfig's
 
 **MoveLaneDialog false positive**: Static analysis (grep for imports) is essential before deleting "dead code." The plan flagged MoveLaneDialog as dead, but it's actively imported in 2 files.
 
-**Zod-for-props boundary**: CodeRabbit suggested deriving React component props from Zod schemas. Correctly rejected -- Zod-first is for domain schemas, not component props with callbacks and React concerns. Tracked as [issue #70](https://github.com/cmbays/print-4ink/issues/70).
+**Zod-for-props boundary**: CodeRabbit suggested deriving React component props from Zod schemas. Correctly rejected -- Zod-first is for domain schemas, not component props with callbacks and React concerns. Tracked as [issue #70](https://github.com/cmbays/mokumo/issues/70).
 
 ## GitHub Issues Created
 
-| Issue                                                 | Title                                               |
-| ----------------------------------------------------- | --------------------------------------------------- |
-| [#70](https://github.com/cmbays/print-4ink/issues/70) | Refactor: Derive JobBoardCard props from Zod schema |
+| Issue                                             | Title                                               |
+| ------------------------------------------------- | --------------------------------------------------- |
+| [#70](https://github.com/cmbays/mokumo/issues/70) | Refactor: Derive JobBoardCard props from Zod schema |

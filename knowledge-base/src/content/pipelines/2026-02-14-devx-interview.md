@@ -40,7 +40,7 @@ status: complete
 
 ## 1. Executive Summary
 
-The DevX vertical focuses on optimizing how we develop Screen Print Pro — the parallel AI workflow, session management, automation, and tooling that enables building verticals faster with better quality and traceability.
+The DevX vertical focuses on optimizing how we develop Mokumo — the parallel AI workflow, session management, automation, and tooling that enables building verticals faster with better quality and traceability.
 
 **Core insight**: Separate concerns across four layers:
 
@@ -123,14 +123,14 @@ The `work` shell function becomes the orchestration layer connecting all four, w
 **Decision**: Launch Claude from worktrees parent directory.
 
 ```
-~/Github/print-4ink-worktrees/    ← Claude launches HERE
-  ├── CLAUDE.md                   ← symlink → print-4ink/CLAUDE.md
+~/Github/mokumo-worktrees/    ← Claude launches HERE
+  ├── CLAUDE.md                   ← symlink → mokumo/CLAUDE.md
   ├── .session-registry.json      ← session cross-reference registry
   ├── session/0214-jobs-w1-schemas/  ← worktree (deletable)
   └── ...
 ```
 
-All Claude sessions store transcripts at: `~/.claude/projects/-Users-cmbays-Github-print-4ink-worktrees/`
+All Claude sessions store transcripts at: `~/.claude/projects/-Users-cmbays-Github-mokumo-worktrees/`
 
 Deleting any worktree subdirectory has no impact on session storage. `claude --resume <id>` works from the parent dir anytime.
 
@@ -138,7 +138,7 @@ Deleting any worktree subdirectory has no impact on session storage. `claude --r
 
 ### Session Registry
 
-JSON file at `~/Github/print-4ink-worktrees/.session-registry.json`:
+JSON file at `~/Github/mokumo-worktrees/.session-registry.json`:
 
 ```json
 {
@@ -455,8 +455,8 @@ Current `~/.claude/settings.json` uses colon syntax in Bash patterns that doesn'
 ### Action Items
 
 1. Fix all colon→space patterns in `~/.claude/settings.json`
-2. Remove dbt-project-specific patterns (not relevant to print-4ink)
-3. Add missing patterns for common Screen Print Pro operations
+2. Remove dbt-project-specific patterns (not relevant to mokumo)
+3. Add missing patterns for common Mokumo operations
 4. Review `defaultMode: "delegate"` — consider if this is optimal per-phase
 5. Test permission behavior after fixes
 

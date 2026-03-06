@@ -130,4 +130,4 @@ Future extension: multi-team competitive variant where N agent teams with differ
 
 ## PR
 
-[PR #91](https://github.com/cmbays/print-4ink/pull/91)
+[PR #91](https://github.com/cmbays/mokumo/pull/91)

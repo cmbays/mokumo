@@ -4,9 +4,9 @@
 
 ---
 
-## Build the Quoting Vertical for Screen Print Pro
+## Build the Quoting Vertical for Mokumo
 
-You're building the **Quoting vertical** — the first complete workflow for Screen Print Pro, a production management app for a screen-printing shop (4Ink). Discovery is done. All specs, acceptance criteria, and design decisions are documented. Your job is to execute the build using a **team of parallel agents**.
+You're building the **Quoting vertical** — the first complete workflow for Mokumo, a production management app for a screen-printing shop (4Ink). Discovery is done. All specs, acceptance criteria, and design decisions are documented. Your job is to execute the build using a **team of parallel agents**.
 
 ### Context Loading (Read These First)
 
@@ -14,7 +14,7 @@ Read these files in order before doing anything:
 
 1. `CLAUDE.md` — Project rules, design system tokens, coding standards, quality checklist
 2. `docs/strategy/quoting-scope-definition.md` — **The BUILD spec.** CORE features, acceptance criteria, quality checklists per component. This is your primary reference.
-3. `docs/strategy/screen-print-pro-journey-quoting.md` — The improved journey design. Explains WHY each design decision was made and what friction points from Print Life we're solving.
+3. `docs/strategy/mokumo-journey-quoting.md` — The improved journey design. Explains WHY each design decision was made and what friction points from Print Life we're solving.
 4. `docs/reference/ss-activewear-api-reference.md` — S&S Activewear API field shapes. Our mock data MUST mirror these field names and structures so Phase 2 integration is a data source swap, not a refactor.
 5. `PROGRESS.md` — Current state, what's already built (dashboard, sidebar, schemas, mock data)
 6. `lib/schemas/` — Existing Zod schemas (quote.ts, garment.ts, customer.ts) that need updating

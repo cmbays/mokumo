@@ -25,7 +25,7 @@ function getPageTitle(pathname: string): string {
     const base = `/${segments[0]}`
     if (pageTitles[base]) return pageTitles[base]
   }
-  return 'Screen Print Pro'
+  return 'Mokumo Print'
 }
 
 export function MobileHeader() {

@@ -1,6 +1,6 @@
 # Invoicing Competitor Analysis — Screen Print Shop Software
 
-> **Context**: Pre-build research for Screen Print Pro invoicing vertical
+> **Context**: Pre-build research for Mokumo invoicing vertical
 > **Date**: 2026-02-10
 > **Branch**: `session/0210-invoicing-research`
 > **Deep Focus**: PrintLife (The Print Life)

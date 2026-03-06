@@ -1,6 +1,6 @@
 ---
 title: Design Vision
-description: Architectural decision records and design philosophy for Screen Print Pro.
+description: Architectural decision records and design philosophy for Mokumo.
 ---
 
 # Design Vision
@@ -11,7 +11,7 @@ description: Architectural decision records and design philosophy for Screen Pri
 
 **"Linear Calm + Raycast Polish + Neobrutalist Delight"**
 
-Screen Print Pro draws from three design lineages:
+Mokumo draws from three design lineages:
 
 - **Linear's calm**: Dark, focused, information-dense interfaces that respect the user's attention
 - **Raycast's polish**: Keyboard-navigable, responsive, feels fast even when doing heavy work

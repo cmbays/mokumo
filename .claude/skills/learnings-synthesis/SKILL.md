@@ -33,7 +33,7 @@ Read each matching file. Pay attention to: decisions made, Gary questions, block
 **Session registry**:
 
 ```bash
-jq --arg v "{VERTICAL}" '.sessions[] | select(.vertical == $v)' ~/Github/print-4ink-worktrees/.session-registry.json
+jq --arg v "{VERTICAL}" '.sessions[] | select(.vertical == $v)' ~/Github/mokumo-worktrees/.session-registry.json
 ```
 
 Note: how many sessions, how long they ran, which stages were used, any forks.
@@ -42,7 +42,7 @@ Note: how many sessions, how long they ran, which stages were used, any forks.
 
 ```bash
 git log --oneline --all --grep="{VERTICAL}" | head -20
-gh pr list --repo cmbays/print-4ink --state merged --search "{VERTICAL}" --limit 20 --json number,title,additions,deletions,reviews
+gh pr list --repo cmbays/mokumo --state merged --search "{VERTICAL}" --limit 20 --json number,title,additions,deletions,reviews
 ```
 
 Note: PR sizes, review comments, how many rounds of review.
@@ -50,17 +50,17 @@ Note: PR sizes, review comments, how many rounds of review.
 **PR review comments** (look for patterns in feedback):
 
 ```bash
-gh pr list --repo cmbays/print-4ink --state merged --search "{VERTICAL}" --json number --jq '.[].number' | head -5
+gh pr list --repo cmbays/mokumo --state merged --search "{VERTICAL}" --json number --jq '.[].number' | head -5
 ```
 
-For each PR, skim reviews: `gh api repos/cmbays/print-4ink/pulls/{N}/reviews`
+For each PR, skim reviews: `gh api repos/cmbays/mokumo/pulls/{N}/reviews`
 
 **Open issues** related to the vertical:
 
 ```bash
-gh issue list --repo cmbays/print-4ink --label "product/{VERTICAL}" --state open
+gh issue list --repo cmbays/mokumo --label "product/{VERTICAL}" --state open
 # or for domain-scoped work:
-gh issue list --repo cmbays/print-4ink --label "domain/{VERTICAL}" --state open
+gh issue list --repo cmbays/mokumo --label "domain/{VERTICAL}" --state open
 ```
 
 ### Step 2: Extract Patterns

@@ -10,7 +10,7 @@ last-verified: 2026-02-14
 
 # Mobile Optimization — Scope Definition
 
-**Purpose**: Define what "mobile optimization" means for Screen Print Pro, prioritize features, and establish acceptance criteria.
+**Purpose**: Define what "mobile optimization" means for Mokumo, prioritize features, and establish acceptance criteria.
 **Context**: No competitor in the screen print management space has a good mobile experience. This is our opportunity to differentiate.
 
 ---

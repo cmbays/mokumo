@@ -66,5 +66,5 @@ paths were never updated — build had been broken since Feb 17. Fixed as part o
 ## Resume Command
 
 ```bash
-cd ~/Github/print-4ink-worktrees/session-0218-kb-foundation
+cd ~/Github/mokumo-worktrees/session-0218-kb-foundation
 ```

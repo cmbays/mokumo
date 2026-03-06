@@ -1,6 +1,6 @@
-# Invoicing UX Patterns — Recommendations for Screen Print Pro
+# Invoicing UX Patterns — Recommendations for Mokumo
 
-> **Context**: Pre-build research for Screen Print Pro invoicing vertical
+> **Context**: Pre-build research for Mokumo invoicing vertical
 > **Date**: 2026-02-10
 > **Branch**: `session/0210-invoicing-research`
 
@@ -301,5 +301,5 @@ Balance Due:       $0.00
 - FreshBooks — quote-to-invoice conversion, recurring invoices
 - Square Invoices — installment payments, mobile-first
 - Linear UI — dark mode design, clean aesthetic
-- Existing Screen Print Pro codebase — QuoteForm, CustomersDataTable patterns
+- Existing Mokumo codebase — QuoteForm, CustomersDataTable patterns
 - UX research: Eleken fintech best practices, InvoiceMaster psychology, designmodo billing forms

@@ -33,7 +33,7 @@ Verify whether GitHub's native issue types are available on personal repos via t
 $ gh --version
 gh version 2.86.0 (2026-01-21)
 
-$ gh issue type list --repo cmbays/print-4ink
+$ gh issue type list --repo cmbays/mokumo
 unknown command "type" for "gh issue"
 
 $ gh issue create --help | grep -i type
@@ -50,7 +50,7 @@ The `issueTypes` field exists in the GraphQL schema on `Repository`:
 ```graphql
 # Returns null — types not yet created/enabled on this repo
 {
-  repository(owner: "cmbays", name: "print-4ink") {
+  repository(owner: "cmbays", name: "mokumo") {
     issueTypes(first: 10) {
       nodes {
         id

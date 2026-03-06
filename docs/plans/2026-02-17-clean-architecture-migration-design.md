@@ -7,7 +7,7 @@
 
 ## Context
 
-Screen Print Pro is a Next.js 16 app for screen-printing production management. Phase 1 (frontend mockups with mock data) is complete — 7 verticals, 529 tests, strong DAL with provider pattern, Zod-first schemas. Phase 2 (backend with Supabase/Drizzle) is next.
+Mokumo is a Next.js 16 app for screen-printing production management. Phase 1 (frontend mockups with mock data) is complete — 7 verticals, 529 tests, strong DAL with provider pattern, Zod-first schemas. Phase 2 (backend with Supabase/Drizzle) is next.
 
 The current architecture has strong boundaries (DAL, schemas, helpers) but lacks explicit Clean Architecture layers. Business logic lives in `lib/helpers/` and `lib/pricing-engine.ts` — functional but not organized by domain. The project needs architectural clarity before backend work starts.
 
@@ -33,7 +33,7 @@ Design refined through conversation with Grok (architectural recommendations) + 
 ### Target Directory Structure
 
 ```
-print-4ink/
+mokumo/
 ├── src/                              # Production runtime
 │   ├── app/                          # Next.js routing — THIN
 │   │   ├── layout.tsx

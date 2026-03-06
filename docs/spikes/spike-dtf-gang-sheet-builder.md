@@ -6,7 +6,7 @@
 
 ## Context
 
-The DTF Gang Sheet Builder is a new vertical for Screen Print Pro. 4Ink runs DTF printing in-house with their own printer. They currently use Drip Apps on Shopify for customer-facing gang sheet ordering and PrintLife for production management. Screen Print Pro will replace the production side. This spike resolves unknowns about the DTF workflow, quoting integration, and visual builder requirements before shaping and building.
+The DTF Gang Sheet Builder is a new vertical for Mokumo. 4Ink runs DTF printing in-house with their own printer. They currently use Drip Apps on Shopify for customer-facing gang sheet ordering and PrintLife for production management. Mokumo will replace the production side. This spike resolves unknowns about the DTF workflow, quoting integration, and visual builder requirements before shaping and building.
 
 ## Goal
 
@@ -178,7 +178,7 @@ Key rule: T-shirts = 3" down from collar for centered images. Hoodies/sweatshirt
 
 5. **Film-only is the primary revenue stream** — not a side service. The tool should be optimized for this workflow.
 
-6. **The 5% Drip Apps commission** is a concrete cost savings pitch — Screen Print Pro eliminates this overhead.
+6. **The 5% Drip Apps commission** is a concrete cost savings pitch — Mokumo eliminates this overhead.
 
 7. **Read-only visual canvas for demo** — auto-arrangement must be high quality. Interactive editing is Phase 2.
 

@@ -2,7 +2,7 @@
 
 **Pipeline:** 20260226-640-color-favorites
 **Date:** 2026-02-27
-**Purpose:** Competitive and IA research to inform nav taxonomy decisions and garment-related feature planning for Screen Print Pro.
+**Purpose:** Competitive and IA research to inform nav taxonomy decisions and garment-related feature planning for Mokumo.
 
 ---
 
@@ -51,7 +51,7 @@ Research cited across multiple sources (including Miller's Law) establishes 5–
 
 HubSpot redesigned global navigation to support contextual access — users arrive with specific goals, and navigation should reflect those workflows rather than forcing a separate trip to Settings. Shopify App settings are accessible from within the App context (the app listing itself, not from a global Settings page). The pattern: Settings for a specific entity should be reachable from that entity's operational view, not only from the top-level Settings menu.
 
-**Implication for Screen Print Pro:** A "Garments Settings" or "Catalog Settings" link should be accessible from the Garments feature itself, not only buried under a generic Settings page.
+**Implication for Mokumo:** A "Garments Settings" or "Catalog Settings" link should be accessible from the Garments feature itself, not only buried under a generic Settings page.
 
 ---
 
@@ -85,7 +85,7 @@ There is **no concept of shop favorites, preferred styles, or curated catalogs**
 
 **Automation and workflow:** Printavo has custom automation rules (triggers + actions), scheduling, task assignment, and payment collection. These are its strongest operational features.
 
-**What Printavo lacks** (relevant to Screen Print Pro's scope):
+**What Printavo lacks** (relevant to Mokumo's scope):
 
 - No catalog-browsing experience with visual filtering
 - No favorites/preferred styles concept
@@ -172,9 +172,9 @@ ShopVox's garment handling is catalog-lookup-in-quoting (same model as Printavo)
 
 ### Feature Gaps and Competitive Opportunities
 
-Screen Print Pro's color family filtering and visual garment browsing (current work in the #632 epic) represents a **differentiated capability** that competitors do not appear to offer. Across Printavo, InkSoft, DecoNetwork, YoPrint, and ShopVox, garment selection is uniformly a _style-code lookup_ within the quoting workflow — not a _visual catalog browsing_ experience.
+Mokumo's color family filtering and visual garment browsing (current work in the #632 epic) represents a **differentiated capability** that competitors do not appear to offer. Across Printavo, InkSoft, DecoNetwork, YoPrint, and ShopVox, garment selection is uniformly a _style-code lookup_ within the quoting workflow — not a _visual catalog browsing_ experience.
 
-**Features competitors have that Screen Print Pro should plan to build:**
+**Features competitors have that Mokumo should plan to build:**
 
 | Feature                        | Competitors with it                | Priority Signal                              |
 | ------------------------------ | ---------------------------------- | -------------------------------------------- |
@@ -185,7 +185,7 @@ Screen Print Pro's color family filtering and visual garment browsing (current w
 | Online stores / merch          | InkSoft, DecoNetwork               | Medium — downstream revenue for clients      |
 | Multi-decoration support       | DecoNetwork, YoPrint               | Low — screen print focus is correct for now  |
 
-**Features Screen Print Pro has that competitors lack:**
+**Features Mokumo has that competitors lack:**
 
 - Visual color family taxonomy and browsing
 - Curated shop-scoped garment catalog (is_enabled / is_favorite per style)
@@ -197,7 +197,7 @@ Screen Print Pro's color family filtering and visual garment browsing (current w
 
 ### S&S Activewear
 
-S&S Activewear (ssactivewear.com) is the primary supplier integration in Screen Print Pro. Their dealer portal is the operational interface print shops use to browse, order, and track wholesale garments.
+S&S Activewear (ssactivewear.com) is the primary supplier integration in Mokumo. Their dealer portal is the operational interface print shops use to browse, order, and track wholesale garments.
 
 **Catalog navigation structure:**
 
@@ -280,11 +280,11 @@ Across S&S Activewear, SanMar, and ShirtSpace, there is a consistent pattern:
 
 This creates a gap that print shop management software must fill. Shops mentally maintain a list of "house styles" — the garments they stock, recommend, or regularly use — but no distributor portal surfaces or formalizes this concept. The shop owner ends up with this knowledge in their head.
 
-**Screen Print Pro's garment catalog with `is_enabled` and `is_favorite` per style is building directly into this gap.** Competitors don't offer it. Distributors don't solve it. It is a genuine workflow need that has no current tool solution.
+**Mokumo's garment catalog with `is_enabled` and `is_favorite` per style is building directly into this gap.** Competitors don't offer it. Distributors don't solve it. It is a genuine workflow need that has no current tool solution.
 
 ---
 
-## 4. Synthesis: Implications for Screen Print Pro
+## 4. Synthesis: Implications for Mokumo
 
 ### The Right Principle for Main Nav vs Settings
 
@@ -301,7 +301,7 @@ More precisely:
 | Places you navigate to by intent | Pages you visit to adjust behavior  |
 | Revenue-generating activities    | Infrastructure for those activities |
 
-Applied to Screen Print Pro:
+Applied to Mokumo:
 
 **Main nav (sidebar) candidates:**
 
@@ -343,7 +343,7 @@ This mirrors the Shopify pattern: pinning a sales channel is done from within th
 
 4. **A "My Catalog" or "House Styles" view:** A filtered view of the full supplier catalog showing only `is_enabled` styles — this is a main-nav-level destination, not a Settings page. The conceptual model: the shop owner curates their house catalog from the full supplier feed, and their team then browses/searches within house catalog.
 
-### What Garment-Related Features Screen Print Pro Should Plan to Build
+### What Garment-Related Features Mokumo Should Plan to Build
 
 In priority order based on what competitors have and what fills genuine gaps:
 
@@ -356,7 +356,7 @@ In priority order based on what competitors have and what fills genuine gaps:
 
 **Longer-term:** 7. **Custom product upload** — shops carry styles not in S&S/SanMar (local vendor specials, custom blanks) 8. **Receiving / check-in flow** — mark received garments against POs; Printavo and DecoNetwork both have this 9. **SanMar integration** — second supplier source; SanMar has different brand coverage (Nike, The North Face, etc.)
 
-### Recommended Nav Taxonomy for Screen Print Pro
+### Recommended Nav Taxonomy for Mokumo
 
 Based on all research above:
 

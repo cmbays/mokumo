@@ -2,7 +2,7 @@
 
 Reference guide for the breadboarding methodology. Consult when producing or reviewing breadboard documents.
 
-Source: Adapted from Ryan Singer's [shaping-skills/breadboarding](https://github.com/rjs/shaping-skills) for Screen Print Pro.
+Source: Adapted from Ryan Singer's [shaping-skills/breadboarding](https://github.com/rjs/shaping-skills) for Mokumo.
 
 ---
 
@@ -298,7 +298,7 @@ Backend affordances follow the same rules:
 
 Database tables (S) belong inside the Backend Place alongside the resolvers (N) that read and write them.
 
-**Screen Print Pro convention**: In Phase 1, Backend is not built -- code affordances in the Backend Place are tagged Phase 2. In Phase 2, the Backend Place contains Supabase tables (S), Drizzle queries (N), and server actions (N).
+**Mokumo convention**: In Phase 1, Backend is not built -- code affordances in the Backend Place are tagged Phase 2. In Phase 2, the Backend Place contains Supabase tables (S), Drizzle queries (N), and server actions (N).
 
 When spanning frontend + backend, label both as Places:
 
@@ -393,7 +393,7 @@ Common external stores to model:
 - `Clipboard` -- copy/paste operations
 - `Browser History` -- navigation state
 
-**Screen Print Pro convention**: URL search params are a key state mechanism in Phase 1. Always model them as explicit S nodes so wiring is traceable.
+**Mokumo convention**: URL search params are a key state mechanism in Phase 1. Always model them as explicit S nodes so wiring is traceable.
 
 ---
 

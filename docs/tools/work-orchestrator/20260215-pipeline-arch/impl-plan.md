@@ -105,7 +105,7 @@
    - `_pipeline_transition()` — state machine validation (ready->active->building->reviewing->wrapped->cooled)
    - `_pipeline_validate_type()` — validate type against `config/pipeline-types.json`
 3. Implement `pipeline-registry.sh`:
-   - Registry file: `~/Github/print-4ink-worktrees/.pipeline-registry.json`
+   - Registry file: `~/Github/mokumo-worktrees/.pipeline-registry.json`
    - `_registry_pipeline_init()` — create registry if not exists
    - `_registry_pipeline_add()` — add pipeline to registry
    - `_registry_pipeline_get()` — get pipeline by ID

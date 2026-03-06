@@ -13,7 +13,7 @@ depends-on:
 
 # Jobs Vertical — Current Journey Map
 
-**Purpose**: Document how production jobs actually flow at 4Ink today, identifying every friction point that Screen Print Pro's Jobs vertical must address
+**Purpose**: Document how production jobs actually flow at 4Ink today, identifying every friction point that Mokumo's Jobs vertical must address
 **Input**: User interview with 4Ink owner, Playwright exploration of Printavo + PrintLife, web research
 **Status**: Complete
 

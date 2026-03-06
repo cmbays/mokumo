@@ -20,9 +20,9 @@ Implemented `verifySession()` — the server-side auth verification function tha
 
 Also classified all 9 DAL domain files as `PUBLIC` or `AUTHENTICATED`, and fixed a pre-existing security gap in `middleware.ts` where cookie presence was checked but value was not validated.
 
-**Issue**: https://github.com/cmbays/print-4ink/issues/362
-**PR**: https://github.com/cmbays/print-4ink/pull/424
-**Design doc**: https://github.com/cmbays/print-4ink/blob/main/docs/strategy/auth-session-design.md
+**Issue**: https://github.com/cmbays/mokumo/issues/362
+**PR**: https://github.com/cmbays/mokumo/pull/424
+**Design doc**: https://github.com/cmbays/mokumo/blob/main/docs/strategy/auth-session-design.md
 
 ## Why This Matters
 

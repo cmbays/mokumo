@@ -1,7 +1,7 @@
-name: print_4ink_analytics
+name: mokumo_analytics
 version: '0.1.0'
 
-profile: print_4ink
+profile: mokumo
 
 model-paths: ['models']
 analysis-paths: ['analyses']
@@ -15,7 +15,7 @@ clean-targets:
   - dbt_packages
 
 models:
-  print_4ink_analytics:
+  mokumo_analytics:
     staging:
       +materialized: view
       +schema: staging
@@ -28,7 +28,7 @@ models:
 
 dispatch:
   - macro_namespace: dbt_project_evaluator
-    search_order: ['print_4ink_analytics', 'dbt_project_evaluator']
+    search_order: ['mokumo_analytics', 'dbt_project_evaluator']
 
 snapshots:
   +target_schema: snapshots

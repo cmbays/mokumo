@@ -20,7 +20,7 @@ status: current
 - **Linear** — Two MCP plugins available (including Linear MCP from the project-management-suite). Rejected because it optimizes for human-team coordination patterns we don't use. Would require syncing between Linear and GitHub for PR linking.
 - **Jira/Notion** — Not considered seriously. Both add overhead and separation from code without benefits for this project's workflow.
 
-**Source:** [PM Foundation pipeline](https://github.com/cmbays/print-4ink/pull/91)
+**Source:** [PM Foundation pipeline](https://github.com/cmbays/mokumo/pull/91)
 
 ---
 
@@ -77,7 +77,7 @@ status: current
 
 **Decision:** Create the Projects v2 board as a user-owned project (`@me`), not an organization project.
 
-**Rationale:** `cmbays/print-4ink` is a personal repo. Org-owned projects require organization-level permissions and configuration. User-owned projects are simpler to manage and match the repo ownership model.
+**Rationale:** `cmbays/mokumo` is a personal repo. Org-owned projects require organization-level permissions and configuration. User-owned projects are simpler to manage and match the repo ownership model.
 
 **Source:** `docs/breadboards/pm-overhaul-breadboard.md`
 

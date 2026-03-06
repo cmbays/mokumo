@@ -16,7 +16,7 @@ status: complete
 
 ## What Is the Review Orchestration Engine?
 
-The Review Orchestration Engine is an automated quality gate built into the Screen Print Pro developer workflow. Every time a build session finishes implementation, the engine automatically analyzes the diff, determines which review agents are needed, runs them in parallel, aggregates their findings into a unified report, and makes a pass/fail gate decision — all without the building agent manually selecting reviewers or deciding what to check.
+The Review Orchestration Engine is an automated quality gate built into the Mokumo developer workflow. Every time a build session finishes implementation, the engine automatically analyzes the diff, determines which review agents are needed, runs them in parallel, aggregates their findings into a unified report, and makes a pass/fail gate decision — all without the building agent manually selecting reviewers or deciding what to check.
 
 It lives as a skill at `.claude/skills/review-orchestration/SKILL.md` and is automatically invoked by `build-session-protocol` Phase 2 on every build PR.
 
@@ -274,9 +274,9 @@ This engine covers **build-phase PR quality gates** (sub-issues #337–#342). Fu
 
 ## Session Links
 
-- **Design doc**: https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-16-review-orchestration-design.md
-- **Skill**: https://github.com/cmbays/print-4ink/blob/main/docs/.claude/skills/review-orchestration/SKILL.md
-- **PR #407**: https://github.com/cmbays/print-4ink/pull/407
-- **Epic #302**: https://github.com/cmbays/print-4ink/issues/302
-- **Issue #342**: https://github.com/cmbays/print-4ink/issues/342
+- **Design doc**: https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-16-review-orchestration-design.md
+- **Skill**: https://github.com/cmbays/mokumo/blob/main/docs/.claude/skills/review-orchestration/SKILL.md
+- **PR #407**: https://github.com/cmbays/mokumo/pull/407
+- **Epic #302**: https://github.com/cmbays/mokumo/issues/302
+- **Issue #342**: https://github.com/cmbays/mokumo/issues/342
 - Resume: `claude --resume 0ba68ef8-1b02-40be-a039-2c63d6d15cd1`

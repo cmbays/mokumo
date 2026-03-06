@@ -60,7 +60,7 @@ After applying all fixes, verified end-to-end in the browser:
 
 ## Pull Request
 
-[PR #33](https://github.com/cmbays/print-4ink/pull/33) — `session/0210-customer-quality-gate` → `main`
+[PR #33](https://github.com/cmbays/mokumo/pull/33) — `session/0210-customer-quality-gate` → `main`
 
 ---
 

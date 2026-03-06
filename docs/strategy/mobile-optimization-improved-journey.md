@@ -1,6 +1,6 @@
 ---
 title: 'Mobile Optimization — Improved Journey Design'
-description: "Screen Print Pro's mobile-optimized experience design, patterns, and build order"
+description: "Mokumo's mobile-optimized experience design, patterns, and build order"
 category: strategy
 status: complete
 phase: 1
@@ -10,7 +10,7 @@ last-verified: 2026-02-14
 
 # Mobile Optimization — Improved Journey Design
 
-**Purpose**: Design Screen Print Pro's mobile experience that addresses every friction point found in competitive analysis, using industry best practices from B2B mobile leaders.
+**Purpose**: Design Mokumo's mobile experience that addresses every friction point found in competitive analysis, using industry best practices from B2B mobile leaders.
 **Input**: Competitive analysis, journey map, UX best practices research
 **Status**: Complete
 
@@ -95,7 +95,7 @@ On mobile: Sidebar hidden. No navigation alternative. Dead end.
 
 ```
 ┌──────────────────────────┐
-│ Screen Print Pro    [🔔] │  ← Compact header, notification bell
+│ Mokumo    [🔔] │  ← Compact header, notification bell
 ├──────────────────────────┤
 │ ┌──────────────────────┐ │
 │ │ 🔴 2 Blocked Jobs    │ │  ← Priority alert card (if any)
@@ -223,9 +223,9 @@ On mobile: Sidebar hidden. No navigation alternative. Dead end.
 
 ---
 
-## Key Differences: Competitors vs Screen Print Pro
+## Key Differences: Competitors vs Mokumo
 
-| Aspect           | Competitors                   | Screen Print Pro (Mobile)                |
+| Aspect           | Competitors                   | Mokumo (Mobile)                          |
 | ---------------- | ----------------------------- | ---------------------------------------- |
 | Navigation       | Hidden sidebar or hamburger   | Bottom tab bar (always visible)          |
 | Lists            | Desktop tables, pinch-to-zoom | Card layout, scannable, tappable         |

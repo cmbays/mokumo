@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-This report synthesizes findings from four parallel research streams to define Screen Print Pro's Price Matrix vertical — the pricing engine that powers automated quoting for 4Ink's screen printing shop.
+This report synthesizes findings from four parallel research streams to define Mokumo's Price Matrix vertical — the pricing engine that powers automated quoting for 4Ink's screen printing shop.
 
-**The Opportunity**: 4Ink currently uses The Print Life, which scores 74% (26/35) in our competitive analysis. It excels at automation and simplicity but is weak on flexibility (2/5) and customization. The top competitors (YoPrint, Teesom, PriceIt) also score 74% — meaning **no one in the market has pulled away**. Screen Print Pro can leapfrog every competitor by combining PrintLife's automation strength with the flexibility of Teesom, the innovation of YoPrint, and a 10x better UX than anything on the market.
+**The Opportunity**: 4Ink currently uses The Print Life, which scores 74% (26/35) in our competitive analysis. It excels at automation and simplicity but is weak on flexibility (2/5) and customization. The top competitors (YoPrint, Teesom, PriceIt) also score 74% — meaning **no one in the market has pulled away**. Mokumo can leapfrog every competitor by combining PrintLife's automation strength with the flexibility of Teesom, the innovation of YoPrint, and a 10x better UX than anything on the market.
 
 **The Strategy**: Build a centralized pricing engine (not just a lookup table) that all verticals consume as a service. Wrap it in a "Simple Mode" wizard for 5-minute setup and a "Power Mode" spreadsheet grid for advanced users. Show real-time margin visibility in every price cell. This gives 4Ink something no competitor offers: **instant profitability clarity with zero friction**.
 
@@ -225,7 +225,7 @@ Customer Context → Price Matrix Engine → Quote (with margin visibility)
 
 > **PrintLife optimizes for automation at the expense of visibility. We optimize for both.**
 
-PrintLife prevents mistakes (good) but doesn't show profitability (bad). Screen Print Pro will auto-calculate AND show real-time margins in every price cell — so the shop owner always knows exactly how much money they're making.
+PrintLife prevents mistakes (good) but doesn't show profitability (bad). Mokumo will auto-calculate AND show real-time margins in every price cell — so the shop owner always knows exactly how much money they're making.
 
 ### Three UX Pillars
 
@@ -327,7 +327,7 @@ Must-have for any viable price matrix. These are table stakes that PrintLife alr
 
 ### P1 — Phase 1 Features (Surpass PrintLife, Wow the Demo)
 
-Features that make Screen Print Pro's pricing clearly superior to PrintLife. This is our 10x demo moment — the features that make 4Ink say "I need this."
+Features that make Mokumo's pricing clearly superior to PrintLife. This is our 10x demo moment — the features that make 4Ink say "I need this."
 
 | #     | Feature                                | Description                                                                                   | Complexity | Why It Wows                                                          |
 | ----- | -------------------------------------- | --------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------- |
@@ -348,7 +348,7 @@ Features that make Screen Print Pro's pricing clearly superior to PrintLife. Thi
 
 ### P2 — Phase 2 Features (Match/Surpass Top Competitors)
 
-Features that position Screen Print Pro at or above the best competitors in every dimension.
+Features that position Mokumo at or above the best competitors in every dimension.
 
 | #     | Feature                        | Description                                                                                 | Complexity | Competitor Reference                         |
 | ----- | ------------------------------ | ------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------- |
@@ -372,7 +372,7 @@ Features that position Screen Print Pro at or above the best competitors in ever
 ```
                     High Flexibility
                          │
-              Teesom ●   │   ● Screen Print Pro
+              Teesom ●   │   ● Mokumo
                          │      (TARGET POSITION)
                          │
  Low Automation ─────────┼───────── High Automation
@@ -383,7 +383,7 @@ Features that position Screen Print Pro at or above the best competitors in ever
                     Low Flexibility
 ```
 
-**Screen Print Pro's target**: Top-right quadrant — high automation AND high flexibility. No current competitor occupies this space.
+**Mokumo's target**: Top-right quadrant — high automation AND high flexibility. No current competitor occupies this space.
 
 ### Feature Parity Timeline
 

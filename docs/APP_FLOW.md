@@ -12,7 +12,7 @@ depends_on:
   - docs/APP_IA.md
 ---
 
-# Screen Print Pro — App Flow
+# Mokumo — App Flow
 
 > **See also**: `docs/APP_IA.md` — the _why_ behind this inventory. Governing principles for where features go, how settings vs nav is decided, interaction patterns, and feature placement criteria. Read APP_IA before placing a new feature in the nav or Settings.
 
@@ -20,7 +20,7 @@ depends_on:
 
 ## Tool Overview
 
-**Name**: Screen Print Pro
+**Name**: Mokumo
 **Purpose**: Production management for a screen-printing shop — manage jobs from quote through production to completion
 **Primary User**: Shop owner/operator (Chris at 4Ink)
 **Entry Point**: Opens app in browser, lands on Dashboard (`/`)

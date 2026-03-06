@@ -28,7 +28,7 @@ git show session/0218-schema-ci-gate:docs/workspace/20260219-schema-ci-gate/sess
 git show session/0218-schema-ci-gate:docs/workspace/20260219-schema-ci-gate/implementation-details.md
 
 # Option 2: Read from worktree if available
-cat ~/Github/print-4ink-worktrees/session-0218-schema-ci-gate/docs/workspace/20260219-schema-ci-gate/session-notes.md
+cat ~/Github/mokumo-worktrees/session-0218-schema-ci-gate/docs/workspace/20260219-schema-ci-gate/session-notes.md
 ```
 
 ## What Was Delivered

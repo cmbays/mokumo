@@ -362,10 +362,10 @@ git commit -m "ci: add coverage threshold check and non-blocking E2E step"
 ```markdown
 ---
 name: tdd
-description: Project TDD framework for Screen Print Pro — wraps superpowers:test-driven-development with project-specific layer rules, mandatory targets, and verification commands. Invoke at the start of every build stage in Phase 2 and beyond.
+description: Project TDD framework for Mokumo — wraps superpowers:test-driven-development with project-specific layer rules, mandatory targets, and verification commands. Invoke at the start of every build stage in Phase 2 and beyond.
 ---
 
-# Screen Print Pro — TDD Framework
+# Mokumo — TDD Framework
 
 ## Step 1: Invoke the Methodology Skill
 

@@ -19,7 +19,7 @@ depends-on:
 
 ## 1. Executive Summary
 
-We're building the **Jobs & Production vertical** — the core of Screen Print Pro. Three screens: **Production Board** (two-section Kanban with 5 universal lanes), **Jobs List** (sortable/filterable table), and **Job Detail Command Center** (tasks, notes, actions, linked entities). This replaces the old 6-stage production pipeline with a universal lane model (Ready → In Progress → Review → Blocked → Done) that works across all service types (Screen Printing, DTF, Embroidery).
+We're building the **Jobs & Production vertical** — the core of Mokumo. Three screens: **Production Board** (two-section Kanban with 5 universal lanes), **Jobs List** (sortable/filterable table), and **Job Detail Command Center** (tasks, notes, actions, linked entities). This replaces the old 6-stage production pipeline with a universal lane model (Ready → In Progress → Review → Blocked → Done) that works across all service types (Screen Printing, DTF, Embroidery).
 
 **Why waves**: Dependencies cascade — schemas must exist before mock data, mock data before UI, board before drag-and-drop, core screens before integration. Each wave produces a demoable checkpoint, isolates risk, and allows quality gates between phases. Wave 4 parallelizes two independent screens (Job Detail + Jobs List) for efficiency.
 
@@ -357,7 +357,7 @@ Everything that must exist before Wave 1 begins:
 ````
 TASK: Jobs Vertical — Wave 1: Foundation (Schema + Constants + Mock Data + Tests)
 
-You are building the data layer for the Jobs & Production vertical in Screen Print Pro. This is Phase 1 (mock data, no backend). Your job is to:
+You are building the data layer for the Jobs & Production vertical in Mokumo. This is Phase 1 (mock data, no backend). Your job is to:
 
 1. REWRITE the job schema from the old 6-stage pipeline to the new universal lane model
 2. CREATE new schemas (scratch-note, board-card)
@@ -535,7 +535,7 @@ Stage and commit:
 
 TASK: Jobs Vertical — Wave 2: Board Core (Static Board + Card Components)
 
-You are building the Production Board page and all supporting components for Screen Print Pro. This is the CRITICAL PATH — the highest-complexity wave. You'll build 21 items: 4 shared components, 8 vertical-specific components, 1 page, 3 utility functions, and supporting wiring.
+You are building the Production Board page and all supporting components for Mokumo. This is the CRITICAL PATH — the highest-complexity wave. You'll build 21 items: 4 shared components, 8 vertical-specific components, 1 page, 3 utility functions, and supporting wiring.
 
 Wave 1 (schemas + mock data) is already complete and merged. You have the full lane-based job model, scratch notes, board card types, and comprehensive mock data available.
 
@@ -1361,7 +1361,7 @@ Wave 4A and 4B can merge in either order since they don't conflict (different fi
 
 **After each PR merges to main**:
 
-1. Pull latest main: `git -C ~/Github/print-4ink pull origin main`
+1. Pull latest main: `git -C ~/Github/mokumo pull origin main`
 2. Update PROGRESS.md on main
 3. Run `npm run gen:index` (on main only)
 

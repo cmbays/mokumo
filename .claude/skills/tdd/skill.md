@@ -1,8 +1,8 @@
-# Screen Print Pro — TDD Skill
+# Mokumo — TDD Skill
 
 > **Wraps:** `superpowers:test-driven-development` — invoke that skill first for Red-Green-Refactor methodology.
 
-This skill adds Screen Print Pro–specific rules on top of the superpowers TDD methodology.
+This skill adds Mokumo–specific rules on top of the superpowers TDD methodology.
 
 ---
 

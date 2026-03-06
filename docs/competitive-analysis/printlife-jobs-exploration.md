@@ -11,7 +11,7 @@ last-verified: 2026-02-12
 
 # Print Life — Jobs/Production Workflow Exploration
 
-**Purpose**: Document Print Life's production/job management workflow to inform Screen Print Pro's Jobs vertical design
+**Purpose**: Document Print Life's production/job management workflow to inform Mokumo's Jobs vertical design
 **Input**: Screenshot analysis (3 captures from live app), web research (theprintlife.com pages, Q1 2025 updates, 2024 updates, 2025 roadmap), and cross-reference with existing quoting analysis
 **Status**: Complete (web research + screenshot analysis; browser automation not available)
 
@@ -382,7 +382,7 @@ TOTAL ESTIMATED TIME: ~15-20 minutes (mostly quote creation)
 
 ---
 
-## 8. Key Insights for Screen Print Pro
+## 8. Key Insights for Mokumo
 
 ### What to Adopt (Learn From)
 
@@ -414,7 +414,7 @@ TOTAL ESTIMATED TIME: ~15-20 minutes (mostly quote creation)
 
 10. **Empty state with guidance** — When the dashboard is empty, show onboarding guidance: "Create your first quote to see jobs here" with a prominent CTA.
 
-### Proposed Stage Model for Screen Print Pro
+### Proposed Stage Model for Mokumo
 
 ```text
 ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐

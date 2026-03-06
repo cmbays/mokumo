@@ -42,13 +42,13 @@ Three focused integration features that surface screen data where it matters in 
 
 ## Files Changed
 
-| File                                                                                                                                                                | Change                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| [`lib/helpers/screen-helpers.ts`](https://github.com/cmbays/print-4ink/blob/main/lib/helpers/screen-helpers.ts)                                                     | Added `getScreensByJobId()`, `getActiveCustomerScreens()` |
-| [`lib/helpers/__tests__/screen-helpers.test.ts`](https://github.com/cmbays/print-4ink/blob/main/lib/helpers/__tests__/screen-helpers.test.ts)                       | Added 6 tests for new helpers                             |
-| [`app/(dashboard)/quotes/_components/QuoteForm.tsx`](<https://github.com/cmbays/print-4ink/blob/main/app/(dashboard)/quotes/_components/QuoteForm.tsx>)             | Screen reuse state, banner, pricing wire                  |
-| [`app/(dashboard)/quotes/_components/PricingSummary.tsx`](<https://github.com/cmbays/print-4ink/blob/main/app/(dashboard)/quotes/_components/PricingSummary.tsx>)   | Screen reuse discount display                             |
-| [`app/(dashboard)/jobs/_components/JobDetailsSection.tsx`](<https://github.com/cmbays/print-4ink/blob/main/app/(dashboard)/jobs/_components/JobDetailsSection.tsx>) | Linked screens with burn status                           |
+| File                                                                                                                                                            | Change                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`lib/helpers/screen-helpers.ts`](https://github.com/cmbays/mokumo/blob/main/lib/helpers/screen-helpers.ts)                                                     | Added `getScreensByJobId()`, `getActiveCustomerScreens()` |
+| [`lib/helpers/__tests__/screen-helpers.test.ts`](https://github.com/cmbays/mokumo/blob/main/lib/helpers/__tests__/screen-helpers.test.ts)                       | Added 6 tests for new helpers                             |
+| [`app/(dashboard)/quotes/_components/QuoteForm.tsx`](<https://github.com/cmbays/mokumo/blob/main/app/(dashboard)/quotes/_components/QuoteForm.tsx>)             | Screen reuse state, banner, pricing wire                  |
+| [`app/(dashboard)/quotes/_components/PricingSummary.tsx`](<https://github.com/cmbays/mokumo/blob/main/app/(dashboard)/quotes/_components/PricingSummary.tsx>)   | Screen reuse discount display                             |
+| [`app/(dashboard)/jobs/_components/JobDetailsSection.tsx`](<https://github.com/cmbays/mokumo/blob/main/app/(dashboard)/jobs/_components/JobDetailsSection.tsx>) | Linked screens with burn status                           |
 
 ## Verification
 

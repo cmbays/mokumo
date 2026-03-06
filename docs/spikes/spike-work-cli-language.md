@@ -1,7 +1,7 @@
 # Spike: Work CLI Implementation Language
 
-**Issue**: [#346](https://github.com/cmbays/print-4ink/issues/346) — Evaluate CLI implementation language
-**Parent**: [#333](https://github.com/cmbays/print-4ink/issues/333) — Work CLI Robustness
+**Issue**: [#346](https://github.com/cmbays/mokumo/issues/346) — Evaluate CLI implementation language
+**Parent**: [#333](https://github.com/cmbays/mokumo/issues/333) — Work CLI Robustness
 **Date**: 2026-02-17
 **Status**: Complete
 **Reviewed by**: Architect agent (2026-02-17) — 8 findings addressed
@@ -10,7 +10,7 @@
 
 ## Context
 
-The `work` CLI (`scripts/work.sh` + `scripts/lib/*.sh`) manages the full pipeline lifecycle for Screen Print Pro development. It was prototyped in bash for zero-dependency shell integration — sourcing directly into zsh, managing git worktrees, launching Zellij sessions, and orchestrating Claude Code instances.
+The `work` CLI (`scripts/work.sh` + `scripts/lib/*.sh`) manages the full pipeline lifecycle for Mokumo development. It was prototyped in bash for zero-dependency shell integration — sourcing directly into zsh, managing git worktrees, launching Zellij sessions, and orchestrating Claude Code instances.
 
 **Codebase size**: 4,215 lines across 13 files (1 dispatcher + 12 library modules).
 
@@ -468,7 +468,7 @@ The `WORK_CORE` variable is resolved once at source-time in `work.sh`:
 WORK_CORE="${WORK_SCRIPT_DIR}/work-core/dist/work-core.js"
 ```
 
-**Path resolution**: Because `WORK_SCRIPT_DIR` is resolved when `work.sh` is sourced (from `.zshrc`), it always points to the main repo's copy (`~/Github/print-4ink/scripts/`). Worktree-local changes to the TypeScript core do NOT take effect until merged to main and the shell is re-sourced. This is intentional — the running `work` CLI uses the stable main-branch binary.
+**Path resolution**: Because `WORK_SCRIPT_DIR` is resolved when `work.sh` is sourced (from `.zshrc`), it always points to the main repo's copy (`~/Github/mokumo/scripts/`). Worktree-local changes to the TypeScript core do NOT take effect until merged to main and the shell is re-sourced. This is intentional — the running `work` CLI uses the stable main-branch binary.
 
 ### 6.2 Environment Contract
 

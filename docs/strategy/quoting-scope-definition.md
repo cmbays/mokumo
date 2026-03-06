@@ -10,7 +10,7 @@ last-verified: 2026-02-08
 
 # Quoting Vertical — Scope Definition
 
-**Purpose**: Define boundaries for Quoting mockup in Screen Print Pro
+**Purpose**: Define boundaries for Quoting mockup in Mokumo
 **Status**: Complete (finalized after Playwright exploration + user interview)
 **Depends on**: Print Life analysis (complete), user interview (complete)
 
@@ -474,6 +474,6 @@ Each quote includes:
 
 - `docs/competitive-analysis/print-life-quoting-analysis.md` (Print Life features)
 - `docs/competitive-analysis/print-life-journey-quoting.md` (Print Life workflows)
-- `docs/strategy/screen-print-pro-journey-quoting.md` (improved workflow design)
+- `docs/strategy/mokumo-journey-quoting.md` (improved workflow design)
 - `.claude/plans/vertical-by-vertical-strategy.md` (overall strategy)
 - `CLAUDE.md` (quality checklist, design system)

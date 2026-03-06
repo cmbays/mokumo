@@ -11,7 +11,7 @@ last-verified: 2026-02-09
 
 # Customer Management Vertical — Scope Definition
 
-**Purpose**: Define boundaries for Customer Management mockup in Screen Print Pro
+**Purpose**: Define boundaries for Customer Management mockup in Mokumo
 **Status**: Complete (finalized after competitive research + user interview)
 **Depends on**: Competitive analysis (complete), industry research (complete), user interview (complete), quoting vertical (built)
 
@@ -35,7 +35,7 @@ The customer detail page is a **dashboard, not a form**. It answers five questio
 - **80%+ auto-populate**: When you pick a customer, most fields inherit from their defaults. The software "knows" them.
 - **Speed over features**: Adding a customer < 30 seconds. Seeing their full picture < 5 seconds.
 - **Zero admin overhead**: Lifecycle transitions are automatic. Churn detection is automatic. The shop owner manages customers, not the software.
-- **Record of truth**: Every feature moves toward making Screen Print Pro the single source of truth for customer relationships.
+- **Record of truth**: Every feature moves toward making Mokumo the single source of truth for customer relationships.
 - **Mobile-friendly from day one**: Every screen in this vertical must be responsive and usable on mobile. Shop owners take calls on the shop floor, check customer history from their phone, and need quick lookups while away from their desk. Build with mobile breakpoints from the start — not as an afterthought. Future mobile app is on the roadmap; responsive web is the Phase 1 foundation.
 
 ---
@@ -860,6 +860,6 @@ These items were flagged during the interview as needing Gary's direct input:
 - `docs/competitive-analysis/customer-management-competitive-analysis.md` (9-competitor analysis)
 - `docs/research/customer-management-research.md` (industry needs analysis)
 - `docs/strategy/quoting-scope-definition.md` (quoting scope — shows interconnections)
-- `docs/strategy/screen-print-pro-journey-quoting.md` (quoting journey design)
+- `docs/strategy/mokumo-journey-quoting.md` (quoting journey design)
 - `.claude/plans/vertical-by-vertical-strategy.md` (overall strategy)
 - `CLAUDE.md` (quality checklist, design system)

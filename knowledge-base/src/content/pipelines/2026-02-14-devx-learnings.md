@@ -16,7 +16,7 @@ status: complete
 
 ## Context
 
-The DevX vertical was a meta-vertical: building the tools and workflow used to build Screen Print Pro itself. It ran across 5 waves in a single day, producing ~1,200 lines of shell orchestration, 3 new agents, 6 new skills, and 8 prompt templates. This document captures the patterns and gotchas that emerged.
+The DevX vertical was a meta-vertical: building the tools and workflow used to build Mokumo itself. It ran across 5 waves in a single day, producing ~1,200 lines of shell orchestration, 3 new agents, 6 new skills, and 8 prompt templates. This document captures the patterns and gotchas that emerged.
 
 ## Pattern 1: Wave-Based Implementation Works for Solo Dev + AI
 

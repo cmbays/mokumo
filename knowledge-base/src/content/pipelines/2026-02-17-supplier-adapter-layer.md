@@ -18,7 +18,7 @@ status: complete
 
 Built `lib/suppliers/` — a new layer for external garment catalog data, sitting **alongside** `lib/dal/` (not inside it). This is the foundation for real S&S Activewear API integration (#162).
 
-**PR**: https://github.com/cmbays/print-4ink/pull/429
+**PR**: https://github.com/cmbays/mokumo/pull/429
 
 ## What was built
 

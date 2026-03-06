@@ -1,6 +1,6 @@
 ---
 title: 'Invoicing Vertical Research'
-subtitle: 'Comprehensive competitive, UX, integration, compliance, and industry research for the Screen Print Pro invoicing vertical'
+subtitle: 'Comprehensive competitive, UX, integration, compliance, and industry research for the Mokumo invoicing vertical'
 date: 2026-02-10
 phase: 1
 pipelineName: invoicing
@@ -34,7 +34,7 @@ status: complete
 
 ## 1. Executive Summary
 
-**The invoicing vertical is the natural next step for Screen Print Pro.** The existing quote schema already contains 90% of the data an invoice needs. The competitive landscape reveals fragmented solutions where every platform excels in 1-2 areas but has significant blind spots. Our opportunity: production-aware invoicing that feels as simple as Printavo on day one but grows with the shop.
+**The invoicing vertical is the natural next step for Mokumo.** The existing quote schema already contains 90% of the data an invoice needs. The competitive landscape reveals fragmented solutions where every platform excels in 1-2 areas but has significant blind spots. Our opportunity: production-aware invoicing that feels as simple as Printavo on day one but grows with the shop.
 
 ### Key Findings Across All Research Tracks
 

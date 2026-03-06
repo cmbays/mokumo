@@ -1,6 +1,6 @@
 ---
 title: Domain Glossary
-description: Print shop terminology and domain concepts used throughout Screen Print Pro.
+description: Print shop terminology and domain concepts used throughout Mokumo.
 ---
 
 # Domain Glossary

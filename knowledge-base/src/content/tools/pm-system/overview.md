@@ -11,7 +11,7 @@ status: current
 
 The PM System is GitHub-native project management infrastructure — not a separate application. It uses GitHub Issues, Projects v2, milestones, YAML issue forms, GitHub Actions, and the `work progress` CLI command to provide structured work tracking for a solo developer working with concurrent AI agent sessions.
 
-The canonical operational reference is [`docs/PM.md`](https://github.com/cmbays/print-4ink/blob/main/docs/PM.md). This overview describes what the system is and how its pieces fit together.
+The canonical operational reference is [`docs/PM.md`](https://github.com/cmbays/mokumo/blob/main/docs/PM.md). This overview describes what the system is and how its pieces fit together.
 
 ## Architecture
 
@@ -34,7 +34,7 @@ Each issue needs at minimum one scope label: `product/*`, `domain/*`, or `tool/*
 
 ### Projects v2 Board
 
-[Screen Print Pro board](https://github.com/users/cmbays/projects/4) — user-owned Projects v2 with 8 custom fields:
+[Mokumo board](https://github.com/users/cmbays/projects/4) — user-owned Projects v2 with 8 custom fields:
 
 | Field          | Type          | Purpose                                                                                   |
 | -------------- | ------------- | ----------------------------------------------------------------------------------------- |

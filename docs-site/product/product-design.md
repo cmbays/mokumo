@@ -1,6 +1,6 @@
 ---
 title: Phase 2 Product Design
-description: Problem statement, scope, design constraints, success criteria, and core principles for Phase 2 of Screen Print Pro.
+description: Problem statement, scope, design constraints, success criteria, and core principles for Phase 2 of Mokumo.
 ---
 
 # Phase 2 — Product Design Brief
@@ -11,7 +11,7 @@ description: Problem statement, scope, design constraints, success criteria, and
 
 Phase 1 validated the UI and workflows with the shop owner through high-fidelity mockups. The shop owner confirmed: "this looks right." But the mockup has no persistence, no real data, and no backend. Every interaction resets on page reload.
 
-Phase 2 transforms Screen Print Pro from a clickable prototype into a functioning production system that the shop owner can use to run their business day-to-day.
+Phase 2 transforms Mokumo from a clickable prototype into a functioning production system that the shop owner can use to run their business day-to-day.
 
 **The core tension**: a screen-printing shop needs software that handles the complexity of multi-service-type production (screen printing, DTF, DTF press) without requiring the operator to become a data entry clerk. Every field, every click, every workflow must earn its place.
 
@@ -25,7 +25,7 @@ Phase 2 transforms Screen Print Pro from a clickable prototype into a functionin
 - Production tracking that automates where possible and minimizes data entry everywhere else
 - A customer portal (future) where clients can approve artwork, view job status, pay invoices
 
-## What Screen Print Pro Is
+## What Mokumo Is
 
 A **production-first** management system for small screen-printing shops. It tracks the full lifecycle of a print job from initial customer inquiry through delivery, with the production board as the central nervous system.
 

@@ -9,7 +9,7 @@
 
 ## 1. Problem
 
-Building Screen Print Pro requires managing parallel AI sessions across multiple verticals. Current workflow has:
+Building Mokumo requires managing parallel AI sessions across multiple verticals. Current workflow has:
 
 - **CWD orphaning**: Claude sessions die when worktrees are deleted
 - **No cross-referencing**: Claude session IDs, branches, KB docs, terminal sessions are disconnected
@@ -48,23 +48,23 @@ Building Screen Print Pro requires managing parallel AI sessions across multiple
 - **`work` CLI is the single entry point** for all workflow operations
 - **Zellij** provides workspace view; KDL layouts are generated from YAML manifests
 - **Session registry** is the glue connecting all layers
-- **Claude launches from `~/Github/print-4ink-worktrees/`** (parent dir) so session storage survives worktree cleanup
+- **Claude launches from `~/Github/mokumo-worktrees/`** (parent dir) so session storage survives worktree cleanup
 - **Secretary Claude** is your executive assistant with evolving personality — reads state, doesn't manage it
 - **Shell handles deterministic orchestration**; Claude handles nondeterministic thinking within phases
 
 ### CWD Architecture
 
 ```
-~/Github/print-4ink/              <- main repo, always on main
-~/Github/print-4ink-worktrees/    <- Claude launches HERE
-  ├── CLAUDE.md                   <- symlink -> print-4ink/CLAUDE.md
+~/Github/mokumo/              <- main repo, always on main
+~/Github/mokumo-worktrees/    <- Claude launches HERE
+  ├── CLAUDE.md                   <- symlink -> mokumo/CLAUDE.md
   ├── .session-registry.json      <- session cross-reference registry
   ├── session/0214-jobs-w1-schemas/  <- worktree (deletable)
   └── ...
 ```
 
 All Claude session transcripts stored at:
-`~/.claude/projects/-Users-cmbays-Github-print-4ink-worktrees/`
+`~/.claude/projects/-Users-cmbays-Github-mokumo-worktrees/`
 
 Deleting any worktree subdirectory has no impact on session storage.
 
@@ -237,7 +237,7 @@ Ada is not a generic assistant. She is a character with an evolving personality,
 
 ### Personality Foundation
 
-- **Deeply invested** in Screen Print Pro's success — she tracks progress, celebrates wins, flags risks
+- **Deeply invested** in Mokumo's success — she tracks progress, celebrates wins, flags risks
 - **Delightful to work with** — warm, direct, occasionally witty, never sycophantic
 - **Interesting to talk with** — has opinions, makes connections, asks good questions
 - **Evolving story arc** — her personality develops based on project milestones, 1:1 conversations, challenges overcome

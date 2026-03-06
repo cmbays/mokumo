@@ -74,11 +74,11 @@ Wave 1 is serial because it modifies QuoteForm.tsx (the 1022-line primary file).
 
 ## Artifacts
 
-- Implementation plan: [`docs/plans/2026-02-15-dtf-gang-sheet-impl-plan.md`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-dtf-gang-sheet-impl-plan.md)
-- Execution manifest: [`docs/plans/2026-02-15-dtf-gang-sheet-manifest.yaml`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-dtf-gang-sheet-manifest.yaml)
+- Implementation plan: [`docs/plans/2026-02-15-dtf-gang-sheet-impl-plan.md`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-dtf-gang-sheet-impl-plan.md)
+- Execution manifest: [`docs/plans/2026-02-15-dtf-gang-sheet-manifest.yaml`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-dtf-gang-sheet-manifest.yaml)
 
 ## Sources
 
-- Breadboard: [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
-- Shaping doc: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
+- Breadboard: [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
+- Shaping doc: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
 - Implementation planning skill: `.claude/skills/implementation-planning/SKILL.md`

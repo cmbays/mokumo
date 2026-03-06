@@ -9,7 +9,7 @@ description: How features wire together — affordances, transitions, data flow 
 
 ## Purpose
 
-This document captures **how things connect** — not what screens look like (that's [App Flow](/architecture/app-flow)), but how user actions in one place affect state in another. It's the wiring diagram for Screen Print Pro.
+This document captures **how things connect** — not what screens look like (that's [App Flow](/architecture/app-flow)), but how user actions in one place affect state in another. It's the wiring diagram for Mokumo.
 
 ## Core Interaction Loops
 

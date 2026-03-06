@@ -17,7 +17,7 @@ status: complete
 
 ## Context
 
-Screen Print Pro's desktop experience is polished, but the mobile experience has significant gaps. Rather than treating mobile fixes as ad-hoc tasks, we're establishing Mobile Optimization as a first-class vertical that runs through the full pipeline: research → interview → breadboarding → implementation-planning → build → review → learnings.
+Mokumo's desktop experience is polished, but the mobile experience has significant gaps. Rather than treating mobile fixes as ad-hoc tasks, we're establishing Mobile Optimization as a first-class vertical that runs through the full pipeline: research → interview → breadboarding → implementation-planning → build → review → learnings.
 
 ## What Was Done
 

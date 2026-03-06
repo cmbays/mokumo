@@ -145,7 +145,7 @@ type ScreenRequirement = {
 
 ### Critical Insight: Don't Build Separation Software
 
-Screen Print Pro should NOT perform color separations — that's Photoshop + UltraSeps/Sep Studio territory. Instead, be the **system of record** for separation metadata and the orchestrator connecting art department outputs to screen room inputs.
+Mokumo should NOT perform color separations — that's Photoshop + UltraSeps/Sep Studio territory. Instead, be the **system of record** for separation metadata and the orchestrator connecting art department outputs to screen room inputs.
 
 ---
 

@@ -44,7 +44,7 @@ export function Sidebar() {
     <aside className="flex h-full w-60 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
         <Layers className="h-6 w-6 text-action" />
-        <span className="text-sm font-semibold tracking-tight">Screen Print Pro</span>
+        <span className="text-sm font-semibold tracking-tight">Mokumo Print</span>
       </div>
       <nav className="flex flex-1 flex-col px-2 py-3">
         <div className="flex-1 space-y-0.5">

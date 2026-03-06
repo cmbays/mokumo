@@ -1,6 +1,6 @@
 ---
 title: Coding Standards
-description: Code conventions, patterns, and rules enforced across the Screen Print Pro codebase.
+description: Code conventions, patterns, and rules enforced across the Mokumo codebase.
 ---
 
 # Coding Standards

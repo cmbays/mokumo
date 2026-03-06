@@ -10,7 +10,7 @@ last-verified: 2026-02-08
 
 # Print Life — Quoting Journey Map
 
-**Purpose**: Document Print Life's actual quoting workflow with friction points to inform Screen Print Pro design
+**Purpose**: Document Print Life's actual quoting workflow with friction points to inform Mokumo design
 **Input**: Playwright exploration of 4Ink customer portal + user interview with 4Ink operator
 **Status**: Complete
 
@@ -190,17 +190,17 @@ END: Quote built → invoice → phone call
 
 ## Success Metrics for Redesign
 
-| Metric                 | Print Life (Actual) | Screen Print Pro (Target) | Improvement     |
-| ---------------------- | ------------------- | ------------------------- | --------------- |
-| Simple quote time      | 10 min              | 3-4 min                   | 60-70% faster   |
-| Complex quote time     | 15-20 min           | 6-8 min                   | 50-60% faster   |
-| Simple quote clicks    | 20-30               | 8-12                      | 60% fewer       |
-| Complex quote clicks   | 40-60               | 20-30                     | 50% fewer       |
-| Mandatory unused steps | 2                   | 0                         | Eliminated      |
-| Recalculation blocking | Every field         | Never                     | 100% eliminated |
-| Quote reuse            | Not possible        | 1-click duplicate         | New capability  |
-| Quote tracking         | None                | Full dashboard            | New capability  |
-| Customer self-service  | No approval gate    | Hybrid with approval      | Differentiator  |
+| Metric                 | Print Life (Actual) | Mokumo (Target)      | Improvement     |
+| ---------------------- | ------------------- | -------------------- | --------------- |
+| Simple quote time      | 10 min              | 3-4 min              | 60-70% faster   |
+| Complex quote time     | 15-20 min           | 6-8 min              | 50-60% faster   |
+| Simple quote clicks    | 20-30               | 8-12                 | 60% fewer       |
+| Complex quote clicks   | 40-60               | 20-30                | 50% fewer       |
+| Mandatory unused steps | 2                   | 0                    | Eliminated      |
+| Recalculation blocking | Every field         | Never                | 100% eliminated |
+| Quote reuse            | Not possible        | 1-click duplicate    | New capability  |
+| Quote tracking         | None                | Full dashboard       | New capability  |
+| Customer self-service  | No approval gate    | Hybrid with approval | Differentiator  |
 
 ---
 
@@ -237,5 +237,5 @@ END: Quote built → invoice → phone call
 
 - `docs/competitive-analysis/print-life-quoting-analysis.md` (feature analysis)
 - `docs/strategy/quoting-discovery-interview-questions.md` (interview guide)
-- `docs/strategy/screen-print-pro-journey-quoting.md` (improved journey design)
+- `docs/strategy/mokumo-journey-quoting.md` (improved journey design)
 - `.claude/plans/vertical-by-vertical-strategy.md` (overall strategy)

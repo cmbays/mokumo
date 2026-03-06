@@ -18,7 +18,7 @@ status: complete
 
 Completed Wave 4 (final wave) of the DTF Gang Sheet Builder. This wave implemented the SVG gang sheet canvas (`GangSheetCanvas.tsx`) — the visual representation of packed designs on 22"-wide gang sheets. All 4 waves of the DTF vertical are now merged.
 
-**PR**: [#284 — feat(dtf): Wave 4 — Gang Sheet Canvas](https://github.com/cmbays/print-4ink/pull/284) (3 commits, squash-merged)
+**PR**: [#284 — feat(dtf): Wave 4 — Gang Sheet Canvas](https://github.com/cmbays/mokumo/pull/284) (3 commits, squash-merged)
 
 ## What Was Built
 
@@ -94,7 +94,7 @@ All 4 implementation waves merged:
 | Wave 3   | #249, #280 | Save/validate integration, Sheet Calculation UI      |
 | Wave 4   | #284       | Gang Sheet Canvas + design audit fixes               |
 
-**Deferred**: V5 job card wiring → [PRI-155](https://linear.app/print-4ink/issue/PRI-155) (icebox, Phase 2)
+**Deferred**: V5 job card wiring → [PRI-155](https://linear.app/mokumo/issue/PRI-155) (icebox, Phase 2)
 
 ## Files Modified/Created
 

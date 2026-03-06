@@ -17,7 +17,7 @@ status: complete
 
 ## Context
 
-4Ink is adding a DTF Gang Sheet Builder as a new vertical. Gary (shop owner) runs DTF printing **in-house** — he has his own DTF printer and builds gang sheets to optimize film usage for customer orders. The existing Shopify storefront uses the Drip Apps "Build a Gang Sheet" Shopify app for customer-facing orders, but the production management software (Screen Print Pro) needs its own gang sheet building capability integrated into the production workflow.
+4Ink is adding a DTF Gang Sheet Builder as a new vertical. Gary (shop owner) runs DTF printing **in-house** — he has his own DTF printer and builds gang sheets to optimize film usage for customer orders. The existing Shopify storefront uses the Drip Apps "Build a Gang Sheet" Shopify app for customer-facing orders, but the production management software (Mokumo) needs its own gang sheet building capability integrated into the production workflow.
 
 The existing codebase already has DTF pricing schemas (`lib/schemas/dtf-pricing.ts`), a DTF pricing editor (`/settings/pricing/dtf/[id]`), and DTF as a service type in the quoting system. This research focuses on the **gang sheet builder** — the visual tool for arranging multiple designs on a single DTF film sheet.
 
@@ -36,7 +36,7 @@ Gang sheet builders split into two distinct categories:
 1. **Customer-facing Shopify/WooCommerce apps** — embedded in online stores, customers upload designs and build their own gang sheets, output feeds into shop's order queue
 2. **Production-focused desktop/web apps** — used by the shop operator to arrange orders onto gang sheets, optimize nesting, generate print-ready files for RIP software
 
-4Ink needs **both**: Drip Apps handles the customer-facing side (already in use), and Screen Print Pro should handle the production/operations side.
+4Ink needs **both**: Drip Apps handles the customer-facing side (already in use), and Mokumo should handle the production/operations side.
 
 ### Competitor Comparison
 
@@ -128,7 +128,7 @@ Customer Order (Shopify/walk-in)
     → Ships/delivers
 ```
 
-The gap in this workflow: **no production management between order intake and gang sheet building**. Screen Print Pro can bridge this gap.
+The gap in this workflow: **no production management between order intake and gang sheet building**. Mokumo can bridge this gap.
 
 ## UX Patterns That Work
 
@@ -202,7 +202,7 @@ The existing DTF pricing schema handles **how much to charge**. The gang sheet b
 
 ### Finding 1: Two Distinct Workflows
 
-The customer-facing builder (Drip Apps on Shopify) and the production builder (Screen Print Pro) serve different purposes. The Shopify app lets customers build their own sheets for ordering. Screen Print Pro should let Gary arrange **his pending orders** onto sheets for production.
+The customer-facing builder (Drip Apps on Shopify) and the production builder (Mokumo) serve different purposes. The Shopify app lets customers build their own sheets for ordering. Mokumo should let Gary arrange **his pending orders** onto sheets for production.
 
 ### Finding 2: Auto-Nesting Is Table Stakes
 
@@ -214,7 +214,7 @@ The DTF pricing schema and editor already handle the 10 sheet size tiers (22" x 
 
 ### Finding 4: The Killer Feature Is Order-to-Sheet
 
-What no competitor fully solves: **connecting production orders to gang sheet layouts**. Shopify apps are customer-facing. Desktop tools are standalone. Screen Print Pro can uniquely link jobs → gang sheets → production status, giving Gary visibility into what's on each sheet and which orders are fulfilled.
+What no competitor fully solves: **connecting production orders to gang sheet layouts**. Shopify apps are customer-facing. Desktop tools are standalone. Mokumo can uniquely link jobs → gang sheets → production status, giving Gary visibility into what's on each sheet and which orders are fulfilled.
 
 ### Finding 5: Phase 1 Scope Should Be Visual + Mock
 
@@ -257,7 +257,7 @@ This is sufficient to validate the concept with Gary. Advanced features (halfton
 
 <div class="gary-question" data-question-id="dtf-q5" data-pipeline="dtf-gang-sheet" data-status="unanswered">
   <p class="gary-question-text">Do you use the Drip Apps builder on your Shopify store for all DTF orders, or do some come through other channels (walk-ins, phone, email)?</p>
-  <p class="gary-question-context">If orders come from multiple channels, Screen Print Pro needs to be the single place where Gary builds gang sheets regardless of order source. If all orders come through Shopify/Drip Apps, the integration story is simpler.</p>
+  <p class="gary-question-context">If orders come from multiple channels, Mokumo needs to be the single place where Gary builds gang sheets regardless of order source. If all orders come through Shopify/Drip Apps, the integration story is simpler.</p>
   <div class="gary-answer" data-answered-date=""></div>
 </div>
 
@@ -293,6 +293,6 @@ This is sufficient to validate the concept with Gary. Advanced features (halfton
 
 ### Prior Research (Internal)
 
-- [DTF Gang Sheet Pricing Research](https://github.com/cmbays/print-4ink/blob/main/docs/research/05-dtf-gang-sheet-pricing.md) — Cost structures, pricing models, margin analysis
-- [Price Matrix Build Session](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/pipelines/2026-02-12-price-matrix-build.md) — DTF editor implementation
-- [GitHub Issue #144](https://github.com/cmbays/print-4ink/issues/144) — DTF Gang Sheet Builder feature request
+- [DTF Gang Sheet Pricing Research](https://github.com/cmbays/mokumo/blob/main/docs/research/05-dtf-gang-sheet-pricing.md) — Cost structures, pricing models, margin analysis
+- [Price Matrix Build Session](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/pipelines/2026-02-12-price-matrix-build.md) — DTF editor implementation
+- [GitHub Issue #144](https://github.com/cmbays/mokumo/issues/144) — DTF Gang Sheet Builder feature request

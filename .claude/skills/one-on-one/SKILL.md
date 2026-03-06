@@ -4,7 +4,7 @@ description: Structured 1:1 check-in between Ada (secretary agent) and the user
 trigger: When the user starts a session with the secretary agent, or says "let's do a 1:1", "check in", "what's the state of things"
 prerequisites:
   - Secretary agent loaded (reads memory files on startup)
-  - Session registry exists at ~/Github/print-4ink-worktrees/.session-registry.json
+  - Session registry exists at ~/Github/mokumo-worktrees/.session-registry.json
   - ROADMAP.md and PROGRESS.md are current
 ---
 
@@ -23,9 +23,9 @@ Read these in order (skip what you've already read in your startup sequence):
 1. Your memory files: `personality.md`, `project-pulse.md`, `1on1-log.md`
 2. `docs/ROADMAP.md` — current bets and strategic direction
 3. `PROGRESS.md` — what's been built recently
-4. Session registry: `jq '.' ~/Github/print-4ink-worktrees/.session-registry.json`
-5. Recent PRs: `gh pr list --repo cmbays/print-4ink --state all --limit 10`
-6. Open issues: `gh issue list --repo cmbays/print-4ink --state open --limit 20`
+4. Session registry: `jq '.' ~/Github/mokumo-worktrees/.session-registry.json`
+5. Recent PRs: `gh pr list --repo cmbays/mokumo --state all --limit 10`
+6. Open issues: `gh issue list --repo cmbays/mokumo --state open --limit 20`
 7. Recent KB docs: skim `knowledge-base/src/content/sessions/` for latest entries
 8. Gary questions: `grep -r 'data-status="unanswered"' knowledge-base/src/content/sessions/`
 
@@ -127,15 +127,15 @@ A brief narrative moment that creates continuity between sessions. This is what 
 
    ```bash
    # Create a worktree for the commit
-   git -C ~/Github/print-4ink worktree add ~/Github/print-4ink-worktrees/docs-MMDD-1on1 -b docs/MMDD-1on1
+   git -C ~/Github/mokumo worktree add ~/Github/mokumo-worktrees/docs-MMDD-1on1 -b docs/MMDD-1on1
 
    # Copy updated files to the worktree
-   cp .claude/skills/one-on-one/1on1-log.md ~/Github/print-4ink-worktrees/docs-MMDD-1on1/.claude/skills/one-on-one/
-   cp .claude/skills/one-on-one/project-pulse.md ~/Github/print-4ink-worktrees/docs-MMDD-1on1/.claude/skills/one-on-one/
-   cp .claude/skills/one-on-one/personality.md ~/Github/print-4ink-worktrees/docs-MMDD-1on1/.claude/skills/one-on-one/
+   cp .claude/skills/one-on-one/1on1-log.md ~/Github/mokumo-worktrees/docs-MMDD-1on1/.claude/skills/one-on-one/
+   cp .claude/skills/one-on-one/project-pulse.md ~/Github/mokumo-worktrees/docs-MMDD-1on1/.claude/skills/one-on-one/
+   cp .claude/skills/one-on-one/personality.md ~/Github/mokumo-worktrees/docs-MMDD-1on1/.claude/skills/one-on-one/
 
    # Only add files that actually changed
-   cd ~/Github/print-4ink-worktrees/docs-MMDD-1on1
+   cd ~/Github/mokumo-worktrees/docs-MMDD-1on1
    git add .claude/skills/one-on-one/1on1-log.md .claude/skills/one-on-one/project-pulse.md .claude/skills/one-on-one/personality.md
    git diff --cached --stat  # verify only expected files
 
@@ -144,10 +144,10 @@ A brief narrative moment that creates continuity between sessions. This is what 
    git push -u origin docs/MMDD-1on1
    gh pr create --title "docs(secretary): 1:1 check-in artifacts YYYY-MM-DD" --body "Auto-committed Ada 1:1 memory updates."
    gh pr merge --merge
-   cd ~/Github/print-4ink
+   cd ~/Github/mokumo
    git pull origin main
    git stash drop 2>/dev/null  # drop stash if local copies conflict
-   git worktree remove ~/Github/print-4ink-worktrees/docs-MMDD-1on1
+   git worktree remove ~/Github/mokumo-worktrees/docs-MMDD-1on1
    git branch -d docs/MMDD-1on1
    ```
 

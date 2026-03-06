@@ -17,7 +17,7 @@ status: complete
 
 ## Summary
 
-Applied the R x S shaping methodology to design a hierarchical color preference system for Screen Print Pro. Defined 9 requirements (R0-R8), explored 3 competing shapes, selected Shape A (entity-owned favorites with live inheritance) via fit check, and resolved the brand detail view spike. This shaping feeds directly into the breadboard at `docs/breadboards/color-preference-breadboard.md`.
+Applied the R x S shaping methodology to design a hierarchical color preference system for Mokumo. Defined 9 requirements (R0-R8), explored 3 competing shapes, selected Shape A (entity-owned favorites with live inheritance) via fit check, and resolved the brand detail view spike. This shaping feeds directly into the breadboard at `docs/breadboards/color-preference-breadboard.md`.
 
 ## Requirements (9 top-level)
 
@@ -94,10 +94,10 @@ Entry points: (1) brand name on garment cards, (2) brand name in toolbar when fi
 
 ## Artifacts
 
-- **Shaping doc**: [`docs/shaping/colors/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/colors/shaping.md)
-- **Frame**: [`docs/shaping/colors/frame.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/colors/frame.md)
-- **Spike**: [`docs/shaping/colors/spike-brand-detail-view.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/colors/spike-brand-detail-view.md)
-- **Design doc**: [`docs/plans/2026-02-15-color-preference-system-design.md`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-color-preference-system-design.md)
+- **Shaping doc**: [`docs/shaping/colors/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/colors/shaping.md)
+- **Frame**: [`docs/shaping/colors/frame.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/colors/frame.md)
+- **Spike**: [`docs/shaping/colors/spike-brand-detail-view.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/colors/spike-brand-detail-view.md)
+- **Design doc**: [`docs/plans/2026-02-15-color-preference-system-design.md`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-color-preference-system-design.md)
 
 ## Pipeline
 

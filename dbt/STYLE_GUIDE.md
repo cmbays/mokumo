@@ -1,4 +1,4 @@
-# dbt Style Guide — Screen Print Pro Analytics
+# dbt Style Guide — Mokumo Analytics
 
 > Canonical reference for all dbt development. Every model, test, and YAML file must follow these conventions.
 

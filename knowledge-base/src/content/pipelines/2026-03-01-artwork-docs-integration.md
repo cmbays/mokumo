@@ -80,7 +80,7 @@ Targeted edits to the AI context document without rewriting strategic content:
 
 ## Artifacts
 
-- PR #729: [docs(artwork): Epic #717 research integration](https://github.com/cmbays/print-4ink/pull/729)
+- PR #729: [docs(artwork): Epic #717 research integration](https://github.com/cmbays/mokumo/pull/729)
 - Research source: `docs/workspace/20260301-artwork-vertical/research-report.md`
 - Upstream research: PR #727 (Epic #717 research + ROADMAP update)
 - Docs-site foundation: PR #716 (Mintlify docs-site launch)

@@ -123,7 +123,7 @@ A 4-agent orchestrated review (build-reviewer, security-reviewer, architect, des
 - Missing `shop_id` column for future multi-tenancy
 - No soft-delete reconciliation strategy
 
-All findings tracked in [Issue #550](https://github.com/cmbays/print-4ink/issues/550).
+All findings tracked in [Issue #550](https://github.com/cmbays/mokumo/issues/550).
 
 ## Learnings and Patterns
 
@@ -157,21 +157,21 @@ The review findings confirmed this: the missing `source` column and `shop_id` we
 
 ### Merged PRs
 
-| PR                                                    | Title                                  | Wave    |
-| ----------------------------------------------------- | -------------------------------------- | ------- |
-| [#531](https://github.com/cmbays/print-4ink/pull/531) | Supabase + Drizzle foundation          | Wave 0  |
-| [#534](https://github.com/cmbays/print-4ink/pull/534) | Drizzle schema migration drift checks  | Wave 1C |
-| [#535](https://github.com/cmbays/print-4ink/pull/535) | V2 sync - wire S&S catalog to Supabase | Wave 1B |
-| [#536](https://github.com/cmbays/print-4ink/pull/536) | Replace demo code with Supabase auth   | Wave 1A |
-| [#537](https://github.com/cmbays/print-4ink/pull/537) | Wave 1 deferred work                   | Cleanup |
-| [#541](https://github.com/cmbays/print-4ink/pull/541) | Session C notes                        | Docs    |
-| [#543](https://github.com/cmbays/print-4ink/pull/543) | Session C doc index                    | Docs    |
-| [#544](https://github.com/cmbays/print-4ink/pull/544) | Wave 0 summary for KB                  | Docs    |
+| PR                                                | Title                                  | Wave    |
+| ------------------------------------------------- | -------------------------------------- | ------- |
+| [#531](https://github.com/cmbays/mokumo/pull/531) | Supabase + Drizzle foundation          | Wave 0  |
+| [#534](https://github.com/cmbays/mokumo/pull/534) | Drizzle schema migration drift checks  | Wave 1C |
+| [#535](https://github.com/cmbays/mokumo/pull/535) | V2 sync - wire S&S catalog to Supabase | Wave 1B |
+| [#536](https://github.com/cmbays/mokumo/pull/536) | Replace demo code with Supabase auth   | Wave 1A |
+| [#537](https://github.com/cmbays/mokumo/pull/537) | Wave 1 deferred work                   | Cleanup |
+| [#541](https://github.com/cmbays/mokumo/pull/541) | Session C notes                        | Docs    |
+| [#543](https://github.com/cmbays/mokumo/pull/543) | Session C doc index                    | Docs    |
+| [#544](https://github.com/cmbays/mokumo/pull/544) | Wave 0 summary for KB                  | Docs    |
 
 ### Open Issues
 
-- [#550](https://github.com/cmbays/print-4ink/issues/550) -- Review findings: 14 major + 20 warnings from 4-agent orchestration review
-- [#530](https://github.com/cmbays/print-4ink/issues/530) -- Environment variable Zod validation (deferred from Wave 0)
+- [#550](https://github.com/cmbays/mokumo/issues/550) -- Review findings: 14 major + 20 warnings from 4-agent orchestration review
+- [#530](https://github.com/cmbays/mokumo/issues/530) -- Environment variable Zod validation (deferred from Wave 0)
 
 ## Phase 2b Readiness
 

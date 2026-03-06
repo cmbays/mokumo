@@ -12,7 +12,7 @@
 
 **Breadboard:** `docs/breadboards/mockup-engine-breadboard.md`
 
-**Worktree:** `~/Github/print-4ink-worktrees/session-0214-mockup-design` (branch: `session/0214-mockup-design`)
+**Worktree:** `~/Github/mokumo-worktrees/session-0214-mockup-design` (branch: `session/0214-mockup-design`)
 
 **Breadboard Gaps Addressed:** This plan incorporates 4 integration gaps found during breadboarding:
 
@@ -112,7 +112,7 @@ describe('mockupTemplateSchema', () => {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd ~/Github/print-4ink-worktrees/session-0214-mockup-design && npm test -- lib/schemas/__tests__/mockup-template.test.ts`
+Run: `cd ~/Github/mokumo-worktrees/session-0214-mockup-design && npm test -- lib/schemas/__tests__/mockup-template.test.ts`
 Expected: FAIL — module `../mockup-template` not found
 
 **Step 3: Write minimal implementation**
@@ -149,7 +149,7 @@ export type MockupTemplate = z.infer<typeof mockupTemplateSchema>
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cd ~/Github/print-4ink-worktrees/session-0214-mockup-design && npm test -- lib/schemas/__tests__/mockup-template.test.ts`
+Run: `cd ~/Github/mokumo-worktrees/session-0214-mockup-design && npm test -- lib/schemas/__tests__/mockup-template.test.ts`
 Expected: ALL PASS
 
 **Step 5: Commit**
@@ -579,7 +579,7 @@ Create a greyscale t-shirt silhouette SVG with:
 The SVG should be a realistic t-shirt outline rendered in shades of grey (#808080 base with #999 highlights and #666 shadows). No text, no decoration — just the garment shape.
 
 ```bash
-mkdir -p ~/Github/print-4ink-worktrees/session-0214-mockup-design/public/mockup-templates
+mkdir -p ~/Github/mokumo-worktrees/session-0214-mockup-design/public/mockup-templates
 ```
 
 Write `public/mockup-templates/t-shirts-front.svg` — a greyscale t-shirt front silhouette with collar, shoulders, sleeves, and hem. Use multiple path fills to create depth (lighter center, darker edges for fold lines).
@@ -930,7 +930,7 @@ export function GarmentMockup({
 
 **Step 2: Verify it compiles**
 
-Run: `cd ~/Github/print-4ink-worktrees/session-0214-mockup-design && npx tsc --noEmit`
+Run: `cd ~/Github/mokumo-worktrees/session-0214-mockup-design && npx tsc --noEmit`
 Expected: No type errors
 
 **Step 3: Commit**

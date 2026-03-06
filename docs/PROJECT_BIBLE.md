@@ -9,11 +9,11 @@ last_verified: 2026-02-07
 depends_on: []
 ---
 
-# **Screen Print Pro \- Project Bible**
+# **Mokumo \- Project Bible**
 
 ## **1\. Project Overview**
 
-"Screen Print Pro" is a high-performance management software for screen printing shops (inspired by The Print Life and Printavo). It manages the entire lifecycle of a garment: from Quote \-\> Artwork Approval \-\> Screen Room \-\> Production \-\> Shipping.
+"Mokumo" is a high-performance management software for screen printing shops (inspired by The Print Life and Printavo). It manages the entire lifecycle of a garment: from Quote \-\> Artwork Approval \-\> Screen Room \-\> Production \-\> Shipping.
 
 ## **2\. Core Industry Workflows (The Business Logic)**
 

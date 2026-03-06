@@ -51,8 +51,8 @@ Click the header label to toggle sort direction. A small filter icon opens a Rad
 
 ## Pull Requests
 
-- [PR #33](https://github.com/cmbays/print-4ink/pull/33) — Quality gate fixes (prerequisite, merged first)
-- [PR #35](https://github.com/cmbays/print-4ink/pull/35) — All 8 feedback items + CodeRabbit fixes + Zod enums + generated ID
+- [PR #33](https://github.com/cmbays/mokumo/pull/33) — Quality gate fixes (prerequisite, merged first)
+- [PR #35](https://github.com/cmbays/mokumo/pull/35) — All 8 feedback items + CodeRabbit fixes + Zod enums + generated ID
 
 ---
 

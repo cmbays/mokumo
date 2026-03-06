@@ -8,7 +8,7 @@ waves:
         prompt: |
           ## PM Label Cleanup (B1.1)
 
-          You are cleaning up the GitHub label taxonomy for cmbays/print-4ink.
+          You are cleaning up the GitHub label taxonomy for cmbays/mokumo.
           This is an API-only session — you modify GitHub state via `gh` CLI, not files.
 
           ### Read First
@@ -20,7 +20,7 @@ waves:
 
           **1. Audit current labels**
           ```bash
-          gh label list --repo cmbays/print-4ink --json name --limit 200
+          gh label list --repo cmbays/mokumo --json name --limit 200
           ```
           Verify current state before making changes.
 
@@ -42,14 +42,14 @@ waves:
           Pattern for each:
           ```bash
           # Find issues with the label
-          gh issue list -l "<ad-hoc-label>" --json number --jq '.[].number' --repo cmbays/print-4ink
+          gh issue list -l "<ad-hoc-label>" --json number --jq '.[].number' --repo cmbays/mokumo
           # For each issue:
-          gh issue edit <N> --remove-label "<ad-hoc-label>" --add-label "<replacement>" --repo cmbays/print-4ink
+          gh issue edit <N> --remove-label "<ad-hoc-label>" --add-label "<replacement>" --repo cmbays/mokumo
           ```
 
           **3. Delete 8 ad-hoc labels (N2)**
           ```bash
-          gh label delete "<name>" --yes --repo cmbays/print-4ink
+          gh label delete "<name>" --yes --repo cmbays/mokumo
           ```
 
           **4. Delete 4 unused default labels (N3)**
@@ -66,7 +66,7 @@ waves:
           - If a replacement label doesn't exist, create it first.
 
           ### Acceptance
-          `gh label list --repo cmbays/print-4ink` shows ~37 labels, all within
+          `gh label list --repo cmbays/mokumo` shows ~37 labels, all within
           `type/*`, `priority/*`, `vertical/*`, `phase/*`, `source/*` dimensions.
           Zero orphan labels outside the taxonomy.
 
@@ -75,7 +75,7 @@ waves:
         prompt: |
           ## PM Project Board (B1.2)
 
-          You are creating a GitHub Projects v2 board for cmbays/print-4ink.
+          You are creating a GitHub Projects v2 board for cmbays/mokumo.
           This is an API-only session — you modify GitHub state via `gh` CLI.
 
           ### Read First
@@ -94,7 +94,7 @@ waves:
 
           **1. Create project (N5)**
           ```bash
-          gh project create --owner @me --title "Screen Print Pro" --format json
+          gh project create --owner @me --title "Mokumo" --format json
           ```
           Record the project number from output.
 
@@ -147,7 +147,7 @@ waves:
         prompt: |
           ## PM D-Day Milestone (B1.3)
 
-          You are creating the D-Day milestone for cmbays/print-4ink.
+          You are creating the D-Day milestone for cmbays/mokumo.
           This is an API-only session — small and fast.
 
           ### Read First
@@ -158,7 +158,7 @@ waves:
 
           **1. Create milestone (N8)**
           ```bash
-          gh api repos/cmbays/print-4ink/milestones \
+          gh api repos/cmbays/mokumo/milestones \
             -f title="D-Day" \
             -f due_on="2026-02-21T00:00:00Z" \
             -f description="Demo prep: Wizards, DTF Pricing, Pricing Mobile"
@@ -166,14 +166,14 @@ waves:
 
           **2. Assign 3 issues (N9)**
           ```bash
-          gh issue edit 145 --milestone "D-Day" --repo cmbays/print-4ink
-          gh issue edit 144 --milestone "D-Day" --repo cmbays/print-4ink
-          gh issue edit 177 --milestone "D-Day" --repo cmbays/print-4ink
+          gh issue edit 145 --milestone "D-Day" --repo cmbays/mokumo
+          gh issue edit 144 --milestone "D-Day" --repo cmbays/mokumo
+          gh issue edit 177 --milestone "D-Day" --repo cmbays/mokumo
           ```
 
           **3. Verify**
           ```bash
-          gh api repos/cmbays/print-4ink/milestones --jq '.[].title'
+          gh api repos/cmbays/mokumo/milestones --jq '.[].title'
           ```
 
           ### Important
@@ -181,7 +181,7 @@ waves:
           - If any issue number doesn't exist, skip it and note in output.
 
           ### Acceptance
-          `gh api repos/cmbays/print-4ink/milestones` shows "D-Day" with
+          `gh api repos/cmbays/mokumo/milestones` shows "D-Day" with
           Feb 21 due date. Three issues assigned.
 
       - topic: pm-sub-issue-migration
@@ -190,7 +190,7 @@ waves:
           ## PM Sub-Issue Migration (B1.4)
 
           You are converting checkbox-based tracking issues into native GitHub
-          sub-issue relationships for cmbays/print-4ink.
+          sub-issue relationships for cmbays/mokumo.
           This is an API-only session using GraphQL mutations.
 
           ### Read First
@@ -203,7 +203,7 @@ waves:
           **1. Scan for tracking issues (N10)**
           Find all open issues with checkbox references to other issues:
           ```bash
-          gh issue list --state open --json number,body --limit 200 --repo cmbays/print-4ink | \
+          gh issue list --state open --json number,body --limit 200 --repo cmbays/mokumo | \
             jq -r '.[] | select(.body != null) | select(.body | test("- \\[[ x]\\] #[0-9]+")) | .number'
           ```
           Known tracking issues: #166, #192, #216. You may discover more.
@@ -214,7 +214,7 @@ waves:
 
           **3. Get node IDs**
           ```bash
-          gh issue view <NUMBER> --json id --jq '.id' --repo cmbays/print-4ink
+          gh issue view <NUMBER> --json id --jq '.id' --repo cmbays/mokumo
           ```
 
           **4. Create sub-issue relationships (N11)**
@@ -259,7 +259,7 @@ waves:
           ## PM Issue Templates (B2.1)
 
           You are creating GitHub issue form templates and a PR template
-          for cmbays/print-4ink.
+          for cmbays/mokumo.
 
           ### Read First
           1. `CLAUDE.md` — project rules, design system
@@ -362,7 +362,7 @@ waves:
           ## PM Auto-Add Action (B2.2)
 
           You are creating a GitHub Action that auto-adds new issues and PRs
-          to the project board for cmbays/print-4ink.
+          to the project board for cmbays/mokumo.
 
           ### Read First
           1. `CLAUDE.md` — project rules
@@ -398,11 +398,11 @@ waves:
           ```bash
           gh project list --owner @me --format json --jq '.[].number'
           ```
-          Use the project titled "Screen Print Pro".
+          Use the project titled "Mokumo".
 
           **2. Set repository secret (N19)**
           ```bash
-          gh secret set PROJECT_PAT --repo cmbays/print-4ink
+          gh secret set PROJECT_PAT --repo cmbays/mokumo
           ```
           Human pastes the PAT value when prompted.
 
@@ -424,7 +424,7 @@ waves:
           ## PM PR Auto-Labeler (B2.3)
 
           You are creating a GitHub Action that auto-labels PRs based on
-          changed file paths for cmbays/print-4ink.
+          changed file paths for cmbays/mokumo.
 
           ### Read First
           1. `CLAUDE.md` — project rules
@@ -508,7 +508,7 @@ waves:
           ## PM Work Progress Command + Config (B2.4 + B2.5)
 
           You are building the `work progress` shell command and migrating
-          PROGRESS.md from tracked to gitignored for cmbays/print-4ink.
+          PROGRESS.md from tracked to gitignored for cmbays/mokumo.
 
           ### Read First
           1. `CLAUDE.md` — project rules
@@ -606,7 +606,7 @@ waves:
         prompt: |
           ## PM Backlog Grooming (B3.1)
 
-          You are grooming the full open backlog for cmbays/print-4ink.
+          You are grooming the full open backlog for cmbays/mokumo.
           This is an INTERACTIVE session — present each issue to the human
           for decisions.
 
@@ -632,16 +632,16 @@ waves:
           **Workflow:**
           ```bash
           # Get all open issues
-          gh issue list --state open --json number,title,labels --limit 200 --repo cmbays/print-4ink
+          gh issue list --state open --json number,title,labels --limit 200 --repo cmbays/mokumo
           ```
 
           For each issue, show: number, title, current labels, and ask the human
           what changes to make. Then apply:
           ```bash
           # Re-label (N27)
-          gh issue edit <N> --add-label <label> --remove-label <label> --repo cmbays/print-4ink
+          gh issue edit <N> --add-label <label> --remove-label <label> --repo cmbays/mokumo
           # Close (N28)
-          gh issue close <N> --comment "Reason" --repo cmbays/print-4ink
+          gh issue close <N> --comment "Reason" --repo cmbays/mokumo
           ```
 
           **Known close candidates:**
@@ -656,7 +656,7 @@ waves:
           After all issues groomed, add surviving issues to project board:
           ```bash
           gh project item-add <PROJECT_NUMBER> --owner @me \
-            --url https://github.com/cmbays/print-4ink/issues/<N>
+            --url https://github.com/cmbays/mokumo/issues/<N>
           ```
 
           ### Important
@@ -675,7 +675,7 @@ waves:
         prompt: |
           ## PM Doc (B3.2)
 
-          You are writing the canonical PM reference document for cmbays/print-4ink.
+          You are writing the canonical PM reference document for cmbays/mokumo.
           This is the final task — it documents everything built in this pipeline.
 
           ### Read First
@@ -685,7 +685,7 @@ waves:
           4. `docs/shaping/pm-overhaul/shaping.md` — full requirements (R0-R8),
              Decision D8 (PM doc structure)
           5. `docs/research/2026-02-15-pm-overhaul-interview.md` — all 17 decisions
-          6. Current state of labels: `gh label list --repo cmbays/print-4ink`
+          6. Current state of labels: `gh label list --repo cmbays/mokumo`
           7. Current state of project: `gh project list --owner @me`
           8. Current state of templates: `.github/ISSUE_TEMPLATE/`
           9. Current state of workflows: `.github/workflows/`
@@ -714,7 +714,7 @@ waves:
 
           Query live state to fill in real data:
           ```bash
-          gh label list --repo cmbays/print-4ink --json name
+          gh label list --repo cmbays/mokumo --json name
           gh project list --owner @me
           ```
 

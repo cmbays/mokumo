@@ -56,4 +56,4 @@ Added `garments` and `screens` to `config/products.json`:
 
 ## PR
 
-**Issue**: https://github.com/cmbays/print-4ink/issues/192
+**Issue**: https://github.com/cmbays/mokumo/issues/192

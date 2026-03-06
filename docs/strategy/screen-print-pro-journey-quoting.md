@@ -1,5 +1,5 @@
 ---
-title: 'Screen Print Pro — Improved Quoting Journey'
+title: 'Mokumo — Improved Quoting Journey'
 description: 'Redesigned quoting workflow addressing all 10 Print Life friction points with 60-70% time reduction targets'
 category: strategy
 status: complete
@@ -12,9 +12,9 @@ depends-on:
   - docs/strategy/quoting-scope-definition.md
 ---
 
-# Screen Print Pro — Improved Quoting Journey
+# Mokumo — Improved Quoting Journey
 
-**Purpose**: Design the 10x better quoting workflow for Screen Print Pro based on Print Life friction analysis and 4Ink user interview
+**Purpose**: Design the 10x better quoting workflow for Mokumo based on Print Life friction analysis and 4Ink user interview
 **Input**: Playwright exploration, user interview, competitive analysis, scope definition
 **Status**: Complete — ready for build phase
 
@@ -136,7 +136,7 @@ POST-FLOW: Quote Tracking Dashboard (/quotes)
 
 ## Key Differences from Print Life
 
-| Aspect              | Print Life (6 Steps)                          | Screen Print Pro (1 Page)                 |
+| Aspect              | Print Life (6 Steps)                          | Mokumo (1 Page)                           |
 | ------------------- | --------------------------------------------- | ----------------------------------------- |
 | **Flow**            | 6 mandatory sequential steps                  | Single scrollable form with sections      |
 | **Steps**           | Can't skip unused steps                       | Only show what's needed                   |

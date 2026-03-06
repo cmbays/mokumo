@@ -1,4 +1,4 @@
-You are starting the **interview** phase for the **{VERTICAL}** vertical of Screen Print Pro.
+You are starting the **interview** phase for the **{VERTICAL}** vertical of Mokumo.
 
 ## Your Mission
 

@@ -17,7 +17,7 @@ status: complete
 
 ## Summary
 
-Launched 4 parallel research agents to investigate all dimensions of integrating S&S Activewear's REST API into Screen Print Pro. This is the foundation research for Phase 2 backend work.
+Launched 4 parallel research agents to investigate all dimensions of integrating S&S Activewear's REST API into Mokumo. This is the foundation research for Phase 2 backend work.
 
 ## Research Agents
 
@@ -85,7 +85,7 @@ Launched 4 parallel research agents to investigate all dimensions of integrating
 
 ## Artifacts
 
-- [Research Synthesis Document](https://github.com/cmbays/print-4ink/blob/main/docs/research/2026-02-15-ss-integration-research-synthesis.md)
+- [Research Synthesis Document](https://github.com/cmbays/mokumo/blob/main/docs/research/2026-02-15-ss-integration-research-synthesis.md)
 
 ## Next Steps
 

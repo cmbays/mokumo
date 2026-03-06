@@ -362,5 +362,5 @@ Interview (human) → Shaping (R×S) → Breadboarding (affordances + slicing) �
 ## Upstream Source
 
 - [rjs/shaping-skills](https://github.com/rjs/shaping-skills) — shaping (23KB), breadboarding (61KB), breadboard-reflection (6KB), ripple hook
-- Prior evaluation: [KB 2026-02-07-shaping-skills.md](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/sessions/2026-02-07-shaping-skills.md)
-- Prior adoption: [KB 2026-02-08-breadboarding-skill.md](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/sessions/2026-02-08-breadboarding-skill.md)
+- Prior evaluation: [KB 2026-02-07-shaping-skills.md](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/sessions/2026-02-07-shaping-skills.md)
+- Prior adoption: [KB 2026-02-08-breadboarding-skill.md](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/sessions/2026-02-08-breadboarding-skill.md)

@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document maps how the price matrix vertical integrates with other Screen Print Pro verticals. The price matrix is the **pricing engine** that feeds quote generation, honors contract pricing, flows into invoicing, enables margin reporting, and tracks production profitability.
+This document maps how the price matrix vertical integrates with other Mokumo verticals. The price matrix is the **pricing engine** that feeds quote generation, honors contract pricing, flows into invoicing, enables margin reporting, and tracks production profitability.
 
 **Key Finding**: Industry leaders (Printavo, YoPrint, InfoFlo, Ordant) treat pricing as a **centralized service** that all other verticals consume. The price matrix is not just a lookup table—it's an active calculation engine with business rules.
 

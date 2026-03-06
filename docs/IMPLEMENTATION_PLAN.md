@@ -13,7 +13,7 @@ depends_on:
   - docs/ROADMAP.md
 ---
 
-# Screen Print Pro — Implementation Plan
+# Mokumo — Implementation Plan
 
 **Current Phase**: Phase 1.5 — Demo Prep (Feb 15-21)
 **Demo Date**: February 21, 2026

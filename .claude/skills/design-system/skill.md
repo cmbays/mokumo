@@ -1,6 +1,6 @@
 # Design System Skill
 
-Screen Print Pro's visual language. Consult before writing any UI component.
+Mokumo's visual language. Consult before writing any UI component.
 
 ---
 

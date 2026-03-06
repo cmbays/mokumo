@@ -11,7 +11,7 @@ last-verified: 2026-02-09
 
 # Customer Management — Competitive Analysis
 
-**Purpose**: Document how the leading screen printing / print shop management platforms handle customer management, CRM, contacts, portals, and related features. This research drives product decisions for Screen Print Pro's Customer Management vertical.
+**Purpose**: Document how the leading screen printing / print shop management platforms handle customer management, CRM, contacts, portals, and related features. This research drives product decisions for Mokumo's Customer Management vertical.
 
 **Competitors Analyzed**: Printavo, ShopWorks (OnSite), InkSoft, GraphicsFlow, OrderMyGear (OMG), DecoNetwork, printIQ, Kothari Print Pro, Print Life
 
@@ -794,7 +794,7 @@ last-verified: 2026-02-09
 
 ---
 
-## Key Insights for Screen Print Pro
+## Key Insights for Mokumo
 
 ### What the Market Does Well (Table Stakes)
 
@@ -832,7 +832,7 @@ last-verified: 2026-02-09
 | Public Profile URL (no login)            | Printavo     | Medium -- frictionless customer access      |
 | Art Approval event timeline              | GraphicsFlow | Medium -- audit trail for disputes          |
 
-### Recommended Feature Prioritization for Screen Print Pro
+### Recommended Feature Prioritization for Mokumo
 
 **CORE (Must Have)**:
 

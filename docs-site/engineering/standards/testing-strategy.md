@@ -1,6 +1,6 @@
 ---
 title: Testing Strategy
-description: Test philosophy, coverage thresholds, and testing patterns for Screen Print Pro.
+description: Test philosophy, coverage thresholds, and testing patterns for Mokumo.
 ---
 
 # Testing Strategy

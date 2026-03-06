@@ -11,7 +11,7 @@ prerequisites:
 
 ## Overview
 
-This skill defines the end-to-end completion flow for every build session in Screen Print Pro. It ensures consistent quality by enforcing self-review, structured PR creation, and automated review integration before declaring work merge-ready.
+This skill defines the end-to-end completion flow for every build session in Mokumo. It ensures consistent quality by enforcing self-review, structured PR creation, and automated review integration before declaring work merge-ready.
 
 ## Process
 

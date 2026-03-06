@@ -63,6 +63,6 @@ status: complete
 ## Finding the session ID
 
 ```bash
-ls -t ~/.claude/projects/-Users-cmbays-Github-print-4ink/*.jsonl | head -1
+ls -t ~/.claude/projects/-Users-cmbays-Github-mokumo/*.jsonl | head -1
 # The filename (without .jsonl) is the session UUID
 ```

@@ -17,7 +17,7 @@ depends_on:
 
 ## Overview
 
-This protocol defines the systematic audit process for evaluating Screen Print Pro page implementations. Every screen must pass this audit before being considered done (per CLAUDE.md Quality Checklist).
+This protocol defines the systematic audit process for evaluating Mokumo page implementations. Every screen must pass this audit before being considered done (per CLAUDE.md Quality Checklist).
 
 **Philosophy**: "Linear calm + Raycast polish + Neobrutalist delight"
 
@@ -132,7 +132,7 @@ Before running the audit, ensure:
 | Do blank screens feel intentional or broken?  | Clear messaging with Lucide icon             |
 | Is the user guided toward their first action? | CTA present in empty state where appropriate |
 
-**Screen Print Pro examples**:
+**Mokumo examples**:
 
 - Jobs List with no jobs: "No jobs yet. Jobs will appear here."
 - Dashboard with no blocked items: "All clear — no blocked jobs"
@@ -156,7 +156,7 @@ Before running the audit, ensure:
 | Do they feel helpful and clear?         | Plain language, actionable guidance      |
 | Are error messages accessible?          | `role="alert"` or `aria-live`            |
 
-**Screen Print Pro examples**:
+**Mokumo examples**:
 
 - Invalid job ID: "Job not found" + link back to `/jobs`
 - No search results: "No results for '[query]'" + clear search action
@@ -321,7 +321,7 @@ For **every element** on the screen, ask these five questions:
 
 ## Version History
 
-| Date       | Change                                                                    |
-| ---------- | ------------------------------------------------------------------------- |
-| 2026-02-04 | Initial protocol (as PLAYGROUND_AUDIT_PROTOCOL.md)                        |
-| 2026-02-07 | Adapted for Screen Print Pro: renamed, updated examples, fixed references |
+| Date       | Change                                                          |
+| ---------- | --------------------------------------------------------------- |
+| 2026-02-04 | Initial protocol (as PLAYGROUND_AUDIT_PROTOCOL.md)              |
+| 2026-02-07 | Adapted for Mokumo: renamed, updated examples, fixed references |

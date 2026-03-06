@@ -15,7 +15,7 @@ depends-on:
 
 # Jobs Vertical — Competitive Analysis Synthesis
 
-**Purpose**: Synthesize all competitor research into actionable insights for Screen Print Pro's Jobs vertical (F2: Jobs List, F3: Job Detail, F4: Production Board)
+**Purpose**: Synthesize all competitor research into actionable insights for Mokumo's Jobs vertical (F2: Jobs List, F3: Job Detail, F4: Production Board)
 **Inputs**: Printavo Playwright exploration (18 screenshots), PrintLife Playwright exploration (7 screenshots), web research reports, user interview with 4Ink owner
 **Status**: Complete
 
@@ -25,7 +25,7 @@ depends-on:
 
 ### Architecture Philosophy
 
-| Dimension               | Printavo                                 | PrintLife                   | Screen Print Pro (Our Plan)                          |
+| Dimension               | Printavo                                 | PrintLife                   | Mokumo (Our Plan)                                    |
 | ----------------------- | ---------------------------------------- | --------------------------- | ---------------------------------------------------- |
 | **Core model**          | Status-based pipeline                    | 4-lane Kanban               | Universal-lane board with service type awareness     |
 | **Default view**        | Calendar (monthly)                       | Invoice Dashboard (Kanban)  | Production Board (2-week horizon)                    |

@@ -1,6 +1,6 @@
 ---
 title: 'Mobile Optimization — Design'
-description: "Interview-validated design for Screen Print Pro's mobile experience"
+description: "Interview-validated design for Mokumo's mobile experience"
 category: plan
 status: approved
 phase: 1

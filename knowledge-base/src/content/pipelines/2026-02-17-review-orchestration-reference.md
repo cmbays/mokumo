@@ -20,7 +20,7 @@ status: complete
 
 ## Why This Tool Exists
 
-Screen Print Pro uses Claude agents to build features. Those agents finish implementation, run tests, and create PRs. The problem: deciding _which review agents to invoke_, and _what to check_, was left to the building agent itself.
+Mokumo uses Claude agents to build features. Those agents finish implementation, run tests, and create PRs. The problem: deciding _which review agents to invoke_, and _what to check_, was left to the building agent itself.
 
 That's the fox guarding the henhouse. The building agent is most likely to overlook its own mistakes. Manual reviewer selection meant:
 
@@ -481,8 +481,8 @@ This engine handles **build-phase PR quality gates** (issues #337–#342 in epic
 
 ## Related Sessions
 
-- **Build session** (this epic's final sub-issue): https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/pipelines/2026-02-17-review-orchestration-engine.md
+- **Build session** (this epic's final sub-issue): https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/pipelines/2026-02-17-review-orchestration-engine.md
 - **Skill file**: `.claude/skills/review-orchestration/SKILL.md`
 - **Design doc**: `docs/plans/2026-02-16-review-orchestration-design.md`
-- **Epic #302**: https://github.com/cmbays/print-4ink/issues/302
-- **PR #407**: https://github.com/cmbays/print-4ink/pull/407
+- **Epic #302**: https://github.com/cmbays/mokumo/issues/302
+- **PR #407**: https://github.com/cmbays/mokumo/pull/407

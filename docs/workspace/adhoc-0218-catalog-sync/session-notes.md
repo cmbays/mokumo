@@ -2,7 +2,7 @@
 
 ## Source & Context
 
-**Worktree**: `~/Github/print-4ink-worktrees/session-0218-catalog-sync`
+**Worktree**: `~/Github/mokumo-worktrees/session-0218-catalog-sync`
 **Session Branch**: `session/0218-catalog-sync`
 **Session Dates**: 2026-02-18 to 2026-02-19
 **Work Type**: Feature implementation with security hardening and code review cycles

@@ -18,7 +18,7 @@ status: complete
 
 Wave 2.1 of the DAL consumer migration. Converted the Dashboard page and all four Jobs route group files from direct `mock-data` imports to the Data Access Layer (DAL). Applied three migration patterns across six files.
 
-**PR**: https://github.com/cmbays/print-4ink/pull/413
+**PR**: https://github.com/cmbays/mokumo/pull/413
 
 ## Files Migrated
 

@@ -4,7 +4,7 @@
 
 ## What belongs here
 
-Domain-Driven Design knowledge about **Screen Print Pro's bounded contexts**. This is the
+Domain-Driven Design knowledge about **Mokumo's bounded contexts**. This is the
 ground truth of our business rules — the rules that would still be true if we rebuilt the app
 from scratch in a different framework.
 

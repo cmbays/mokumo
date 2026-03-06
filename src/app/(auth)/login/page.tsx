@@ -37,7 +37,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="w-full max-w-md p-8 space-y-6 bg-elevated rounded-lg border border-border">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Screen Print Pro</h1>
+          <h1 className="text-2xl font-bold text-foreground">Mokumo Print</h1>
           <p className="mt-2 text-sm text-muted-foreground">Sign in to your account</p>
         </div>
 

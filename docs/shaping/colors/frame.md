@@ -50,4 +50,4 @@ The garment catalog's color experience has two surface issues and one systemic g
 - **Design document**: `docs/plans/2026-02-15-color-preference-system-design.md` (approved)
 - **UX research**: `knowledge-base/src/content/sessions/2026-02-15-colors-research.md`
 - **Interview decisions**: `knowledge-base/src/content/sessions/2026-02-15-colors-interview.md` (14 decisions, 3 Gary questions)
-- **Issue**: [#169](https://github.com/cmbays/print-4ink/issues/169)
+- **Issue**: [#169](https://github.com/cmbays/mokumo/issues/169)

@@ -14,13 +14,13 @@
 4. [Market Gaps](#market-gaps)
 5. [Best-in-Class Examples](#best-in-class-examples)
 6. [Pricing & Positioning](#pricing--positioning)
-7. [Key Takeaways for Screen Print Pro](#key-takeaways)
+7. [Key Takeaways for Mokumo](#key-takeaways)
 
 ---
 
 ## Executive Summary
 
-**The biggest finding: Nobody does Screen Room management well.** This is the single largest gap across all 9 competitors analyzed. Physical screen tracking (mesh count, burn status, tension, lifecycle management) is almost universally absent from dedicated software. Most shops still use whiteboards, spreadsheets, or physical cart systems in their darkroom. This represents a massive differentiation opportunity for Screen Print Pro.
+**The biggest finding: Nobody does Screen Room management well.** This is the single largest gap across all 9 competitors analyzed. Physical screen tracking (mesh count, burn status, tension, lifecycle management) is almost universally absent from dedicated software. Most shops still use whiteboards, spreadsheets, or physical cart systems in their darkroom. This represents a massive differentiation opportunity for Mokumo.
 
 Garment Catalog is better served — most competitors offer vendor catalog integration (SanMar, S&S Activewear/AlphaBroder, etc.) with real-time pricing and stock. The differentiation opportunity here is in the **browsing experience, size/color matrix UX, and connection to quoting**. Nobody has a truly delightful catalog browser.
 
@@ -57,7 +57,7 @@ Garment Catalog is better served — most competitors offer vendor catalog integ
 - Store feature (undergoing overhaul as of 2024)
 - Limited mobile support (no mobile-specific mentions)
 
-**Verdict**: PrintLife is focused on order/invoicing workflow. Screen room and catalog are afterthoughts. This is the tool Screen Print Pro is replacing — the bar is low.
+**Verdict**: PrintLife is focused on order/invoicing workflow. Screen room and catalog are afterthoughts. This is the tool Mokumo is replacing — the bar is low.
 
 ---
 
@@ -206,7 +206,7 @@ Garment Catalog is better served — most competitors offer vendor catalog integ
 - Smart filters to show only relevant information
 - Customer self-service portal
 
-**Verdict**: Best UI/UX in the competitive set. Strong inventory management. Barcode workflow is innovative. But still no screen room management. The modern UI sets the bar for what Screen Print Pro should aspire to.
+**Verdict**: Best UI/UX in the competitive set. Strong inventory management. Barcode workflow is innovative. But still no screen room management. The modern UI sets the bar for what Mokumo should aspire to.
 
 ---
 
@@ -491,11 +491,11 @@ PrintLife  Printavo  Teesom  YoPrint  ShopVOX  InkSoft  DecoNetwork  Katana
   $30       $49-199   $0-147  $60      $55-95   ~$150    $199-500+    $179+
 ```
 
-**Screen Print Pro positioning opportunity**: Between Printavo and ShopVOX in complexity, with the UI quality of YoPrint, at a competitive price point ($49-99/mo). The screen room feature alone justifies a premium over simpler tools.
+**Mokumo positioning opportunity**: Between Printavo and ShopVOX in complexity, with the UI quality of YoPrint, at a competitive price point ($49-99/mo). The screen room feature alone justifies a premium over simpler tools.
 
 ---
 
-## Key Takeaways for Screen Print Pro
+## Key Takeaways for Mokumo
 
 ### 1. Screen Room = Category-Defining Feature
 
@@ -511,7 +511,7 @@ This is the single biggest opportunity. **No competitor offers screen room manag
 
 ### 2. Garment Catalog Should Be a Delight, Not a Utility
 
-Every competitor treats the catalog as a quoting input. Screen Print Pro can treat it as a **browsing experience**:
+Every competitor treats the catalog as a quoting input. Mokumo can treat it as a **browsing experience**:
 
 - Visual-first: large garment photos, color swatches, clean cards
 - Smart organization: by brand, style, category, color family
@@ -629,7 +629,7 @@ OnSite/ShopWorx is notably absent from the main analysis but deserves special at
 
 **Critical distinction**: OnSite treats screens as **job attributes** (metadata on an order), NOT as **tracked physical assets** with lifecycle states. There's no screen inventory, no lifecycle management, no tension tracking, no reclaim queue, and no screen utilization dashboard. It's "here are the production details for this job" — not "here are all our screens and their current status."
 
-This is the precise gap Screen Print Pro should fill: **screen-as-first-class-entity with lifecycle management**, not screen-as-job-metadata.
+This is the precise gap Mokumo should fill: **screen-as-first-class-entity with lifecycle management**, not screen-as-job-metadata.
 
 _Sources: [OnSite Features](https://www.shopworx.com/onsite-screen-print-business-software/), [ShopWorx Screen Printing](https://www.shopworx.com/industries/screen-printing-management-software/)_
 
@@ -701,7 +701,7 @@ _Source: [Printavo Customizing Statuses](https://support.printavo.com/hc/en-us/a
 
 ### Summary of Additional Findings
 
-| Insight                                                                | Impact on Screen Print Pro                                                       |
+| Insight                                                                | Impact on Mokumo                                                                 |
 | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | OnSite tracks screen data as job metadata, not asset inventory         | Confirms the "screen as first-class entity" approach is novel                    |
 | Printavo's status trigger system is the market's best workflow pattern | Adopt for screen lifecycle transitions (status change → notification/automation) |

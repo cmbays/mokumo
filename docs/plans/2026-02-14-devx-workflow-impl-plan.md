@@ -18,21 +18,21 @@
 
 **Files:**
 
-- Create: `~/Github/print-4ink-worktrees/CLAUDE.md` (symlink)
+- Create: `~/Github/mokumo-worktrees/CLAUDE.md` (symlink)
 
 **Step 1: Create symlink**
 
 ```bash
-ln -s ~/Github/print-4ink/CLAUDE.md ~/Github/print-4ink-worktrees/CLAUDE.md
+ln -s ~/Github/mokumo/CLAUDE.md ~/Github/mokumo-worktrees/CLAUDE.md
 ```
 
 **Step 2: Verify**
 
 ```bash
-ls -la ~/Github/print-4ink-worktrees/CLAUDE.md
-# Expected: symlink pointing to ../print-4ink/CLAUDE.md
-cat ~/Github/print-4ink-worktrees/CLAUDE.md | head -5
-# Expected: "# Screen Print Pro — CLAUDE.md"
+ls -la ~/Github/mokumo-worktrees/CLAUDE.md
+# Expected: symlink pointing to ../mokumo/CLAUDE.md
+cat ~/Github/mokumo-worktrees/CLAUDE.md | head -5
+# Expected: "# Mokumo — CLAUDE.md"
 ```
 
 **Step 3: Add to .gitignore at worktrees level**
@@ -68,9 +68,9 @@ Replace the `"allow"` array with corrected patterns. Changes:
 - `Bash(open:*)` → `Bash(open *)`
 - `Bash(wc:*)` → `Bash(wc *)`
 - `Bash(curl:*)` → `Bash(curl *)`
-- `Bash(dbt:*)` → remove (dbt not used in print-4ink)
-- `Bash(python3:*)` → remove (not used in print-4ink)
-- `Bash(uv:*)` → remove (not used in print-4ink)
+- `Bash(dbt:*)` → remove (dbt not used in mokumo)
+- `Bash(python3:*)` → remove (not used in mokumo)
+- `Bash(uv:*)` → remove (not used in mokumo)
 - `Bash(npx markdownlint-cli2:*)` → `Bash(npx markdownlint-cli2 *)`
 - `Bash(coderabbit review:*)` → `Bash(coderabbit review *)`
 - `Bash(PYTHONPATH=. uv run pytest:*)` → remove (dbt-specific)
@@ -107,7 +107,7 @@ This is a user config file, not in the repo. No git commit needed.
 
 **Files:**
 
-- Create: `~/Github/print-4ink-worktrees/.session-registry.json`
+- Create: `~/Github/mokumo-worktrees/.session-registry.json`
 
 **Step 1: Create initial registry file**
 
@@ -118,14 +118,14 @@ This is a user config file, not in the repo. No git commit needed.
 }
 ```
 
-Write to `~/Github/print-4ink-worktrees/.session-registry.json`.
+Write to `~/Github/mokumo-worktrees/.session-registry.json`.
 
 **Step 2: Verify jq can read it**
 
 ```bash
-jq '.version' ~/Github/print-4ink-worktrees/.session-registry.json
+jq '.version' ~/Github/mokumo-worktrees/.session-registry.json
 # Expected: 1
-jq '.sessions | length' ~/Github/print-4ink-worktrees/.session-registry.json
+jq '.sessions | length' ~/Github/mokumo-worktrees/.session-registry.json
 # Expected: 0
 ```
 
@@ -138,13 +138,13 @@ No git commit — this file lives outside any repo.
 **Step 1: Create the label**
 
 ```bash
-gh label create "vertical/devx" --description "Developer experience and workflow tooling" --color "8B5CF6" --repo cmbays/print-4ink
+gh label create "vertical/devx" --description "Developer experience and workflow tooling" --color "8B5CF6" --repo cmbays/mokumo
 ```
 
 **Step 2: Verify**
 
 ```bash
-gh label list --repo cmbays/print-4ink | grep devx
+gh label list --repo cmbays/mokumo | grep devx
 # Expected: vertical/devx    Developer experience and workflow tooling    #8B5CF6
 ```
 
@@ -273,7 +273,7 @@ git commit -m "feat(devx): rewrite work.sh for Zellij + session registry"
 - Create: `scripts/lib/registry.sh`
 - Modify: `scripts/work.sh` (source the lib)
 
-**Context:** The registry lives at `~/Github/print-4ink-worktrees/.session-registry.json`. All operations use `jq` for JSON manipulation. Functions are sourced by `work.sh`.
+**Context:** The registry lives at `~/Github/mokumo-worktrees/.session-registry.json`. All operations use `jq` for JSON manipulation. Functions are sourced by `work.sh`.
 
 **Step 1: Create registry library**
 
@@ -672,7 +672,7 @@ git commit -m "feat(devx): add gary-tracker skill for auto-tagging interview que
 **Memory files** (created on first run, updated by Ada):
 
 - These live in Ada's auto-memory directory. The agent definition should reference them.
-- Initial `personality.md`: Seed with Ada's founding narrative — she's the first team member of Screen Print Pro's development team, she's watched the project grow from a blank Next.js scaffold, she cares about craft and hates when corners are cut.
+- Initial `personality.md`: Seed with Ada's founding narrative — she's the first team member of Mokumo's development team, she's watched the project grow from a blank Next.js scaffold, she cares about craft and hates when corners are cut.
 - Initial `project-pulse.md`: Current project state (Phase 1 frontend, 5+ verticals built, devx vertical in progress)
 - Initial `1on1-log.md`: Empty, first entry created after first 1:1
 
@@ -870,7 +870,7 @@ git commit -m "docs(devx): add review and learnings KB docs"
 - **Existing agents:** `.claude/agents/` — follow the same YAML frontmatter + system prompt format
 - **KB schema:** `knowledge-base/src/content.config.ts` — verticals include `devx`, stages include `polish`
 - **PM labels:** Already created on GitHub: `vertical/*`, `type/*`, `priority/*`, `source/*`, `phase/*`
-- **Registry:** `~/Github/print-4ink-worktrees/.session-registry.json`
+- **Registry:** `~/Github/mokumo-worktrees/.session-registry.json`
 - **Session naming:** `session/MMDD-{vertical}-{stage}` for pipeline, `session/MMDD-{vertical}-w{N}-{topic}` for build waves
 
 ### Testing Shell Functions

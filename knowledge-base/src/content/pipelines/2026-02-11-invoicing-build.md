@@ -152,7 +152,7 @@ React 19 ESLint flags `setState` in effects. The pattern `{show && <Sheet />}` i
 
 ## Artifacts
 
-- **PR**: [#50 — Invoicing vertical build](https://github.com/cmbays/print-4ink/pull/50)
+- **PR**: [#50 — Invoicing vertical build](https://github.com/cmbays/mokumo/pull/50)
 - **Breadboard**: `docs/breadboards/invoicing-breadboard.md`
 - **Research spikes**: `docs/spikes/invoicing-*.md` (6 files)
 - **Plan**: `.claude/plans/zesty-wibbling-river.md`
