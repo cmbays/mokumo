@@ -71,9 +71,9 @@ These require manual testing in a Zellij terminal session.
 
 | Issue                                                   | Title                                                            | Severity                                                  |
 | ------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------- |
-| [#105](https://github.com/cmbays/print-4ink/issues/105) | `work status/list` exit code 1 when no dev servers running       | Medium — `_work_show_infra()` for loop leaves exit code 1 |
-| [#106](https://github.com/cmbays/print-4ink/issues/106) | Phase commands reject `mobile-optimization` and `meta` verticals | Medium — hardcoded whitelist out of sync with KB schema   |
-| [#107](https://github.com/cmbays/print-4ink/issues/107) | Worktree limit check off-by-one                                  | Low — `>` should be `>=`                                  |
+| [#105](https://github.com/cmbays/mokumo/issues/105) | `work status/list` exit code 1 when no dev servers running       | Medium — `_work_show_infra()` for loop leaves exit code 1 |
+| [#106](https://github.com/cmbays/mokumo/issues/106) | Phase commands reject `mobile-optimization` and `meta` verticals | Medium — hardcoded whitelist out of sync with KB schema   |
+| [#107](https://github.com/cmbays/mokumo/issues/107) | Worktree limit check off-by-one                                  | Low — `>` should be `>=`                                  |
 
 All three are quick fixes (1-2 lines each). Could be addressed in a single patch PR.
 

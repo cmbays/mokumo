@@ -15,7 +15,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Screen Print Pro',
+  title: 'Mokumo Print',
   description: 'Production management software for screen printing shops',
 }
 

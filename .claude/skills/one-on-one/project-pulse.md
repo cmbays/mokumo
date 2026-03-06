@@ -15,7 +15,7 @@
 
 ## Demo Objective (Clarified 2026-02-17)
 
-**Re-anchor Gary from PrintLife to Screen Print Pro.** Gary is cognitively locked into PrintLife's workflows. The demo must be intuitive and responsive enough that he stops comparing to PrintLife and starts thinking about how _his business_ fits into _this system_. Once re-anchored, feedback becomes actionable product signal ("I need X to adopt this") rather than comparative noise ("PrintLife does it this way").
+**Re-anchor Gary from PrintLife to Mokumo.** Gary is cognitively locked into PrintLife's workflows. The demo must be intuitive and responsive enough that he stops comparing to PrintLife and starts thinking about how _his business_ fits into _this system_. Once re-anchored, feedback becomes actionable product signal ("I need X to adopt this") rather than comparative noise ("PrintLife does it this way").
 
 **The mechanism**: Wizard orients → Gary creates real data → in-memory backend makes system respond to _his_ actions → Gary operates the system rather than observing it → re-anchoring happens.
 

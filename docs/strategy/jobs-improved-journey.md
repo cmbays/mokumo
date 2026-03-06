@@ -1,5 +1,5 @@
 ---
-title: 'Screen Print Pro — Improved Jobs & Production Journey'
+title: 'Mokumo — Improved Jobs & Production Journey'
 description: 'Redesigned production workflow addressing all friction points with universal board, capacity awareness, and quality gates'
 category: strategy
 status: complete
@@ -12,9 +12,9 @@ depends-on:
   - docs/competitive-analysis/jobs-journey-map.md
 ---
 
-# Screen Print Pro — Improved Jobs & Production Journey
+# Mokumo — Improved Jobs & Production Journey
 
-**Purpose**: Design the production management experience for Screen Print Pro, addressing all 12 friction points from the current journey map
+**Purpose**: Design the production management experience for Mokumo, addressing all 12 friction points from the current journey map
 **Input**: Competitive analysis synthesis, journey map, user interview (12 questions)
 **Status**: Complete — ready for scope definition and build
 

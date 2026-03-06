@@ -73,7 +73,7 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### User Story
 
-> Gary opens Screen Print Pro to look up Riverside High School. He sees the company page with three contacts: Coach Johnson (athletics), Ms. Rivera (PTA), and the school office. Coach Johnson's page shows his order history, pending quotes, and a timeline of every interaction — calls, emails, approvals, payments. Gary notices Coach Johnson prefers Gildan 5000 in Cardinal Red (a saved preference from previous orders). When building a new quote, the system pre-fills this garment. Under the company page, Gary sees aggregate stats: $12,400 lifetime revenue, 8 orders this year, average order value $1,550.
+> Gary opens Mokumo to look up Riverside High School. He sees the company page with three contacts: Coach Johnson (athletics), Ms. Rivera (PTA), and the school office. Coach Johnson's page shows his order history, pending quotes, and a timeline of every interaction — calls, emails, approvals, payments. Gary notices Coach Johnson prefers Gildan 5000 in Cardinal Red (a saved preference from previous orders). When building a new quote, the system pre-fills this garment. Under the company page, Gary sees aggregate stats: $12,400 lifetime revenue, 8 orders this year, average order value $1,550.
 
 ### Milestones
 
@@ -268,7 +268,7 @@ The pilot vertical. End-to-end screen print quoting with real garment data, pric
 
 ### User Story
 
-> A customer calls Gary: "I need 100 Gildan 5000 tees — 3-color front, 1-color back — for a 5K run next month." Gary opens Screen Print Pro, searches for the customer (or creates a new one), picks Gildan 5000 from the catalog, enters size quantities (S: 10, M: 30, L: 35, XL: 20, XXL: 5), adds two print locations (front: 3 colors, back: 1 color), and the pricing matrix auto-calculates. Gary reviews the margin, adjusts if needed, and sends the quote as a PDF via email — all while the customer is still on the phone. The customer clicks "Approve" in the email. The quote status updates automatically.
+> A customer calls Gary: "I need 100 Gildan 5000 tees — 3-color front, 1-color back — for a 5K run next month." Gary opens Mokumo, searches for the customer (or creates a new one), picks Gildan 5000 from the catalog, enters size quantities (S: 10, M: 30, L: 35, XL: 20, XXL: 5), adds two print locations (front: 3 colors, back: 1 color), and the pricing matrix auto-calculates. Gary reviews the margin, adjusts if needed, and sends the quote as a PDF via email — all while the customer is still on the phone. The customer clicks "Approve" in the email. The quote status updates automatically.
 
 ### Milestones
 
@@ -396,7 +396,7 @@ Quote-to-job conversion, task tracking, production board with real persistence, 
 
 ### User Story
 
-> It's Monday morning. Gary opens Screen Print Pro to the production board. Five jobs are in the queue — he sees them as cards on a kanban board: 2 in "Art Prep," 1 in "Screen Burn," 2 in "Pressing." He notices the Riverside High job (due Thursday) is still in Art Prep — he drags it to "Screen Burn" after confirming the artwork is final. On the shop floor, his press operator Marcus scans the barcode on a job ticket with his phone — the board updates: "Acme Corp Polos" moves from "Pressing" to "QC." The TV mounted on the wall refreshes to show the updated board. Gary clicks on the Riverside High card and sees the task checklist: Art finalize (done), Film output (done), Screen coat (in progress), Expose, Wash, Register, Press, QC, Pack. The progress bar shows 30% complete. He also notices that two jobs this week share the same 2-color design — the system flagged them as a batch opportunity: burn one set of screens, press both orders in sequence.
+> It's Monday morning. Gary opens Mokumo to the production board. Five jobs are in the queue — he sees them as cards on a kanban board: 2 in "Art Prep," 1 in "Screen Burn," 2 in "Pressing." He notices the Riverside High job (due Thursday) is still in Art Prep — he drags it to "Screen Burn" after confirming the artwork is final. On the shop floor, his press operator Marcus scans the barcode on a job ticket with his phone — the board updates: "Acme Corp Polos" moves from "Pressing" to "QC." The TV mounted on the wall refreshes to show the updated board. Gary clicks on the Riverside High card and sees the task checklist: Art finalize (done), Film output (done), Screen coat (in progress), Expose, Wash, Register, Press, QC, Pack. The progress bar shows 30% complete. He also notices that two jobs this week share the same 2-color design — the system flagged them as a batch opportunity: burn one set of screens, press both orders in sequence.
 
 ### Milestones
 
@@ -489,7 +489,7 @@ Real metrics replacing mock data. Production KPIs, revenue tracking, customer in
 
 ### User Story
 
-> It's 7:00 AM. Gary opens Screen Print Pro and sees his morning dashboard. The top row shows what matters right now: 2 jobs are blocked (one awaiting artwork approval, one out of Gildan 5000 Medium), 3 jobs ship today (all on track), and yesterday's payroll COGS was 22% (green — below the 25% target). Below that, he sees this week's production: 12 jobs completed, 94% on-time delivery, $8,400 shipped revenue. He clicks into the financial view: outstanding invoices total $4,200, with $1,800 overdue (30+ days). The customer concentration chart shows Riverside High at 28% of monthly revenue — too concentrated. He makes a mental note to pursue new accounts. On the production side, his automatic press ran at 31% utilization this week — he knows the industry average is 20-30%, so that's solid. Setup time averaged 6.2 minutes per screen — down from 8.5 last month after he standardized the registration process.
+> It's 7:00 AM. Gary opens Mokumo and sees his morning dashboard. The top row shows what matters right now: 2 jobs are blocked (one awaiting artwork approval, one out of Gildan 5000 Medium), 3 jobs ship today (all on track), and yesterday's payroll COGS was 22% (green — below the 25% target). Below that, he sees this week's production: 12 jobs completed, 94% on-time delivery, $8,400 shipped revenue. He clicks into the financial view: outstanding invoices total $4,200, with $1,800 overdue (30+ days). The customer concentration chart shows Riverside High at 28% of monthly revenue — too concentrated. He makes a mental note to pursue new accounts. On the production side, his automatic press ran at 31% utilization this week — he knows the industry average is 20-30%, so that's solid. Setup time averaged 6.2 minutes per screen — down from 8.5 last month after he standardized the registration process.
 
 ### Milestones
 
@@ -583,7 +583,7 @@ Business configuration, API credential management (bring-your-own-token), notifi
 
 ### User Story
 
-> Gary just signed up for Screen Print Pro. The onboarding wizard walks him through: business name ("4Ink Print"), address, tax rate (8.25% for Texas), and active service types (screen print + DTF, embroidery off). He enters his S&S Activewear API credentials — the system tests the connection and confirms "Connected: 100+ brands available." Under Pricing, he sets his default screen setup fee ($25/screen), minimum order amount ($150), and standard markup (45%). Under Notifications, he enables email alerts for new quote approvals and job status changes. Later, he comes back to add a team member — his press operator Marcus gets the "Press Operator" role (can update job status, can't see financials). Everything Gary configured here flows through the entire system: tax rate appears on quotes and invoices, setup fee auto-calculates in the pricing matrix, supplier credentials enable catalog sync.
+> Gary just signed up for Mokumo. The onboarding wizard walks him through: business name ("4Ink Print"), address, tax rate (8.25% for Texas), and active service types (screen print + DTF, embroidery off). He enters his S&S Activewear API credentials — the system tests the connection and confirms "Connected: 100+ brands available." Under Pricing, he sets his default screen setup fee ($25/screen), minimum order amount ($150), and standard markup (45%). Under Notifications, he enables email alerts for new quote approvals and job status changes. Later, he comes back to add a team member — his press operator Marcus gets the "Press Operator" role (can update job status, can't see financials). Everything Gary configured here flows through the entire system: tax rate appears on quotes and invoices, setup fee auto-calculates in the pricing matrix, supplier credentials enable catalog sync.
 
 ### Milestones
 
@@ -623,7 +623,7 @@ Customer-facing portal for artwork approval, job status viewing, invoice payment
 
 ### User Story
 
-> Gary's customer, Coach Johnson at Riverside High, needs to approve artwork for their spring sports order. Gary uploads the artwork in Screen Print Pro and sends an approval request. Coach Johnson receives an email: "Your artwork is ready for review." He clicks the link, logs into the portal (branded as `orders.4inkprint.com`), and sees three artwork files: varsity jacket front, t-shirt front, t-shirt back. He approves the jacket and t-shirt front, but rejects the t-shirt back — "The mascot needs to be larger." Gary gets notified, revises the back design, and re-sends just that one file. Coach Johnson approves the revision. Meanwhile, he checks on his other orders — one is in production, another shipped yesterday with a FedEx tracking number. He also pays an outstanding invoice via Stripe.
+> Gary's customer, Coach Johnson at Riverside High, needs to approve artwork for their spring sports order. Gary uploads the artwork in Mokumo and sends an approval request. Coach Johnson receives an email: "Your artwork is ready for review." He clicks the link, logs into the portal (branded as `orders.4inkprint.com`), and sees three artwork files: varsity jacket front, t-shirt front, t-shirt back. He approves the jacket and t-shirt front, but rejects the t-shirt back — "The mascot needs to be larger." Gary gets notified, revises the back design, and re-sends just that one file. Coach Johnson approves the revision. Meanwhile, he checks on his other orders — one is in production, another shipped yesterday with a FedEx tracking number. He also pays an outstanding invoice via Stripe.
 
 ### Milestones
 
@@ -657,7 +657,7 @@ Customer-facing portal for artwork approval, job status viewing, invoice payment
 - **Persistent login over URL-per-invoice**: Customers log in once, see full order history. Printavo's URL-per-invoice model fails repeat customers. Persistent login builds the relationship.
 - **Per-artwork approval**: Approve/reject individual files within an order. Shop can configure whether production starts on approved locations before all artwork is approved (shop-level or job-level setting).
 - **Custom domain (M6)**: Design for it from M0 (domain routing, tenant-scoped rendering), but implement it last. High trust signal — the customer never sees our brand, only the shop's.
-- **White-labeled by default**: No "Powered by Screen Print Pro" branding unless the shop opts in. B2B tool — the shop IS the brand.
+- **White-labeled by default**: No "Powered by Mokumo" branding unless the shop opts in. B2B tool — the shop IS the brand.
 
 > See [Customer & Portal Research](/research/customer-portal) for competitive portal analysis, artwork approval patterns, and auth model evaluation.
 

@@ -67,7 +67,7 @@ Built Wave 0 (Foundation) of the Color Preference System — the data model, res
 
 ## Artifacts
 
-- PR: https://github.com/cmbays/print-4ink/pull/215
+- PR: https://github.com/cmbays/mokumo/pull/215
 - Shaping: `docs/shaping/colors/shaping.md`
 - Breadboard: `docs/breadboards/color-preference-breadboard.md`
 - Impl Plan: `docs/plans/2026-02-15-colors-impl-plan.md`

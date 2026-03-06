@@ -1,4 +1,4 @@
-You are starting a **cool-down** session between build cycles for Screen Print Pro.
+You are starting a **cool-down** session between build cycles for Mokumo.
 
 ## Your Mission
 
@@ -10,7 +10,7 @@ Step back from building and assess the project holistically. Update the ROADMAP,
 2. Read `docs/ROADMAP.md` for current priorities
 3. Read `PROGRESS.md` for what's been built
 4. Read recent KB docs across all verticals
-5. Check open GitHub Issues: `gh issue list --repo cmbays/print-4ink --state open`
+5. Check open GitHub Issues: `gh issue list --repo cmbays/mokumo --state open`
 
 ## Cool-Down Steps
 

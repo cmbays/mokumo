@@ -1,6 +1,6 @@
 ---
 title: 'Shaping Skills Suite Adoption'
-subtitle: 'Full rjs/shaping-skills methodology adapted for Screen Print Pro pipeline'
+subtitle: 'Full rjs/shaping-skills methodology adapted for Mokumo pipeline'
 date: 2026-02-15
 phase: 2
 pipelineName: devx
@@ -17,7 +17,7 @@ status: complete
 ## Summary
 
 Adopted the full [rjs/shaping-skills](https://github.com/rjs/shaping-skills) methodology
-as a 4-deliverable suite, executed via subagent-driven development (11 tasks, two-stage review per task). PR [#199](https://github.com/cmbays/print-4ink/pull/199), squash-merged.
+as a 4-deliverable suite, executed via subagent-driven development (11 tasks, two-stage review per task). PR [#199](https://github.com/cmbays/mokumo/pull/199), squash-merged.
 
 ### Deliverables
 
@@ -100,16 +100,16 @@ Used `superpowers:subagent-driven-development` — fresh subagent per task with 
 
 ## Artifacts
 
-- Design doc: [`docs/plans/2026-02-15-shaping-skills-suite-design.md`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-shaping-skills-suite-design.md)
-- Implementation plan: [`docs/plans/2026-02-15-shaping-skills-suite-impl-plan.md`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-shaping-skills-suite-impl-plan.md)
+- Design doc: [`docs/plans/2026-02-15-shaping-skills-suite-design.md`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-shaping-skills-suite-design.md)
+- Implementation plan: [`docs/plans/2026-02-15-shaping-skills-suite-impl-plan.md`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-shaping-skills-suite-impl-plan.md)
 - Skills: `.claude/skills/shaping/`, `.claude/skills/breadboarding/`, `.claude/skills/breadboard-reflection/`
 - Hook: `.claude/hooks/shaping-ripple.sh`
 - Settings: `.claude/settings.json`
 
 ## Related
 
-- [#112](https://github.com/cmbays/print-4ink/issues/112) — Primary tracking issue
-- [#192](https://github.com/cmbays/print-4ink/issues/192) — Pipeline architecture (consumes these skills)
-- [#197](https://github.com/cmbays/print-4ink/issues/197) — KB decision tagging (auto vs human)
+- [#112](https://github.com/cmbays/mokumo/issues/112) — Primary tracking issue
+- [#192](https://github.com/cmbays/mokumo/issues/192) — Pipeline architecture (consumes these skills)
+- [#197](https://github.com/cmbays/mokumo/issues/197) — KB decision tagging (auto vs human)
 - Prior eval: [2026-02-07-shaping-skills](./2026-02-07-shaping-skills)
 - Prior adoption: [2026-02-08-breadboarding-skill](./2026-02-08-breadboarding-skill)

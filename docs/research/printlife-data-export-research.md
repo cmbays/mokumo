@@ -1,8 +1,8 @@
 # The Print Life Data Export Research
 
 **Research Date**: February 10, 2026
-**Researcher**: Claude (Screen Print Pro Development Team)
-**Purpose**: Investigate The Print Life's pricing data export capabilities to support import functionality in Screen Print Pro
+**Researcher**: Claude (Mokumo Development Team)
+**Purpose**: Investigate The Print Life's pricing data export capabilities to support import functionality in Mokumo
 
 ---
 
@@ -10,12 +10,12 @@
 
 **Key Finding**: The Print Life software **does not appear to have documented CSV export functionality** for pricing data. After extensive research including web searches, documentation review, and competitor analysis, no evidence was found of native pricing matrix export features in The Print Life.
 
-**Critical Implications for Screen Print Pro**:
+**Critical Implications for Mokumo**:
 
-1. Direct PrintLife → Screen Print Pro data migration via file export is **not currently feasible**
-2. 4Ink will likely need to **manually recreate their pricing configuration** in Screen Print Pro
+1. Direct PrintLife → Mokumo data migration via file export is **not currently feasible**
+2. 4Ink will likely need to **manually recreate their pricing configuration** in Mokumo
 3. Alternative workarounds exist but require manual effort or technical extraction techniques
-4. Screen Print Pro should prioritize **intuitive manual pricing setup** over import functionality
+4. Mokumo should prioritize **intuitive manual pricing setup** over import functionality
 
 ---
 
@@ -237,7 +237,7 @@ Each platform uses its own CSV structure:
 - InkSoft: Proprietary pricing grid
 - The Print Life: Unknown/undocumented
 
-**Implication**: Screen Print Pro must define its own import format or support multiple formats.
+**Implication**: Mokumo must define its own import format or support multiple formats.
 
 ---
 
@@ -250,8 +250,8 @@ Since direct PrintLife export isn't available, here are workarounds:
 **Process**:
 
 1. User reviews their current pricing in The Print Life
-2. User manually enters pricing rules into Screen Print Pro's pricing matrix UI
-3. Screen Print Pro provides guided workflow with templates
+2. User manually enters pricing rules into Mokumo's pricing matrix UI
+3. Mokumo provides guided workflow with templates
 
 **Pros**:
 
@@ -274,8 +274,8 @@ Since direct PrintLife export isn't available, here are workarounds:
 **Process**:
 
 1. User takes screenshots of pricing screens in The Print Life
-2. User manually transcribes values into Screen Print Pro
-3. Screen Print Pro UI provides side-by-side reference view
+2. User manually transcribes values into Mokumo
+3. Mokumo UI provides side-by-side reference view
 
 **Pros**:
 
@@ -299,7 +299,7 @@ Since direct PrintLife export isn't available, here are workarounds:
 2. Opens pricing configuration screen
 3. Uses browser DevTools console to extract table data
 4. Runs JavaScript snippet to export to CSV
-5. Imports CSV into Screen Print Pro
+5. Imports CSV into Mokumo
 
 **Technical Approach** ([source](https://gist.github.com/greenido/c0f529544299f46b668dcdf1e9d8aee8)):
 
@@ -348,7 +348,7 @@ console.log(csv)
 1. User's Print Life invoices sync to QuickBooks
 2. Export QuickBooks data to CSV
 3. Extract pricing from historical invoices
-4. Import pricing patterns into Screen Print Pro
+4. Import pricing patterns into Mokumo
 
 **Pros**:
 
@@ -370,11 +370,11 @@ console.log(csv)
 
 **Process**:
 
-1. Screen Print Pro provides downloadable CSV template
+1. Mokumo provides downloadable CSV template
 2. User creates their pricing matrix in Excel/Google Sheets
 3. User saves as CSV
-4. User uploads to Screen Print Pro
-5. Screen Print Pro validates and imports
+4. User uploads to Mokumo
+5. Mokumo validates and imports
 
 **Template Structure** (based on industry standards):
 
@@ -403,7 +403,7 @@ quantity_min,quantity_max,colors,locations,setup_fee,per_item_cost
 
 ---
 
-## Recommendations for Screen Print Pro
+## Recommendations for Mokumo
 
 ### Priority 1: Intuitive Manual Pricing Setup (MUST HAVE)
 
@@ -485,11 +485,11 @@ For users migrating from Print Life who sync to QuickBooks:
 **Feature**: "Validate Pricing Against QB Invoices"
 
 1. Import QuickBooks invoice data (optional)
-2. Compare quoted prices in Screen Print Pro vs historical QB prices
+2. Compare quoted prices in Mokumo vs historical QB prices
 3. Flag discrepancies for review
 4. Help user ensure pricing continuity
 
-**Use Case**: User sets up pricing in Screen Print Pro manually, then validates against 6 months of QB invoices to catch mistakes.
+**Use Case**: User sets up pricing in Mokumo manually, then validates against 6 months of QB invoices to catch mistakes.
 
 **Success Metric**: 95% of validated quotes match historical pricing within 5%.
 
@@ -501,13 +501,13 @@ For users migrating from Print Life who sync to QuickBooks:
 
 **How It Works**:
 
-1. User installs "Screen Print Pro Importer" Chrome extension
+1. User installs "Mokumo Importer" Chrome extension
 2. User logs into The Print Life
 3. Extension detects pricing screens
 4. User clicks "Extract Pricing Data"
-5. Extension scrapes HTML tables, converts to Screen Print Pro format
+5. Extension scrapes HTML tables, converts to Mokumo format
 6. User downloads JSON or CSV
-7. User imports into Screen Print Pro
+7. User imports into Mokumo
 
 **Challenges**:
 
@@ -521,7 +521,7 @@ For users migrating from Print Life who sync to QuickBooks:
 
 ## Competitive Feature Analysis
 
-| Feature              | YoPrint    | Printavo   | InkSoft    | Print Life | Screen Print Pro (Target) |
+| Feature              | YoPrint    | Printavo   | InkSoft    | Print Life | Mokumo (Target) |
 | -------------------- | ---------- | ---------- | ---------- | ---------- | ------------------------- |
 | CSV Export           | ✅ Yes     | ✅ Yes     | ❓ Unknown | ❌ No      | ✅ **Must Have**          |
 | CSV Import           | ✅ Yes     | ✅ Yes     | ❓ Unknown | ❌ No      | ✅ **Must Have**          |
@@ -531,7 +531,7 @@ For users migrating from Print Life who sync to QuickBooks:
 | QB Integration       | ✅ Yes     | ✅ Yes     | ✅ Yes     | ✅ Yes     | 🚧 Phase 2                |
 | API Access           | ❓ Likely  | ❓ Likely  | ❓ Likely  | ❌ No      | 🚧 Phase 3                |
 
-**Key Insight**: Screen Print Pro can **differentiate** by providing the **best manual setup experience** since competitors focus on import but don't optimize first-time setup UX.
+**Key Insight**: Mokumo can **differentiate** by providing the **best manual setup experience** since competitors focus on import but don't optimize first-time setup UX.
 
 ---
 
@@ -627,7 +627,7 @@ pricing-import/
    - Include instructional README
 
 3. **Document Expected Pricing Structure**
-   - Add to Screen Print Pro docs
+   - Add to Mokumo docs
    - Include examples from 4Ink's actual pricing
 
 ### Short-term (Phase 2)
@@ -654,7 +654,7 @@ pricing-import/
 
 **The Print Life does not offer documented pricing data export capabilities.** After exhaustive research, no CSV export, API access, or data portability features were found. This is a **significant limitation** compared to competitors like YoPrint and Printavo, which provide robust import/export tools.
 
-**Implications for Screen Print Pro**:
+**Implications for Mokumo**:
 
 - ✅ **Opportunity**: Build superior manual pricing setup UX to differentiate from competitors
 - ⚠️ **Challenge**: 4Ink will need to manually recreate their pricing configuration
@@ -667,7 +667,7 @@ pricing-import/
 2. Design the best possible manual pricing entry experience
 3. Provide CSV import as power-user feature
 4. Document workarounds (screenshots, templates, validation)
-5. Consider Print Life's limitations a competitive advantage for Screen Print Pro
+5. Consider Print Life's limitations a competitive advantage for Mokumo
 
 ---
 

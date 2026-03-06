@@ -1,6 +1,6 @@
 # screen-builder
 
-Build Screen Print Pro screens with consistent design system, patterns, and quality.
+Build Mokumo screens with consistent design system, patterns, and quality.
 
 ## Trigger
 

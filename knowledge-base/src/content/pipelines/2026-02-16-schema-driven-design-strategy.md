@@ -1,6 +1,6 @@
 ---
 title: 'Schema-Driven Design Strategy'
-subtitle: 'Principles, patterns, and application guide for self-describing configuration across Screen Print Pro'
+subtitle: 'Principles, patterns, and application guide for self-describing configuration across Mokumo'
 date: 2026-02-16
 phase: 1
 pipelineName: schema-config-design
@@ -113,7 +113,7 @@ When multiple artifacts need the same data, generate them from the schema instea
 
 ---
 
-## 3. Application to Screen Print Pro
+## 3. Application to Mokumo
 
 ### Where We Use It Today
 
@@ -441,7 +441,7 @@ product: z.enum(products)
 
 ## Summary
 
-Schema-driven design is now an adopted practice for Screen Print Pro. The pattern is proven across 8 config files, 8 Zod schemas, 925+ tests, and 2 config-driven CLI commands. The decision criteria (Section 4) and patterns catalog (Section 5) provide the framework for applying it to new data structures as the project grows.
+Schema-driven design is now an adopted practice for Mokumo. The pattern is proven across 8 config files, 8 Zod schemas, 925+ tests, and 2 config-driven CLI commands. The decision criteria (Section 4) and patterns catalog (Section 5) provide the framework for applying it to new data structures as the project grows.
 
 ### Key Artifacts
 

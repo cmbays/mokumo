@@ -50,7 +50,7 @@ waves:
 
           ### 3. Pipeline Entity + Registry
           - Create `scripts/lib/pipeline-entity.sh`: entity CRUD functions (_pipeline_create, _pipeline_read, _pipeline_update, _pipeline_transition), state machine validation (ready->active->building->reviewing->wrapped->cooled), type validation against pipeline-types.json, artifact directory creation (docs/{products|tools}/{slug}/{pipeline-id}/).
-          - Create `scripts/lib/pipeline-registry.sh`: JSON registry management at `~/Github/print-4ink-worktrees/.pipeline-registry.json` (_registry_pipeline_init, _add, _get, _list, _update).
+          - Create `scripts/lib/pipeline-registry.sh`: JSON registry management at `~/Github/mokumo-worktrees/.pipeline-registry.json` (_registry_pipeline_init, _add, _get, _list, _update).
           - Source both from work.sh.
 
           ### 4. Work.sh Consumer Updates

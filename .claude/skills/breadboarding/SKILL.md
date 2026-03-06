@@ -17,7 +17,7 @@ prerequisites:
 
 Transform shaped parts or existing systems into affordance tables with wiring and
 vertical slices. Adapted from [rjs/shaping-skills](https://github.com/rjs/shaping-skills)
-for Screen Print Pro's pipeline.
+for Mokumo's pipeline.
 
 ## Pipeline Context
 
@@ -546,7 +546,7 @@ See **Example B** below for a complete worked example including slicing.
 
 **Step 1: List each part from the shape**
 
-Take each mechanism/part identified in shaping and write it down. In the Screen Print Pro pipeline, parts come from the shaping doc's selected shape parts table (`docs/workspace/{pipeline-id}/shaping.md` — see the "Selected Shape" section's parts/mechanisms table).
+Take each mechanism/part identified in shaping and write it down. In the Mokumo pipeline, parts come from the shaping doc's selected shape parts table (`docs/workspace/{pipeline-id}/shaping.md` — see the "Selected Shape" section's parts/mechanisms table).
 
 **Step 2: Translate parts into affordances**
 
@@ -1240,7 +1240,7 @@ design waves (groups of parallel sessions) and generate execution manifests.
 
 ---
 
-## Screen Print Pro Conventions
+## Mokumo Conventions
 
 ### Phase 2 Extensions Table
 

@@ -24,7 +24,7 @@ status: complete
 | Research Agents      | 4     |
 | Features Prioritized | 36    |
 
-**The Opportunity:** No competitor has pulled away — PrintLife, YoPrint, Teesom, and PriceIt are all tied at 74%. Screen Print Pro can leapfrog everyone by combining PrintLife's automation with Teesom's flexibility, YoPrint's innovation, and a 10x better UX.
+**The Opportunity:** No competitor has pulled away — PrintLife, YoPrint, Teesom, and PriceIt are all tied at 74%. Mokumo can leapfrog everyone by combining PrintLife's automation with Teesom's flexibility, YoPrint's innovation, and a 10x better UX.
 
 ## Executive Summary
 
@@ -83,7 +83,7 @@ PrintLife optimizes for _automation at the expense of visibility_. We optimize f
 ```text
                     High Flexibility
                          |
-              Teesom o   |   * Screen Print Pro
+              Teesom o   |   * Mokumo
                          |      (TARGET)
                          |
  Low Automation ----------+-------- High Automation
@@ -184,7 +184,7 @@ Must-have for any viable price matrix. We cannot demo without these.
 
 ### P1 — Phase 1 (Surpass PrintLife, Wow the Demo)
 
-Features that make Screen Print Pro clearly superior to PrintLife. This is the 10x demo moment.
+Features that make Mokumo clearly superior to PrintLife. This is the 10x demo moment.
 
 - **P1 — Real-time margin indicators** (M) — Green/yellow/red per price cell. Tooltip shows full cost/margin breakdown. **PrintLife has ZERO margin visibility — this alone is 10x.**
 - **P1 — Contract vs. retail pricing toggle** (M) — Switch pricing modes per customer. Contract = lower margin, waived setup fees.
@@ -203,7 +203,7 @@ Features that make Screen Print Pro clearly superior to PrintLife. This is the 1
 
 ### P2 — Phase 2 (Match/Surpass Top Competitors)
 
-Features that position Screen Print Pro at or above every competitor in the market.
+Features that position Mokumo at or above every competitor in the market.
 
 - **P2 — Breakless pricing** (L) — Linear pricing without quantity break jumps. Eliminates gaming. Offer alongside traditional breaks.
 - **P2 — Vendor cost integration** (L) — Auto-sync garment costs from SanMar, AlphaBroder, S&S Activewear APIs.
@@ -233,11 +233,11 @@ Features that position Screen Print Pro at or above every competitor in the mark
 
 Full research reports are available as rendered markdown on GitHub:
 
-- [Final Synthesis Report](https://github.com/cmbays/print-4ink/blob/session/0210-price-matrix/docs/research/price-matrix-research.md) — Executive summary, all findings, P0/P1/P2 recommendations
-- [Industry Best Practices](https://github.com/cmbays/print-4ink/blob/session/0210-price-matrix/docs/research/01-industry-practices.md) — Pricing dimensions, formulas, setup fees, MOQs, specialty inks
-- [Competitor Analysis](https://github.com/cmbays/print-4ink/blob/session/0210-price-matrix/docs/research/02-competitor-analysis.md) — 10 platforms rated on 7 criteria, PrintLife baseline, innovation gaps
-- [Integration Map](https://github.com/cmbays/print-4ink/blob/session/0210-price-matrix/docs/research/03-integration-map.md) — 5 vertical integrations, TypeScript schemas, API surfaces, data flows
-- [UX/UI Patterns & Innovations](https://github.com/cmbays/print-4ink/blob/session/0210-price-matrix/docs/research/04-ux-patterns.md) — Progressive disclosure, margin indicators, what-if, CSV UX, smart defaults
+- [Final Synthesis Report](https://github.com/cmbays/mokumo/blob/session/0210-price-matrix/docs/research/price-matrix-research.md) — Executive summary, all findings, P0/P1/P2 recommendations
+- [Industry Best Practices](https://github.com/cmbays/mokumo/blob/session/0210-price-matrix/docs/research/01-industry-practices.md) — Pricing dimensions, formulas, setup fees, MOQs, specialty inks
+- [Competitor Analysis](https://github.com/cmbays/mokumo/blob/session/0210-price-matrix/docs/research/02-competitor-analysis.md) — 10 platforms rated on 7 criteria, PrintLife baseline, innovation gaps
+- [Integration Map](https://github.com/cmbays/mokumo/blob/session/0210-price-matrix/docs/research/03-integration-map.md) — 5 vertical integrations, TypeScript schemas, API surfaces, data flows
+- [UX/UI Patterns & Innovations](https://github.com/cmbays/mokumo/blob/session/0210-price-matrix/docs/research/04-ux-patterns.md) — Progressive disclosure, margin indicators, what-if, CSV UX, smart defaults
 
 ## Next Steps
 

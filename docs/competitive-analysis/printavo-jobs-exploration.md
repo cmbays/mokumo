@@ -401,7 +401,7 @@ Free trial available. All plans are cloud-hosted with web + mobile access.
 
 ---
 
-## 8. Key Insights for Screen Print Pro
+## 8. Key Insights for Mokumo
 
 ### What to Learn From
 

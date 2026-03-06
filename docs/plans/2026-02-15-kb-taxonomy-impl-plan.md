@@ -279,7 +279,7 @@ git push
 **Step 1: Use git mv to rename the directory**
 
 ```bash
-cd ~/Github/print-4ink-worktrees/<branch>
+cd ~/Github/mokumo-worktrees/<branch>
 git mv knowledge-base/src/content/sessions knowledge-base/src/content/pipelines
 ```
 

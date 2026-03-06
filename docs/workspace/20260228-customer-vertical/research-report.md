@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Analysis of 7 print shop management competitors plus SaaS CRM patterns reveals that customer management in the screen printing industry is broadly underserved. Most tools treat CRM as an afterthought — a flat contact list attached to orders. The opportunity for Screen Print Pro is to build a customer vertical that combines enterprise CRM patterns (HubSpot-style activity timelines, company-contact hierarchies) with print-industry-specific intelligence (garment preferences, seasonal detection, per-state tax compliance) that no competitor offers.
+Analysis of 7 print shop management competitors plus SaaS CRM patterns reveals that customer management in the screen printing industry is broadly underserved. Most tools treat CRM as an afterthought — a flat contact list attached to orders. The opportunity for Mokumo is to build a customer vertical that combines enterprise CRM patterns (HubSpot-style activity timelines, company-contact hierarchies) with print-industry-specific intelligence (garment preferences, seasonal detection, per-state tax compliance) that no competitor offers.
 
 ---
 
@@ -172,7 +172,7 @@ Analysis of 7 print shop management competitors plus SaaS CRM patterns reveals t
 
 ## S&S Activewear — Dealer Account Model
 
-Relevant because Screen Print Pro customers are S&S dealers/buyers.
+Relevant because Mokumo customers are S&S dealers/buyers.
 
 **Key patterns**:
 
@@ -184,7 +184,7 @@ Relevant because Screen Print Pro customers are S&S dealers/buyers.
 - AutoPay model: automatic weekly payment of outstanding invoices
 - Inventory reservation without purchasing
 
-**Relevance to Screen Print Pro**:
+**Relevance to Mokumo**:
 
 - Per-state tax exemption model → our customers may need this too
 - AutoPay pattern → interesting for recurring customers
@@ -201,7 +201,7 @@ Relevant because Screen Print Pro customers are S&S dealers/buyers.
 3. **Properties** (fields): Default + custom per object
 4. **Associations** (relationships): N:N between any objects with "primary" designation
 
-**Key patterns applicable to Screen Print Pro**:
+**Key patterns applicable to Mokumo**:
 
 - Contact-Company N:N association (contact can belong to multiple companies)
 - Activities as first-class objects (calls, emails, meetings, tasks, notes)
@@ -212,7 +212,7 @@ Relevant because Screen Print Pro customers are S&S dealers/buyers.
 
 ## Cross-Competitor Feature Matrix
 
-| Feature                    | Printavo | YoPrint  | Print Life | ShopWorks | DecoNetwork | InkSoft    | shopVOX | **Screen Print Pro (Planned)** |
+| Feature                    | Printavo | YoPrint  | Print Life | ShopWorks | DecoNetwork | InkSoft    | shopVOX | **Mokumo (Planned)** |
 | -------------------------- | -------- | -------- | ---------- | --------- | ----------- | ---------- | ------- | ------------------------------ |
 | Company-Contact hierarchy  | Weak     | Weak     | None       | Yes       | **Yes**     | **Yes**    | Partial | **Yes**                        |
 | Multiple contacts + roles  | Yes      | Yes      | ?          | Yes       | Yes         | Yes        | Yes     | **Yes (role-based)**           |
@@ -248,7 +248,7 @@ Relevant because Screen Print Pro customers are S&S dealers/buyers.
 
 ---
 
-## Our Competitive Advantages (Unique to Screen Print Pro)
+## Our Competitive Advantages (Unique to Mokumo)
 
 These features are not found in any analyzed competitor:
 

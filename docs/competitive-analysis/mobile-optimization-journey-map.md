@@ -77,7 +77,7 @@ Open Printavo app → App doesn't load → Force quit → Reopen → Still doesn
 Total: 60-120 seconds (if app works) or ABANDONED | Friction: CRITICAL
 ```
 
-### Target Experience (Screen Print Pro — Phase 1)
+### Target Experience (Mokumo — Phase 1)
 
 ```
 Open browser → App loads instantly (cached shell)
@@ -89,7 +89,7 @@ Open browser → App loads instantly (cached shell)
 Total: 5-10 seconds for full status overview | Friction: MINIMAL
 ```
 
-### Target Experience (Screen Print Pro — Phase 2 PWA)
+### Target Experience (Mokumo — Phase 2 PWA)
 
 ```
 Tap home screen icon → App opens instantly (service worker)
@@ -116,7 +116,7 @@ Total: 30-60 seconds | Customer hears: "Hold on, let me find that..."
 Friction: MODERATE (embarrassment factor — looks unprofessional)
 ```
 
-### Target Experience (Screen Print Pro)
+### Target Experience (Mokumo)
 
 ```
 Customer calls → Tap "Customers" tab
@@ -144,7 +144,7 @@ Customer asks "How much for 100 tees, 2-color front?"
 Total: Deferred (hours/days) or 5-10 minutes of fumbling | Friction: HIGH
 ```
 
-### Target Experience (Screen Print Pro — Phase 2)
+### Target Experience (Mokumo — Phase 2)
 
 ```
 Customer asks "How much for 100 tees, 2-color front?"
@@ -170,7 +170,7 @@ Job finished printing → Walk to desk computer → Open browser → Find job �
 Total: 2-5 minutes per update | Friction: HIGH (physical interruption)
 ```
 
-### Target Experience (Screen Print Pro)
+### Target Experience (Mokumo)
 
 ```
 Job finished printing → Pull phone from pocket

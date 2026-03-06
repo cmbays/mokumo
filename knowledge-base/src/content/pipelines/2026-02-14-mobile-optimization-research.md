@@ -66,7 +66,7 @@ Used a 4-agent parallel research team:
 
 - **Mobile UX Researcher**: Industry best practices for B2B management apps on mobile
 - **Competitor Analyst**: Screen print software competitive landscape for mobile
-- **App Auditor**: Systematic audit of all 19 Screen Print Pro pages for mobile readiness
+- **App Auditor**: Systematic audit of all 19 Mokumo pages for mobile readiness
 - **Consumer Researcher**: Shop operator mobile needs, pain points, and maturity roadmap
 
 ## What's Next

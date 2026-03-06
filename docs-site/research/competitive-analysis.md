@@ -15,11 +15,11 @@ Print shop software falls into three categories:
 
 | Category               | Examples                            | Center of Gravity                            |
 | ---------------------- | ----------------------------------- | -------------------------------------------- |
-| **Production-first**   | Printavo, YoPrint, Screen Print Pro | Shop floor operations, job tracking, quoting |
+| **Production-first**   | Printavo, YoPrint, Mokumo | Shop floor operations, job tracking, quoting |
 | **E-commerce hybrids** | DecoNetwork, InkSoft                | Online storefronts with production bolted on |
 | **Legacy ERP**         | ShopWorks, shopVOX, Ordant          | Enterprise manufacturing, $295+/mo           |
 
-Screen Print Pro competes in the production-first category. Our target user is the shop owner running a 5-30 person screen printing operation who values speed, clarity, and production visibility over online storefronts.
+Mokumo competes in the production-first category. Our target user is the shop owner running a 5-30 person screen printing operation who values speed, clarity, and production visibility over online storefronts.
 
 ---
 
@@ -29,7 +29,7 @@ Screen Print Pro competes in the production-first category. Our target user is t
 
 Once integrated, Inktavo/OMG offers: shop management (Printavo) + design tools (GraphicsFlow) + online stores (InkSoft) + enterprise group ordering (OMG). No standalone competitor matches this combined breadth.
 
-**Why this is an opportunity, not just a threat**: PE ownership has introduced pricing pressure (Printavo went from ~$2,500/year to $1,788-$2,988/year), forced payment processor migration (Stripe → Payrix), and "patchwork" product architecture. Users describe feeling "stuck" because switching costs are high but satisfaction is declining. This is a window to position Screen Print Pro as the focused, independent, shop-owner-built alternative.
+**Why this is an opportunity, not just a threat**: PE ownership has introduced pricing pressure (Printavo went from ~$2,500/year to $1,788-$2,988/year), forced payment processor migration (Stripe → Payrix), and "patchwork" product architecture. Users describe feeling "stuck" because switching costs are high but satisfaction is declining. This is a window to position Mokumo as the focused, independent, shop-owner-built alternative.
 
 ---
 
@@ -160,7 +160,7 @@ InkSoft's target user wants to sell online. Our target user is managing producti
 
 ## Competitive Matrix
 
-| Dimension            | Screen Print Pro                           | Printavo                         | YoPrint                     | DecoNetwork                  |
+| Dimension            | Mokumo                           | Printavo                         | YoPrint                     | DecoNetwork                  |
 | -------------------- | ------------------------------------------ | -------------------------------- | --------------------------- | ---------------------------- |
 | Entry price          | TBD                                        | $49/mo                           | $69/mo                      | $199/mo + $499               |
 | Production views     | Kanban board                               | Status list + calendar           | Gantt + calendar + list     | Calendar                     |
@@ -209,7 +209,7 @@ Inktavo's forced Payrix migration, price increases, and patchwork architecture h
 
 ## Supplier Integration Comparison
 
-| Supplier            | Printavo          | YoPrint                 | DecoNetwork       | Screen Print Pro                       |
+| Supplier            | Printavo          | YoPrint                 | DecoNetwork       | Mokumo                       |
 | ------------------- | ----------------- | ----------------------- | ----------------- | -------------------------------------- |
 | S&S Activewear      | Catalog + pricing | Catalog + pricing (Pro) | Catalog + pricing | Catalog + pricing + inventory + sizing |
 | SanMar              | Catalog + pricing | Catalog + pricing (Pro) | Catalog + pricing | Planned (P2 future)                    |

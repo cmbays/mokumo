@@ -2,7 +2,7 @@
 
 **Last Verified**: 2026-02-15
 
-This document is the canonical reference for Screen Print Pro's agent architecture. It defines which agents exist, when to use them, how they orchestrate together, and how to create new ones.
+This document is the canonical reference for Mokumo's agent architecture. It defines which agents exist, when to use them, how they orchestrate together, and how to create new ones.
 
 ## Agents vs Skills
 

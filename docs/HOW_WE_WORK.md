@@ -113,7 +113,7 @@ Labels encode stable categorical metadata. Runtime state (status, effort, pipeli
 
 ### Projects v2 Board
 
-The [Screen Print Pro board](https://github.com/users/cmbays/projects/4) is the visual layer for humans:
+The [Mokumo board](https://github.com/users/cmbays/projects/4) is the visual layer for humans:
 
 | View             | Layout                          | Purpose                        |
 | ---------------- | ------------------------------- | ------------------------------ |
@@ -227,8 +227,8 @@ When `main` is validated and ready for release:
 gh pr create --base production --head main --title "Release: <description>"
 
 # Option B: Direct fast-forward (quicker, no branch checkout needed)
-git -C ~/Github/print-4ink fetch origin
-git -C ~/Github/print-4ink push origin origin/main:production
+git -C ~/Github/mokumo fetch origin
+git -C ~/Github/mokumo push origin origin/main:production
 ```
 
 ### Deployment Math

@@ -92,7 +92,7 @@ Two independent architect agents reviewed the plan and identified 20 findings (4
 
 ## Artifacts
 
-- [Implementation plan](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-14-mobile-optimization-implementation.md)
-- [Breadboard](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/mobile-optimization-breadboard.md)
-- [Design doc](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-14-mobile-optimization-design.md)
-- [Interview session](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/pipelines/2026-02-14-mobile-optimization-interview.md)
+- [Implementation plan](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-14-mobile-optimization-implementation.md)
+- [Breadboard](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/mobile-optimization-breadboard.md)
+- [Design doc](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-14-mobile-optimization-design.md)
+- [Interview session](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/pipelines/2026-02-14-mobile-optimization-interview.md)

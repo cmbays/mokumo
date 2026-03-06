@@ -6,7 +6,7 @@
 
 ## Problem
 
-Screen Print Pro has 5 verticals built but weak project management scaffolding. Specific gaps:
+Mokumo has 5 verticals built but weak project management scaffolding. Specific gaps:
 
 1. **Task tracking**: No structured view of what's done, in progress, or next across verticals
 2. **Forward planning**: No roadmap artifact; strategic decisions live in the user's head

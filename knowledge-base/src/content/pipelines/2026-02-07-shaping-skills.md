@@ -1,6 +1,6 @@
 ---
 title: 'Shaping Skills Evaluation'
-subtitle: "Evaluated Ryan Singer's shaping-skills methodology and extracted three high-value patterns for Screen Print Pro's build process."
+subtitle: "Evaluated Ryan Singer's shaping-skills methodology and extracted three high-value patterns for Mokumo's build process."
 date: 2026-02-07
 phase: 1
 pipelineName: devx
@@ -37,7 +37,7 @@ Ryan Singer (author of Basecamp's "Shape Up") published a [shaping-skills repo](
 
 ## Why Not Adopt As-Is
 
-Screen Print Pro is past the 0-to-1 phase where shaping provides maximum value. The project already has equivalent coverage:
+Mokumo is past the 0-to-1 phase where shaping provides maximum value. The project already has equivalent coverage:
 
 | Shaping Provides          | We Already Have                      |
 | ------------------------- | ------------------------------------ |

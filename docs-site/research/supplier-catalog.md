@@ -11,7 +11,7 @@ description: Supplier API capabilities, multi-supplier architecture, and integra
 
 ## Current State
 
-Screen Print Pro integrates with **S&S Activewear REST V2** for garment catalog data. The integration covers:
+Mokumo integrates with **S&S Activewear REST V2** for garment catalog data. The integration covers:
 
 | Capability                              | Status | Endpoint                                     |
 | --------------------------------------- | ------ | -------------------------------------------- |

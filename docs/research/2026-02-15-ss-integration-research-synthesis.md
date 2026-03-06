@@ -12,7 +12,7 @@ status: complete
 
 ## Executive Summary
 
-Four parallel research agents investigated the full scope of integrating S&S Activewear's API into Screen Print Pro. This document synthesizes their findings into actionable recommendations.
+Four parallel research agents investigated the full scope of integrating S&S Activewear's API into Mokumo. This document synthesizes their findings into actionable recommendations.
 
 **The verdict**: Start with S&S REST API V2 (the easiest, richest data), introduce a Data Access Layer (DAL) immediately, build toward Supabase + Drizzle ORM as the production stack, and design for multi-supplier extensibility from day one.
 
@@ -35,7 +35,7 @@ Four parallel research agents investigated the full scope of integrating S&S Act
 
 **Key endpoints**:
 
-| Endpoint          | Purpose                                                         | Screen Print Pro Use                      |
+| Endpoint          | Purpose                                                         | Mokumo Use                      |
 | ----------------- | --------------------------------------------------------------- | ----------------------------------------- |
 | `/v2/styles/`     | Style-level catalog data                                        | Garment catalog browsing                  |
 | `/v2/products/`   | Full SKU-level data (colors, sizes, pricing, images, inventory) | Garment selection, pricing, mockup images |

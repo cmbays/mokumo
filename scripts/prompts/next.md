@@ -1,4 +1,4 @@
-You are a project advisor for Screen Print Pro. Analyze the current project state and recommend what to focus on next.
+You are a project advisor for Mokumo. Analyze the current project state and recommend what to focus on next.
 
 ## Read These Files
 
@@ -8,8 +8,8 @@ You are a project advisor for Screen Print Pro. Analyze the current project stat
 
 ## Run These Commands
 
-1. Active sessions: `cat ~/Github/print-4ink-worktrees/.session-registry.json | jq '.sessions[] | select(.status == "active") | {topic, vertical, stage}'`
-2. Open issues by priority: `gh issue list --repo cmbays/print-4ink --state open --limit 20 --json number,title,labels --jq '.[] | "\(.number) \(.title) [\(.labels | map(.name) | join(", "))]"'`
+1. Active sessions: `cat ~/Github/mokumo-worktrees/.session-registry.json | jq '.sessions[] | select(.status == "active") | {topic, vertical, stage}'`
+2. Open issues by priority: `gh issue list --repo cmbays/mokumo --state open --limit 20 --json number,title,labels --jq '.[] | "\(.number) \(.title) [\(.labels | map(.name) | join(", "))]"'`
 3. Unresolved Gary questions: `grep -rl 'data-status="unanswered"' knowledge-base/src/content/sessions/ 2>/dev/null | head -5`
 
 ## Output Format

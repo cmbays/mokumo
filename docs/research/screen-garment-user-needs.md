@@ -303,7 +303,7 @@ Phase 1 only needs t-shirts and fleece. The category system is ready for expansi
 
 ## Pain Points from Current Tooling
 
-### PrintLife Pain Points (what Screen Print Pro replaces)
+### PrintLife Pain Points (what Mokumo replaces)
 
 From the research and interview data:
 
@@ -404,7 +404,7 @@ These should be asked during the first demo session or via the requirements-inte
 
 ### Screen Room
 
-The screen room is the **operational heart** of a screen-printing shop, yet it's invisible in software. Chris manages it through verbal communication and physical organization (carts, whiteboards). Screen Print Pro's Screen Room feature should:
+The screen room is the **operational heart** of a screen-printing shop, yet it's invisible in software. Chris manages it through verbal communication and physical organization (carts, whiteboards). Mokumo's Screen Room feature should:
 
 1. **Make the invisible visible** — show screen state in software
 2. **Connect screens to jobs** — the missing link in production planning
@@ -413,7 +413,7 @@ The screen room is the **operational heart** of a screen-printing shop, yet it's
 
 ### Garment Catalog
 
-The garment catalog is a **pricing foundation** that feeds directly into quoting. It's not just a browsing tool — it's the source of garment cost data for margin calculations. Screen Print Pro's catalog should:
+The garment catalog is a **pricing foundation** that feeds directly into quoting. It's not just a browsing tool — it's the source of garment cost data for margin calculations. Mokumo's catalog should:
 
 1. **Feel like a catalog, not a spreadsheet** — visual, browsable, organized
 2. **Show the data that matters for quoting** — brand, price, colors, sizes

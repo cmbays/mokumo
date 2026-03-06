@@ -9,7 +9,7 @@
 
 4Ink needs to show customers what their printed garment will look like before production begins. Currently, Gary uses a third-party tool (specifics unknown) to create mockups manually. This is disconnected from the quote/job workflow — mockups live outside the app.
 
-The goal is to build mockup generation into Screen Print Pro so that anywhere a garment + artwork combination exists (quotes, jobs, invoices, Kanban cards, customer approval pages), a realistic visual mockup renders automatically.
+The goal is to build mockup generation into Mokumo so that anywhere a garment + artwork combination exists (quotes, jobs, invoices, Kanban cards, customer approval pages), a realistic visual mockup renders automatically.
 
 ## Requirements
 

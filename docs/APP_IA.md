@@ -4,7 +4,7 @@ updated: 2026-02-27
 research_basis: docs/workspace/20260226-640-color-favorites/research-ia-patterns.md
 ---
 
-# Screen Print Pro — App Information Architecture & Product Philosophy
+# Mokumo — App Information Architecture & Product Philosophy
 
 > Living document. Update whenever a new feature raises a taxonomy question.
 > Canonical reference for: where new features go, how preferences work, how routing is structured.
@@ -210,20 +210,20 @@ When a new feature arises, ask:
 
 Basis: research across Printavo, InkSoft, DecoNetwork, YoPrint, S&S Activewear, SanMar (Feb 2026).
 
-**Differentiated capabilities Screen Print Pro has that competitors lack:**
+**Differentiated capabilities Mokumo has that competitors lack:**
 
 - Visual garment catalog with color family taxonomy and dense swatch browsing
 - Shop-scoped `is_enabled` / `is_favorite` per style (shop curation of supplier catalog)
 - Color group preferences at the `(brand_id, colorGroupName)` level
 
-**Capability gaps Screen Print Pro should close:**
+**Capability gaps Mokumo should close:**
 
 - Real-time vendor stock/pricing at quote time (YoPrint has this)
 - Purchase order generation from job (Printavo, DecoNetwork)
 - Customer self-service portal (Printavo, InkSoft, YoPrint)
 - Artwork/mockup generation (DecoNetwork, InkSoft)
 
-**The distributor gap:** S&S Activewear and SanMar provide raw catalog access with no shop-level curation. Every print shop maintains a mental "house catalog" of preferred styles. No distributor tool formalizes this. Screen Print Pro's `is_enabled` + `is_favorite` system fills this gap.
+**The distributor gap:** S&S Activewear and SanMar provide raw catalog access with no shop-level curation. Every print shop maintains a mental "house catalog" of preferred styles. No distributor tool formalizes this. Mokumo's `is_enabled` + `is_favorite` system fills this gap.
 
 ---
 

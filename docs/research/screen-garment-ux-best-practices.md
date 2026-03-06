@@ -11,7 +11,7 @@
 1. [Screen Room UI Best Practices](#1-screen-room-ui-best-practices)
 2. [Garment Catalog UI Best Practices](#2-garment-catalog-ui-best-practices)
 3. [General UI Patterns (Both Verticals)](#3-general-ui-patterns-both-verticals)
-4. [Recommended Patterns for Screen Print Pro](#4-recommended-patterns-for-screen-print-pro)
+4. [Recommended Patterns for Mokumo](#4-recommended-patterns-for-mokumo)
 5. [Anti-Patterns to Avoid](#5-anti-patterns-to-avoid)
 6. [Key Design Decisions Before Building](#6-key-design-decisions-before-building)
 
@@ -281,7 +281,7 @@ Three primary catalog organization models:
 | **Brand-first**          | Gildan → all styles within   | Shop is brand-loyal or customers request specific brands |
 | **Hybrid (recommended)** | Category → Brand → Style     | Supports both workflows; mirrors how S&S/SanMar organize |
 
-**Recommended for Screen Print Pro**: **Category-first with brand filtering**, matching the mental model of "I need a tee" → "which brand?" → "which color/size?" This matches how the shop owner thinks when quoting a job.
+**Recommended for Mokumo**: **Category-first with brand filtering**, matching the mental model of "I need a tee" → "which brand?" → "which color/size?" This matches how the shop owner thinks when quoting a job.
 
 ### 2.4 Size/Color Matrix Display Patterns
 
@@ -324,7 +324,7 @@ _Source: [Shopify Swatches Guide](https://www.shopify.com/partners/blog/swatches
 - **Weaknesses**: More clicks to get to detail, harder to compare across colors
 - **Best for**: Catalog index page
 
-**Recommended for Screen Print Pro**: Use **Pattern B (swatches + pills) for the catalog browsing view** and **Pattern A (matrix grid) in the quote builder / order entry** where users need to specify exact quantities per size/color.
+**Recommended for Mokumo**: Use **Pattern B (swatches + pills) for the catalog browsing view** and **Pattern A (matrix grid) in the quote builder / order entry** where users need to specify exact quantities per size/color.
 
 ### 2.5 Image Gallery Patterns
 
@@ -360,7 +360,7 @@ From S&S Activewear, SanMar, and SaaS filter best practices:
 - **Saved views**: "My go-to tees", "Heavyweight blanks", "Youth styles"
 - **Sort options**: Price (low/high), brand (A-Z), popularity, newest, stock availability
 - **Result count**: Always show "Showing 47 of 342 styles" when filters are active
-- **Filter persistence**: Filters survive page navigation (use URL query params — already planned for Screen Print Pro)
+- **Filter persistence**: Filters survive page navigation (use URL query params — already planned for Mokumo)
 
 _Sources: [Filter UI for SaaS](https://www.eleken.co/blog-posts/filter-ux-and-ui-for-saas), [Faceted Filter Patterns](https://bricxlabs.com/blogs/universal-search-and-filters-ui), [SaaS Filter Examples](https://saasinterface.com/components/filters/)_
 
@@ -414,7 +414,7 @@ _Sources: [Data Table Design Best Practices](https://uxdworld.com/data-table-des
 | **High-volume data (100+ items)** | ❌ Slow to scan        | ✅ Dense, efficient         |
 | **Quick status scanning**         | ❌ Must scan each card | ✅ Glance down one column   |
 
-**Application to Screen Print Pro:**
+**Application to Mokumo:**
 
 - **Garment Catalog**: **Cards for browsing** (visual products benefit from images + swatches), **table for management** (admin needs sort/filter/bulk actions)
 - **Screen Room**: **Table as primary view** (screens are data-heavy, not visual), **cards for dashboard summary widgets** (metric cards at top)
@@ -471,7 +471,7 @@ _Sources: [Mobile Tables UXmatters](https://www.uxmatters.com/mt/archives/2020/0
 
 ---
 
-## 4. Recommended Patterns for Screen Print Pro
+## 4. Recommended Patterns for Mokumo
 
 Applying the research to our specific design system: **dark theme, Linear Calm + Raycast Polish + Neobrutalist Delight**.
 

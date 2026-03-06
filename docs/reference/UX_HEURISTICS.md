@@ -11,7 +11,7 @@ depends_on:
   - docs/reference/SCREEN_AUDIT_PROTOCOL.md
 ---
 
-# UX Heuristics for Screen Print Pro
+# UX Heuristics for Mokumo
 
 **Scope**: All 11 screens defined in APP_FLOW.md
 
@@ -322,4 +322,4 @@ Use this table to audit each screen:
 | Date       | Change                                                                       |
 | ---------- | ---------------------------------------------------------------------------- |
 | 2026-02-05 | Initial heuristics (dbt-playground context)                                  |
-| 2026-02-07 | Adapted for Screen Print Pro: replaced all examples, updated audit scorecard |
+| 2026-02-07 | Adapted for Mokumo: replaced all examples, updated audit scorecard |

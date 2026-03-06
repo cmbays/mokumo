@@ -88,9 +88,9 @@ Two distinct review levels, intentionally separated:
 
 ## Artifacts
 
-- Design doc: [`docs/plans/2026-02-16-review-orchestration-design.md`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-16-review-orchestration-design.md)
-- Epic: [#302](https://github.com/cmbays/print-4ink/issues/302)
-- Epic context comment: [#302 comment](https://github.com/cmbays/print-4ink/issues/302#issuecomment-3910846910)
+- Design doc: [`docs/plans/2026-02-16-review-orchestration-design.md`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-16-review-orchestration-design.md)
+- Epic: [#302](https://github.com/cmbays/mokumo/issues/302)
+- Epic context comment: [#302 comment](https://github.com/cmbays/mokumo/issues/302#issuecomment-3910846910)
 
 ## Resume
 

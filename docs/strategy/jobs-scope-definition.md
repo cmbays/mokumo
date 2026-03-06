@@ -15,7 +15,7 @@ depends-on:
 
 # Jobs & Production Vertical — Scope Definition
 
-**Purpose**: Define boundaries for the Jobs/Production mockup in Screen Print Pro
+**Purpose**: Define boundaries for the Jobs/Production mockup in Mokumo
 **Status**: Complete (finalized after competitive analysis + user interview + improved journey design)
 **Depends on**: Printavo + PrintLife analysis (complete), user interview (complete), improved journey design (complete)
 

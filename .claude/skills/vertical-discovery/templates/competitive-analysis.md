@@ -10,7 +10,7 @@ last-verified: [DATE]
 
 # [COMPETITOR] — [VERTICAL] Vertical Analysis
 
-**Purpose**: Document [COMPETITOR]'s [VERTICAL] features, UI patterns, and workflows to inform Screen Print Pro design
+**Purpose**: Document [COMPETITOR]'s [VERTICAL] features, UI patterns, and workflows to inform Mokumo design
 **Input**: Web research, Playwright exploration, user interview with 4Ink operator
 **Status**: [Draft / Complete]
 
@@ -130,12 +130,12 @@ Step 2: [STEP]
 ### Simple [TASK]
 
 - [COMPETITOR]: ~[X] clicks, ~[X] minutes
-- Screen Print Pro Target: [X] clicks ([X]% reduction), [X] minutes ([X]% faster)
+- Mokumo Target: [X] clicks ([X]% reduction), [X] minutes ([X]% faster)
 
 ### Complex [TASK]
 
 - [COMPETITOR]: ~[X] clicks, ~[X] minutes
-- Screen Print Pro Target: [X] clicks ([X]% reduction), [X] minutes ([X]% faster)
+- Mokumo Target: [X] clicks ([X]% reduction), [X] minutes ([X]% faster)
 
 ---
 

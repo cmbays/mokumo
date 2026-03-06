@@ -9,7 +9,7 @@
 #   preview → Pre-prod / main branch (Vercel preview reads this)
 #   prod    → Production / production branch (Vercel production reads this)
 
-print_4ink:
+mokumo:
   target: dev
   outputs:
     dev:

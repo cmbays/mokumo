@@ -91,10 +91,10 @@ Verified no file conflicts within parallel waves:
 
 ## Artifacts
 
-- **Implementation plan**: [`docs/plans/2026-02-15-colors-impl-plan.md`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-colors-impl-plan.md)
-- **Execution manifest**: [`docs/plans/2026-02-15-colors-manifest.yaml`](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-15-colors-manifest.yaml)
-- **Breadboard (input)**: [`docs/breadboards/color-preference-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/color-preference-breadboard.md)
-- **Shaping (input)**: [`docs/shaping/colors/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/colors/shaping.md)
+- **Implementation plan**: [`docs/plans/2026-02-15-colors-impl-plan.md`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-colors-impl-plan.md)
+- **Execution manifest**: [`docs/plans/2026-02-15-colors-manifest.yaml`](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-15-colors-manifest.yaml)
+- **Breadboard (input)**: [`docs/breadboards/color-preference-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/color-preference-breadboard.md)
+- **Shaping (input)**: [`docs/shaping/colors/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/colors/shaping.md)
 
 ## Pipeline
 

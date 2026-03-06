@@ -1,7 +1,7 @@
 # SOLID Principles Audit
 
 **Date**: 2026-02-17
-**Codebase**: Screen Print Pro (post-Phase-3 Clean Architecture migration)
+**Codebase**: Mokumo (post-Phase-3 Clean Architecture migration)
 **Auditor**: Claude Code (claude-sonnet-4-6)
 **Scope**: `src/domain/`, `src/infrastructure/repositories/`
 

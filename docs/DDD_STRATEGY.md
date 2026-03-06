@@ -1,6 +1,6 @@
 ---
 title: 'DDD Strategy'
-description: 'Domain-Driven Design as the architectural lens for classifying, organizing, and building Screen Print Pro. Living blueprint for project taxonomy.'
+description: 'Domain-Driven Design as the architectural lens for classifying, organizing, and building Mokumo. Living blueprint for project taxonomy.'
 category: canonical
 status: active
 phase: all
@@ -15,7 +15,7 @@ depends_on:
   - docs/ROADMAP.md
 ---
 
-# DDD Strategy — Screen Print Pro
+# DDD Strategy — Mokumo
 
 > Living blueprint for how we classify, organize, and build everything in the project.
 > Last Verified: 2026-02-16
@@ -25,7 +25,7 @@ depends_on:
 ## Table of Contents
 
 1. [Why DDD? Industry Context](#1-why-ddd-industry-context)
-2. [DDD Concepts Applied to Screen Print Pro](#2-ddd-concepts-applied-to-screen-print-pro)
+2. [DDD Concepts Applied to Mokumo](#2-ddd-concepts-applied-to-mokumo)
 3. [Classification Definitions — Product / Domain / Tool](#3-classification-definitions--product--domain--tool)
 4. [Bounded Context Map](#4-bounded-context-map)
 5. [Data Architecture Implications (Phase 2)](#5-data-architecture-implications-phase-2)
@@ -52,7 +52,7 @@ DDD has two halves:
 
 ### Why the Industry Uses It
 
-| Problem DDD Solves       | How                                                                        | Screen Print Pro Relevance                                                                                                      |
+| Problem DDD Solves       | How                                                                        | Mokumo Relevance                                                                                                      |
 | ------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Ambiguous vocabulary** | Ubiquitous Language — one term, one meaning, everywhere                    | "Screen" means a mesh frame in production, but a UI view in dev. "Job" means a production order, not a background task.         |
 | **God objects**          | Bounded Contexts separate models that mean different things                | A `Customer` in quoting (contact + pricing tier) is different from a `Customer` in invoicing (billing address + payment terms). |
@@ -60,7 +60,7 @@ DDD has two halves:
 | **Tangled dependencies** | Aggregates enforce transaction boundaries, contexts communicate via events | Prevents a change to pricing from cascading into job, invoice, and dashboard code.                                              |
 | **Premature coupling**   | Strategic design separates core domain from supporting infrastructure      | Pricing rules (core) shouldn't be tangled with email delivery (generic).                                                        |
 
-### Why DDD Now for Screen Print Pro
+### Why DDD Now for Mokumo
 
 We're transitioning from Phase 1 (frontend mockups) to Phase 2 (backend + real data). This is the ideal moment to establish DDD as our architectural lens because:
 
@@ -72,12 +72,12 @@ We're transitioning from Phase 1 (frontend mockups) to Phase 2 (backend + real d
 ### What DDD Is NOT for Us
 
 - **Not a folder restructuring exercise.** We don't need `domain/`, `application/`, `infrastructure/` directories in Phase 1.
-- **Not microservices.** Screen Print Pro is a monolith, and that's correct for a solo-dev + AI team. DDD bounded contexts map to logical modules, not physical services.
+- **Not microservices.** Mokumo is a monolith, and that's correct for a solo-dev + AI team. DDD bounded contexts map to logical modules, not physical services.
 - **Not academic purity.** We adapt DDD pragmatically. Evans himself says: "DDD is not about applying patterns — it's about understanding the domain."
 
 ---
 
-## 2. DDD Concepts Applied to Screen Print Pro
+## 2. DDD Concepts Applied to Mokumo
 
 ### Ubiquitous Language
 
@@ -113,7 +113,7 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 
 ### Entities, Value Objects, and Aggregates
 
-| DDD Concept             | Definition                                                                                       | Screen Print Pro Examples                                                                              |
+| DDD Concept             | Definition                                                                                       | Mokumo Examples                                                                              |
 | ----------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | **Entity**              | Has a unique identity; two instances with the same data are still different objects              | `Quote`, `Job`, `Customer`, `Invoice`, `Screen`                                                        |
 | **Value Object**        | Defined by its attributes, not identity; immutable, interchangeable                              | `Address`, `Money` (via big.js), `PrintLocationDetail`, `GarmentSize`, `QuantityTier`                  |
@@ -221,7 +221,7 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        Screen Print Pro                                  │
+│                        Mokumo                                  │
 │                                                                          │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐                │
 │  │   QUOTING    │   │  PRODUCTION  │   │   BILLING    │                │

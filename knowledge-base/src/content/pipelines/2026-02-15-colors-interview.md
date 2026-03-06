@@ -145,7 +145,7 @@ Customer preferences include favorite colors, favorite brands, and favorite garm
 
 - **Design document**: `docs/plans/2026-02-15-color-preference-system-design.md`
 - **UX research**: See companion KB doc: Colors — UX Research: Hierarchical Settings Inheritance
-- **Issue**: [#169](https://github.com/cmbays/print-4ink/issues/169)
+- **Issue**: [#169](https://github.com/cmbays/mokumo/issues/169)
 
 <div class="gary-question" data-question-id="colors-q1" data-pipeline="colors" data-status="unanswered">
   <p class="gary-question-text">When you set up color favorites for a supplier like Gildan, would you want to do that from a dedicated supplier/brand page in the garments section, or from a settings screen?</p>

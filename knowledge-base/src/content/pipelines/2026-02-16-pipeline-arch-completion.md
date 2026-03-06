@@ -11,7 +11,7 @@ stage: wrap-up
 tags: [build, decision]
 sessionId: '8b128c24-0ec7-43a3-954d-5825e1cd1aa3'
 branch: 'session/0216-work-execution-pipeline'
-pr: 'https://github.com/cmbays/print-4ink/pull/295'
+pr: 'https://github.com/cmbays/mokumo/pull/295'
 status: complete
 ---
 
@@ -82,7 +82,7 @@ All 6 implementation streams from #192 are now complete:
 
 ## Artifacts
 
-- **PR**: [#295](https://github.com/cmbays/print-4ink/pull/295) (merged)
-- **Prior PRs**: [#230](https://github.com/cmbays/print-4ink/pull/230) (Wave 0+1), [#286](https://github.com/cmbays/print-4ink/pull/286) (Wave 2)
-- **Issue**: [#192](https://github.com/cmbays/print-4ink/issues/192) (closed)
+- **PR**: [#295](https://github.com/cmbays/mokumo/pull/295) (merged)
+- **Prior PRs**: [#230](https://github.com/cmbays/mokumo/pull/230) (Wave 0+1), [#286](https://github.com/cmbays/mokumo/pull/286) (Wave 2)
+- **Issue**: [#192](https://github.com/cmbays/mokumo/issues/192) (closed)
 - **Research doc**: `docs/research/2026-02-15-pipeline-architecture-research.md`

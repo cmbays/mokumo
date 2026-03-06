@@ -16,7 +16,7 @@ status: complete
 
 ## What Was Built
 
-Migrated all 7 mock-data import sites in the invoices route group to use the Data Access Layer (DAL). This is Wave 2, Task 2.3 of the [DAL Architecture plan](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-16-dal-impl-plan.md).
+Migrated all 7 mock-data import sites in the invoices route group to use the Data Access Layer (DAL). This is Wave 2, Task 2.3 of the [DAL Architecture plan](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-16-dal-impl-plan.md).
 
 **Epic:** #360 (DAL Architecture) | **Issue:** #158 | **PR:** #412
 

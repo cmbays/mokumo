@@ -40,7 +40,7 @@ All upstream files are in [rjs/shaping-skills](https://github.com/rjs/shaping-sk
 
 ### Worktree
 
-This work happens in the existing worktree: `~/Github/print-4ink-worktrees/session-0215-shaping-skill/`
+This work happens in the existing worktree: `~/Github/mokumo-worktrees/session-0215-shaping-skill/`
 
 Branch: `session/0215-shaping-skill`
 
@@ -88,7 +88,7 @@ Add these sections at the top of the skill, before the upstream content:
 # Shaping
 
 Iterative R × S methodology for defining problems and exploring solutions. Adapted from
-[rjs/shaping-skills](https://github.com/rjs/shaping-skills) for Screen Print Pro's pipeline.
+[rjs/shaping-skills](https://github.com/rjs/shaping-skills) for Mokumo's pipeline.
 
 ## Pipeline Context
 
@@ -499,7 +499,7 @@ prerequisites:
 
 Transform shaped parts or existing systems into affordance tables with wiring and
 vertical slices. Adapted from [rjs/shaping-skills](https://github.com/rjs/shaping-skills)
-for Screen Print Pro's pipeline.
+for Mokumo's pipeline.
 
 ## Pipeline Context
 
@@ -574,7 +574,7 @@ All decisions logged in breadboard document.
 **Our Additions** (add after upstream content, before Examples):
 
 ```markdown
-## Screen Print Pro Conventions
+## Mokumo Conventions
 
 ### Phase 2 Extensions Table
 
@@ -1024,14 +1024,14 @@ git push
 ```yaml
 ---
 title: "Shaping Skills Suite Adoption"
-subtitle: "Full rjs/shaping-skills methodology adapted for Screen Print Pro pipeline"
+subtitle: "Full rjs/shaping-skills methodology adapted for Mokumo pipeline"
 date: 2026-02-15
 phase: 2
 vertical: meta
 verticalSecondary: []
 stage: build
 tags: [build, decision]
-sessionId: "{get from ls -t ~/.claude/projects/-Users-cmbays-Github-print-4ink/*.jsonl | head -1}"
+sessionId: "{get from ls -t ~/.claude/projects/-Users-cmbays-Github-mokumo/*.jsonl | head -1}"
 branch: "session/0215-shaping-skill"
 status: complete
 ---

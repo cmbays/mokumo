@@ -9,7 +9,7 @@
 ## 1. Quick Reference
 
 _Four common agent workflows as `gh` commands. Copy-paste these to interact with the issue tracker._
-_All commands target `cmbays/print-4ink`. Project board: [Screen Print Pro](https://github.com/users/cmbays/projects/4)._
+_All commands target `cmbays/mokumo`. Project board: [Mokumo](https://github.com/users/cmbays/projects/4)._
 
 ### Find work
 
@@ -338,7 +338,7 @@ Pull requests use `.github/pull_request_template.md` with these sections:
 
 ### Config
 
-Blank issues are disabled (`.github/ISSUE_TEMPLATE/config.yml`). All issues must use a template. General discussion goes to [Discussions](https://github.com/cmbays/print-4ink/discussions).
+Blank issues are disabled (`.github/ISSUE_TEMPLATE/config.yml`). All issues must use a template. General discussion goes to [Discussions](https://github.com/cmbays/mokumo/discussions).
 
 ---
 
@@ -638,7 +638,7 @@ Everything between these touchpoints is agent-automatable.
 
 ```bash
 # List milestones
-gh api repos/cmbays/print-4ink/milestones --jq '.[] | "\(.title) — \(.open_issues)/\(.open_issues + .closed_issues) open — due \(.due_on)"'
+gh api repos/cmbays/mokumo/milestones --jq '.[] | "\(.title) — \(.open_issues)/\(.open_issues + .closed_issues) open — due \(.due_on)"'
 ```
 
 ---
@@ -652,7 +652,7 @@ _Actions are the safety net. The `work` CLI is the agent happy path._
 
 | Action                   | Trigger                                            | What it does                                                                   | File                                                    |
 | ------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| **Auto-add to project**  | Issue opened, PR opened/ready_for_review           | Adds to [Screen Print Pro](https://github.com/users/cmbays/projects/4) board   | `.github/workflows/auto-project.yml`                    |
+| **Auto-add to project**  | Issue opened, PR opened/ready_for_review           | Adds to [Mokumo](https://github.com/users/cmbays/projects/4) board   | `.github/workflows/auto-project.yml`                    |
 | **PR Labeler**           | PR opened/synchronized (via `pull_request_target`) | Applies `product/*` / `domain/*` / `tool/*` labels based on changed file paths | `.github/workflows/labeler.yml` + `.github/labeler.yml` |
 | **Template auto-labels** | Issue created via template                         | Applies `type/*` label from template's `labels:` field                         | `.github/ISSUE_TEMPLATE/*.yml`                          |
 | **CI**                   | Push/PR                                            | Build, test, typecheck                                                         | `.github/workflows/ci.yml`                              |
@@ -709,7 +709,7 @@ Cross-cutting paths (`lib/schemas/**`, `docs/**`, `components/ui/**`) are delibe
 
 ## Project Board Reference
 
-**Board**: [Screen Print Pro](https://github.com/users/cmbays/projects/4)
+**Board**: [Mokumo](https://github.com/users/cmbays/projects/4)
 
 ### Custom Fields
 

@@ -9,7 +9,7 @@ status: 'current'
 
 # Database Tool — Supabase PostgreSQL + Drizzle
 
-**Purpose**: Phase 2 data persistence layer — database schema, migrations, and ORM for Screen Print Pro.
+**Purpose**: Phase 2 data persistence layer — database schema, migrations, and ORM for Mokumo.
 
 ## Stack
 

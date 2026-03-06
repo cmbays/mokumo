@@ -17,7 +17,7 @@ status: complete
 
 ## Summary
 
-Implemented the full Garment Catalog vertical from the [breadboard](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/garment-catalog-breadboard.md) and [implementation plan](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-14-garment-catalog-implementation.md). 18 tasks across 6 groups, executed via subagent-driven development.
+Implemented the full Garment Catalog vertical from the [breadboard](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/garment-catalog-breadboard.md) and [implementation plan](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-14-garment-catalog-implementation.md). 18 tasks across 6 groups, executed via subagent-driven development.
 
 ## What Was Built
 
@@ -103,5 +103,5 @@ Implemented the full Garment Catalog vertical from the [breadboard](https://gith
 
 ## Related Sessions
 
-- [Garment Catalog Breadboard](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/garment-catalog-breadboard.md) — affordance map this build implements
-- [Implementation Plan](https://github.com/cmbays/print-4ink/blob/main/docs/plans/2026-02-14-garment-catalog-implementation.md) — detailed 18-task plan
+- [Garment Catalog Breadboard](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/garment-catalog-breadboard.md) — affordance map this build implements
+- [Implementation Plan](https://github.com/cmbays/mokumo/blob/main/docs/plans/2026-02-14-garment-catalog-implementation.md) — detailed 18-task plan

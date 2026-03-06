@@ -9,7 +9,7 @@ last_updated: 2026-02-08
 
 # Strategy Documentation Index
 
-This folder contains all strategy-level documents for Screen Print Pro's vertical-by-vertical development approach.
+This folder contains all strategy-level documents for Mokumo's vertical-by-vertical development approach.
 
 ---
 
@@ -110,9 +110,9 @@ These documents guide the Quoting vertical (pilot), which establishes the repeat
 
 ### Phase 3: Build Execution
 
-#### [screen-print-pro-journey-quoting.md](screen-print-pro-journey-quoting.md) _(to be created)_
+#### [mokumo-journey-quoting.md](mokumo-journey-quoting.md) _(to be created)_
 
-**Screen Print Pro's improved workflow design** documenting:
+**Mokumo's improved workflow design** documenting:
 
 - Target click count vs Print Life
 - Target time estimate vs Print Life
@@ -148,14 +148,14 @@ After Quoting is complete and validated, apply the same 4-phase methodology to:
 - `docs/competitive-analysis/print-life-invoicing-analysis.md`
 - `docs/competitive-analysis/print-life-journey-invoicing.md`
 - `docs/strategy/invoicing-scope-definition.md`
-- `docs/strategy/screen-print-pro-journey-invoicing.md`
+- `docs/strategy/mokumo-journey-invoicing.md`
 
 ### Customer Management Vertical (TBD)
 
 - `docs/competitive-analysis/print-life-customer-analysis.md`
 - `docs/competitive-analysis/print-life-journey-customer.md`
 - `docs/strategy/customer-management-scope-definition.md`
-- `docs/strategy/screen-print-pro-journey-customer.md`
+- `docs/strategy/mokumo-journey-customer.md`
 
 ### Pricing Matrix Vertical (TBD)
 
@@ -222,7 +222,7 @@ After Quoting is complete and validated, apply the same 4-phase methodology to:
 
 1. Review: Completed analysis and journey documents
 2. Validate: [quoting-scope-definition.md](quoting-scope-definition.md) with user
-3. Create: [screen-print-pro-journey-quoting.md](screen-print-pro-journey-quoting.md)
+3. Create: [mokumo-journey-quoting.md](mokumo-journey-quoting.md)
 
 ### For Build Phase (Weeks 4-6)
 

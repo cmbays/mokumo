@@ -10,7 +10,7 @@ last-verified: 2026-02-14
 
 # Mobile Optimization — Competitive Analysis
 
-**Purpose**: Document the mobile experience landscape across screen print management competitors and adjacent B2B tools to identify gaps and opportunities for Screen Print Pro.
+**Purpose**: Document the mobile experience landscape across screen print management competitors and adjacent B2B tools to identify gaps and opportunities for Mokumo.
 **Input**: Web research, App Store / Google Play analysis, user review mining, B2B mobile UX best practices research
 **Status**: Complete
 
@@ -159,7 +159,7 @@ last-verified: 2026-02-14
 3. **Adjacent industries are years ahead**: Jobber, ServiceTitan prove that complex B2B management tools can have excellent mobile experiences. The screen print industry hasn't caught up.
 4. **"Cloud-based" ≠ "Mobile-optimized"**: Every competitor markets cloud access, but none have invested in mobile-specific UX, touch interactions, or mobile workflows.
 
-### Opportunity Areas for Screen Print Pro
+### Opportunity Areas for Mokumo
 
 1. **Job status dashboard on mobile** — The #1 use case. No competitor does this well.
 2. **Quick customer lookup** — Before meetings, on calls. Currently requires desktop.

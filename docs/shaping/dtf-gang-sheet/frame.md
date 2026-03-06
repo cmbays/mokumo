@@ -6,7 +6,7 @@ shaping: true
 
 ## Source
 
-> 4Ink runs DTF printing in-house with their own printer. They currently use Drip Apps on Shopify for customer-facing gang sheet ordering (5% commission per fulfilled order, max $12/order) and PrintLife for production management. Screen Print Pro replaces the production side.
+> 4Ink runs DTF printing in-house with their own printer. They currently use Drip Apps on Shopify for customer-facing gang sheet ordering (5% commission per fulfilled order, max $12/order) and PrintLife for production management. Mokumo replaces the production side.
 >
 > The customer buying the images probably doesn't really care about the Gang Sheet. They probably just care that they get their images at the cheapest, most efficient price possible. [Container-first] shows a lack of software sophistication.
 >
@@ -28,7 +28,7 @@ Gary's current DTF workflow has four compounding pain points:
 
 2. **No connection between orders and production** — Drip Apps handles ordering on Shopify, PrintLife handles production tracking, but there's no link between them. Gary manually tracks which orders are on which sheets.
 
-3. **5% commission overhead** — Every fulfilled gang sheet order pays Drip Apps a 5% commission. This is a concrete, recurring cost that Screen Print Pro eliminates.
+3. **5% commission overhead** — Every fulfilled gang sheet order pays Drip Apps a 5% commission. This is a concrete, recurring cost that Mokumo eliminates.
 
 4. **Container-first forces customer errors** — Drip Apps requires customers to pick a sheet size first, then arrange designs manually. Customers don't know optimal sheet sizes, leading to waste and QA failures. Competitors (Antigro, Kixxl) have moved to content-first.
 
@@ -40,10 +40,10 @@ Beyond the gang sheet builder itself, the interview revealed a **structural gap*
 
 After this build, Gary can:
 
-1. **Create DTF film-only quotes** inside Screen Print Pro's existing quote builder, with line items that represent individual designs (image + size + quantity)
+1. **Create DTF film-only quotes** inside Mokumo's existing quote builder, with line items that represent individual designs (image + size + quantity)
 2. **See auto-calculated sheet layouts** — the system determines the optimal sheet size(s) and arrangement, optimizing for minimum cost
 3. **Visually confirm the arrangement** on a read-only canvas before finalizing
 4. **Create multi-service-type quotes** by switching between service type tabs that preserve state
 5. **Track DTF jobs through production** with simplified DTF-specific steps
 
-The demo (Feb 21) should be compelling enough that Gary sees Screen Print Pro as a viable replacement for the Drip Apps + PrintLife combination.
+The demo (Feb 21) should be compelling enough that Gary sees Mokumo as a viable replacement for the Drip Apps + PrintLife combination.

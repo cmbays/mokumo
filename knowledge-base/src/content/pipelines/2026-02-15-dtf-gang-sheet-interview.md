@@ -70,7 +70,7 @@ Customer → Drip Apps on Shopify (picks sheet size, arranges designs)
 
 **Pain points**: Manual QA is slow, customer errors cause cycles, no connection between orders and production, 5% commission to Drip Apps.
 
-### Target Workflow (To-Be in Screen Print Pro)
+### Target Workflow (To-Be in Mokumo)
 
 ```
 Customer contacts Gary (phone/Shopify/walk-in)
@@ -182,7 +182,7 @@ Research confirmed industry standards for gang sheet layout:
 
 ## Spike Document
 
-Full pre-build interrogation spike with affordance table: [`docs/spikes/spike-dtf-gang-sheet-builder.md`](https://github.com/cmbays/print-4ink/blob/main/docs/spikes/spike-dtf-gang-sheet-builder.md)
+Full pre-build interrogation spike with affordance table: [`docs/spikes/spike-dtf-gang-sheet-builder.md`](https://github.com/cmbays/mokumo/blob/main/docs/spikes/spike-dtf-gang-sheet-builder.md)
 
 ## Sources
 
@@ -202,4 +202,4 @@ Full pre-build interrogation spike with affordance table: [`docs/spikes/spike-dt
 
 ### Prior Session
 
-- [DTF Gang Sheet Builder — Competitive Research](https://github.com/cmbays/print-4ink/blob/main/knowledge-base/src/content/pipelines/2026-02-15-dtf-gang-sheet-research.md) — 5-competitor analysis, industry workflows, UX patterns
+- [DTF Gang Sheet Builder — Competitive Research](https://github.com/cmbays/mokumo/blob/main/knowledge-base/src/content/pipelines/2026-02-15-dtf-gang-sheet-research.md) — 5-competitor analysis, industry workflows, UX patterns

@@ -49,7 +49,7 @@ All sessions run concurrently. No mutual dependencies. Produces GitHub API state
 
 **Steps:**
 
-1. Audit current labels: `gh label list --repo cmbays/print-4ink --json name`
+1. Audit current labels: `gh label list --repo cmbays/mokumo --json name`
 2. Re-label affected issues (N1) — for each ad-hoc label, find issues and replace:
 
    | Ad-Hoc Label     | Replacement      | Command                                                                                                                                                  |
@@ -86,7 +86,7 @@ All sessions run concurrently. No mutual dependencies. Produces GitHub API state
 2. Create project (N5):
 
    ```bash
-   gh project create --owner @me --title "Screen Print Pro" --format json
+   gh project create --owner @me --title "Mokumo" --format json
    ```
 
    Record the project number from output.
@@ -132,7 +132,7 @@ All sessions run concurrently. No mutual dependencies. Produces GitHub API state
 1. Create milestone (N8):
 
    ```bash
-   gh api repos/cmbays/print-4ink/milestones \
+   gh api repos/cmbays/mokumo/milestones \
      -f title="D-Day" \
      -f due_on="2026-02-21T00:00:00Z" \
      -f description="Demo prep: Wizards, DTF Pricing, Pricing Mobile"
@@ -145,7 +145,7 @@ All sessions run concurrently. No mutual dependencies. Produces GitHub API state
    gh issue edit 177 --milestone "D-Day"
    ```
 
-**Acceptance:** `gh api repos/cmbays/print-4ink/milestones --jq '.[].title'` shows "D-Day". Three issues assigned with Feb 21 due date.
+**Acceptance:** `gh api repos/cmbays/mokumo/milestones --jq '.[].title'` shows "D-Day". Three issues assigned with Feb 21 due date.
 
 ---
 
@@ -477,7 +477,7 @@ For each open issue, present to human (N26) and apply decisions (N27-N28):
 
 ```bash
 # For each issue number:
-gh project item-add <PROJECT_NUMBER> --owner @me --url https://github.com/cmbays/print-4ink/issues/<N>
+gh project item-add <PROJECT_NUMBER> --owner @me --url https://github.com/cmbays/mokumo/issues/<N>
 ```
 
 **Acceptance:** `gh issue list --state open` shows ~40-45 issues. All correctly labeled and milestoned. `priority/next` has ~8-10 items. All issues on project board.

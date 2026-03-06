@@ -1,6 +1,6 @@
 # dbt Architecture — Data Freshness & Serving Strategy
 
-> Canonical reference for how Screen Print Pro serves data from multiple freshness tiers. See `STYLE_GUIDE.md` for SQL/YAML conventions.
+> Canonical reference for how Mokumo serves data from multiple freshness tiers. See `STYLE_GUIDE.md` for SQL/YAML conventions.
 
 ---
 

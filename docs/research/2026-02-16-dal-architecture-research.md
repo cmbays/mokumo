@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Screen Print Pro currently accesses all data through a single 2,429-line `lib/mock-data.ts` file. 45 files across 7 verticals import from this module using three ad-hoc patterns. This monolith must be replaced with a structured Data Access Layer (DAL) before backend integration begins.
+Mokumo currently accesses all data through a single 2,429-line `lib/mock-data.ts` file. 45 files across 7 verticals import from this module using three ad-hoc patterns. This monolith must be replaced with a structured Data Access Layer (DAL) before backend integration begins.
 
 This research synthesizes three parallel investigations:
 
@@ -317,7 +317,7 @@ This integrates with Vitest — each test file gets an isolated database instanc
 
 ### Why DAL Structure Matters for AI-Driven Development
 
-Screen Print Pro is built by AI agents working in parallel across worktrees. The data access architecture directly impacts agent productivity in measurable ways:
+Mokumo is built by AI agents working in parallel across worktrees. The data access architecture directly impacts agent productivity in measurable ways:
 
 **1. Context Window Efficiency**
 

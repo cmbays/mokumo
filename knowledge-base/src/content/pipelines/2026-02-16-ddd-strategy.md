@@ -16,7 +16,7 @@ status: complete
 
 ## Summary
 
-Established Domain-Driven Design (DDD) as the architectural lens for classifying, organizing, and building Screen Print Pro. Created `docs/DDD_STRATEGY.md` as a living blueprint answering all 9 research questions from issue #316.
+Established Domain-Driven Design (DDD) as the architectural lens for classifying, organizing, and building Mokumo. Created `docs/DDD_STRATEGY.md` as a living blueprint answering all 9 research questions from issue #316.
 
 ## Research Questions Answered
 

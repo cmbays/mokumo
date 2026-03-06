@@ -11,7 +11,7 @@ stage: build
 tags: [feature, learning]
 sessionId: 'fix: kanban card dragging'
 branch: 'session/0213-fix-drag-tooltip'
-pr: 'https://github.com/cmbays/print-4ink/pull/79'
+pr: 'https://github.com/cmbays/mokumo/pull/79'
 status: complete
 ---
 

@@ -30,7 +30,7 @@ The breadboard maps the full Price Matrix vertical: a centralized pricing engine
 
 ### Breadboard Blueprint
 
-[docs/breadboards/price-matrix-breadboard.md](https://github.com/cmbays/print-4ink/blob/session/0210-price-matrix/docs/breadboards/price-matrix-breadboard.md)
+[docs/breadboards/price-matrix-breadboard.md](https://github.com/cmbays/mokumo/blob/session/0210-price-matrix/docs/breadboards/price-matrix-breadboard.md)
 
 Full affordance tables, wiring verification, component boundaries, and scope coverage matrix.
 

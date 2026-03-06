@@ -18,7 +18,7 @@ Sources: Session conversation (2026-02-16), DAL research synthesis (`docs/resear
 
 ## Problem
 
-Screen Print Pro's data access is a monolith: one 2,429-line file (`lib/mock-data.ts`) exports 16 entity arrays, 5 config values, and 13 query functions. 45 files across all 7 verticals import directly from it. This creates four compounding problems:
+Mokumo's data access is a monolith: one 2,429-line file (`lib/mock-data.ts`) exports 16 entity arrays, 5 config values, and 13 query functions. 45 files across all 7 verticals import directly from it. This creates four compounding problems:
 
 1. **No abstraction boundary** — Adding Supabase in Phase 2 means rewriting 45 files simultaneously. There's no seam to swap data sources without touching every consumer.
 

@@ -15,7 +15,7 @@ prerequisites:
 # Shaping
 
 Iterative R × S methodology for defining problems and exploring solutions. Adapted from
-[rjs/shaping-skills](https://github.com/rjs/shaping-skills) for Screen Print Pro's pipeline.
+[rjs/shaping-skills](https://github.com/rjs/shaping-skills) for Mokumo's pipeline.
 
 ## Pipeline Context
 

@@ -489,7 +489,7 @@ shadcn/ui components handle ARIA automatically (built on Radix primitives). For 
 
 ### Desktop-First
 
-Screen Print Pro is designed for shop office desktop use. Optimize for cursor interaction and comfortable reading at typical desktop widths.
+Mokumo is designed for shop office desktop use. Optimize for cursor interaction and comfortable reading at typical desktop widths.
 
 **Design Priority**: Desktop (primary) -> Tablet (Phase 2) -> Mobile (Phase 2+)
 
@@ -544,5 +544,5 @@ shadcn/ui handles dark mode token mapping automatically. Custom elements should 
 | Date       | Change                                                                                                     |
 | ---------- | ---------------------------------------------------------------------------------------------------------- |
 | 2026-02-04 | Initial guidelines (dbt-playground context)                                                                |
-| 2026-02-07 | Adapted for Screen Print Pro: Tailwind v4 + shadcn/ui + next/font                                          |
+| 2026-02-07 | Adapted for Mokumo: Tailwind v4 + shadcn/ui + next/font                                          |
 | 2026-03-02 | Two-pool color architecture, badge variants, encoding channel rules, categorical palette (+teal, +emerald) |

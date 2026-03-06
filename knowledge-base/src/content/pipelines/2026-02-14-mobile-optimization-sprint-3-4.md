@@ -110,11 +110,11 @@ The mobile optimization build phase is complete. Remaining polish items (#151-#1
 ## Resume Command
 
 ```bash
-cd ~/Github/print-4ink-worktrees/session-0214-mobile-sprint-3-4
+cd ~/Github/mokumo-worktrees/session-0214-mobile-sprint-3-4
 ```
 
 ## Artifacts
 
-- PR: https://github.com/cmbays/print-4ink/pull/148
+- PR: https://github.com/cmbays/mokumo/pull/148
 - Issues: #151, #152, #153, #154, #155, #156
 - Plan: `docs/plans/2026-02-14-mobile-optimization-implementation.md`

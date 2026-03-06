@@ -1,6 +1,6 @@
 ---
 title: User Journeys
-description: How the shop owner accomplishes goals in Screen Print Pro. Story map, journey flows, and acceptance criteria.
+description: How the shop owner accomplishes goals in Mokumo. Story map, journey flows, and acceptance criteria.
 ---
 
 # User Journeys

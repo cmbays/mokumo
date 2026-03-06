@@ -34,12 +34,12 @@
 
 **Evidence**:
 
-One git repository (`cmbays/print-4ink`) tracked at `~/Github/print-4ink/`. Multiple deploys are served from the same codebase via Vercel's two-branch model:
+One git repository (`cmbays/mokumo`) tracked at `~/Github/mokumo/`. Multiple deploys are served from the same codebase via Vercel's two-branch model:
 
 - `main` branch -> Vercel preview deployment (Gary demo URL)
 - `production` branch -> Vercel production deployment (live 4Ink domain)
 
-Feature work uses git worktrees (`~/Github/print-4ink-worktrees/<branch>/`), which are co-located checkouts of the same repo — not separate codebases. The `vercel.json` `ignoreCommand` correctly scopes which branches Vercel builds:
+Feature work uses git worktrees (`~/Github/mokumo-worktrees/<branch>/`), which are co-located checkouts of the same repo — not separate codebases. The `vercel.json` `ignoreCommand` correctly scopes which branches Vercel builds:
 
 ```json
 {
@@ -578,29 +578,29 @@ Key files examined for this audit:
 
 | File                                                                                           | Factors Assessed |
 | ---------------------------------------------------------------------------------------------- | ---------------- |
-| `/Users/cmbays/Github/print-4ink/package.json`                                                 | II, V            |
-| `/Users/cmbays/Github/print-4ink/package-lock.json`                                            | II               |
-| `/Users/cmbays/Github/print-4ink/vercel.json`                                                  | I, V             |
-| `/Users/cmbays/Github/print-4ink/.github/workflows/ci.yml`                                     | V, X             |
-| `/Users/cmbays/Github/print-4ink/next.config.ts`                                               | V, IX            |
-| `/Users/cmbays/Github/print-4ink/tsconfig.json`                                                | II               |
-| `/Users/cmbays/Github/print-4ink/.gitignore`                                                   | II, III          |
-| `/Users/cmbays/Github/print-4ink/middleware.ts`                                                | III, X           |
-| `/Users/cmbays/Github/print-4ink/src/infrastructure/auth/session.ts`                           | III, VI, X       |
-| `/Users/cmbays/Github/print-4ink/src/infrastructure/bootstrap.ts`                              | IV               |
-| `/Users/cmbays/Github/print-4ink/src/infrastructure/repositories/_providers/index.ts`          | III, IV          |
-| `/Users/cmbays/Github/print-4ink/src/infrastructure/repositories/_providers/mock/customers.ts` | IV, VI           |
-| `/Users/cmbays/Github/print-4ink/src/infrastructure/repositories/_shared/errors.ts`            | XI               |
-| `/Users/cmbays/Github/print-4ink/src/domain/ports/customer.repository.ts`                      | IV               |
-| `/Users/cmbays/Github/print-4ink/src/app/api/demo-login/route.ts`                              | III              |
-| `/Users/cmbays/Github/print-4ink/src/app/(dashboard)/quotes/_components/EmailPreviewModal.tsx` | III              |
-| `/Users/cmbays/Github/print-4ink/src/app/layout.tsx`                                           | VI, IX           |
-| `/Users/cmbays/Github/print-4ink/lib/suppliers/types.ts`                                       | IV, VIII         |
-| `/Users/cmbays/Github/print-4ink/lib/suppliers/registry.ts`                                    | VI, VIII         |
-| `/Users/cmbays/Github/print-4ink/lib/suppliers/cache/in-memory.ts`                             | IV, VI, VIII     |
-| `/Users/cmbays/Github/print-4ink/lib/config/index.ts`                                          | XI               |
-| `/Users/cmbays/Github/print-4ink/scripts/work.sh`                                              | VII, XII         |
-| `/Users/cmbays/Github/print-4ink/eslint.config.mjs`                                            | II               |
-| `/Users/cmbays/Github/print-4ink/vitest.config.ts`                                             | II, V            |
-| `/Users/cmbays/Github/print-4ink/docs/strategy/auth-session-design.md`                         | III, X           |
-| `/Users/cmbays/Github/print-4ink/docs/TECH_STACK.md`                                           | IV, VIII         |
+| `/Users/cmbays/Github/mokumo/package.json`                                                 | II, V            |
+| `/Users/cmbays/Github/mokumo/package-lock.json`                                            | II               |
+| `/Users/cmbays/Github/mokumo/vercel.json`                                                  | I, V             |
+| `/Users/cmbays/Github/mokumo/.github/workflows/ci.yml`                                     | V, X             |
+| `/Users/cmbays/Github/mokumo/next.config.ts`                                               | V, IX            |
+| `/Users/cmbays/Github/mokumo/tsconfig.json`                                                | II               |
+| `/Users/cmbays/Github/mokumo/.gitignore`                                                   | II, III          |
+| `/Users/cmbays/Github/mokumo/middleware.ts`                                                | III, X           |
+| `/Users/cmbays/Github/mokumo/src/infrastructure/auth/session.ts`                           | III, VI, X       |
+| `/Users/cmbays/Github/mokumo/src/infrastructure/bootstrap.ts`                              | IV               |
+| `/Users/cmbays/Github/mokumo/src/infrastructure/repositories/_providers/index.ts`          | III, IV          |
+| `/Users/cmbays/Github/mokumo/src/infrastructure/repositories/_providers/mock/customers.ts` | IV, VI           |
+| `/Users/cmbays/Github/mokumo/src/infrastructure/repositories/_shared/errors.ts`            | XI               |
+| `/Users/cmbays/Github/mokumo/src/domain/ports/customer.repository.ts`                      | IV               |
+| `/Users/cmbays/Github/mokumo/src/app/api/demo-login/route.ts`                              | III              |
+| `/Users/cmbays/Github/mokumo/src/app/(dashboard)/quotes/_components/EmailPreviewModal.tsx` | III              |
+| `/Users/cmbays/Github/mokumo/src/app/layout.tsx`                                           | VI, IX           |
+| `/Users/cmbays/Github/mokumo/lib/suppliers/types.ts`                                       | IV, VIII         |
+| `/Users/cmbays/Github/mokumo/lib/suppliers/registry.ts`                                    | VI, VIII         |
+| `/Users/cmbays/Github/mokumo/lib/suppliers/cache/in-memory.ts`                             | IV, VI, VIII     |
+| `/Users/cmbays/Github/mokumo/lib/config/index.ts`                                          | XI               |
+| `/Users/cmbays/Github/mokumo/scripts/work.sh`                                              | VII, XII         |
+| `/Users/cmbays/Github/mokumo/eslint.config.mjs`                                            | II               |
+| `/Users/cmbays/Github/mokumo/vitest.config.ts`                                             | II, V            |
+| `/Users/cmbays/Github/mokumo/docs/strategy/auth-session-design.md`                         | III, X           |
+| `/Users/cmbays/Github/mokumo/docs/TECH_STACK.md`                                           | IV, VIII         |

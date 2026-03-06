@@ -24,7 +24,7 @@ Make worktree sessions fully resumable after cleanup, with rich per-worktree env
 
 ## What Shipped
 
-**PR [#458](https://github.com/cmbays/print-4ink/pull/458)** — 7 commits, 3 files changed (`scripts/work.sh`, `scripts/lib/registry.sh`, `.gitignore`)
+**PR [#458](https://github.com/cmbays/mokumo/pull/458)** — 7 commits, 3 files changed (`scripts/work.sh`, `scripts/lib/registry.sh`, `.gitignore`)
 
 | Task | Change                                            | Key Design                                                                         |
 | ---- | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -41,7 +41,7 @@ Make worktree sessions fully resumable after cleanup, with rich per-worktree env
 direnv is scoped to the directory — `WORK_TOPIC`, `PORT`, and `CLAUDE_SESSION_ID` load automatically on `cd` and unload when you leave. No global state pollution between concurrent worktrees.
 
 **Why a second persistent store?**
-The worktree registry (`.session-registry.json`) can be wiped when `~/Github/print-4ink-worktrees/` is cleaned. `.claude-sessions.json` in the main repo root (gitignored) is durable metadata — `sessionId`, `branch`, `baseRef`, `capturedAt`, `clearedAt`. Survives any worktree cleanup.
+The worktree registry (`.session-registry.json`) can be wiped when `~/Github/mokumo-worktrees/` is cleaned. `.claude-sessions.json` in the main repo root (gitignored) is durable metadata — `sessionId`, `branch`, `baseRef`, `capturedAt`, `clearedAt`. Survives any worktree cleanup.
 
 **`--resume` + positional prompt approach**
 `_kdl_render_tab` already uses `claude $claude_args 'message'` — this pattern is consistent. The prompt goes to `.session-prompt.md` in the new worktree; Claude receives it as the first new message in the resumed conversation.
@@ -84,20 +84,20 @@ work status / work end
 work test-flow --no-launch
 
 # 2. Check .envrc written
-cat ~/Github/print-4ink-worktrees/session-$(date +%m%d)-test-flow/.envrc
+cat ~/Github/mokumo-worktrees/session-$(date +%m%d)-test-flow/.envrc
 
 # 3. cd in — env auto-loads
-cd ~/Github/print-4ink-worktrees/session-$(date +%m%d)-test-flow
+cd ~/Github/mokumo-worktrees/session-$(date +%m%d)-test-flow
 echo $PORT $WORK_TOPIC $CLAUDE_SESSION_ID  # CLAUDE_SESSION_ID empty until Claude starts
 
 # 4. Check persistent store initialized
-jq '.["test-flow"]' ~/Github/print-4ink/.claude-sessions.json
+jq '.["test-flow"]' ~/Github/mokumo/.claude-sessions.json
 
 # 5. After Claude starts (wait ~5s): CLAUDE_SESSION_ID populated
 grep CLAUDE_SESSION_ID .envrc
 
 # 6. Clean and verify durability
-cd ~/Github/print-4ink
+cd ~/Github/mokumo
 work clean test-flow
 jq '.["test-flow"]' .claude-sessions.json  # clearedAt set, sessionId still there
 
@@ -111,6 +111,6 @@ work status   # (using $WORK_PIPELINE_ID: 20260217-test) shown on stderr
 
 ## Files Modified
 
-- [`scripts/work.sh`](https://github.com/cmbays/print-4ink/blob/main/scripts/work.sh) — `_work_new`, `_work_resume`, `work()` dispatcher, `_work_pipeline_id_arg`
-- [`scripts/lib/registry.sh`](https://github.com/cmbays/print-4ink/blob/main/scripts/lib/registry.sh) — `_poll_claude_session_id`, all `_sessions_persistent_*` helpers
-- [`.gitignore`](https://github.com/cmbays/print-4ink/blob/main/.gitignore) — `.envrc`, `.claude-sessions.json`
+- [`scripts/work.sh`](https://github.com/cmbays/mokumo/blob/main/scripts/work.sh) — `_work_new`, `_work_resume`, `work()` dispatcher, `_work_pipeline_id_arg`
+- [`scripts/lib/registry.sh`](https://github.com/cmbays/mokumo/blob/main/scripts/lib/registry.sh) — `_poll_claude_session_id`, all `_sessions_persistent_*` helpers
+- [`.gitignore`](https://github.com/cmbays/mokumo/blob/main/.gitignore) — `.envrc`, `.claude-sessions.json`

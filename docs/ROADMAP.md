@@ -12,7 +12,7 @@ depends_on:
   - PROGRESS.md
 ---
 
-# Screen Print Pro — Roadmap
+# Mokumo — Roadmap
 
 ## Vision
 

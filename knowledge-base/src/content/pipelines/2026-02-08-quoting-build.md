@@ -30,15 +30,15 @@ status: complete
 
 ## Pull Requests
 
-### [PR #13](https://github.com/cmbays/print-4ink/pull/13) — feat: Build complete Quoting vertical
+### [PR #13](https://github.com/cmbays/mokumo/pull/13) — feat: Build complete Quoting vertical
 
 Initial build: 3 pages, 4 reusable components, expanded data layer. 31 files, 3,874 insertions. **Merged.**
 
-### [PR #14](https://github.com/cmbays/print-4ink/pull/14) — feat: Quoting patch v2 — pricing, artwork, form UX
+### [PR #14](https://github.com/cmbays/mokumo/pull/14) — feat: Quoting patch v2 — pricing, artwork, form UX
 
 20 feedback items: artwork system, customer tags, service types, discount model, flat setup fees, collapsible sections, sticky top bar, CodeRabbit review fixes. **Merged.**
 
-### [PR #20](https://github.com/cmbays/print-4ink/pull/20) — feat: Quoting patch v3 — sticky bar, pricing, tooltips
+### [PR #20](https://github.com/cmbays/mokumo/pull/20) — feat: Quoting patch v3 — sticky bar, pricing, tooltips
 
 Sticky bar redesign (single-row service type layout with inline color swatches), pricing formula with info tooltip in review view, artwork-derived color counts, tooltip dark mode + hover fixes, removed Edit Quote from review slide-out. CodeRabbit fixes (icon sizes). **Merged.**
 
@@ -138,10 +138,10 @@ Iterative polish session focused on sticky bar UX, tooltip behavior, and pricing
 
 Tracked as GitHub issues for future sessions:
 
-- [#15](https://github.com/cmbays/print-4ink/issues/15) — Migrate forms to React Hook Form + Zod (QuoteForm, ArtworkUploadModal, AddCustomerModal)
-- [#16](https://github.com/cmbays/print-4ink/issues/16) — Replace local LineItemRow interfaces with schema-derived types
-- [#17](https://github.com/cmbays/print-4ink/issues/17) — Sync garment category filter with URL query params
-- [#18](https://github.com/cmbays/print-4ink/issues/18) — Extract shared formatCurrency/formatDate to lib/utils
+- [#15](https://github.com/cmbays/mokumo/issues/15) — Migrate forms to React Hook Form + Zod (QuoteForm, ArtworkUploadModal, AddCustomerModal)
+- [#16](https://github.com/cmbays/mokumo/issues/16) — Replace local LineItemRow interfaces with schema-derived types
+- [#17](https://github.com/cmbays/mokumo/issues/17) — Sync garment category filter with URL query params
+- [#18](https://github.com/cmbays/mokumo/issues/18) — Extract shared formatCurrency/formatDate to lib/utils
 
 ## Next Steps
 

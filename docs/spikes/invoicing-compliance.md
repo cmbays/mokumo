@@ -1,6 +1,6 @@
 # Invoicing Legal, Financial & Compliance Requirements
 
-> **Context**: Pre-build research for Screen Print Pro invoicing vertical
+> **Context**: Pre-build research for Mokumo invoicing vertical
 > **Date**: 2026-02-10
 > **Branch**: `session/0210-invoicing-research`
 

@@ -589,7 +589,7 @@ Shop management specifically for screen printers and embroiderers.
 
 ---
 
-## Key Insights for Screen Print Pro
+## Key Insights for Mokumo
 
 ### 1. The Print Life Baseline Analysis
 
@@ -615,7 +615,7 @@ Every competitive solution includes:
 5. **Garment type/cost** (blank product cost)
 6. **Surcharges** (rush, specialty ink, underbase)
 
-**To compete, Screen Print Pro must match these baseline capabilities.**
+**To compete, Mokumo must match these baseline capabilities.**
 
 ### 3. Innovation Opportunities
 
@@ -693,7 +693,7 @@ Every competitive solution includes:
 
 ---
 
-## Recommendations for Screen Print Pro
+## Recommendations for Mokumo
 
 ### P0 (Must Have) — Match Industry Baseline
 

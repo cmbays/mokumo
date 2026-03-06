@@ -1,4 +1,4 @@
-# Screen Print Pro — History
+# Mokumo — History
 
 Archived session logs and completed feature details.
 For active state, see `PROGRESS.md`.

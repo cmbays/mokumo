@@ -9,7 +9,7 @@ last_verified: 2026-02-18
 depends_on: []
 ---
 
-# Screen Print Pro — Tech Stack
+# Mokumo — Tech Stack
 
 > Every tool earns its place. This document captures **what** we use, **why** we chose it, and **when** to reach for it.
 
@@ -232,7 +232,7 @@ depends_on: []
 ## Phase 2 Direction (Partially Installed)
 
 > Research completed 2026-02-15. See `docs/research/2026-02-15-ss-integration-research-synthesis.md` for full analysis.
-> Tracking issue: [#166](https://github.com/cmbays/print-4ink/issues/166)
+> Tracking issue: [#166](https://github.com/cmbays/mokumo/issues/166)
 
 **Supabase + Drizzle** — Installed 2026-02-18 (Wave 0, epic #529). See "Database & Auth" and "ORM" sections above.
 

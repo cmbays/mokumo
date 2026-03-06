@@ -1,6 +1,6 @@
 ---
 title: Changelog
-description: What's been shipped in Screen Print Pro, organized by date.
+description: What's been shipped in Mokumo, organized by date.
 ---
 
 # Changelog

@@ -107,11 +107,11 @@ Breadboard reflection — audit the breadboard for design smells, trace user sto
 
 ## Artifacts
 
-- Breadboard: [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
+- Breadboard: [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
 
 ## Sources
 
-- Shape D: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
-- Frame: [`docs/shaping/dtf-gang-sheet/frame.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/dtf-gang-sheet/frame.md)
-- Spike: [`docs/spikes/spike-dtf-gang-sheet-builder.md`](https://github.com/cmbays/print-4ink/blob/main/docs/spikes/spike-dtf-gang-sheet-builder.md)
-- Existing quoting breadboard: [`docs/breadboards/quoting-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/quoting-breadboard.md)
+- Shape D: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
+- Frame: [`docs/shaping/dtf-gang-sheet/frame.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/dtf-gang-sheet/frame.md)
+- Spike: [`docs/spikes/spike-dtf-gang-sheet-builder.md`](https://github.com/cmbays/mokumo/blob/main/docs/spikes/spike-dtf-gang-sheet-builder.md)
+- Existing quoting breadboard: [`docs/breadboards/quoting-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/quoting-breadboard.md)

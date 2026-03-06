@@ -1,6 +1,6 @@
 ---
 title: 'Data Freshness Architecture — Tiered Serving Strategy'
-subtitle: 'Six serving patterns for OLTP, analytics, and hybrid data in Screen Print Pro'
+subtitle: 'Six serving patterns for OLTP, analytics, and hybrid data in Mokumo'
 date: 2026-02-23
 phase: 2
 pipelineName: 'Data Freshness Architecture'

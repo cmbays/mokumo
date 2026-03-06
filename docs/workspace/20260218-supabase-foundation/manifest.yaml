@@ -9,7 +9,7 @@ waves:
       - topic: supabase-infra-setup
         stage: build
         prompt: |
-          You are implementing Wave 0 of the Supabase Foundation epic (#529) for Screen Print Pro.
+          You are implementing Wave 0 of the Supabase Foundation epic (#529) for Mokumo.
 
           ## Your goal
           Install packages and create infrastructure files with ZERO behavior changes.
@@ -32,7 +32,7 @@ waves:
           - `supabase/config.toml` — minimal local CLI config:
             ```toml
             [project]
-            project_id = "screen-print-pro"
+            project_id = "mokumo"
             ```
           - `supabase/migrations/.gitkeep` — empty placeholder
 

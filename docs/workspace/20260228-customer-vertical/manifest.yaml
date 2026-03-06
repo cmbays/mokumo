@@ -8,7 +8,7 @@ waves:
       - topic: customer-schema
         stage: build
         prompt: |
-          You are building Wave 0 of the Customer Vertical for Screen Print Pro.
+          You are building Wave 0 of the Customer Vertical for Mokumo.
           This is the critical path session — all parallel waves block on this PR merging.
 
           ## Context
@@ -162,7 +162,7 @@ waves:
         stage: build
         dependsOn: customer-schema
         prompt: |
-          You are building Wave 1a of the Customer Vertical for Screen Print Pro.
+          You are building Wave 1a of the Customer Vertical for Mokumo.
           This session runs IN PARALLEL with customer-activity — coordinate on shared files.
 
           ## Context
@@ -296,7 +296,7 @@ waves:
         stage: build
         dependsOn: customer-schema
         prompt: |
-          You are building Wave 1b of the Customer Vertical for Screen Print Pro.
+          You are building Wave 1b of the Customer Vertical for Mokumo.
           This session runs IN PARALLEL with customer-crud — coordinate on shared files.
 
           ## Context
@@ -419,7 +419,7 @@ waves:
         stage: build
         dependsOn: customer-crud
         prompt: |
-          You are building Wave 2a of the Customer Vertical for Screen Print Pro.
+          You are building Wave 2a of the Customer Vertical for Mokumo.
           This session runs IN PARALLEL with customer-intelligence and customer-dbt.
 
           ## Context
@@ -507,7 +507,7 @@ waves:
         stage: build
         dependsOn: customer-crud
         prompt: |
-          You are building Wave 2b of the Customer Vertical for Screen Print Pro.
+          You are building Wave 2b of the Customer Vertical for Mokumo.
           This session runs IN PARALLEL with customer-financial and customer-dbt.
 
           ## Context
@@ -616,7 +616,7 @@ waves:
         stage: build
         dependsOn: customer-schema
         prompt: |
-          You are building Wave 2c of the Customer Vertical for Screen Print Pro.
+          You are building Wave 2c of the Customer Vertical for Mokumo.
           This session runs IN PARALLEL with customer-financial and customer-intelligence.
           It only requires Wave 0 (schema) to have merged — it can run anytime after schema is in Supabase.
 
@@ -815,7 +815,7 @@ waves:
         stage: build
         dependsOn: customer-intelligence
         prompt: |
-          You are building Wave 3 of the Customer Vertical for Screen Print Pro.
+          You are building Wave 3 of the Customer Vertical for Mokumo.
           This is the final integration session — it runs SERIALLY after all Wave 2 sessions merge.
           This session is the most complex — it touches quote, job, and invoice verticals.
 

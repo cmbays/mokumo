@@ -16,7 +16,7 @@ This research analyzes UX/UI patterns and innovations for pricing matrix interfa
 - Progressive disclosure patterns
 - Screen printing industry pain points
 
-**Key Insight**: The best pricing interfaces balance spreadsheet power-user capabilities with progressive disclosure for simplicity. Screen Print Pro should start simple (wizard-style setup with smart defaults) while offering an advanced "Excel-like" power mode for shops with complex pricing needs.
+**Key Insight**: The best pricing interfaces balance spreadsheet power-user capabilities with progressive disclosure for simplicity. Mokumo should start simple (wizard-style setup with smart defaults) while offering an advanced "Excel-like" power mode for shops with complex pricing needs.
 
 ---
 
@@ -41,7 +41,7 @@ This research analyzes UX/UI patterns and innovations for pricing matrix interfa
 
 ### Design Context
 
-Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" design philosophy:
+Mokumo uses "Linear Calm + Raycast Polish + Neobrutalist Delight" design philosophy:
 
 - **Base layer**: Monochrome, opacity-based hierarchy, extreme restraint
 - **Polish layer**: Glass effects, responsive transitions, OS-native feel
@@ -71,7 +71,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - **Purposeful over flashy**: Design world moving away from flashy visuals toward purposeful, outcome-driven interfaces
 - **Intention-driven**: Overarching theme is intention—users want to complete tasks efficiently without distraction
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - Use monochrome base with opacity hierarchy (Linear Calm)
 - Apply vibrant Niji status colors only for meaningful data (margins, warnings)
@@ -101,7 +101,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [Handsontable JavaScript data grid](https://handsontable.com)
 - [AG Grid vs. Handsontable: Navigating the JavaScript Data Grid Landscape](https://www.oreateai.com/blog/ag-grid-vs-handsontable-navigating-the-javascript-data-grid-landscape/2356c75b9a91ee9815b1ddf3aedc6db9)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Use TanStack Table (already in tech stack)** for structured pricing matrix
 - **Add Handsontable-inspired features**:
@@ -132,7 +132,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [Embeddable pricing table for subscriptions | Stripe Documentation](https://docs.stripe.com/payments/checkout/pricing-table)
 - [Chargebee vs. Stripe: The Latest Comparison [2025]](https://tridenstechnology.com/chargebee-vs-stripe/)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Stripe-like simplicity**: Start with a clean "New Price Matrix" wizard
 - **Chargebee-like flexibility**: Allow shops to customize per customer, save as templates
@@ -165,7 +165,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [Progressive Disclosure Examples to Simplify Complex SaaS Products](https://userpilot.com/blog/progressive-disclosure-examples/)
 - [Progressive Disclosure design pattern](https://ui-patterns.com/patterns/ProgressiveDisclosure)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Simple Mode (Default)**: Wizard-style price matrix setup
   1. Enter shop basics (base hourly rate, overhead %)
@@ -198,7 +198,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [5 Ways Print Shops Mess Up Their Prices | Screen Printing Price Mistakes](https://www.printavo.com/blog/screen-printing-price-mistakes/)
 - [screen print pricing & bookkeeping | T-Shirt Forums](https://www.t-shirtforums.com/threads/screen-print-pricing-bookkeeping.51655/)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Instant margin visibility**: Show profit margin % for every price cell (green/yellow/red indicators)
 - **Labor cost tracking**: Factor in hourly rate, setup time, press time
@@ -229,7 +229,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [What-If Analysis & Scenario Planning Software - Epicflow](https://www.epicflow.com/features/what-if/)
 - [Software for Scenario & What-If Analysis | Cube](https://www.cubesoftware.com/scenario-what-if-analysis)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Real-time price preview**: As user edits hourly rate or overhead %, instantly update entire pricing matrix
 - **What-if scenarios**:
@@ -255,7 +255,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [How to Display a Traffic Light Indicator in Salesforce](https://focusonforce.com/configuration/how-to-display-a-traffic-light-indicator-in-salesforce/)
 - [What does Red Green Yellow Mean In Project Management](https://www.projectmanagertemplate.com/post/what-does-red-green-yellow-mean-in-project-management)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Margin color coding per cell**:
   - **Green (Niji #54ca74)**: Margin ≥ 30% (healthy profit)
@@ -300,7 +300,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [5 Best Practices for Building a CSV Uploader](https://www.oneschema.co/blog/building-a-csv-uploader)
 - [How To Design Bulk Import UX (+ Figma Prototypes)](https://smart-interface-design-patterns.com/articles/bulk-ux/)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Export**: One-click "Export to CSV" button—shop owner can edit in Excel
 - **Import wizard**:
@@ -334,7 +334,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [The UX of Keyboard Shortcuts: Designing for speed and efficiency](https://medium.com/design-bootcamp/the-art-of-keyboard-shortcuts-designing-for-speed-and-efficiency-9afd717fc7ed)
 - [10 Time-Saving Spreadsheet Shortcuts | Microsoft 365](https://www.microsoft.com/en-us/microsoft-365-life-hacks/everyday-ai/time-saving-tips/10-time-saving-spreadsheet-shortcuts)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Phase 1**: Focus on mouse/click interactions (most users)
 - **Phase 2+**: Add power user shortcuts
@@ -381,7 +381,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [10 Design Guidelines for Reporting Errors in Forms - NN/G](https://www.nngroup.com/articles/errors-forms-design-guidelines/)
 - [A Complete Guide To Live Validation UX — Smashing Magazine](https://www.smashingmagazine.com/2022/09/inline-validation-web-forms-ux/)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **On blur validation**: Check price when user tabs away, not on every keystroke
 - **Green checkmarks**: Show when price is valid and profitable
@@ -410,7 +410,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [The differences between Clone, Duplicate, and Copy functions](https://knowledge.broadcom.com/external/article/9571/the-differences-between-the-clone-duplic.html)
 - [UI Copy: UX Guidelines for Command Names and Keyboard Shortcuts - NN/G](https://www.nngroup.com/articles/ui-copy/)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **"Duplicate Price Matrix" button**: Copy entire pricing table, rename it (e.g., "Standard 2026" → "Holiday 2026")
 - **"Start from Template"**: New shops choose from presets—"Simple 3-Tier", "Advanced Multi-Color", "Custom"
@@ -448,7 +448,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [Automatic Version Control with Rollback | IT Glue](https://www.itglue.com/features/version-control/)
 - [Mastering the Memento Pattern: Powering Undo, Redo, and State Restoration](https://curatepartners.com/tech-skills-tools-platforms/mastering-the-memento-pattern-powering-undo-redo-and-state-restoration-in-software/)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Phase 1**: Simple undo/redo (in-memory state)
 - **Phase 2**: Version history with timestamps
@@ -486,7 +486,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 - [Machine Learning for UX: Balancing Personalization - Google Design](https://design.google/library/predictably-smart)
 - [Future-Proof UX: Designing for AI and Machine Learning](https://medium.com/design-bootcamp/future-proof-ux-designing-for-ai-and-machine-learning-e9c91847fb6d)
 
-**Recommendation for Screen Print Pro:**
+**Recommendation for Mokumo:**
 
 - **Industry average defaults**: Pre-fill pricing based on typical screen print shops
   - Base hourly rate: $60/hr
@@ -499,7 +499,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 
 ---
 
-## Synthesis: Recommendations for Screen Print Pro
+## Synthesis: Recommendations for Mokumo
 
 ### Core UX Strategy
 
@@ -562,7 +562,7 @@ Screen Print Pro uses "Linear Calm + Raycast Polish + Neobrutalist Delight" desi
 
 ---
 
-## Industry Pain Points → Screen Print Pro Solutions
+## Industry Pain Points → Mokumo Solutions
 
 | Pain Point                                         | Our Solution                                                          |
 | -------------------------------------------------- | --------------------------------------------------------------------- |

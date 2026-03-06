@@ -76,10 +76,10 @@ Implementation planning — take the sliced breadboard and produce an execution 
 
 ## Artifacts
 
-- Breadboard (updated): [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
+- Breadboard (updated): [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
 
 ## Sources
 
-- Breadboard: [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
-- Shaping doc: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
+- Breadboard: [`docs/breadboards/dtf-gang-sheet-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/dtf-gang-sheet-breadboard.md)
+- Shaping doc: [`docs/shaping/dtf-gang-sheet/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/dtf-gang-sheet/shaping.md)
 - Breadboard reflection skill: `.claude/skills/breadboard-reflection/SKILL.md`

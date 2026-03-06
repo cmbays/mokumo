@@ -14,7 +14,7 @@ The Work Orchestrator is a Bash shell function (`work()`) in `scripts/work.sh` t
 Source this file in your shell profile:
 
 ```bash
-source ~/Github/print-4ink/scripts/work.sh
+source ~/Github/mokumo/scripts/work.sh
 ```
 
 Then use `work <subcommand>` for all session lifecycle operations.
@@ -34,8 +34,8 @@ Then use `work <subcommand>` for all session lifecycle operations.
 
 | Variable                  | Default                         | Purpose                     |
 | ------------------------- | ------------------------------- | --------------------------- |
-| `PRINT4INK_REPO`          | `~/Github/print-4ink`           | Main repo (stays on `main`) |
-| `PRINT4INK_WORKTREES`     | `~/Github/print-4ink-worktrees` | Worktree parent directory   |
+| `PRINT4INK_REPO`          | `~/Github/mokumo`           | Main repo (stays on `main`) |
+| `PRINT4INK_WORKTREES`     | `~/Github/mokumo-worktrees` | Worktree parent directory   |
 | `PRINT4INK_MAX_WORKTREES` | 15                              | Safety limit                |
 | `PRINT4INK_PORT_MIN/MAX`  | 3001-3015                       | Dev server port range       |
 
@@ -219,4 +219,4 @@ The Work Orchestrator is the bridge between methodology and execution:
 
 ## Source
 
-[`scripts/work.sh`](https://github.com/cmbays/print-4ink/blob/main/scripts/work.sh) + library files in `scripts/lib/`.
+[`scripts/work.sh`](https://github.com/cmbays/mokumo/blob/main/scripts/work.sh) + library files in `scripts/lib/`.

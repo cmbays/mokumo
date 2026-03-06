@@ -10,7 +10,7 @@ last-verified: 2026-02-08
 
 # Print Life — Quoting Vertical Analysis
 
-**Purpose**: Document Print Life's quoting features, UI patterns, and workflows to inform Screen Print Pro design
+**Purpose**: Document Print Life's quoting features, UI patterns, and workflows to inform Mokumo design
 **Input**: Web research, Playwright exploration of 4Ink customer portal, user interview with 4Ink operator
 **Status**: Complete
 
@@ -229,12 +229,12 @@ Each additional garment requires repeating Steps 1-5 (product selection, color, 
 ### Simple Quote (Measured)
 
 - Print Life: ~20-30 clicks
-- Screen Print Pro Target: 8-12 clicks (60% reduction)
+- Mokumo Target: 8-12 clicks (60% reduction)
 
 ### Complex Quote (Estimated)
 
 - Print Life: ~40-60 clicks
-- Screen Print Pro Target: 20-30 clicks (50% reduction)
+- Mokumo Target: 20-30 clicks (50% reduction)
 
 ---
 
@@ -243,12 +243,12 @@ Each additional garment requires repeating Steps 1-5 (product selection, color, 
 ### Simple Quote
 
 - Print Life: ~10 minutes (measured via interview)
-- Screen Print Pro Target: 3-4 minutes (60-70% faster)
+- Mokumo Target: 3-4 minutes (60-70% faster)
 
 ### Complex Quote
 
 - Print Life: ~15-20 minutes (estimated)
-- Screen Print Pro Target: 6-8 minutes (50-60% faster)
+- Mokumo Target: 6-8 minutes (50-60% faster)
 
 ---
 
@@ -279,5 +279,5 @@ Each additional garment requires repeating Steps 1-5 (product selection, color, 
 
 - `docs/competitive-analysis/print-life-journey-quoting.md` (journey map)
 - `docs/strategy/quoting-discovery-interview-questions.md` (interview guide)
-- `docs/strategy/screen-print-pro-journey-quoting.md` (improved journey design)
+- `docs/strategy/mokumo-journey-quoting.md` (improved journey design)
 - `.claude/plans/vertical-by-vertical-strategy.md` (overall strategy)

@@ -3,7 +3,7 @@
 **Purpose**: Understand what print shop owners and operators actually NEED from a customer management system
 **Status**: Complete
 **Date**: 2026-02-09
-**Context**: Pre-discovery research for the Customer Management vertical in Screen Print Pro
+**Context**: Pre-discovery research for the Customer Management vertical in Mokumo
 
 ---
 
@@ -17,7 +17,7 @@
 6. [Small Shop vs Large Shop Needs](#6-small-shop-vs-large-shop-needs)
 7. [Industry Trends (2025-2026)](#7-industry-trends-2025-2026)
 8. [Competitive Landscape: What Existing Tools Offer](#8-competitive-landscape-what-existing-tools-offer)
-9. [Actionable Insights for Screen Print Pro](#9-actionable-insights-for-screen-print-pro)
+9. [Actionable Insights for Mokumo](#9-actionable-insights-for-mokumo)
 10. [Gap Analysis: What's Missing in the Current Schema](#10-gap-analysis-whats-missing-in-the-current-schema)
 
 ---
@@ -120,7 +120,7 @@ Lead ──────────► Prospect ──────────�
 **For 4Ink's small shop context**, the lifecycle is simpler but the transitions matter:
 
 1. Someone calls/walks in/emails asking about printing
-2. Shop owner builds a quote (already built in Screen Print Pro)
+2. Shop owner builds a quote (already built in Mokumo)
 3. Customer approves, order enters production
 4. Delivery/pickup, payment collected
 5. Months later: "Hey, I need more of those shirts"
@@ -276,7 +276,7 @@ The art approval process is the most communication-intensive part of the custome
 > "The way you attach your quote and send your art proof to the customer -- and the verbiage you use to communicate expectations -- will set the tone for how positive or negative the complicated art approval process becomes." — Printavo Blog
 > "Let clients know how many revisions are included in their quote and clearly explain that additional changes will come at an extra cost." — Industry best practice
 
-**Key insight for Screen Print Pro**: Art approval communication should be visible in the customer profile. "When did Sarah last approve? What version? Who sent the proof?"
+**Key insight for Mokumo**: Art approval communication should be visible in the customer profile. "When did Sarah last approve? What version? Who sent the proof?"
 
 ### Communication Channels Used
 
@@ -471,7 +471,7 @@ Sources:
 4. **Ordant** has the best CRM module but is more enterprise-focused.
 5. **Sales Ink CRM** is new (2025), print-specific, but separate from shop management. Requires integration.
 
-**The opportunity for Screen Print Pro**: None of these tools do customer management _well_ for a small shop. They either bolt CRM onto production software (Printavo, ShopVox) or build production around CRM (Ordant). Nobody has built a customer view that gives a small shop owner the "instant clarity" they need.
+**The opportunity for Mokumo**: None of these tools do customer management _well_ for a small shop. They either bolt CRM onto production software (Printavo, ShopVox) or build production around CRM (Ordant). Nobody has built a customer view that gives a small shop owner the "instant clarity" they need.
 
 Sources:
 
@@ -484,7 +484,7 @@ Sources:
 
 ---
 
-## 9. Actionable Insights for Screen Print Pro
+## 9. Actionable Insights for Mokumo
 
 ### Principle: The Customer Profile Is a Dashboard, Not a Form
 

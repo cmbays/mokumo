@@ -222,7 +222,7 @@ All 8 fields from research. Each is a single `gh project field-create` call — 
 ### B1.3: D-Day Milestone
 
 ```bash
-gh api repos/cmbays/print-4ink/milestones \
+gh api repos/cmbays/mokumo/milestones \
   -f title="D-Day" \
   -f due_on="2026-02-21T00:00:00Z" \
   -f description="Demo prep: Wizards, DTF Pricing, Pricing Mobile"

@@ -55,7 +55,7 @@ the appropriate memo deps to keep the React Compiler happy.
 
 **`MatrixPeekSheet.tsx` deferred**: Still imports from `@/lib/mock-data-pricing`
 (`allScreenPrintTemplates`, `tagTemplateMappings`). No settings DAL exists yet for pricing
-templates. Filed as [GitHub Issue #417](https://github.com/cmbays/print-4ink/issues/417).
+templates. Filed as [GitHub Issue #417](https://github.com/cmbays/mokumo/issues/417).
 
 ## Verification
 
@@ -66,8 +66,8 @@ templates. Filed as [GitHub Issue #417](https://github.com/cmbays/print-4ink/iss
 
 ## Links
 
-- PR: https://github.com/cmbays/print-4ink/pull/416
-- Deferred issue: https://github.com/cmbays/print-4ink/issues/417
+- PR: https://github.com/cmbays/mokumo/pull/416
+- Deferred issue: https://github.com/cmbays/mokumo/issues/417
 - DAL migration plan: `docs/plans/2026-02-16-dal-impl-plan.md`
 
 ## Resume Command

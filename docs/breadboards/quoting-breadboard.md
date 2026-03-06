@@ -8,7 +8,7 @@ created: 2026-02-08
 last-verified: 2026-02-08
 depends-on:
   - docs/strategy/quoting-scope-definition.md
-  - docs/strategy/screen-print-pro-journey-quoting.md
+  - docs/strategy/mokumo-journey-quoting.md
 ---
 
 # Quoting — Breadboard
@@ -474,7 +474,7 @@ Code affordances that will be added/replaced in Phase 2:
 ## Related Documents
 
 - `docs/strategy/quoting-scope-definition.md` (scope boundaries)
-- `docs/strategy/screen-print-pro-journey-quoting.md` (improved journey)
+- `docs/strategy/mokumo-journey-quoting.md` (improved journey)
 - `docs/reference/ss-activewear-api-reference.md` (S&S API field shapes for mock data)
 - `docs/APP_FLOW.md` (routes and navigation)
 - `CLAUDE.md` (design system, quality checklist)

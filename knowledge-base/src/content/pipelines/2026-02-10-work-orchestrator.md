@@ -182,14 +182,14 @@ One-time setup (already done):
 
 ```
 # Added to ~/.zshrc
-[[ -f ~/Github/print-4ink/scripts/work.sh ]] && source ~/Github/print-4ink/scripts/work.sh
+[[ -f ~/Github/mokumo/scripts/work.sh ]] && source ~/Github/mokumo/scripts/work.sh
 ```
 
 The script is sourced (not executed), so it defines the `work()` function in your shell. Uses absolute paths internally, works from any directory.
 
 ## Safety Guarantees
 
-- Always operates from main repo (`~/GitHub/print-4ink`), never from `$PWD`
+- Always operates from main repo (`~/GitHub/mokumo`), never from `$PWD`
 - Pulls latest main before branching (skips for stacked PRs)
 - Checks branch doesn't already exist before creating
 - Enforces max 6 worktrees with warning

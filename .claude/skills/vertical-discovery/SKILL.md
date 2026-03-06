@@ -247,5 +247,5 @@ See `reference/quoting-discovery-example.md` for how this methodology was applie
 
 - `docs/workspace/legacy-phase1/competitive-analysis/print-life-quoting-analysis.md`
 - `docs/workspace/legacy-phase1/competitive-analysis/print-life-journey-quoting.md`
-- `docs/workspace/legacy-phase1/strategy/screen-print-pro-journey-quoting.md`
+- `docs/workspace/legacy-phase1/strategy/mokumo-journey-quoting.md`
 - `docs/workspace/legacy-phase1/strategy/quoting-scope-definition.md`

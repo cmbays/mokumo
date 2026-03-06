@@ -97,9 +97,9 @@ Root cause: nested `ScrollArea` components — the drawer has one and the picker
 
 ## Artifacts
 
-- **Breadboard**: [`docs/breadboards/color-preference-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/color-preference-breadboard.md)
-- **Shaping doc**: [`docs/shaping/colors/shaping.md`](https://github.com/cmbays/print-4ink/blob/main/docs/shaping/colors/shaping.md)
-- **Integration reference**: [`docs/breadboards/garment-catalog-breadboard.md`](https://github.com/cmbays/print-4ink/blob/main/docs/breadboards/garment-catalog-breadboard.md)
+- **Breadboard**: [`docs/breadboards/color-preference-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/color-preference-breadboard.md)
+- **Shaping doc**: [`docs/shaping/colors/shaping.md`](https://github.com/cmbays/mokumo/blob/main/docs/shaping/colors/shaping.md)
+- **Integration reference**: [`docs/breadboards/garment-catalog-breadboard.md`](https://github.com/cmbays/mokumo/blob/main/docs/breadboards/garment-catalog-breadboard.md)
 
 ## Pipeline
 

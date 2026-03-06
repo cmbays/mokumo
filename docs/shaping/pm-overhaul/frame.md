@@ -65,6 +65,6 @@ These gaps are compounding: without structure, agents produce inconsistent work,
 
 - **Research synthesis**: `docs/research/2026-02-15-pm-overhaul-research.md`
 - **Interview notes**: `docs/research/2026-02-15-pm-overhaul-interview.md` (17 decisions)
-- **Issue**: [#216](https://github.com/cmbays/print-4ink/issues/216)
+- **Issue**: [#216](https://github.com/cmbays/mokumo/issues/216)
 - **Branch**: `session/0215-pm-overhaul-research`
 - **Related issues**: #192 (pipeline architecture), #202 (vertical rename), #196 (stage slugs)

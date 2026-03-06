@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Transform Screen Print Pro from a desktop-only app into a responsive mobile-first experience at < 768px, following the breadboard at `docs/breadboards/mobile-optimization-breadboard.md`.
+**Goal:** Transform Mokumo from a desktop-only app into a responsive mobile-first experience at < 768px, following the breadboard at `docs/breadboards/mobile-optimization-breadboard.md`.
 
 **Architecture:** The app currently has zero responsive infrastructure — fixed sidebar, hardcoded grid columns, no viewport hooks, no mobile tokens. We build a responsive shell (bottom tab bar + mobile header + drawer replacing sidebar) in Sprint 1, then high-value screens (Kanban board, dashboard, notes) in Sprint 2, list/form polish in Sprint 3, and detail views + full-screen modals in Sprint 4. All changes use CSS breakpoints (`md:` = 768px) so desktop is preserved.
 
@@ -86,7 +86,7 @@ Below the `@theme inline` block, add a utility layer for mobile bottom safe area
 
 ```tsx
 export const metadata: Metadata = {
-  title: 'Screen Print Pro',
+  title: 'Mokumo',
   description: 'Production management software for screen printing shops',
   other: {
     viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
@@ -108,7 +108,7 @@ Without this, `env(safe-area-inset-bottom)` will always resolve to `0px`, making
 
 **Step 4: Verify tokens resolve**
 
-Run: `cd ~/Github/print-4ink-worktrees/session-0214-mobile-impl-plan && npm run dev -- --port 3005`
+Run: `cd ~/Github/mokumo-worktrees/session-0214-mobile-impl-plan && npm run dev -- --port 3005`
 
 Open browser, inspect element, verify `--mobile-nav-height` resolves to `3.5rem` in computed styles.
 
@@ -359,7 +359,7 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
         <SheetHeader className="border-b border-sidebar-border px-4 py-3">
           <SheetTitle className="flex items-center gap-2 text-sidebar-foreground">
             <Layers className="h-5 w-5 text-action" />
-            Screen Print Pro
+            Mokumo
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 p-2" aria-label="Additional navigation">
@@ -439,7 +439,7 @@ function getPageTitle(pathname: string): string {
     const base = `/${segments[0]}`
     if (pageTitles[base]) return pageTitles[base]
   }
-  return 'Screen Print Pro'
+  return 'Mokumo'
 }
 
 export function MobileHeader() {

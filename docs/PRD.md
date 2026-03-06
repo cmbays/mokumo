@@ -9,7 +9,7 @@ last_verified: 2026-02-15
 depends_on: []
 ---
 
-# Screen Print Pro — Product Requirements Document
+# Mokumo — Product Requirements Document
 
 > Phase 1: High-fidelity mockup with mock data for user acceptance testing.
 
@@ -21,7 +21,7 @@ depends_on: []
 
 The 4Ink shop owner currently tracks production across spreadsheets, text messages, and memory. There is no single view of what's blocked, what's in progress, and what needs attention next. Jobs fall through cracks. Artwork approval stalls silently. Screen room status is verbal.
 
-Screen Print Pro replaces this with a unified production dashboard that gives instant clarity on the full garment lifecycle: **Quote -> Artwork Approval -> Screen Room -> Production -> Shipping**.
+Mokumo replaces this with a unified production dashboard that gives instant clarity on the full garment lifecycle: **Quote -> Artwork Approval -> Screen Room -> Production -> Shipping**.
 
 ---
 

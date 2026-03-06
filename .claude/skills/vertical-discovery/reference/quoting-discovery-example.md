@@ -109,7 +109,7 @@ This documents how the vertical-discovery methodology was first applied to the *
 
 ## Step 6: Improved Journey Design
 
-**Output**: `docs/workspace/legacy-phase1/strategy/screen-print-pro-journey-quoting.md` _(Phase 1 legacy)_
+**Output**: `docs/workspace/legacy-phase1/strategy/mokumo-journey-quoting.md` _(Phase 1 legacy)_
 
 **Key design decisions**:
 

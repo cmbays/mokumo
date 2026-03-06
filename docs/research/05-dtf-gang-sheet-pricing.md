@@ -207,7 +207,7 @@ For individual transfer pricing (not gang sheets):
 
 ---
 
-## 6. Recommendations for Screen Print Pro
+## 6. Recommendations for Mokumo
 
 ### DTF Pricing Matrix Structure
 

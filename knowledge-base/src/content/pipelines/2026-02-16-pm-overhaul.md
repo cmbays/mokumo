@@ -20,7 +20,7 @@ The project had 98 open issues (originally estimated at 67 — the planning esti
 
 The core problem: **structure IS memory** for AI agents that start fresh every session. Without clean PM infrastructure, agents drift, create inconsistent artifacts, and can't autonomously triage or track work.
 
-Prior work in the [PM Foundation session](https://github.com/cmbays/print-4ink/pull/91) (2026-02-14) established the Shape Up philosophy, chose GitHub Issues over Linear, and created the initial 28-label taxonomy with 10 issues. This pipeline built the full infrastructure on that foundation.
+Prior work in the [PM Foundation session](https://github.com/cmbays/mokumo/pull/91) (2026-02-14) established the Shape Up philosophy, chose GitHub Issues over Linear, and created the initial 28-label taxonomy with 10 issues. This pipeline built the full infrastructure on that foundation.
 
 ## Shape Selection
 
@@ -53,23 +53,23 @@ Shape B organizes 10 tasks into 3 waves based on the dependency graph:
 
 | Task                    | PR                                                    | What It Produced                                                                                                                                                                             |
 | ----------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **2.1 Issue Templates** | [#268](https://github.com/cmbays/print-4ink/pull/268) | 4 YAML issue forms (Feature Request, Bug Report, Research Task, Tracking Issue) + PR template + config disabling blank issues. Templates auto-apply `type/*` labels.                         |
-| **2.2 Auto-Add Action** | [#275](https://github.com/cmbays/print-4ink/pull/275) | GitHub Action that auto-adds new issues and PRs to project board #4 using `actions/add-to-project@v1.0.2`.                                                                                   |
-| **2.3 PR Auto-Labeler** | [#267](https://github.com/cmbays/print-4ink/pull/267) | PR labeler config mapping file paths to `vertical/*` labels (quoting, jobs, garments, price-matrix, colors, devx). Uses `actions/labeler@v5`.                                                |
-| **2.4 Work Progress**   | [#269](https://github.com/cmbays/print-4ink/pull/269) | `work progress` subcommand querying GitHub API for milestones, priorities, blocked items, recent PRs, stale issues. Writes gitignored PROGRESS.md. Added `pm-system` to `config/tools.json`. |
+| **2.1 Issue Templates** | [#268](https://github.com/cmbays/mokumo/pull/268) | 4 YAML issue forms (Feature Request, Bug Report, Research Task, Tracking Issue) + PR template + config disabling blank issues. Templates auto-apply `type/*` labels.                         |
+| **2.2 Auto-Add Action** | [#275](https://github.com/cmbays/mokumo/pull/275) | GitHub Action that auto-adds new issues and PRs to project board #4 using `actions/add-to-project@v1.0.2`.                                                                                   |
+| **2.3 PR Auto-Labeler** | [#267](https://github.com/cmbays/mokumo/pull/267) | PR labeler config mapping file paths to `vertical/*` labels (quoting, jobs, garments, price-matrix, colors, devx). Uses `actions/labeler@v5`.                                                |
+| **2.4 Work Progress**   | [#269](https://github.com/cmbays/mokumo/pull/269) | `work progress` subcommand querying GitHub API for milestones, priorities, blocked items, recent PRs, stale issues. Writes gitignored PROGRESS.md. Added `pm-system` to `config/tools.json`. |
 
 ### Wave 3: Convergence (Serial — Human-Interactive)
 
 | Task                     | PR                                                    | What It Produced                                                                                                                                                                                                                                                                                                                                            |
 | ------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **3.1 Backlog Grooming** | N/A (API ops)                                         | 98 issues groomed: all correctly labeled (`type/*` + `priority/*` + `vertical/*`), 4 issues closed (#85, #73, #134, #117), `priority/next` triaged from 36 down to 16 (target of 8-10 relaxed based on user decisions), all 63 surviving issues added to project board #4. Created `vertical/dtf` label. Deleted `enhancement` and `type/ux-review` labels. |
-| **3.2 PM Doc**           | [#283](https://github.com/cmbays/print-4ink/pull/283) | `docs/PM.md` — 10-section canonical document covering issue lifecycle, label taxonomy, templates, dependencies, epic pattern, pipeline flow, agent conventions, milestones, and automation. Added to CLAUDE.md canonical doc table.                                                                                                                         |
+| **3.2 PM Doc**           | [#283](https://github.com/cmbays/mokumo/pull/283) | `docs/PM.md` — 10-section canonical document covering issue lifecycle, label taxonomy, templates, dependencies, epic pattern, pipeline flow, agent conventions, milestones, and automation. Added to CLAUDE.md canonical doc table.                                                                                                                         |
 
 ### Pipeline Shaping Docs
 
 | Doc                          | PR                                                    |
 | ---------------------------- | ----------------------------------------------------- |
-| Shaping + Breadboard + Spike | [#266](https://github.com/cmbays/print-4ink/pull/266) |
+| Shaping + Breadboard + Spike | [#266](https://github.com/cmbays/mokumo/pull/266) |
 
 ## Key Decisions
 
@@ -87,12 +87,12 @@ Shape B organizes 10 tasks into 3 waves based on the dependency graph:
 
 | PR                                                    | Description                                                                  |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [#266](https://github.com/cmbays/print-4ink/pull/266) | Shaping pipeline: frame, shaping doc, breadboard, spike, interview notes     |
-| [#267](https://github.com/cmbays/print-4ink/pull/267) | PR auto-labeler: `.github/labeler.yml` + workflow                            |
-| [#268](https://github.com/cmbays/print-4ink/pull/268) | Issue templates: 4 YAML forms + PR template + config                         |
-| [#269](https://github.com/cmbays/print-4ink/pull/269) | Work progress: `work progress` command + PROGRESS.md migration to gitignored |
-| [#275](https://github.com/cmbays/print-4ink/pull/275) | Auto-add Action: issues/PRs auto-added to project board                      |
-| [#283](https://github.com/cmbays/print-4ink/pull/283) | PM.md: canonical PM document + CLAUDE.md update                              |
+| [#266](https://github.com/cmbays/mokumo/pull/266) | Shaping pipeline: frame, shaping doc, breadboard, spike, interview notes     |
+| [#267](https://github.com/cmbays/mokumo/pull/267) | PR auto-labeler: `.github/labeler.yml` + workflow                            |
+| [#268](https://github.com/cmbays/mokumo/pull/268) | Issue templates: 4 YAML forms + PR template + config                         |
+| [#269](https://github.com/cmbays/mokumo/pull/269) | Work progress: `work progress` command + PROGRESS.md migration to gitignored |
+| [#275](https://github.com/cmbays/mokumo/pull/275) | Auto-add Action: issues/PRs auto-added to project board                      |
+| [#283](https://github.com/cmbays/mokumo/pull/283) | PM.md: canonical PM document + CLAUDE.md update                              |
 
 ## Learnings
 

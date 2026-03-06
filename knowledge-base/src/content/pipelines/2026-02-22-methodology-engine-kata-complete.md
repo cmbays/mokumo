@@ -93,7 +93,7 @@ A TypeScript package providing:
 - Print-4ink is production software; kata is methodology framework
 - Independent release cadence
 - Extractable as standalone package for other projects
-- Parallel development: kata work doesn't block print-4ink iterations
+- Parallel development: kata work doesn't block mokumo iterations
 
 ### Spikes Resolved
 
@@ -171,7 +171,7 @@ Documentation, package structure (exports, TypeScript types), README, CI/CD, npm
 
 | Date       | Decision                                               | Rationale                                                                              |
 | ---------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| 2026-02-21 | Separate package from print-4ink (repo: `cmbays/kata`) | Independent release cadence, extraction as reusable framework                          |
+| 2026-02-21 | Separate package from mokumo (repo: `cmbays/kata`) | Independent release cadence, extraction as reusable framework                          |
 | 2026-02-21 | Execution-layer agnostic (manifests, not agent code)   | Works with any agent tool (Claude CLI, Composio, manual)                               |
 | 2026-02-21 | Three-tier learning model                              | Balances automation (Tier 1) with specialization (Tier 2) and personalization (Tier 3) |
 | 2026-02-21 | Shape A: Clean architecture + Zod-first design         | Testability, type safety, extensibility from day one                                   |
@@ -194,7 +194,7 @@ Documentation, package structure (exports, TypeScript types), README, CI/CD, npm
 After kata stabilizes:
 
 1. Print-4ink can import `@4ink/kata` for enhanced PM workflows
-2. Pipeline executions can feed back into print-4ink's dashboard
+2. Pipeline executions can feed back into mokumo's dashboard
 3. Shared knowledge graph between projects
 4. Extensible to other AI-driven development tools
 

@@ -1,8 +1,8 @@
-# Screen Print Pro — CLAUDE.md
+# Mokumo — CLAUDE.md
 
 ## Project Overview
 
-Screen Print Pro is production management software for 4Ink, a screen-printing shop. Full garment lifecycle: Quote → Artwork Approval → Screen Room → Production → Shipping. Primary user is the shop owner/operator. See `PROGRESS.md` for current phase status.
+Mokumo is production management software for a screen-printing shop. Full garment lifecycle: Quote → Artwork Approval → Screen Room → Production → Shipping. Primary user is the shop owner/operator. See `PROGRESS.md` for current phase status.
 
 ## Commands
 
@@ -46,14 +46,14 @@ npm run kb:build   # Build + validate schema
 Every Claude session that will modify code MUST create its own worktree. Full workflow in `memory/worktree-workflow.md`.
 
 ```bash
-git -C ~/Github/print-4ink pull origin main
-git -C ~/Github/print-4ink worktree add ~/Github/print-4ink-worktrees/session-MMDD-topic -b session/MMDD-topic
-cd ~/Github/print-4ink-worktrees/session-MMDD-topic && npm install
+git -C ~/Github/mokumo pull origin main
+git -C ~/Github/mokumo worktree add ~/Github/mokumo-worktrees/session-MMDD-topic -b session/MMDD-topic
+cd ~/Github/mokumo-worktrees/session-MMDD-topic && npm install
 ```
 
 **Rules:**
 
-- Worktrees at `~/Github/print-4ink-worktrees/<branch-name>/` — main repo stays on `main`
+- Worktrees at `~/Github/mokumo-worktrees/<branch-name>/` — main repo stays on `main`
 - Branch format: `session/<MMDD>-<kebab-case-topic>`
 - **NEVER push to main directly** — always branch + PR
 - **Commit+push after every logical chunk** — never leave work local-only
@@ -253,7 +253,7 @@ For complex screens: add a `spike-{topic}.md` in the workspace dir before breadb
 feature/session branches ──PR──→ main ──merge──→ production
                                    │                  │
                              Preview builds      Production builds
-                           (Gary demo URL)      (4ink live domain)
+                           (Gary demo URL)      (mokumo live domain)
 ```
 
 - **`main`** — Integration branch. All PRs merge here. Vercel preview deployment.
@@ -265,7 +265,7 @@ feature/session branches ──PR──→ main ──merge──→ production
 gh pr create --base production --head main --title "Release: <description>"
 
 # Promote to production (Option B — fast-forward)
-git -C ~/Github/print-4ink fetch origin && git -C ~/Github/print-4ink push origin origin/main:production
+git -C ~/Github/mokumo fetch origin && git -C ~/Github/mokumo push origin origin/main:production
 ```
 
 **Rules:**
@@ -388,6 +388,6 @@ Schema validated by Zod at build time. Config in `tools/orchestration/config/` (
 
 **Rules:**
 
-- Session ID: `ls -t ~/.claude/projects/-Users-cmbays-Github-print-4ink/*.jsonl | head -1` (filename without `.jsonl`)
+- Session ID: `ls -t ~/.claude/projects/-Users-cmbays-Github-mokumo/*.jsonl | head -1` (filename without `.jsonl`)
 - `npm run kb:build` validates schema — check before committing
 - Include session resume command, artifact links, PR links, decision rationale
