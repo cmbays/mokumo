@@ -1,6 +1,7 @@
 # Mokumo — CLAUDE.md
 
-Mokumo is production management software for decorated apparel shops. Full garment lifecycle: Quote → Artwork Approval → Production → Shipping → Invoice.
+Mokumo is production management software for decorated apparel shops. Full garment lifecycle:
+Quote → Artwork Approval → Production → Shipping → Invoice.
 
 ## Commands
 
@@ -35,11 +36,14 @@ cd ~/Github/mokumo-worktrees/session-MMDD-topic && npm install
 
 ## Tech Stack
 
-Next.js 16 (App Router, TypeScript, Turbopack), Tailwind CSS, shadcn/ui (Radix), Lucide icons, React Hook Form + Zod, TanStack Table, dnd-kit, Framer Motion, Supabase (Postgres + Auth), Drizzle ORM. URL query params for state — no global state libraries.
+Next.js 16 (App Router, TypeScript, Turbopack), Tailwind CSS, shadcn/ui (Radix), Lucide icons,
+React Hook Form + Zod, TanStack Table, dnd-kit, Framer Motion, Supabase (Postgres + Auth),
+Drizzle ORM. URL query params for state — no global state libraries.
 
 ## Architecture
 
-Clean Architecture: `domain/` → `infrastructure/` → `features/` → `shared/` → `app/`. See `docs/ARCHITECTURE.md` for layer rules and import boundaries.
+Clean Architecture: `domain/` → `infrastructure/` → `features/` → `shared/` → `app/`. See
+`docs/ARCHITECTURE.md` for layer rules and import boundaries.
 
 ## Coding Standards
 
@@ -58,7 +62,8 @@ Clean Architecture: `domain/` → `infrastructure/` → `features/` → `shared/
 
 ## Pre-Build Ritual
 
-Before building any vertical: `shaping` → `breadboarding` → `breadboard-reflection` → Paper MCP mockups → `implementation-planning`. Details in `memory/agents-and-skills.md`.
+Before building any vertical: `shaping` → `breadboarding` → `breadboard-reflection` →
+Paper MCP mockups → `implementation-planning`. Details in `memory/agents-and-skills.md`.
 
 ## Deployment
 
@@ -84,10 +89,10 @@ feature/session branches ──PR──→ main ──merge──→ production
 
 ## Hot Files — NEVER commit on feature branches
 
-| File | Rule |
-|------|------|
+| File                   | Rule       |
+| ---------------------- | ---------- |
 | `knowledge-base/dist/` | Gitignored |
-| `PROGRESS.md` | Gitignored |
+| `PROGRESS.md`          | Gitignored |
 
 ## Process Artifact Zones
 
@@ -97,14 +102,14 @@ feature/session branches ──PR──→ main ──merge──→ production
 
 ## Knowledge (read on demand)
 
-| Topic | File |
-|-------|------|
-| Domain context | `memory/domain-context.md` |
-| Design system + tokens | `memory/design-system.md` |
-| Testing thresholds | `memory/testing-thresholds.md` |
-| Agents & skills | `memory/agents-and-skills.md` |
-| KB pipeline | `memory/kb-pipeline.md` |
-| Canonical docs | `memory/canonical-docs.md` |
-| Worktree workflow | `memory/worktree-workflow.md` |
-| V1 vision + milestones | Resolve "V1 roadmap" from MEMORY.md registry |
-| Product manifest | Resolve "Product manifest" from MEMORY.md registry |
+| Topic                  | File                                               |
+| ---------------------- | -------------------------------------------------- |
+| Domain context         | `memory/domain-context.md`                         |
+| Design system + tokens | `memory/design-system.md`                          |
+| Testing thresholds     | `memory/testing-thresholds.md`                     |
+| Agents & skills        | `memory/agents-and-skills.md`                      |
+| KB pipeline            | `memory/kb-pipeline.md`                            |
+| Canonical docs         | `memory/canonical-docs.md`                         |
+| Worktree workflow      | `memory/worktree-workflow.md`                      |
+| V1 vision + milestones | Resolve "V1 roadmap" from MEMORY.md registry       |
+| Product manifest       | Resolve "Product manifest" from MEMORY.md registry |

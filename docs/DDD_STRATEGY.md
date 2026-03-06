@@ -716,15 +716,15 @@ In these cases, the domain stays a domain (it's still configuration), but the **
 
 ## Appendix B: Related Documents
 
-| Document               | Relationship                                   |
-| ---------------------- | ---------------------------------------------- |
-| `config/products.json` | Product classification source                  |
-| `config/domains.json`  | Domain classification source (created by #317) |
-| `config/tools.json`    | Tool classification source                     |
-| `docs/PM.md`           | PM label taxonomy (updated by #320)            |
-| `docs/HOW_WE_WORK.md`  | Methodology and pipeline types                 |
-| `V1 roadmap (see MEMORY.md Cross-Repo Registry)`      | Strategic context and phase planning           |
-| `lib/schemas/`         | Current Zod schemas mapped in Section 2        |
+| Document                        | Relationship                                   |
+| ------------------------------- | ---------------------------------------------- |
+| `config/products.json`          | Product classification source                  |
+| `config/domains.json`           | Domain classification source (created by #317) |
+| `config/tools.json`             | Tool classification source                     |
+| `docs/PM.md`                    | PM label taxonomy (updated by #320)            |
+| `docs/HOW_WE_WORK.md`           | Methodology and pipeline types                 |
+| V1 roadmap (MEMORY.md registry) | Strategic context and phase planning           |
+| `lib/schemas/`                  | Current Zod schemas mapped in Section 2        |
 
 ## Appendix C: Revision History
 
