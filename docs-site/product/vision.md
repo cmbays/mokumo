@@ -7,7 +7,7 @@ description: 'What Mokumo is building, why, and how the pieces fit together. The
 
 > **What this document is**: The single source of truth for Mokumo's V1 product strategy. Every milestone, every feature, every architectural decision traces back to this document. When building any piece of the system, consult this to understand how it fits the whole.
 >
-> **What this document is not**: A roadmap (see [Roadmap Overview](/roadmap/overview)), a technical spec (see [System Architecture](/engineering/architecture/system-architecture)), or a PRD (see [PRD](/product/prd)). This is the strategic "why" and "how" that those documents implement.
+> **What this document is not**: A roadmap (see [Roadmap Overview](/roadmap/overview)) or a technical spec (see [System Architecture](/engineering/architecture/system-architecture)). This is the strategic "why" and "how" that those documents implement.
 
 ---
 
@@ -17,7 +17,7 @@ description: 'What Mokumo is building, why, and how the pieces fit together. The
 
 **The promise**: One modern tool to run your entire shop — quoting, artwork, production, invoicing — on any device, with your data always yours. Bring it in easily. Take it out freely. We are your system of record, not your lock-in.
 
-**Target segment**: Small shops (1-5 employees) scaling into small-to-medium (5-10 employees). This is the largest segment of the market. Our canonical reference shop: 4 employees, 2-3 on the production floor, one automated screen press, one manual backup, a double-headed embroidery machine, a DTF printer, three heat presses. We may expand to 10-20 employees over time, but V1 is designed for this segment.
+**Target segment**: Small shops (1-5 employees) scaling into small-to-medium (5-10 employees). This is the largest segment of the market. A typical shop in our segment has 3-4 employees, a mix of screen printing and DTF equipment, and processes 5-20 active jobs at any time. We may expand to 10-20 employees over time, but V1 is designed for this segment.
 
 **Three decoration services**: Screen printing, DTF, and embroidery ship as purchasable modules with a bundle discount. The architecture supports adding heat transfer, sublimation, and vinyl without redesign.
 
@@ -29,7 +29,7 @@ Seven bets, ranked by conviction. Each bet has a thesis, how we enable it, the h
 
 ### Bet 1: Mobile-First on the Production Floor
 
-**Thesis**: Shop floor workers check job status, update production, and communicate with the front office from their phones. Existing tools are broken on mobile — sidebars covering content, tables clipping at narrow viewports, desktop-only builders. This is the single easiest differentiator to deliver and the hardest for existing tools to retrofit. Our mobile experience must be designed to add value: simplified data entry, multiple people tracking their work, information presented for the work being done right now.
+**Thesis**: Shop floor workers check job status, update production, and communicate with the front office from their phones. The industry standard for mobile is poor — sidebars covering content, tables clipping at narrow viewports, desktop-only builders. Mobile-first is the single easiest differentiator to deliver and the hardest for existing tools to retrofit. Our mobile experience must be designed to add value: simplified data entry, multiple people tracking their work, information presented for the work being done right now.
 
 **How we enable it**: Every screen designed at 375px as the primary viewport. Tailwind responsive-first. Touch targets >= 44px. Production board designed for the person at the press holding a phone. Already proven in Phase 1.5 demo.
 
@@ -50,7 +50,7 @@ Seven bets, ranked by conviction. Each bet has a thesis, how we enable it, the h
 - **Domain model design**: Strong interfaces from day one that expect multi-provider support. `SupplierAdapter` port pattern already established — extend to inks, threads, substrates.
 - **Demand-driven procurement**: When we know what's on order and what's in stock, the "What to Order" view writes itself — no data entry, just decisions.
 
-**Honest risk**: API availability varies by supplier. Some may not have public APIs. We need to research and prioritize the suppliers that cover the most market share in our segment. Where APIs don't exist, we fall back to CSV import — still less friction than manual entry.
+**Considerations**: API availability varies by supplier. Some may not have public APIs. We need to research and prioritize the suppliers that cover the most market share in our segment. Where APIs don't exist, we fall back to CSV import — still less friction than manual entry.
 
 **Milestone**: M0-M1 (garment catalog), M3 (supplier expansion), ongoing.
 
@@ -68,7 +68,7 @@ Seven bets, ranked by conviction. Each bet has a thesis, how we enable it, the h
 - **Contextual defaults** at every level: when you create a quote, we pre-fill from customer preferences. When you add a line item, we suggest based on past orders. The system learns from usage without requiring setup.
 - **Beginner mode**: Contextual guidance appears at each "first time" moment throughout the production lifecycle. Not a one-time wizard — persistent help that the shop owner can turn off when they're comfortable. Built into later milestones (M6) when all features exist to guide through.
 
-**Risk**: Getting the defaults wrong means shops immediately hit friction. Mitigation: use our canonical reference shop to validate defaults before shipping each milestone.
+**Considerations**: Getting the defaults wrong means shops immediately hit friction. Mitigation: validate defaults with real shop feedback before shipping each milestone.
 
 **Milestone**: Embedded in every milestone. M3 (automations engine), M6 (onboarding guidance).
 
@@ -87,7 +87,7 @@ Seven bets, ranked by conviction. Each bet has a thesis, how we enable it, the h
 - When a job passes a critical step (artwork approved, screens burned, job printed, job shipped), that event is logged. We don't expect continuous updates — we expect milestone completions, likely at natural break points or end of day.
 - The system can roughly estimate capacity: "You have 12 screen print jobs and 4 DTF jobs this week" is valuable without tracking which press is running which job right now.
 
-**Honest risk**: Even scoped down, production entities add schema complexity. We must resist scope creep toward MES-level granularity. The test: "Would a 4-person shop actually use this feature daily?" If no, cut it.
+**Considerations**: Even scoped down, production entities add schema complexity. We must resist scope creep toward MES-level granularity. The test: "Would a 4-person shop actually use this feature daily?" If no, cut it.
 
 **Milestone**: M2 (Kanban from jobs), M3 (operational depth), M4 (multi-service production).
 
@@ -105,27 +105,25 @@ Seven bets, ranked by conviction. Each bet has a thesis, how we enable it, the h
 4. Price auto-calculates based on garment + color count + quantity
 5. Screen requirements generate from the artwork (number of screens = number of colors)
 
-**Honest risk**: Color detection from arbitrary artwork files is a hard computer vision problem. We need to research the right approach — likely a combination of image analysis for simple cases and manual override for complex ones. We may need to accept that auto-detection works for 60-70% of cases with manual fallback for the rest — and that's still dramatically better than 0% automation.
+**Considerations**: Color detection from arbitrary artwork files is a hard computer vision problem. We need to research the right approach — likely a combination of image analysis for simple cases and manual override for complex ones. We may need to accept that auto-detection works for 60-70% of cases with manual fallback for the rest — and that's still dramatically better than 0% automation.
 
 **Milestone**: M2 (artwork upload + basic approval), M3 (auto-color detect + pricing feedback).
 
 ---
 
-### Bet 6: DTF Module That Replaces Existing Tools
+### Bet 6: Integrated DTF Module
 
-**Thesis**: Mokumo must fully replace standalone DTF tools — not coexist with them. Shops need per-customer pricing (structurally impossible on e-commerce variant systems), production workflow integration, multi-service support, and mobile experience — all capabilities native to Mokumo's architecture.
+**Thesis**: DTF shops need per-customer pricing, production workflow integration, multi-service support, and mobile experience — capabilities that require a full production management platform, not a standalone builder tool.
 
 **How we enable it**:
 
 - DTF quote builder with service-type-specific pricing (transfer size x quantity)
 - Gang sheet workflow integrated into production
-- Flexi RIP integration: export gang sheet files N times to monitored folder (or explore SAi API for direct integration)
+- RIP software integration: export gang sheet files with quantity metadata to monitored folders
 - Per-customer pricing matrices
 - Full production lifecycle
 
-**What existing DTF tools do well that we must match**: The gang sheet builder visual experience. Customers can upload artwork and see it arranged on a sheet. We need this to be at least as good for shops to switch.
-
-**Risk**: Gang sheet builder is niche but specific. Engineering effort for the visual builder may be significant. Explore whether we build custom or adapt an existing canvas library.
+**Key experience to deliver**: The gang sheet builder visual experience — customers can upload artwork and see it arranged on a sheet. This must be intuitive and fast.
 
 **Milestone**: M4.
 
@@ -133,11 +131,11 @@ Seven bets, ranked by conviction. Each bet has a thesis, how we enable it, the h
 
 ### Bet 7: Data Portability as Brand Identity
 
-**Thesis**: Data portability isn't a feature — it's who we are. In an industry where tools have destroyed customer data between versions and limited imports to a handful of entity types, the promise "your data is yours" is an emotional purchase driver.
+**Thesis**: Data portability isn't a feature — it's who we are. In an industry where version upgrades have broken customer data and imports are limited to a handful of entity types, the promise "your data is yours" is an emotional purchase driver.
 
 **How we enable it**:
 
-- **SQL migrations** (Drizzle Kit) guarantee every version upgrade is seamless. We will never break our customers' data between versions.
+- **SQL migrations** (Drizzle Kit) guarantee every version upgrade is seamless. No data loss between versions, ever.
 - **CSV import** with downloadable templates and example data for every entity type.
 - **CSV/JSON export** by entity type in Settings > Data.
 - **Full database export** option for shops that want complete ownership.
@@ -406,7 +404,7 @@ Each vertical is a feature domain built on the horizontal platform. Features are
 - **Clear descriptions**: Each automation says exactly what it does in plain English. No workflow builder complexity.
 - **Advanced mode** (future): For shops that want to customize trigger/condition/action chains. Not expected for V1 — toggle on/off is the V1 experience.
 
-**Honest design challenge**: Statuses must be meaningful — they trigger automations, update dashboards, and change production board views. Custom statuses need to map to production concepts. This requires careful domain modeling to ensure user-created statuses map to real workflow states.
+**Design challenge**: Statuses must be meaningful — they trigger automations, update dashboards, and change production board views. Custom statuses need to map to production concepts. This requires careful domain modeling to ensure user-created statuses map to real workflow states.
 
 ---
 
@@ -474,7 +472,7 @@ Each vertical is a feature domain built on the horizontal platform. Features are
 
 **What it is**: Mesh count, emulsion type, burn status per screen, link screens to jobs, screen reuse detection.
 
-**Honest assessment**: Potentially valuable IF it requires very little setup. If the shop has to manually enter every screen with its specifications, adoption will be low in our segment. Explore whether screen data can be largely inferred from job data (number of colors = number of screens, standard mesh counts per ink type).
+**Considerations**: Potentially valuable IF it requires very little setup. If the shop has to manually enter every screen with its specifications, adoption will be low in our segment. Explore whether screen data can be largely inferred from job data (number of colors = number of screens, standard mesh counts per ink type).
 
 ---
 
@@ -699,19 +697,18 @@ How we know V1 is working:
 | **Data entry reduction**     | 50%+ less manual entry vs industry standard           | Comparative task analysis with beta testers     |
 | **Beta NPS**                 | > 40                                                  | Survey after 2 weeks of daily use               |
 | **Daily active usage**       | Beta shops using Mokumo as primary tool for >= 1 week | Usage analytics                                 |
-| **DTF workflow replacement** | Mokumo fully replaces standalone DTF tools            | Beta tester confirmation                        |
+| **DTF workflow replacement** | Mokumo handles full DTF workflow end-to-end           | Beta tester confirmation                        |
 
 ---
 
 ## 13. Reference Map
 
-| When you need...                      | Read                                                                 |
-| ------------------------------------- | -------------------------------------------------------------------- |
-| Milestone details and timelines       | [Roadmap Overview](/roadmap/overview)                                |
-| Feature specs and acceptance criteria | [PRD](/product/prd)                                                  |
-| Architecture layers and import rules  | [System Architecture](/engineering/architecture/system-architecture) |
-| Routes and navigation                 | [App Flow](/engineering/architecture/app-flow)                       |
-| Tech stack decisions                  | [Tech Stack](/engineering/architecture/tech-stack)                   |
-| DDD strategy and bounded contexts     | [DDD Strategy](/engineering/architecture/ddd-strategy)               |
-| Domain terminology                    | [Domain Glossary](/product/domain-glossary)                          |
-| User journey details                  | [User Journeys](/product/user-journeys)                              |
+| When you need...                     | Read                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| Milestone details and timelines      | [Roadmap Overview](/roadmap/overview)                                |
+| Architecture layers and import rules | [System Architecture](/engineering/architecture/system-architecture) |
+| Routes and navigation                | [App Flow](/engineering/architecture/app-flow)                       |
+| Tech stack decisions                 | [Tech Stack](/engineering/architecture/tech-stack)                   |
+| DDD strategy and bounded contexts    | [DDD Strategy](/engineering/architecture/ddd-strategy)               |
+| Domain terminology                   | [Domain Glossary](/product/domain-glossary)                          |
+| User journey details                 | [User Journeys](/product/user-journeys)                              |

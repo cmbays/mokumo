@@ -7,7 +7,6 @@ phase: 1
 last_updated: 2026-02-27
 last_verified: 2026-02-16
 depends_on:
-  - docs/PRD.md
   - docs/strategy/jobs-scope-definition.md
   - docs/APP_IA.md
 ---
@@ -22,35 +21,35 @@ depends_on:
 
 **Name**: Mokumo
 **Purpose**: Production management for a screen-printing shop — manage jobs from quote through production to completion
-**Primary User**: Shop owner/operator (Chris at 4Ink)
+**Primary User**: Shop owner/operator
 **Entry Point**: Opens app in browser, lands on Dashboard (`/`)
 
 ---
 
 ## Screen Inventory
 
-| #   | Screen              | Route                                 | Description                                                          | PRD Feature |
-| --- | ------------------- | ------------------------------------- | -------------------------------------------------------------------- | ----------- |
-| 1   | Dashboard           | `/`                                   | Production overview: blocked, in-progress, at-risk, completed        | F1          |
-| 2   | Jobs List           | `/jobs`                               | Sortable/filterable table with lane, service type, risk columns      | F2          |
-| 3   | Job Detail          | `/jobs/[id]`                          | Job command center: tasks, notes, quick actions, linked entities     | F3          |
-| 4   | Production Board    | `/jobs/board`                         | Two-section Kanban (Quotes + Jobs), 5 universal lanes, drag-and-drop | F4          |
-| 5   | Quotes List         | `/quotes`                             | Table of quotes with status                                          | F5          |
-| 6   | Quote Detail        | `/quotes/[id]`                        | Full quote breakdown                                                 | F6          |
-| 7   | New Quote           | `/quotes/new`                         | Create quote with dynamic line items                                 | F7          |
-| 8   | Customers List      | `/customers`                          | Searchable customer table                                            | F8          |
-| 9   | Customer Detail     | `/customers/[id]`                     | Customer info + linked jobs/quotes/invoices                          | F9          |
-| 10  | Screen Room         | `/screens`                            | Screen inventory with burn status                                    | F10         |
-| 11  | Garment Catalog     | `/garments`                           | Browse garment styles by brand                                       | F11         |
-| 12  | Invoices List       | `/invoices`                           | Stats bar + smart view tabs + filterable invoice table               | F12         |
-| 13  | Invoice Detail      | `/invoices/[id]`                      | Full invoice view: line items, payments, reminders, linked entities  | F13         |
-| 14  | New Invoice         | `/invoices/new`                       | Create invoice from scratch or from accepted quote                   | F14         |
-| 15  | Edit Invoice        | `/invoices/[id]/edit`                 | Edit draft invoice (reuses invoice form)                             | F15         |
-| 16  | Edit Quote          | `/quotes/[id]/edit`                   | Edit draft quote (reuses quote form)                                 | F7          |
-| 17  | Pricing Hub         | `/settings/pricing`                   | Template cards with service type tabs (Screen Print / DTF)           | F16         |
-| 18  | Screen Print Editor | `/settings/pricing/screen-print/[id]` | Simple/Power mode matrix editor with margin indicators               | F16         |
-| 19  | DTF Editor          | `/settings/pricing/dtf/[id]`          | Sheet tier editor with pricing calculator                            | F16         |
-| 20  | Color Settings      | `/settings/colors`                    | Global favorite color management with flat/grouped display           | F17         |
+| #   | Screen              | Route                                 | Description                                                          |
+| --- | ------------------- | ------------------------------------- | -------------------------------------------------------------------- |
+| 1   | Dashboard           | `/`                                   | Production overview: blocked, in-progress, at-risk, completed        |
+| 2   | Jobs List           | `/jobs`                               | Sortable/filterable table with lane, service type, risk columns      |
+| 3   | Job Detail          | `/jobs/[id]`                          | Job command center: tasks, notes, quick actions, linked entities     |
+| 4   | Production Board    | `/jobs/board`                         | Two-section Kanban (Quotes + Jobs), 5 universal lanes, drag-and-drop |
+| 5   | Quotes List         | `/quotes`                             | Table of quotes with status                                          |
+| 6   | Quote Detail        | `/quotes/[id]`                        | Full quote breakdown                                                 |
+| 7   | New Quote           | `/quotes/new`                         | Create quote with dynamic line items                                 |
+| 8   | Customers List      | `/customers`                          | Searchable customer table                                            |
+| 9   | Customer Detail     | `/customers/[id]`                     | Customer info + linked jobs/quotes/invoices                          |
+| 10  | Screen Room         | `/screens`                            | Screen inventory with burn status                                    |
+| 11  | Garment Catalog     | `/garments`                           | Browse garment styles by brand                                       |
+| 12  | Invoices List       | `/invoices`                           | Stats bar + smart view tabs + filterable invoice table               |
+| 13  | Invoice Detail      | `/invoices/[id]`                      | Full invoice view: line items, payments, reminders, linked entities  |
+| 14  | New Invoice         | `/invoices/new`                       | Create invoice from scratch or from accepted quote                   |
+| 15  | Edit Invoice        | `/invoices/[id]/edit`                 | Edit draft invoice (reuses invoice form)                             |
+| 16  | Edit Quote          | `/quotes/[id]/edit`                   | Edit draft quote (reuses quote form)                                 |
+| 17  | Pricing Hub         | `/settings/pricing`                   | Template cards with service type tabs (Screen Print / DTF)           |
+| 18  | Screen Print Editor | `/settings/pricing/screen-print/[id]` | Simple/Power mode matrix editor with margin indicators               |
+| 19  | DTF Editor          | `/settings/pricing/dtf/[id]`          | Sheet tier editor with pricing calculator                            |
+| 20  | Color Settings      | `/settings/colors`                    | Global favorite color management with flat/grouped display           |
 
 ---
 
@@ -998,7 +997,6 @@ Planned for Phase 2 iteration:
 
 ## Related Documents
 
-- `docs/PRD.md` — Features and acceptance criteria
 - `docs/IMPLEMENTATION_PLAN.md` — Build order
 - `docs/reference/APP_FLOW_STANDARD.md` — Template this doc follows
 - `docs/strategy/jobs-scope-definition.md` — Jobs vertical scope (lanes, tasks, board architecture)

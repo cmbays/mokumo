@@ -61,7 +61,7 @@ Full CRM for print shop customers — contacts, companies, addresses, groups, ac
 | Analytics                | Planned         | dbt models: dim_customers, fct_customer_orders, seasonality |
 | Cross-Vertical Wiring    | Planned         | Quote/job/invoice comboboxes, address snapshots             |
 
-**User story**: Gary opens Mokumo to look up Riverside High School. He sees the company page with three contacts, order history, activity timeline, and aggregate stats ($12,400 lifetime revenue, 8 orders this year). When building a new quote, the system pre-fills Coach Johnson's preferred garment.
+**User story**: The shop owner opens Mokumo to look up a repeat customer. They see the company page with contacts, order history, activity timeline, and aggregate stats (lifetime revenue, orders this year). When building a new quote, the system pre-fills the customer's preferred garment.
 
 ## Horizontal Enablers
 

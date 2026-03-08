@@ -31,7 +31,7 @@ Fill out the V1 skeleton with the features that differentiate Mokumo for daily s
 
 The admin surface — where the shop owner configures everything that isn't daily operations.
 
-**User story**: Gary completes the onboarding wizard — business name, tax rate, active service types, S&S API credentials. Under Pricing, he sets default setup fees and markup. Everything flows through the system: tax rate on invoices, setup fees in pricing matrix, service types gate quote builder tabs.
+**User story**: The shop owner completes the onboarding wizard — business name, tax rate, active service types, S&S API credentials. Under Pricing, they set default setup fees and markup. Everything flows through the system: tax rate on invoices, setup fees in pricing matrix, service types gate quote builder tabs.
 
 **Key decisions:**
 
@@ -43,7 +43,7 @@ The admin surface — where the shop owner configures everything that isn't dail
 
 Pre-built automations covering the full quote-to-reorder lifecycle.
 
-**User story**: Gary accepts a quote. Three things happen automatically: status changes, confirmation email goes to the customer, and a production job is created on the board. All 13 automations ship pre-configured — toggle off what you don't want.
+**User story**: The shop owner accepts a quote. Three things happen automatically: status changes, confirmation email goes to the customer, and a production job is created on the board. All 13 automations ship pre-configured — toggle off what you don't want.
 
 **Key decisions:**
 
@@ -56,7 +56,7 @@ Pre-built automations covering the full quote-to-reorder lifecycle.
 
 Status system connecting production reality to software automation.
 
-**User story**: Gary's shop has a "Spot Check" step after printing. He adds it in Settings, maps it to the "In Progress" canonical group. Board shows the new column. Automations still work. Customer portal shows "In Production" — no internal jargon leaks out.
+**User story**: The shop has a "Spot Check" step after printing. The owner adds it in Settings, maps it to the "In Progress" canonical group. Board shows the new column. Automations still work. Customer portal shows "In Production" — no internal jargon leaks out.
 
 **Key decisions:**
 

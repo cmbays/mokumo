@@ -28,7 +28,7 @@ The pilot end-to-end journey. Screen print only. Establishes patterns for all ot
 
 Configurable pricing per service type. Quantity breaks, setup fees, margin indicators.
 
-**User story**: Gary gets a call: "How much for 50 tees, 3-color front print?" He selects "Standard Screen Print," enters quantity and color count, and the system returns a per-piece price with margin displayed. Setup fees auto-calculate.
+**User story**: The shop owner gets a call: "How much for 50 tees, 3-color front print?" They select "Standard Screen Print," enter quantity and color count, and the system returns a per-piece price with margin displayed. Setup fees auto-calculate.
 
 **Key decisions:**
 
@@ -41,7 +41,7 @@ Configurable pricing per service type. Quantity breaks, setup fees, margin indic
 
 Customer-associated artwork storage with metadata, approval workflows, and automated mockup generation.
 
-**User story**: Gary opens Coach Johnson's page and sees all their artwork with metadata: color count, dimensions, print-ready status, version history. When building a quote, he selects the school crest — the system auto-fills "4 colors" and pulls correct pricing.
+**User story**: The shop owner opens a customer's page and sees all their artwork with metadata: color count, dimensions, print-ready status, version history. When building a quote, they select a design — the system auto-fills the color count and pulls correct pricing.
 
 **Domain model**: Artwork → Variant (parallel color treatments) → Version (sequential revisions). Separation metadata per approved variant.
 
@@ -51,7 +51,7 @@ Customer-associated artwork storage with metadata, approval workflows, and autom
 
 The pilot vertical. End-to-end screen print quoting with real data.
 
-**User story**: A customer calls — "100 Gildan 5000 tees, 3-color front, 1-color back, for a 5K run." Gary searches the customer, picks the garment, enters sizes, adds print locations, and pricing auto-calculates. He sends the quote as a PDF via email while the customer is on the phone.
+**User story**: A customer calls — "100 Gildan 5000 tees, 3-color front, 1-color back, for a 5K run." The shop owner searches the customer, picks the garment, enters sizes, adds print locations, and pricing auto-calculates. They send the quote as a PDF via email while the customer is on the phone.
 
 **Key decisions (pending):**
 
@@ -69,7 +69,7 @@ The pilot vertical. End-to-end screen print quoting with real data.
 
 Quote-to-job conversion, task tracking, production board.
 
-**User story**: Monday morning — Gary opens the production board. Five jobs on a Kanban: 2 in Art Prep, 1 in Screen Burn, 2 in Pressing. His press operator scans a barcode — the board updates. Two jobs share the same 2-color design — the system flags a batch opportunity.
+**User story**: Monday morning — the shop owner opens the production board. Five jobs on a Kanban: 2 in Art Prep, 1 in Screen Burn, 2 in Pressing. A press operator scans a barcode — the board updates. Two jobs share the same 2-color design — the system flags a batch opportunity.
 
 **Key decisions:**
 
@@ -82,7 +82,7 @@ Quote-to-job conversion, task tracking, production board.
 
 Invoice generation, tax handling, payment recording, reminders.
 
-**User story**: Gary finishes an order, creates an invoice pre-populated from the quote, sends it via email with PDF. Later, he checks aging buckets (30/60/90 days) and sends reminders with one click.
+**User story**: The shop owner finishes an order, creates an invoice pre-populated from the quote, sends it via email with PDF. Later, they check aging buckets (30/60/90 days) and send reminders with one click.
 
 **Key decisions:**
 

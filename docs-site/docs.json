@@ -23,7 +23,7 @@
         },
         {
           "group": "User Experience",
-          "pages": ["product/user-journeys", "product/interaction-design", "product/design-vision"]
+          "pages": ["product/user-journeys"]
         },
         {
           "group": "Domain",
@@ -58,7 +58,8 @@
             "engineering/architecture/app-flow",
             "engineering/architecture/app-ia",
             "engineering/architecture/ddd-strategy",
-            "engineering/architecture/infrastructure"
+            "engineering/architecture/infrastructure",
+            "product/design-vision"
           ]
         },
         {

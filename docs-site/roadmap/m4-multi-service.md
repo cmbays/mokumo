@@ -28,7 +28,7 @@ Prove the architecture handles multiple decoration types. Give customers a self-
 
 DTF-specific quoting with gang sheet builder, per-transfer pricing, and sheet cost optimization.
 
-**User story**: Customer needs 50 tees with a full-color photographic design — impossible with screen print. Gary switches to the DTF tab, uploads artwork sized to 11"×11", adds a chest logo, enters quantity. The system calculates gang sheet layout, cost, and pricing.
+**User story**: Customer needs 50 tees with a full-color photographic design — impossible with screen print. The shop owner switches to the DTF tab, uploads artwork sized to 11"×11", adds a chest logo, enters quantity. The system calculates gang sheet layout, cost, and pricing.
 
 **Key decisions:**
 
@@ -41,7 +41,7 @@ DTF-specific quoting with gang sheet builder, per-transfer pricing, and sheet co
 
 Simplified quoting for customer-supplied transfers.
 
-**User story**: A customer brings 75 pre-made DTF transfers plus 75 blank tees. Gary enters quantity × pressing rate + intake handling. Auto-generated waiver covers quality responsibility.
+**User story**: A customer brings 75 pre-made DTF transfers plus 75 blank tees. The shop owner enters quantity × pressing rate + intake handling. Auto-generated waiver covers quality responsibility.
 
 **Key decisions:**
 
@@ -53,7 +53,7 @@ Simplified quoting for customer-supplied transfers.
 
 Customer-facing portal for artwork approval, job status, invoice payment, and order history.
 
-**User story**: Coach Johnson receives an artwork approval request, logs into the portal (branded as `orders.4inkprint.com`), approves two files, rejects one with feedback. Meanwhile, he checks order status and pays an invoice.
+**User story**: A customer receives an artwork approval request, logs into the branded portal, approves two files, rejects one with feedback. Meanwhile, they check order status and pay an invoice.
 
 **Key decisions:**
 

@@ -237,7 +237,7 @@ Max 3 weights per screen:
 ```tsx
 // Page header
 <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-<p className="text-sm text-muted-foreground">Production overview for 4Ink</p>
+<p className="text-sm text-muted-foreground">Production overview for your shop</p>
 
 // Section header
 <h2 className="text-lg font-semibold">In Progress</h2>

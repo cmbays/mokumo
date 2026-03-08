@@ -203,7 +203,7 @@ We use a two-branch deployment model to control Vercel build frequency on the Ho
 feature/session ──PR──→ main ──merge──→ production
                           │                  │
                     Preview builds      Production builds
-                  (Gary demo URL)      (4ink live domain)
+                  (Preview URL)        (Production domain)
 ```
 
 | Branch          | Vercel Role | Build Trigger               | Purpose                          |
