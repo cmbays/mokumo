@@ -7,8 +7,7 @@ Create a comprehensive breadboard document that maps all UI affordances, code af
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project context and design system
-2. Read `docs/PRD.md` for feature scope
-3. Read `docs/APP_FLOW.md` for existing routes and navigation
+2. Read `docs-site/engineering/architecture/app-flow.md` for existing routes and navigation
 4. Read prior KB docs: {PRIOR_KB_DOCS}
 5. Read the interview doc: look for `*-{VERTICAL}-interview*` in `{KB_DIR}/`
 
@@ -28,7 +27,7 @@ For each Place (page, modal, drawer):
 
 ## Output
 
-Produce breadboard doc at `docs/breadboards/{VERTICAL}-breadboard.md` with:
+Produce breadboard doc at `tmp/breadboards/{VERTICAL}-breadboard.md` with:
 
 - Place inventory with affordance maps
 - Wiring diagrams (Mermaid if helpful)

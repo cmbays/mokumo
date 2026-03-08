@@ -12,9 +12,8 @@ Use when building any screen from IMPLEMENTATION_PLAN Steps 1-10.
 
 Read these files (do NOT skip any):
 
-1. `docs/IMPLEMENTATION_PLAN.md` — find the current step, read its tasks
-2. `docs/APP_FLOW.md` — find the route, layout, sections, key actions, breadcrumb trail
-3. `docs/PRD.md` — find the PRD feature ID, read acceptance criteria
+1. `docs-site/engineering/architecture/app-flow.md` — find the route, layout, sections, key actions, breadcrumb trail
+2. `CLAUDE.md` — find the feature acceptance criteria
 4. `lib/schemas/` — identify which Zod schemas this screen needs
 5. `lib/mock-data.ts` — identify which mock data to import
 6. `lib/constants.ts` — identify which label/color mappings to use
@@ -116,4 +115,4 @@ npm run build       # Full build
 After the screen passes verification:
 
 1. Update `PROGRESS.md` — add to "What's Built", update session log
-2. Update `docs/IMPLEMENTATION_PLAN.md` — mark step tasks as complete
+2. Update `PROGRESS.md` — mark step tasks as complete

@@ -7,9 +7,9 @@ Conduct a comprehensive quality review of the {VERTICAL} vertical: code quality,
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project standards
-2. Read `docs/reference/SCREEN_AUDIT_PROTOCOL.md`
-3. Read `docs/reference/UX_HEURISTICS.md`
-4. Read the breadboard doc: `docs/breadboards/{VERTICAL}-breadboard.md`
+2. Read `docs-site/engineering/standards/screen-audit.md`
+3. Read `docs-site/engineering/standards/ux-heuristics.md`
+4. Read the breadboard doc: `tmp/breadboards/{VERTICAL}-breadboard.md`
 5. Read all prior KB docs: {PRIOR_KB_DOCS}
 6. Run `npm run build` and `npm test` to verify baseline
 

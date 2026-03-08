@@ -7,9 +7,9 @@ Review and refine all screens built for the {VERTICAL} vertical. Fix visual inco
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for design system tokens and quality checklist
-2. Read `docs/reference/FRONTEND_GUIDELINES.md` for component patterns
-3. Read `docs/reference/SCREEN_AUDIT_PROTOCOL.md` for the 15-point audit
-4. Read the breadboard doc: `docs/breadboards/{VERTICAL}-breadboard.md`
+2. Read `docs-site/engineering/standards/design-system.md` for component patterns
+3. Read `docs-site/engineering/standards/screen-audit.md` for the 15-point audit
+4. Read the breadboard doc: `tmp/breadboards/{VERTICAL}-breadboard.md`
 5. Read prior KB docs: {PRIOR_KB_DOCS}
 6. Run `npm run dev` and visually inspect each screen
 

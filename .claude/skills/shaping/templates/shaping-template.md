@@ -4,7 +4,7 @@ shaping: true
 
 # {Topic} — Shaping
 
-**Frame:** `docs/workspace/{pipeline-id}/frame.md`
+**Frame:** `tmp/workspace/{pipeline-id}/frame.md`
 **Date:** YYYY-MM-DD
 **Status:** In Progress | Shape Selected | Complete
 **Selected Shape:** {letter + title, when decided}

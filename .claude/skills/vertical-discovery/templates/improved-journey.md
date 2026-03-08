@@ -7,9 +7,9 @@ phase: 1
 created: [DATE]
 last-verified: [DATE]
 depends-on:
-  - docs/workspace/{pipeline-id}/competitive-analysis-[COMPETITOR].md
-  - docs/workspace/{pipeline-id}/journey-[COMPETITOR].md
-  - docs/workspace/{pipeline-id}/scope.md
+  - tmp/workspace/{pipeline-id}/competitive-analysis-[COMPETITOR].md
+  - tmp/workspace/{pipeline-id}/journey-[COMPETITOR].md
+  - tmp/workspace/{pipeline-id}/scope.md
 ---
 
 # Mokumo — Improved [VERTICAL] Journey
@@ -126,7 +126,7 @@ END: [RESULT]
 
 ## Related Documents
 
-- `docs/workspace/{pipeline-id}/competitive-analysis-[COMPETITOR].md` (features)
-- `docs/workspace/{pipeline-id}/journey-[COMPETITOR].md` (journey + friction)
-- `docs/workspace/{pipeline-id}/scope.md` (scope boundaries)
+- `tmp/workspace/{pipeline-id}/competitive-analysis-[COMPETITOR].md` (features)
+- `tmp/workspace/{pipeline-id}/journey-[COMPETITOR].md` (journey + friction)
+- `tmp/workspace/{pipeline-id}/scope.md` (scope boundaries)
 - `CLAUDE.md` (quality checklist, design system)

@@ -18,9 +18,9 @@
     "icon": "Bot"
   },
   {
-    "slug": "knowledge-base",
-    "label": "Knowledge Base",
-    "description": "Astro-powered session documentation, search, and project history",
+    "slug": "docs-site",
+    "label": "Documentation Site",
+    "description": "Canonical project documentation — architecture, standards, and guides",
     "icon": "Library"
   },
   {

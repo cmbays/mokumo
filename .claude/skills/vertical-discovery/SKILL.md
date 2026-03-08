@@ -57,19 +57,17 @@ Each vertical discovery produces exactly 4 documents (+ updates to 2 existing do
 
 | #   | Document             | Location                                                            | Purpose                                    |
 | --- | -------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
-| 1   | Competitive Analysis | `docs/workspace/{pipeline-id}/competitive-analysis-{competitor}.md` | Feature list, UI patterns, friction points |
-| 2   | Journey Map          | `docs/workspace/{pipeline-id}/journey-{competitor}.md`              | Step-by-step workflow, click/time metrics  |
-| 3   | Improved Journey     | `docs/workspace/{pipeline-id}/improved-journey.md`                  | Our redesigned workflow with targets       |
-| 4   | Scope Definition     | `docs/workspace/{pipeline-id}/scope.md`                             | CORE/PERIPHERAL/INTERCONNECTIONS           |
+| 1   | Competitive Analysis | `tmp/workspace/{pipeline-id}/competitive-analysis-{competitor}.md` | Feature list, UI patterns, friction points |
+| 2   | Journey Map          | `tmp/workspace/{pipeline-id}/journey-{competitor}.md`              | Step-by-step workflow, click/time metrics  |
+| 3   | Improved Journey     | `tmp/workspace/{pipeline-id}/improved-journey.md`                  | Our redesigned workflow with targets       |
+| 4   | Scope Definition     | `tmp/workspace/{pipeline-id}/scope.md`                             | CORE/PERIPHERAL/INTERCONNECTIONS           |
 | 5   | PROGRESS.md          | `PROGRESS.md`                                                       | Session log entry                          |
 | 6   | for_human doc        | `tmp/outbox/{date}-{vertical}-discovery.html`                       | Human-readable summary (ephemeral)         |
 
-**On wrap-up**, deposit to the KB (see `knowledge-base/README.md`):
+**On wrap-up**, clean up ephemeral workspace artifacts:
 
-- Competitive analysis + journey map → synthesize into `knowledge-base/src/content/market/competitors/{competitor}.md`
-- Improved journey → synthesize into `knowledge-base/src/content/market/ux-patterns/{vertical}.md`
-- Scope decisions → synthesize into `knowledge-base/src/content/product/{vertical}/`
-- Then delete `docs/workspace/{pipeline-id}/`
+- Key decisions and findings should be committed to `PROGRESS.md` or relevant docs-site pages
+- Then delete `tmp/workspace/{pipeline-id}/`
 
 ## Workflow: 7 Steps
 
@@ -171,7 +169,7 @@ The MCP gives you tools like `browser_navigate`, `browser_click`, `browser_type`
 9. Key Takeaways (top 5-6 insights)
 10. Competitive Landscape (other tools in the space)
 
-**Output file**: `docs/workspace/{pipeline-id}/competitive-analysis-{competitor}.md`
+**Output file**: `tmp/workspace/{pipeline-id}/competitive-analysis-{competitor}.md`
 
 ### Step 5: Write Journey Map Document
 
@@ -191,7 +189,7 @@ The MCP gives you tools like `browser_navigate`, `browser_click`, `browser_type`
 8. Success Metrics for Redesign (before/after comparison table)
 9. Handoff to Designers (key principles + must-haves + nice-to-haves)
 
-**Output file**: `docs/workspace/{pipeline-id}/journey-{competitor}.md`
+**Output file**: `tmp/workspace/{pipeline-id}/journey-{competitor}.md`
 
 ### Step 6: Write Improved Journey Design
 
@@ -213,7 +211,7 @@ The MCP gives you tools like `browser_navigate`, `browser_click`, `browser_type`
 10. Success Metrics (before/after comparison)
 11. Build Order (numbered list of screens/components to build)
 
-**Output file**: `docs/workspace/{pipeline-id}/improved-journey.md`
+**Output file**: `tmp/workspace/{pipeline-id}/improved-journey.md`
 
 ### Step 7: Update Scope Definition + Docs
 
@@ -221,7 +219,7 @@ The MCP gives you tools like `browser_navigate`, `browser_click`, `browser_type`
 
 **Actions**:
 
-1. Update `docs/workspace/{pipeline-id}/scope.md` with findings
+1. Update `tmp/workspace/{pipeline-id}/scope.md` with findings
 2. Add phase indicators (Phase 1/Phase 2) to every feature
 3. Ensure CORE/PERIPHERAL/INTERCONNECTIONS are accurate
 4. Update `PROGRESS.md` with session log entry
@@ -245,7 +243,4 @@ Before marking discovery as complete, verify:
 
 See `reference/quoting-discovery-example.md` for how this methodology was applied to the Quoting vertical. The actual output documents are:
 
-- `docs/workspace/legacy-phase1/competitive-analysis/print-life-quoting-analysis.md`
-- `docs/workspace/legacy-phase1/competitive-analysis/print-life-journey-quoting.md`
-- `docs/workspace/legacy-phase1/strategy/mokumo-journey-quoting.md`
-- `docs/workspace/legacy-phase1/strategy/quoting-scope-definition.md`
+- (Phase 1 legacy artifacts are no longer tracked in repo — see ops/research/mokumo/competitors/ for competitive analysis)

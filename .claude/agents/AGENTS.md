@@ -17,9 +17,9 @@ This document is the canonical reference for Mokumo's agent architecture. It def
 | Agent                       | Use When                                              | Example Invocation                                    | Preloaded Skills                            | Output                          |
 | --------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- | ------------------------------- |
 | `frontend-builder`          | Building screens or components                        | "Use frontend-builder agent to build PageHeader"      | breadboarding, screen-builder, quality-gate | Screen/component files          |
-| `requirements-interrogator` | Before building complex features                      | "Ask requirements-interrogator about Kanban workflow" | pre-build-interrogator                      | Spike doc in `docs/spikes/`     |
+| `requirements-interrogator` | Before building complex features                      | "Ask requirements-interrogator about Kanban workflow" | pre-build-interrogator                      | Spike doc in `tmp/workspace/`   |
 | `design-auditor`            | Design review checkpoint                              | "Have design-auditor review the jobs screen"          | design-audit                                | `ReviewFinding[]` JSON          |
-| `feature-strategist`        | Competitive analysis, feature planning                | "Use feature-strategist for quote system analysis"    | feature-strategy                            | Feature plan in `docs/`         |
+| `feature-strategist`        | Competitive analysis, feature planning                | "Use feature-strategist for quote system analysis"    | feature-strategy                            | Feature plan in `tmp/workspace/`|
 | `doc-sync`                  | Sync docs with code changes                           | "Have doc-sync check APP_FLOW against built screens"  | doc-sync                                    | Updated canonical docs          |
 | `secretary` (Ada)           | Project pulse, 1:1 check-ins, strategic advice        | "Start a 1:1 with Ada"                                | one-on-one, cool-down                       | Memory updates, recommendations |
 | `finance-sme`               | Dispatched by review orchestration (financial domain) | Auto-dispatched by `review-orchestration` skill       | —                                           | `ReviewFinding[]` JSON          |
@@ -50,7 +50,7 @@ This document is the canonical reference for Mokumo's agent architecture. It def
 **Tools**: Read, Grep, Glob (read-only)
 **Preloaded skills**: pre-build-interrogator
 **Reads**: IMPLEMENTATION_PLAN, APP_FLOW, PRD, schemas
-**Writes**: Spike docs in `docs/spikes/`
+**Writes**: Spike docs in `tmp/workspace/{pipeline-id}/`
 **Never touches**: Code, design system files
 
 **When to use**:
@@ -82,7 +82,7 @@ This document is the canonical reference for Mokumo's agent architecture. It def
 **Tools**: Read, Grep, Glob, WebFetch (research capable)
 **Preloaded skills**: feature-strategy
 **Reads**: All code, competitor screenshots, PRD, APP_FLOW
-**Writes**: Feature plans in `docs/`
+**Writes**: Feature plans in `tmp/workspace/{pipeline-id}/`
 **Never touches**: Code (read-only for source)
 
 **When to use**:

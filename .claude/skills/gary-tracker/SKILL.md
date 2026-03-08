@@ -87,7 +87,7 @@ Examples:
 To find the next ID, check existing KB docs for the vertical:
 
 ```bash
-grep -r "data-question-id=\"{VERTICAL}-q" knowledge-base/src/content/sessions/ | wc -l
+gh issue list --repo cmbays/mokumo --label "gary-question" --label "product/{VERTICAL}" --state all --json number --jq 'length'
 ```
 
 ## Proactive Detection

@@ -7,10 +7,10 @@ phase: 1
 created: YYYY-MM-DD
 last-verified: YYYY-MM-DD
 depends-on:
-  - docs/workspace/{pipeline-id}/shaping.md
-  - docs/workspace/{pipeline-id}/frame.md
-  - docs/workspace/{pipeline-id}/scope.md
-  - docs/workspace/{pipeline-id}/improved-journey.md
+  - tmp/workspace/{pipeline-id}/shaping.md
+  - tmp/workspace/{pipeline-id}/frame.md
+  - tmp/workspace/{pipeline-id}/scope.md
+  - tmp/workspace/{pipeline-id}/improved-journey.md
 ---
 
 # {Vertical} — Breadboard
@@ -188,9 +188,9 @@ Code affordances that will be added in Phase 2:
 
 ## Related Documents
 
-- `docs/workspace/{pipeline-id}/shaping.md` (selected shape + parts)
-- `docs/workspace/{pipeline-id}/frame.md` (problem/outcome context)
-- `docs/workspace/{pipeline-id}/scope.md` (scope boundaries)
-- `docs/workspace/{pipeline-id}/improved-journey.md` (improved journey)
-- `docs/APP_FLOW.md` (routes and navigation)
+- `tmp/workspace/{pipeline-id}/shaping.md` (selected shape + parts)
+- `tmp/workspace/{pipeline-id}/frame.md` (problem/outcome context)
+- `tmp/workspace/{pipeline-id}/scope.md` (scope boundaries)
+- `tmp/workspace/{pipeline-id}/improved-journey.md` (improved journey)
+- `docs-site/engineering/architecture/app-flow.md` (routes and navigation)
 - `CLAUDE.md` (design system, quality checklist)

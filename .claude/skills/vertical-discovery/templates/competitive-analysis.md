@@ -156,6 +156,6 @@ Step 2: [STEP]
 
 ## Related Documents
 
-- `docs/workspace/{pipeline-id}/journey-[COMPETITOR].md` (journey map)
-- `docs/workspace/{pipeline-id}/improved-journey.md` (improved journey design)
-- `docs/workspace/{pipeline-id}/scope.md` (scope boundaries)
+- `tmp/workspace/{pipeline-id}/journey-[COMPETITOR].md` (journey map)
+- `tmp/workspace/{pipeline-id}/improved-journey.md` (improved journey design)
+- `tmp/workspace/{pipeline-id}/scope.md` (scope boundaries)

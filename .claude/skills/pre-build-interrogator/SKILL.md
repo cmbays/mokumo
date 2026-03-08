@@ -12,9 +12,8 @@ Use before building complex screens (Steps 4, 6) or any feature where behavior i
 
 Read these files to understand what's planned:
 
-1. `docs/IMPLEMENTATION_PLAN.md` — find the step being interrogated
-2. `docs/APP_FLOW.md` — find the screen's route, sections, actions, states
-3. `docs/PRD.md` — find the feature's acceptance criteria
+1. `docs-site/engineering/architecture/app-flow.md` — find the screen's route, sections, actions, states
+2. `CLAUDE.md` — find the feature's acceptance criteria
 4. `lib/schemas/` — understand the data model
 5. `lib/mock-data.ts` — understand available data shapes
 6. `PROGRESS.md` — understand what's already built
@@ -81,7 +80,7 @@ Example:
 
 ### 4. Write Spike Document
 
-Create a spike doc at `docs/workspace/{pipeline-id}/spike-{topic}.md` using the template at `.claude/skills/pre-build-interrogator/templates/spike-template.md`.
+Create a spike doc at `tmp/workspace/{pipeline-id}/spike-{topic}.md` using the template at `.claude/skills/pre-build-interrogator/templates/spike-template.md`.
 
 Include:
 
@@ -102,7 +101,7 @@ Include:
 
 ## Deliverables
 
-- Spike doc: docs/workspace/{pipeline-id}/spike-{topic}.md
+- Spike doc: tmp/workspace/{pipeline-id}/spike-{topic}.md
 
 ## Unknowns Resolved
 

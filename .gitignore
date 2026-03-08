@@ -115,10 +115,6 @@ PROGRESS.md
 .supabase/
 supabase/.temp/
 
-# Knowledge base build output
-knowledge-base/dist/
-knowledge-base/node_modules/
-knowledge-base/.astro/
 .firecrawl/
 
 # dbt analytics (Python project in dbt/ directory)

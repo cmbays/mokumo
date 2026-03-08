@@ -14,8 +14,8 @@ prerequisites:
 
 This skill produces two artifacts for each vertical build:
 
-1. **Implementation Plan** (`docs/workspace/{pipeline-id}/plan.md`) — human-readable, step-by-step tasks
-2. **Execution Manifest** (`docs/workspace/{pipeline-id}/manifest.yaml`) — machine-readable YAML consumed by `work build`
+1. **Implementation Plan** (`tmp/workspace/{pipeline-id}/plan.md`) — human-readable, step-by-step tasks
+2. **Execution Manifest** (`tmp/workspace/{pipeline-id}/manifest.yaml`) — machine-readable YAML consumed by `work build`
 
 The manifest is the contract between planning and execution. `work build` parses it to create worktrees and generate Zellij layouts.
 
@@ -26,10 +26,9 @@ The manifest is the contract between planning and execution. `work build` parses
 Read these docs in order:
 
 1. `CLAUDE.md` — project standards, tech stack, quality checklist
-2. `docs/PRD.md` — feature scope and acceptance criteria
-3. `docs/workspace/{pipeline-id}/breadboard.md` — affordance maps, component boundaries, build order
+2. `tmp/workspace/{pipeline-id}/breadboard.md` — affordance maps, component boundaries, build order
 4. Prior KB docs for the vertical (research, interview)
-5. `docs/TECH_STACK.md` — technology choices and constraints
+4. `docs-site/engineering/architecture/tech-stack.md` — technology choices and constraints
 
 ### Step 2: Design Waves
 
@@ -69,7 +68,7 @@ Include this section in each session prompt:
 ## Workspace Documentation
 
 Before finalizing your work, commit implementation notes to:
-  docs/workspace/{YYYYMMDD-pipeline-id}/{your-session-topic}-notes.md
+  tmp/workspace/{YYYYMMDD-pipeline-id}/{your-session-topic}-notes.md
 
 Include:
 - Architecture decisions made
@@ -77,9 +76,9 @@ Include:
 - Any blockers or deferred work
 - Links to related code sections
 
-Example: docs/workspace/20260218-supabase-foundation/auth-flow-notes.md
+Example: tmp/workspace/20260218-supabase-foundation/auth-flow-notes.md
 
-This gets consolidated into the knowledge-base during wrap-up.
+Key decisions should be recorded in PROGRESS.md or docs-site before the workspace is cleaned up.
 ```
 
 This ensures all sessions contribute artifacts for wrap-up consolidation into the KB.
@@ -162,5 +161,5 @@ Before committing:
 - Include "Read the breadboard doc" in every prompt — it's the shared context
 - Reference the build-session-protocol skill in prompts so sessions know the completion flow
 - Think about merge order — will parallel PRs conflict on the same files?
-- **Workspace consolidation:** All sessions must write to the same pipeline directory (`docs/workspace/{YYYYMMDD-pipeline-id}/`) with unique filenames. This enables centralized wrap-up consolidation into a single KB pipeline doc.
+- **Workspace consolidation:** All sessions must write to the same pipeline directory (`tmp/workspace/{YYYYMMDD-pipeline-id}/`) with unique filenames. This enables centralized wrap-up consolidation into a single KB pipeline doc.
 - Include workspace doc section in EVERY session prompt — it's not optional, even for simple tasks

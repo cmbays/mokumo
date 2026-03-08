@@ -30,13 +30,13 @@ Interview → **Shaping (R × S)** → Breadboarding → BB Reflection → Impl 
 Read these before starting (do NOT skip any):
 
 1. Interview notes or research docs for this topic
-2. Existing breadboards if upgrading a vertical (in `docs/workspace/{pipeline-id}/breadboard.md` for new work, or `docs/breadboards/` for Phase 1 legacy)
+2. Existing breadboards if upgrading a vertical (in `tmp/workspace/{pipeline-id}/breadboard.md` for new work, or `tmp/breadboards/` for Phase 1 legacy)
 3. `CLAUDE.md` — project standards, design system, quality checklist
 4. V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry) — strategic context, current bets
 
 ### Outputs
 
-Produce these artifacts in `docs/workspace/{pipeline-id}/` (where `{pipeline-id}` is the current pipeline's YYYYMMDD-topic ID, e.g. `20260218-quoting`):
+Produce these artifacts in `tmp/workspace/{pipeline-id}/` (where `{pipeline-id}` is the current pipeline's YYYYMMDD-topic ID, e.g. `20260218-quoting`):
 
 | File              | Contents                                                      |
 | ----------------- | ------------------------------------------------------------- |
@@ -52,8 +52,8 @@ for completion criteria.
 
 The breadboarding agent reads:
 
-1. `docs/workspace/{pipeline-id}/shaping.md` — selected shape + parts
-2. `docs/workspace/{pipeline-id}/frame.md` — problem/outcome context
+1. `tmp/workspace/{pipeline-id}/shaping.md` — selected shape + parts
+2. `tmp/workspace/{pipeline-id}/frame.md` — problem/outcome context
 
 ### Decision Points
 
@@ -319,7 +319,7 @@ A spike is an investigation task to learn how the existing system works and what
 
 ### File Management
 
-**Always create spikes in their own file** in `docs/workspace/{pipeline-id}/spike-{name}.md`. Spikes are standalone investigation documents that may be shared or worked on independently from the shaping doc.
+**Always create spikes in their own file** in `tmp/workspace/{pipeline-id}/spike-{name}.md`. Spikes are standalone investigation documents that may be shared or worked on independently from the shaping doc.
 
 ### Purpose
 
@@ -579,9 +579,9 @@ When the user provides source material during framing (user requests, quotes, em
 
 ### File Management
 
-- **Frame**: `docs/workspace/{pipeline-id}/frame.md` — write early, update if problem/outcome evolves
-- **Shaping doc**: `docs/workspace/{pipeline-id}/shaping.md` — update freely as you iterate; this is the ground truth
-- **Spike docs**: `docs/workspace/{pipeline-id}/spike-{name}.md` — one file per spike investigation
+- **Frame**: `tmp/workspace/{pipeline-id}/frame.md` — write early, update if problem/outcome evolves
+- **Shaping doc**: `tmp/workspace/{pipeline-id}/shaping.md` — update freely as you iterate; this is the ground truth
+- **Spike docs**: `tmp/workspace/{pipeline-id}/spike-{name}.md` — one file per spike investigation
 
 ### Frontmatter
 

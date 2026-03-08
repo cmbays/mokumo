@@ -12,12 +12,10 @@ Use when analyzing competitor screenshots, planning new features, or when the us
 
 Read these before forming any opinion:
 
-1. `docs/PRD.md` — Features and requirements. Know what was promised.
-2. `docs/APP_FLOW.md` — Screens, routes, user journeys. Know what exists.
-3. `docs/TECH_STACK.md` — Stack capabilities and constraints.
-4. `docs/IMPLEMENTATION_PLAN.md` — Build phases and current progress.
-5. `CLAUDE.md` — Design System section for visual constraints.
-6. `docs/reference/FRONTEND_GUIDELINES.md` — Component engineering rules.
+1. `docs-site/engineering/architecture/app-flow.md` — Screens, routes, user journeys. Know what exists.
+2. `docs-site/engineering/architecture/tech-stack.md` — Stack capabilities and constraints.
+3. `CLAUDE.md` — Design System section for visual constraints.
+4. `docs-site/engineering/standards/design-system.md` — Component engineering rules.
 7. `PROGRESS.md` — What's built and what's in flight.
 8. `lib/schemas/` — Data model. Know what entities exist.
 
@@ -39,9 +37,9 @@ After reading everything, analyze:
 
 Before proposing features, validate your assumptions:
 
-- **User research**: Review any user feedback, competitor screenshots, or pain point documentation in `inbox/screenshots/` and `docs/reference/UX_USER_RESEARCH.md`
+- **User research**: Review any user feedback, competitor screenshots, or pain point documentation in `inbox/screenshots/`
 - **Data model check**: Confirm proposed features can be supported by existing schemas in `lib/schemas/`
-- **Tech feasibility**: Verify proposed features work within the stack defined in `docs/TECH_STACK.md`
+- **Tech feasibility**: Verify proposed features work within the stack defined in `docs-site/engineering/architecture/tech-stack.md`
 - **Deliverables**: This step produces a validated understanding of constraints before feature ideation
 
 ### 4. Apply Feature Frameworks
@@ -90,7 +88,7 @@ For each feature include: what it does, why it matters now, what it builds on, w
 
 ## Deliverables
 
-- Feature plan: docs/FEATURE*PLAN*[YYYYMMDD].md
+- Feature plan: tmp/workspace/{pipeline-id}/feature-plan.md
 
 ## Key Findings
 

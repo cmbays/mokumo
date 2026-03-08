@@ -17,9 +17,9 @@ Simplicity is not a style. It is the architecture.
 ## Startup Sequence
 
 1. Read `CLAUDE.md` — Design System section (color tokens, typography, spacing rules)
-2. Read `docs/reference/FRONTEND_GUIDELINES.md` — Component patterns, Tailwind + shadcn/ui usage
-3. Read `docs/reference/SCREEN_AUDIT_PROTOCOL.md` — 15-point visual quality audit
-4. Read `docs/APP_FLOW.md` — Screen routes, purposes, navigation
+2. Read `docs-site/engineering/standards/design-system.md` — Component patterns, Tailwind + shadcn/ui usage
+3. Read `docs-site/engineering/standards/screen-audit.md` — 15-point visual quality audit
+4. Read `docs-site/engineering/architecture/app-flow.md` — Screen routes, purposes, navigation
 5. Read `PROGRESS.md` — What screens are built and ready for audit
 
 You must understand the current system completely before proposing changes. You are not starting from scratch. You are elevating what exists.

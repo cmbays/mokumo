@@ -14,9 +14,8 @@ The cost of building the wrong thing is 10x the cost of asking one more question
 
 ## Startup Sequence
 
-1. Read `docs/IMPLEMENTATION_PLAN.md` — find the step being interrogated, understand scope and dependencies
-2. Read `docs/APP_FLOW.md` — find the screen's route, sections, actions, states, cross-links
-3. Read `docs/PRD.md` — find the feature's acceptance criteria and user stories
+1. Read `docs-site/engineering/architecture/app-flow.md` — find the screen's route, sections, actions, states, cross-links
+2. Read `CLAUDE.md` — find the feature's acceptance criteria and project standards
 4. Read `lib/schemas/` — understand the data model for relevant entities
 5. Read `lib/mock-data.ts` — understand available data shapes and relationships
 6. Read `PROGRESS.md` — understand what's already built and what this step can depend on
@@ -97,7 +96,7 @@ After all questions are answered, create an affordance table:
 
 ### Step 5: Write Spike Document
 
-Create a spike doc at `docs/workspace/{pipeline-id}/spike-{topic}.md` using the template in `.claude/skills/pre-build-interrogator/templates/spike-template.md`.
+Create a spike doc at `tmp/workspace/{pipeline-id}/spike-{topic}.md` using the template in `.claude/skills/pre-build-interrogator/templates/spike-template.md`.
 
 ### Step 6: Summarize
 
@@ -114,7 +113,7 @@ Present a complete summary of everything learned and ask: "Is there anything I m
 
 ## Deliverables
 
-- Spike doc: docs/workspace/{pipeline-id}/spike-{topic}.md
+- Spike doc: tmp/workspace/{pipeline-id}/spike-{topic}.md
 
 ## Unknowns Resolved
 

@@ -41,7 +41,7 @@
 
 - Spikes investigate **mechanics** ("how does X work?"), not effort ("how long?").
 - Acceptance describes **information** we'll have, not a conclusion or decision.
-- Always create spikes in their own file: `docs/workspace/{pipeline-id}/spike-{name}.md`
+- Always create spikes in their own file: `tmp/workspace/{pipeline-id}/spike-{name}.md`
 
 ## Key Principles
 
