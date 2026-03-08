@@ -14,11 +14,11 @@ Read these files (do NOT skip any):
 
 1. `docs-site/engineering/architecture/app-flow.md` — find the route, layout, sections, key actions, breadcrumb trail
 2. `CLAUDE.md` — find the feature acceptance criteria
-4. `lib/schemas/` — identify which Zod schemas this screen needs
-5. `lib/mock-data.ts` — identify which mock data to import
-6. `lib/constants.ts` — identify which label/color mappings to use
-7. `components/ui/` — check what shadcn/ui primitives are installed
-8. `components/features/` — check what shared components already exist (StatusBadge, PriorityBadge, DataTable, EmptyState, PageHeader, etc.)
+3. `lib/schemas/` — identify which Zod schemas this screen needs
+4. `lib/mock-data.ts` — identify which mock data to import
+5. `lib/constants.ts` — identify which label/color mappings to use
+6. `components/ui/` — check what shadcn/ui primitives are installed
+7. `components/features/` — check what shared components already exist (StatusBadge, PriorityBadge, DataTable, EmptyState, PageHeader, etc.)
 
 If a required shared component doesn't exist yet, build it first in `components/features/`.
 

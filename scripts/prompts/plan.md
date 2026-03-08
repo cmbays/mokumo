@@ -8,7 +8,7 @@ Create both a human-readable implementation plan AND a machine-readable YAML exe
 
 1. Read `CLAUDE.md` for project context and coding standards
 2. Read the breadboard doc: `tmp/breadboards/{VERTICAL}-breadboard.md`
-4. Read prior KB docs: {PRIOR_KB_DOCS}
+3. Read prior KB docs: {PRIOR_KB_DOCS}
 4. Read `docs-site/engineering/architecture/tech-stack.md` for technology choices
 
 ## Skills to Use

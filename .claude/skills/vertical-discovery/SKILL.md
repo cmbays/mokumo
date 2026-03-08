@@ -55,14 +55,14 @@ The MCP approach is strongly preferred because it gives Claude direct tool acces
 
 Each vertical discovery produces exactly 4 documents (+ updates to 2 existing docs):
 
-| #   | Document             | Location                                                            | Purpose                                    |
-| --- | -------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
+| #   | Document             | Location                                                           | Purpose                                    |
+| --- | -------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
 | 1   | Competitive Analysis | `tmp/workspace/{pipeline-id}/competitive-analysis-{competitor}.md` | Feature list, UI patterns, friction points |
 | 2   | Journey Map          | `tmp/workspace/{pipeline-id}/journey-{competitor}.md`              | Step-by-step workflow, click/time metrics  |
 | 3   | Improved Journey     | `tmp/workspace/{pipeline-id}/improved-journey.md`                  | Our redesigned workflow with targets       |
 | 4   | Scope Definition     | `tmp/workspace/{pipeline-id}/scope.md`                             | CORE/PERIPHERAL/INTERCONNECTIONS           |
-| 5   | PROGRESS.md          | `PROGRESS.md`                                                       | Session log entry                          |
-| 6   | for_human doc        | `tmp/outbox/{date}-{vertical}-discovery.html`                       | Human-readable summary (ephemeral)         |
+| 5   | PROGRESS.md          | `PROGRESS.md`                                                      | Session log entry                          |
+| 6   | for_human doc        | `tmp/outbox/{date}-{vertical}-discovery.html`                      | Human-readable summary (ephemeral)         |
 
 **On wrap-up**, clean up ephemeral workspace artifacts:
 

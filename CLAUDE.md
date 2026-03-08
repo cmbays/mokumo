@@ -88,9 +88,9 @@ feature/session branches ──PR──→ main ──merge──→ production
 
 ## Hot Files — NEVER commit on feature branches
 
-| File           | Rule       |
-| -------------- | ---------- |
-| `PROGRESS.md`  | Gitignored |
+| File          | Rule       |
+| ------------- | ---------- |
+| `PROGRESS.md` | Gitignored |
 
 ## Process Artifact Zones
 

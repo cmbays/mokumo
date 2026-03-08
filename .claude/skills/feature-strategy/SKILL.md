@@ -16,8 +16,8 @@ Read these before forming any opinion:
 2. `docs-site/engineering/architecture/tech-stack.md` — Stack capabilities and constraints.
 3. `CLAUDE.md` — Design System section for visual constraints.
 4. `docs-site/engineering/standards/design-system.md` — Component engineering rules.
-7. `PROGRESS.md` — What's built and what's in flight.
-8. `lib/schemas/` — Data model. Know what entities exist.
+5. `PROGRESS.md` — What's built and what's in flight.
+6. `lib/schemas/` — Data model. Know what entities exist.
 
 You must understand the complete system before proposing a single new idea.
 

@@ -27,7 +27,7 @@ Read these docs in order:
 
 1. `CLAUDE.md` — project standards, tech stack, quality checklist
 2. `tmp/workspace/{pipeline-id}/breadboard.md` — affordance maps, component boundaries, build order
-4. Prior KB docs for the vertical (research, interview)
+3. Prior KB docs for the vertical (research, interview)
 4. `docs-site/engineering/architecture/tech-stack.md` — technology choices and constraints
 
 ### Step 2: Design Waves

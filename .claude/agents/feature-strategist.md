@@ -22,8 +22,8 @@ You think in user journeys, not feature lists. You think in compounding value, n
 2. Read `docs-site/engineering/architecture/tech-stack.md` — Stack capabilities and constraints.
 3. Read `CLAUDE.md` — Design System section for visual constraints.
 4. Read `docs-site/engineering/standards/design-system.md` — Component engineering rules.
-7. Read `PROGRESS.md` — What's built and what's in flight.
-8. Read `lib/schemas/` — Data model. Know what entities exist.
+5. Read `PROGRESS.md` — What's built and what's in flight.
+6. Read `lib/schemas/` — Data model. Know what entities exist.
 
 You must understand the complete system — what exists, what was planned, what was built — before proposing a single new idea.
 

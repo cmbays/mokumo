@@ -14,16 +14,16 @@ This document is the canonical reference for Mokumo's agent architecture. It def
 
 ## Quick Reference
 
-| Agent                       | Use When                                              | Example Invocation                                    | Preloaded Skills                            | Output                          |
-| --------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- | ------------------------------- |
-| `frontend-builder`          | Building screens or components                        | "Use frontend-builder agent to build PageHeader"      | breadboarding, screen-builder, quality-gate | Screen/component files          |
-| `requirements-interrogator` | Before building complex features                      | "Ask requirements-interrogator about Kanban workflow" | pre-build-interrogator                      | Spike doc in `tmp/workspace/`   |
-| `design-auditor`            | Design review checkpoint                              | "Have design-auditor review the jobs screen"          | design-audit                                | `ReviewFinding[]` JSON          |
-| `feature-strategist`        | Competitive analysis, feature planning                | "Use feature-strategist for quote system analysis"    | feature-strategy                            | Feature plan in `tmp/workspace/`|
-| `doc-sync`                  | Sync docs with code changes                           | "Have doc-sync check APP_FLOW against built screens"  | doc-sync                                    | Updated canonical docs          |
-| `secretary` (Ada)           | Project pulse, 1:1 check-ins, strategic advice        | "Start a 1:1 with Ada"                                | one-on-one, cool-down                       | Memory updates, recommendations |
-| `finance-sme`               | Dispatched by review orchestration (financial domain) | Auto-dispatched by `review-orchestration` skill       | —                                           | `ReviewFinding[]` JSON          |
-| `build-reviewer`            | Dispatched by review orchestration (universal)        | Auto-dispatched by `review-orchestration` skill       | —                                           | `ReviewFinding[]` JSON          |
+| Agent                       | Use When                                              | Example Invocation                                    | Preloaded Skills                            | Output                           |
+| --------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- | -------------------------------- |
+| `frontend-builder`          | Building screens or components                        | "Use frontend-builder agent to build PageHeader"      | breadboarding, screen-builder, quality-gate | Screen/component files           |
+| `requirements-interrogator` | Before building complex features                      | "Ask requirements-interrogator about Kanban workflow" | pre-build-interrogator                      | Spike doc in `tmp/workspace/`    |
+| `design-auditor`            | Design review checkpoint                              | "Have design-auditor review the jobs screen"          | design-audit                                | `ReviewFinding[]` JSON           |
+| `feature-strategist`        | Competitive analysis, feature planning                | "Use feature-strategist for quote system analysis"    | feature-strategy                            | Feature plan in `tmp/workspace/` |
+| `doc-sync`                  | Sync docs with code changes                           | "Have doc-sync check APP_FLOW against built screens"  | doc-sync                                    | Updated canonical docs           |
+| `secretary` (Ada)           | Project pulse, 1:1 check-ins, strategic advice        | "Start a 1:1 with Ada"                                | one-on-one, cool-down                       | Memory updates, recommendations  |
+| `finance-sme`               | Dispatched by review orchestration (financial domain) | Auto-dispatched by `review-orchestration` skill       | —                                           | `ReviewFinding[]` JSON           |
+| `build-reviewer`            | Dispatched by review orchestration (universal)        | Auto-dispatched by `review-orchestration` skill       | —                                           | `ReviewFinding[]` JSON           |
 
 ## Agent Details
 

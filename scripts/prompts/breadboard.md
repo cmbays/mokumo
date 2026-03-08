@@ -8,8 +8,8 @@ Create a comprehensive breadboard document that maps all UI affordances, code af
 
 1. Read `CLAUDE.md` for project context and design system
 2. Read `docs-site/engineering/architecture/app-flow.md` for existing routes and navigation
-4. Read prior KB docs: {PRIOR_KB_DOCS}
-5. Read the interview doc: look for `*-{VERTICAL}-interview*` in `{KB_DIR}/`
+3. Read prior KB docs: {PRIOR_KB_DOCS}
+4. Read the interview doc: look for `*-{VERTICAL}-interview*` in `{KB_DIR}/`
 
 ## Skills to Use
 
