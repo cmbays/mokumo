@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from 'eslint-plugin-storybook'
+
 import { defineConfig, globalIgnores } from 'eslint/config'
 import nextVitals from 'eslint-config-next/core-web-vitals'
 import nextTs from 'eslint-config-next/typescript'
@@ -46,37 +49,32 @@ const eslintConfig = defineConfig([
       // Use `type` for component props, `z.infer<typeof Schema>` for domain entities.
       '@typescript-eslint/consistent-type-definitions': ['warn', 'type'],
     },
-  },
-  // Topbar is the only file allowed to import from @shared/ui/primitives/breadcrumb
+  }, // Topbar is the only file allowed to import from @shared/ui/primitives/breadcrumb
   {
     files: ['src/shared/ui/layouts/topbar.tsx'],
     rules: {
       'no-restricted-imports': 'off',
     },
-  },
-  // Infrastructure layer is allowed to import from _providers internally
+  }, // Infrastructure layer is allowed to import from _providers internally
   {
     files: ['src/infrastructure/**'],
     rules: {
       'no-restricted-imports': 'off',
     },
-  },
-  // Test files are allowed to import mock _providers directly for test fixtures
+  }, // Test files are allowed to import mock _providers directly for test fixtures
   {
     files: ['**/*.test.ts', '**/*.test.tsx', '**/__tests__/**'],
     rules: {
       'no-restricted-imports': 'off',
       'import/no-restricted-paths': 'off',
     },
-  },
-  // MockAdapter is the supplier-layer equivalent of _providers/mock — allowed to import from _providers
+  }, // MockAdapter is the supplier-layer equivalent of _providers/mock — allowed to import from _providers
   {
     files: ['lib/suppliers/**', 'src/infrastructure/adapters/**'],
     rules: {
       'no-restricted-imports': 'off',
     },
-  },
-  // Clean Architecture layer boundaries (import/no-restricted-paths)
+  }, // Clean Architecture layer boundaries (import/no-restricted-paths)
   // Dependency rule: domain ← shared ← features ← app (outer layers may import inner, never reverse)
   // Scoped to non-test source files only (test files may cross layer boundaries for fixtures).
   {
@@ -130,8 +128,7 @@ const eslintConfig = defineConfig([
         },
       ],
     },
-  },
-  // Override default ignores of eslint-config-next.
+  }, // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
     '.next/**',
@@ -146,6 +143,7 @@ const eslintConfig = defineConfig([
     // Node.js utility scripts — CommonJS, not part of the Next.js app
     'scripts/**',
   ]),
+  ...storybook.configs['flat/recommended'],
 ])
 
 export default eslintConfig

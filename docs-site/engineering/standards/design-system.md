@@ -1,18 +1,23 @@
----
-title: 'FRONTEND_GUIDELINES'
-description: 'Design tokens, component patterns, animation, accessibility, and layout standards. Tailwind v4 + shadcn/ui implementation.'
+title: 'FRONTEND_GUIDELINES_LEGACY'
+description: 'Legacy transitional reference for Mokumo frontend guidelines. Retained while the shared design system is extracted and formalized.'
 category: reference
-status: active
+status: legacy
 phase: all
-last_updated: 2026-03-02
-last_verified: 2026-03-02
+last_updated: 2026-03-08
+last_verified: 2026-03-08
 depends_on:
-  - docs/TECH_STACK.md
+
+- docs/TECH_STACK.md
+
 ---
 
 # Frontend Guidelines
 
 ---
+
+> Legacy note: This document is retained as a transitional reference while the shared design
+> system is being formalized. It is not the canonical location for new shared-system decisions.
+> Use it as extraction input until the new design-system content fully replaces it.
 
 ## Design Philosophy
 
