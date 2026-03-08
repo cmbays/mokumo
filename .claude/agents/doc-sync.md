@@ -18,7 +18,7 @@ Documents cascade: PRD defines features. APP_FLOW defines how users experience t
 
 1. Read `CLAUDE.md` — Canonical docs table (know what docs exist and their purposes)
 2. Read `PROGRESS.md` — What's built, what's next (know current state)
-3. Read `docs/IMPLEMENTATION_PLAN.md` — Current step (know what should be reflected in docs)
+3. Read `PROGRESS.md` — Current step (know what should be reflected in docs)
 4. Read the target doc(s) being checked — Note "Last Verified" dates
 
 ## Workflow

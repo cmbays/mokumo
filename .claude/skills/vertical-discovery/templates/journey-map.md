@@ -160,6 +160,6 @@ END: [RESULT]
 
 ## Related Documents
 
-- `docs/workspace/{pipeline-id}/competitive-analysis-[COMPETITOR].md` (feature analysis)
-- `docs/workspace/{pipeline-id}/improved-journey.md` (improved journey design)
-- `docs/workspace/{pipeline-id}/scope.md` (scope boundaries)
+- `tmp/workspace/{pipeline-id}/competitive-analysis-[COMPETITOR].md` (feature analysis)
+- `tmp/workspace/{pipeline-id}/improved-journey.md` (improved journey design)
+- `tmp/workspace/{pipeline-id}/scope.md` (scope boundaries)

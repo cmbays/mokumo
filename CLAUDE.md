@@ -14,7 +14,6 @@ npx tsc --noEmit     # Type check
 npm run db:generate  # Generate migration from schema changes
 npm run db:migrate   # Apply pending migrations
 npm run db:studio    # Drizzle Studio (DB browser)
-npm run kb:build     # Knowledge base build + validate
 ```
 
 ## Session Startup
@@ -43,7 +42,7 @@ Drizzle ORM. URL query params for state — no global state libraries.
 ## Architecture
 
 Clean Architecture: `domain/` → `infrastructure/` → `features/` → `shared/` → `app/`. See
-`docs/ARCHITECTURE.md` for layer rules and import boundaries.
+`docs-site/engineering/architecture/system-architecture.md` for layer rules and import boundaries.
 
 ## Coding Standards
 
@@ -89,16 +88,14 @@ feature/session branches ──PR──→ main ──merge──→ production
 
 ## Hot Files — NEVER commit on feature branches
 
-| File                   | Rule       |
-| ---------------------- | ---------- |
-| `knowledge-base/dist/` | Gitignored |
-| `PROGRESS.md`          | Gitignored |
+| File           | Rule       |
+| -------------- | ---------- |
+| `PROGRESS.md`  | Gitignored |
 
 ## Process Artifact Zones
 
 - `tmp/` — ephemeral scratch, never committed
-- `docs/workspace/{pipeline-id}/` — per-pipeline artifacts, deleted after KB absorption
-- `knowledge-base/` — permanent record
+- `docs-site/` — public product documentation (authoritative for architecture, standards, design system)
 
 ## Knowledge (read on demand)
 
@@ -108,7 +105,6 @@ feature/session branches ──PR──→ main ──merge──→ production
 | Design system + tokens | `memory/design-system.md`                          |
 | Testing thresholds     | `memory/testing-thresholds.md`                     |
 | Agents & skills        | `memory/agents-and-skills.md`                      |
-| KB pipeline            | `memory/kb-pipeline.md`                            |
 | Canonical docs         | `memory/canonical-docs.md`                         |
 | Worktree workflow      | `memory/worktree-workflow.md`                      |
 | V1 vision + milestones | Resolve "V1 roadmap" from MEMORY.md registry       |

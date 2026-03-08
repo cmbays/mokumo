@@ -14,7 +14,7 @@ waves:
         prompt: |
           Use the build-session-protocol skill to guide your workflow.
 
-          Read docs/workspace/{pipeline-id}/breadboard.md for the affordance map.
+          Read tmp/workspace/{pipeline-id}/breadboard.md for the affordance map.
           Read CLAUDE.md for coding standards (Zod-first types, Tailwind tokens).
 
           Build the Zod schemas and mock data for the VERTICAL vertical:
@@ -33,7 +33,7 @@ waves:
         prompt: |
           Use the build-session-protocol skill to guide your workflow.
 
-          Read docs/workspace/{pipeline-id}/breadboard.md for the affordance map.
+          Read tmp/workspace/{pipeline-id}/breadboard.md for the affordance map.
           Read the schemas from lib/schemas/ (built in Wave 0).
 
           Build FEATURE_A:
@@ -49,7 +49,7 @@ waves:
         prompt: |
           Use the build-session-protocol skill to guide your workflow.
 
-          Read docs/workspace/{pipeline-id}/breadboard.md for the affordance map.
+          Read tmp/workspace/{pipeline-id}/breadboard.md for the affordance map.
           Read the schemas from lib/schemas/ (built in Wave 0).
 
           Build FEATURE_B:

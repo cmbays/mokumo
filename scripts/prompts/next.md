@@ -4,13 +4,13 @@ You are a project advisor for Mokumo. Analyze the current project state and reco
 
 1. `V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry)` — strategic direction and current bets
 2. `PROGRESS.md` — what's been built, what's next
-3. Recent KB docs: skim the 5 most recent files in `knowledge-base/src/content/sessions/`
+3. Recent session context: skim `PROGRESS.md` for latest entries
 
 ## Run These Commands
 
 1. Active sessions: `cat ~/Github/mokumo-worktrees/.session-registry.json | jq '.sessions[] | select(.status == "active") | {topic, vertical, stage}'`
 2. Open issues by priority: `gh issue list --repo cmbays/mokumo --state open --limit 20 --json number,title,labels --jq '.[] | "\(.number) \(.title) [\(.labels | map(.name) | join(", "))]"'`
-3. Unresolved Gary questions: `grep -rl 'data-status="unanswered"' knowledge-base/src/content/sessions/ 2>/dev/null | head -5`
+3. Unresolved Gary questions: check open GitHub Issues with `gary-question` label
 
 ## Output Format
 

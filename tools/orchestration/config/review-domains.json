@@ -135,13 +135,13 @@
     "description": "Supplier adapter implementations, HTTP clients, and canonical type mappings"
   },
   {
-    "pattern": "knowledge-base/**",
+    "pattern": "docs-site/**",
     "domain": "documentation",
     "description": "Astro knowledge base with session docs, pipeline visualization, and search"
   },
   {
-    "pattern": "docs/**",
+    "pattern": "docs-site/**",
     "domain": "documentation",
-    "description": "Canonical project documentation including roadmap, PRD, and implementation plans"
+    "description": "Canonical project documentation site including architecture, standards, and guides"
   }
 ]

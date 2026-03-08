@@ -25,7 +25,7 @@ Read all available material for the target vertical. Be thorough — the value c
 **KB docs** (primary source):
 
 ```bash
-ls knowledge-base/src/content/sessions/ | grep "{VERTICAL}"
+gh issue list --repo cmbays/mokumo --label "product/{VERTICAL}" --state all --limit 50
 ```
 
 Read each matching file. Pay attention to: decisions made, Gary questions, blockers encountered, approaches tried.
@@ -145,7 +145,7 @@ If running standalone:
 ### Step 6: Commit
 
 ```bash
-git add knowledge-base/src/content/sessions/YYYY-MM-DD-{VERTICAL}-learnings.md
+git add PROGRESS.md  # learnings recorded in progress
 git add CLAUDE.md  # if updated
 git commit -m "docs({VERTICAL}): add learnings synthesis"
 ```

@@ -12,7 +12,7 @@ Use between verticals, after demos, or whenever the user wants to step back and 
 - GitHub Issues populated with labels (product/_, domain/_, tool/_, type/_, priority/_, source/_)
 - `PROGRESS.md` reflects recent work
 - KB sessions exist for recent build work
-- Vertical BRIEFs in `docs/verticals/` (create if missing)
+- Open GitHub Issues with vertical labels for accumulated feedback
 
 ## Process
 
@@ -21,10 +21,10 @@ Use between verticals, after demos, or whenever the user wants to step back and 
 Gather all raw material. Read these sources systematically:
 
 1. **Open GitHub Issues**: `gh issue list --state open --limit 100` — inventory all open work
-2. **Recent KB sessions**: Read `knowledge-base/src/content/sessions/` files from the last 2 weeks
+2. **Recent progress**: Read `PROGRESS.md` entries from the last 2 weeks
 3. **PROGRESS.md**: What shipped recently
 4. **ROADMAP.md**: Current strategic context, open questions, forward planning items
-5. **Vertical BRIEFs**: Read all `docs/verticals/*/BRIEF.md` files for accumulated feedback
+5. **Vertical feedback**: Review open GitHub Issues by vertical label for accumulated feedback
 6. **Recent PRs**: `gh pr list --state merged --limit 10` — what was built and reviewed
 
 **Output**: Write a harvest summary to `.session-context.md` (gitignored scratchpad) with:

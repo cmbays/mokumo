@@ -14,16 +14,16 @@ You are a frontend builder for Mokumo. You obsess over consistency — every com
 
 ## Startup Sequence
 
-1. Find the breadboard for the current vertical — check `docs/workspace/{pipeline-id}/breadboard.md` for new pipelines, or `docs/breadboards/{vertical}-breadboard.md` for Phase 1 legacy work (will migrate to `docs/workspace/legacy-phase1/` in Phase 2 of epic #478). This is your primary build blueprint: it maps every UI affordance, code affordance, data store, and wiring. Follow its component boundaries and build order.
-2. Find scope and acceptance criteria — check `docs/workspace/{pipeline-id}/` for new pipelines, or `docs/workspace/legacy-phase1/strategy/` for Phase 1 legacy scope definitions
-3. Read `docs/APP_FLOW.md` — find the target screen's route, sections, actions, states, cross-links
-4. Read `docs/PRD.md` — find the feature's acceptance criteria
+1. Find the breadboard for the current vertical — check `tmp/workspace/{pipeline-id}/breadboard.md` for new pipelines, or `tmp/breadboards/{vertical}-breadboard.md` for Phase 1 legacy work. This is your primary build blueprint: it maps every UI affordance, code affordance, data store, and wiring. Follow its component boundaries and build order.
+2. Find scope and acceptance criteria — check `tmp/workspace/{pipeline-id}/` for new pipelines
+3. Read `docs-site/engineering/architecture/app-flow.md` — find the target screen's route, sections, actions, states, cross-links
+4. Read `CLAUDE.md` — find the feature's acceptance criteria
 5. Read `lib/schemas/` — identify which Zod schemas this screen needs
 6. Read `lib/mock-data.ts` — identify which mock data to import
 7. Read `lib/constants.ts` — identify which label/color mappings to use
 8. Read `components/ui/` — scan available shadcn/ui primitives
 9. Read `components/features/` — check what shared components already exist
-10. If a spike doc exists for this step, find it at `docs/workspace/{pipeline-id}/spike-*.md` (or `docs/workspace/legacy-phase1/spikes/` for Phase 1 work), read it for resolved unknowns
+10. If a spike doc exists for this step, find it at `tmp/workspace/{pipeline-id}/spike-*.md`, read it for resolved unknowns
 
 ## Workflow
 
@@ -35,7 +35,7 @@ Complete the startup sequence. Identify all inputs:
 - Required schemas and mock data
 - Shared components available vs needed
 - Template to follow (data-table, detail, or form)
-- Breadboard affordances to implement (from `docs/workspace/{pipeline-id}/breadboard.md`)
+- Breadboard affordances to implement (from `tmp/workspace/{pipeline-id}/breadboard.md`)
 
 If a required shared component doesn't exist, build it first in `components/features/`.
 

@@ -37,9 +37,6 @@ Keyed by stage slug. Each entry **must** have a `description` field. Labels are 
 
 | Consumer           | Reads                                                       | Location                               |
 | ------------------ | ----------------------------------------------------------- | -------------------------------------- |
-| KB Zod schema      | `slug` (enum derivation)                                    | `knowledge-base/src/content.config.ts` |
-| KB utils           | `slug`, `label`, `description`, `color`, `core`, `pipeline` | `knowledge-base/src/lib/utils.ts`      |
-| KB pages           | `slug`, `label`, `description`, `route`                     | `knowledge-base/src/pages/`            |
 | Pipeline entity    | `slug`, `stages`                                            | `scripts/lib/pipeline-entity.sh`       |
 | Pipeline gates     | `artifacts`, `gate`, `next`                                 | `scripts/lib/pipeline-gates.sh`        |
 | CLI help (planned) | `slug`, `label`, `description`, `flag`                      | `scripts/lib/pipeline-update.sh`       |
@@ -55,11 +52,11 @@ Keyed by stage slug. Each entry **must** have a `description` field. Labels are 
 
 ### Tag colors use named strings, not hex values
 
-`tags.json` uses named color strings (`"green"`, `"amber"`, `"purple"`) rather than hex values. These names are mapped to Tailwind design-system token classes in `knowledge-base/src/lib/utils.ts` via `TAG_COLOR_CLASSES`. This keeps config values stable across theme changes — if the hex value for "success green" changes, only the CSS token updates, not the config file.
+`tags.json` uses named color strings (`"green"`, `"amber"`, `"purple"`) rather than hex values. These names are mapped to Tailwind design-system token classes via `TAG_COLOR_CLASSES`. This keeps config values stable across theme changes — if the hex value for "success green" changes, only the CSS token updates, not the config file.
 
 Valid color names: `green`, `blue`, `amber`, `purple`. Unmapped colors fall back to `bg-surface text-muted-foreground`.
 
 ## Related
 
 - Epic: [#325](https://github.com/cmbays/print-4ink/issues/325) (Schema-Driven Configuration Design)
-- Design doc: `docs/plans/2026-02-16-config-driven-work-update-design.md`
+- Design doc: (process artifact — no longer tracked in repo)

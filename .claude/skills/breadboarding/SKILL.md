@@ -31,10 +31,10 @@ Interview → Shaping (R × S) → **Breadboarding** → BB Reflection → Impl 
 
 Read these before starting:
 
-1. `docs/workspace/{pipeline-id}/shaping.md` — selected shape + parts table (primary input)
-2. `docs/workspace/{pipeline-id}/frame.md` — problem/outcome context
+1. `tmp/workspace/{pipeline-id}/shaping.md` — selected shape + parts table (primary input)
+2. `tmp/workspace/{pipeline-id}/frame.md` — problem/outcome context
 3. `CLAUDE.md` — project standards, design system
-4. `docs/APP_FLOW.md` — routes, page structure, navigation
+4. `docs-site/engineering/architecture/app-flow.md` — routes, page structure, navigation
 5. `lib/schemas/` — Zod schemas for relevant data types
 6. Existing code (if mapping an existing system)
 
@@ -42,15 +42,15 @@ Read these before starting:
 
 | File                                         | Contents                                                     |
 | -------------------------------------------- | ------------------------------------------------------------ |
-| `docs/workspace/{pipeline-id}/breadboard.md` | Affordance tables, wiring, Mermaid diagrams, vertical slices |
+| `tmp/workspace/{pipeline-id}/breadboard.md` | Affordance tables, wiring, Mermaid diagrams, vertical slices |
 
 ### Handoff to Implementation Planning
 
 When breadboarding + reflection is complete, the **sliced breadboard** is the primary
 input to the implementation-planning skill. The impl-planning agent reads:
 
-1. `docs/workspace/{pipeline-id}/breadboard.md` — sliced affordance tables
-2. `docs/workspace/{pipeline-id}/shaping.md` — requirements and shape context
+1. `tmp/workspace/{pipeline-id}/breadboard.md` — sliced affordance tables
+2. `tmp/workspace/{pipeline-id}/shaping.md` — requirements and shape context
 
 ### Phase Awareness
 
@@ -546,7 +546,7 @@ See **Example B** below for a complete worked example including slicing.
 
 **Step 1: List each part from the shape**
 
-Take each mechanism/part identified in shaping and write it down. In the Mokumo pipeline, parts come from the shaping doc's selected shape parts table (`docs/workspace/{pipeline-id}/shaping.md` — see the "Selected Shape" section's parts/mechanisms table).
+Take each mechanism/part identified in shaping and write it down. In the Mokumo pipeline, parts come from the shaping doc's selected shape parts table (`tmp/workspace/{pipeline-id}/shaping.md` — see the "Selected Shape" section's parts/mechanisms table).
 
 **Step 2: Translate parts into affordances**
 

@@ -26,8 +26,8 @@ Read these in order (skip what you've already read in your startup sequence):
 4. Session registry: `jq '.' ~/Github/mokumo-worktrees/.session-registry.json`
 5. Recent PRs: `gh pr list --repo cmbays/mokumo --state all --limit 10`
 6. Open issues: `gh issue list --repo cmbays/mokumo --state open --limit 20`
-7. Recent KB docs: skim `knowledge-base/src/content/sessions/` for latest entries
-8. Gary questions: `grep -r 'data-status="unanswered"' knowledge-base/src/content/sessions/`
+7. Recent project state: skim `PROGRESS.md` for latest entries
+8. Gary questions: check open GitHub Issues with `gary-question` label
 
 ## The 6 Steps
 

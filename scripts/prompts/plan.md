@@ -7,10 +7,9 @@ Create both a human-readable implementation plan AND a machine-readable YAML exe
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project context and coding standards
-2. Read `docs/PRD.md` for feature scope
-3. Read the breadboard doc: `docs/breadboards/{VERTICAL}-breadboard.md`
+2. Read the breadboard doc: `tmp/breadboards/{VERTICAL}-breadboard.md`
 4. Read prior KB docs: {PRIOR_KB_DOCS}
-5. Read `docs/TECH_STACK.md` for technology choices
+4. Read `docs-site/engineering/architecture/tech-stack.md` for technology choices
 
 ## Skills to Use
 
@@ -28,13 +27,13 @@ Create both a human-readable implementation plan AND a machine-readable YAML exe
 
 Two artifacts:
 
-**1. Implementation plan** at `docs/plans/YYYY-MM-DD-{VERTICAL}-impl-plan.md`:
+**1. Implementation plan** at `tmp/plans/YYYY-MM-DD-{VERTICAL}-impl-plan.md`:
 
 - Wave breakdown with task descriptions
 - File lists per task
 - Build order rationale
 
-**2. YAML execution manifest** at `docs/plans/YYYY-MM-DD-{VERTICAL}-manifest.yaml`:
+**2. YAML execution manifest** at `tmp/plans/YYYY-MM-DD-{VERTICAL}-manifest.yaml`:
 
 - Machine-readable format consumed by `work build`
 - See the implementation-planning skill for the schema

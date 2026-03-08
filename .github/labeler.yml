@@ -1,6 +1,6 @@
 # PR Auto-Labeler Configuration
 # Maps changed file paths to product/domain/tool labels (DDD taxonomy)
-# Cross-cutting paths (lib/schemas/**, docs/**, components/ui/**) deliberately unmapped
+# Cross-cutting paths (lib/schemas/**, docs-site/**, components/ui/**) deliberately unmapped
 
 'product/quotes':
   - changed-files:
@@ -33,10 +33,6 @@
 'tool/work-orchestrator':
   - changed-files:
       - any-glob-to-any-file: 'scripts/**'
-
-'tool/knowledge-base':
-  - changed-files:
-      - any-glob-to-any-file: 'knowledge-base/**'
 
 'tool/pm-system':
   - changed-files:

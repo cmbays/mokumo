@@ -18,7 +18,6 @@ changelog:
       labels:
         - 'type/tooling'
         - 'tool:agent-system'
-        - 'tool:knowledge-base'
         - 'tool:project-management'
         - 'tool:skills-framework'
         - 'tool:work-orchestrator'

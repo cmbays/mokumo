@@ -386,7 +386,7 @@
     "agent": "build-reviewer",
     "category": "import-hygiene",
     "description": "Detects new package dependencies added to package.json that are not listed in the approved TECH_STACK.md document",
-    "detection": "New entries in package.json dependencies or devDependencies for packages not listed in docs/TECH_STACK.md",
+    "detection": "New entries in package.json dependencies or devDependencies for packages not listed in docs-site/engineering/architecture/tech-stack.md",
     "recommendation": "Check TECH_STACK.md before adding any dependency, and get explicit approval for unlisted packages",
     "scope": "architectural"
   },

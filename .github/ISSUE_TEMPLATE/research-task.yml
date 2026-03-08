@@ -50,7 +50,6 @@ body:
         - Tool: Work Orchestrator
         - Tool: Skills Framework
         - Tool: Agent System
-        - Tool: Knowledge Base
         - Tool: CI Pipeline
         - Tool: PM System
         - Tool: Database
@@ -65,8 +64,7 @@ body:
       label: Expected Deliverable
       description: What artifact should this research produce?
       options:
-        - Spike doc (docs/spikes/)
-        - KB session doc
+        - Spike doc (tmp/spikes/)
         - Issue comment with findings
         - Decision recommendation
         - Proof of concept branch
@@ -80,7 +78,7 @@ body:
       description: Entry points for agents picking up this issue
       render: text
       placeholder: |
-        docs/shaping/topic/shaping.md
+        docs-site/engineering/architecture/system-architecture.md
         lib/schemas/relevant.ts
     validations:
       required: false

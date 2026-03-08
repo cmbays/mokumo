@@ -7,9 +7,8 @@ Conduct a structured requirements interview with the user (shop owner) to define
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project context
-2. Read `docs/PRD.md` for existing scope definition
-3. Read prior KB docs for this vertical: {PRIOR_KB_DOCS}
-4. Read the research doc if available: look for `*-{VERTICAL}-research*` in `{KB_DIR}/`
+2. Read prior research and interview docs for this vertical: {PRIOR_KB_DOCS}
+3. Read the research doc if available: look for `*-{VERTICAL}-research*` in `{KB_DIR}/`
 
 ## Skills to Use
 

@@ -83,9 +83,9 @@ Every time you start a session:
    - V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry) — strategic direction and current bets
    - `PROGRESS.md` — what's been built, what's next
    - Session registry: `cat ~/Github/mokumo-worktrees/.session-registry.json | jq '.sessions[] | select(.status == "active")'`
-3. **Read recent KB docs**: `ls -t knowledge-base/src/content/sessions/ | head -10` — skim the latest sessions for context
+3. **Read recent project state**: `PROGRESS.md` — skim the latest entries for context
 4. **Read open issues**: `gh issue list --repo cmbays/mokumo --state open --limit 20`
-5. **Scan for unresolved Gary questions**: `grep -r 'data-status="unanswered"' knowledge-base/src/content/sessions/`
+5. **Scan for unresolved Gary questions**: check open GitHub Issues with `gary-question` label
 
 After reading, you should have a mental model of: where the project is, what's active, what's stalled, what needs attention.
 

@@ -18,12 +18,10 @@ You think in user journeys, not feature lists. You think in compounding value, n
 
 ## Startup Sequence
 
-1. Read `docs/PRD.md` — Features and requirements. Know what was promised.
-2. Read `docs/APP_FLOW.md` — Screens, routes, user journeys. Know what exists.
-3. Read `docs/TECH_STACK.md` — Stack capabilities and constraints.
-4. Read `docs/IMPLEMENTATION_PLAN.md` — Build phases and current progress.
-5. Read `CLAUDE.md` — Design System section for visual constraints.
-6. Read `docs/reference/FRONTEND_GUIDELINES.md` — Component engineering rules.
+1. Read `docs-site/engineering/architecture/app-flow.md` — Screens, routes, user journeys. Know what exists.
+2. Read `docs-site/engineering/architecture/tech-stack.md` — Stack capabilities and constraints.
+3. Read `CLAUDE.md` — Design System section for visual constraints.
+4. Read `docs-site/engineering/standards/design-system.md` — Component engineering rules.
 7. Read `PROGRESS.md` — What's built and what's in flight.
 8. Read `lib/schemas/` — Data model. Know what entities exist.
 
@@ -94,7 +92,7 @@ Present the plan. Wait for user review. Revise as needed. Do not proceed until t
 
 ## Deliverables
 
-- Feature plan: docs/workspace/{pipeline-id}/feature-plan.md
+- Feature plan: tmp/workspace/{pipeline-id}/feature-plan.md
 
 ## Key Findings
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** {KEY_TECHNOLOGIES}
 
-**Execution Manifest:** `docs/workspace/{pipeline-id}/manifest.yaml`
+**Execution Manifest:** `tmp/workspace/{pipeline-id}/manifest.yaml`
 
 ---
 
@@ -78,5 +78,5 @@
 
 - **Session protocol:** Each session uses `build-session-protocol` skill
 - **Review flow:** Self-review -> PR -> CodeRabbit -> merge checklist
-- **KB docs:** Each session produces a KB doc in `knowledge-base/src/content/sessions/`
+- **Session notes:** Each session records key decisions in `PROGRESS.md` or relevant docs-site pages
 - **Issue tracking:** Deferred review items filed as GitHub Issues with the appropriate `product/*`, `domain/*`, or `tool/*` scope label

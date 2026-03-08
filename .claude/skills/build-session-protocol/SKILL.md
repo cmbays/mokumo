@@ -118,20 +118,15 @@ EOF
 
 Once the PR is merged, close out the pipeline's working artifacts:
 
-21. **Deposit to Knowledge Base** — Read `knowledge-base/README.md` for the two-pass protocol. For each piece of knowledge generated during this session:
-    - Engineering gotchas → `knowledge-base/src/content/learnings/<subdomain>/YYYY-MM-DD-topic.md`
-    - Session record → `knowledge-base/src/content/pipelines/YYYY-MM-DD-topic.md` (absorb key decisions, PR link, artifacts — not just links to files being deleted)
-    - Domain or product decisions → synthesize into the appropriate living doc
+21. **Record key decisions** — Commit any important decisions, findings, or architectural context to `PROGRESS.md` or relevant docs-site pages so they persist beyond the ephemeral workspace.
 
-22. **Delete workspace** — Once the KB pipeline doc is written and committed, delete the pipeline's workspace dir:
+22. **Delete workspace** — Once key decisions are recorded, delete the pipeline's workspace dir:
 
     ```bash
-    rm -rf docs/workspace/{pipeline-id}/
-    git add -A && git commit -m "chore: wrap-up {pipeline-id} — delete workspace after KB deposit"
-    git push
+    rm -rf tmp/workspace/{pipeline-id}/
     ```
 
-23. **Nothing lost** — the KB pipeline doc must stand alone. An agent reading it after the workspace is deleted should have all the context they need.
+23. **Nothing lost** — key decisions must be recorded in persistent docs before the workspace is deleted.
 
 ## Rules
 

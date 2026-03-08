@@ -15,19 +15,6 @@ updates:
           - minor
           - patch
 
-  # Knowledge base (Astro)
-  - package-ecosystem: npm
-    directory: /knowledge-base
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    groups:
-      non-major:
-        update-types:
-          - minor
-          - patch
-
   # GitHub Actions — keep workflow actions up to date
   - package-ecosystem: github-actions
     directory: /

@@ -7,7 +7,7 @@ Conduct comprehensive research on how competing and adjacent products handle the
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project context and coding standards
-2. Read `docs/PRD.md` for feature scope and acceptance criteria
+2. Read `CLAUDE.md` for feature scope and acceptance criteria
 3. Read `V1 roadmap (resolve path from MEMORY.md Cross-Repo Registry)` for current priorities
 4. Check prior KB docs for this vertical: {PRIOR_KB_DOCS}
 

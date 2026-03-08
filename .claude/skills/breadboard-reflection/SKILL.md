@@ -8,7 +8,7 @@ trigger: >
   After breadboarding is complete, before implementation planning.
   Also use independently to audit any existing breadboard.
 prerequisites:
-  - A breadboard document exists (in docs/workspace/{pipeline-id}/breadboard.md for new work, or docs/breadboards/ for Phase 1 legacy)
+  - A breadboard document exists (in tmp/workspace/{pipeline-id}/breadboard.md for new work, or tmp/breadboards/ for Phase 1 legacy)
   - For implementation comparison: access to the codebase
 ---
 
@@ -27,8 +27,8 @@ Shaping -> Breadboarding -> **BB Reflection** -> Impl Planning
 
 ### Inputs
 
-1. `docs/workspace/{pipeline-id}/breadboard.md` — the breadboard to audit (or `docs/breadboards/{topic}-breadboard.md` for Phase 1 legacy work)
-2. `docs/workspace/{pipeline-id}/shaping.md` — requirements to trace through wiring
+1. `tmp/workspace/{pipeline-id}/breadboard.md` — the breadboard to audit (or `tmp/breadboards/{topic}-breadboard.md` for Phase 1 legacy work)
+2. `tmp/workspace/{pipeline-id}/shaping.md` — requirements to trace through wiring
 3. Codebase (if checking implementation match — Phase 2)
 
 ### Outputs
