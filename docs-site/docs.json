@@ -44,18 +44,6 @@
             "roadmap/m8-beta-readiness",
             "roadmap/m9-beta-launch"
           ]
-        },
-        {
-          "group": "Research",
-          "pages": [
-            "research/competitive-analysis",
-            "research/supplier-catalog",
-            "research/quoting-pricing",
-            "research/production-workflow",
-            "research/customer-portal",
-            "research/artwork-management",
-            "research/infrastructure-decisions"
-          ]
         }
       ]
     },
