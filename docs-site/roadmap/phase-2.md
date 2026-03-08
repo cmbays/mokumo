@@ -12,6 +12,10 @@ description: Projects, milestones, dependencies, and delivery strategy for Phase
 
 Transform Mokumo from a validated mockup into a functioning production system. The shop owner can use it to run their day-to-day operations with real data, real pricing, and real persistence.
 
+> **Mapping to V1 milestones**: Phase 2 executes M0-M4 from the V1 milestone plan. For product vision, strategic bets, and feature definitions, see [Product Vision](/product/vision).
+>
+> **Research basis**: 21 competitive research sessions across 4 competitors (183+ screenshots) and 9 role-model repo analyses with direct source code study.
+
 ## Delivery Strategy
 
 ### Horizontal vs. Vertical Development
@@ -43,11 +47,11 @@ Each vertical slice:
 Before building each project, we do targeted research:
 
 1. **Industry practices** — how do print shops handle this today?
-2. **Competitor analysis** — how do Printavo, InkSoft, DecoNetwork, YoPrint solve this?
+2. **Competitor analysis** — how do existing tools in this space solve this?
 3. **Supplier patterns** — how do S&S, SanMar expose relevant data?
 4. **SaaS best practices** — how do the best B2B tools handle this pattern?
 
-Research artifacts live in `docs/workspace/{pipeline-id}/` and feed into shaping.
+Research artifacts live in `tmp/{pipeline-id}/` and feed into shaping.
 
 ---
 
@@ -79,6 +83,13 @@ Projects are ordered by dependency — earlier projects unblock later ones. With
 | P8  | **Quoting (DTF Press)** | Planned | P4, P6     | Simplified flow for customer-supplied transfers          |
 | P9  | **Jobs & Production**   | Planned | P6         | Quote-to-job conversion, task tracking, board management |
 | P10 | **Invoicing**           | Planned | P9         | Invoice generation, tax handling, payment tracking       |
+
+### Tier 2.5: Operational Depth (M3)
+
+| #    | Project                    | Status  | Blocked By | Description                                                                    |
+| ---- | -------------------------- | ------- | ---------- | ------------------------------------------------------------------------------ |
+| P13a | **Automations Engine**     | Planned | P6, P9     | 13+ pre-built automations, multi-step chains, toggle on/off, time-based delays |
+| P13b | **Custom Status Workflow** | Planned | P6         | Canonical groups + custom labels + dual-label (admin/customer-facing)          |
 
 ### Tier 3: Polish & Expansion
 
@@ -381,8 +392,9 @@ Each parallelization window roughly corresponds to a **cycle** (Shape Up 6-week 
 
 _What we're actively working on right now._
 
-1. **P2: Garments Catalog** — Inventory sync, size availability badges, batched products API (latest: PR #709)
-2. **P3: Customer Management** — Paper design sessions (P1-P8), activity tab, contact vs. company data model (Issue #700)
+1. **P2: Garments Catalog** — Inventory sync, size availability badges, batched products API (Epic #714)
+2. **P3: Customer Management** — Paper design sessions (P1-P4 complete, P5-P8 pending), Wave 1 shipped. Contact vs. company data model (Issue #700)
+3. **P4: Pricing Matrix** — Research partially complete, pricing editor active
 
 ---
 
@@ -392,27 +404,27 @@ _What we're actively working on right now._
 
 These risks affect the pilot vertical (P4→P6→P9→P10) — the longest dependency chain. A slip here delays everything downstream.
 
-| Risk                                                                                                                                                          | Impact                           | Mitigation                                                                                                                                                   | When to Address                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| **P6 M0 entity model decision** — Separate entities (quote→job→invoice) vs. Printavo-style unified entity. Wrong call means rework across P9 and P10.         | High — affects 3 project schemas | Research both models deeply during P6 M0. Build a lightweight spike (schema + 2-3 queries) for each approach before committing.                              | P6 M0 (before any schema code) |
-| **P4 pricing matrix is the bottleneck** — P4 M3 (Integration) gates P6 M2 (Quote Builder). If pricing takes longer than expected, the entire pilot stalls.    | High — critical path blocker     | Start P4 M0 research immediately (Window 1). The pricing calculation engine (`big.js` pipeline) is well-understood; the unknown is the editor UI complexity. | Now — begin P4 M0              |
-| **H3+H4 (Email+PDF) gate P6 M4** — Quote sending requires both email infrastructure and PDF generation. Two horizontal enablers must be ready simultaneously. | Medium — parallel dependency     | Build H3 and H4 as a single sprint early in Window 4, before P6 M3 completes. Both are well-scoped (Resend + @react-pdf/renderer).                           | Window 4, early                |
+| Risk                                                                                                                                                                        | Impact                           | Mitigation                                                                                                                                                   | When to Address                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| **P6 M0 entity model decision** — Separate entities (quote→job→invoice) vs. unified entity (one entity with status progression). Wrong call means rework across P9 and P10. | High — affects 3 project schemas | Research both models deeply during P6 M0. Build a lightweight spike (schema + 2-3 queries) for each approach before committing.                              | P6 M0 (before any schema code) |
+| **P4 pricing matrix is the bottleneck** — P4 M3 (Integration) gates P6 M2 (Quote Builder). If pricing takes longer than expected, the entire pilot stalls.                  | High — critical path blocker     | Start P4 M0 research immediately (Window 1). The pricing calculation engine (`big.js` pipeline) is well-understood; the unknown is the editor UI complexity. | Now — begin P4 M0              |
+| **H3+H4 (Email+PDF) gate P6 M4** — Quote sending requires both email infrastructure and PDF generation. Two horizontal enablers must be ready simultaneously.               | Medium — parallel dependency     | Build H3 and H4 as a single sprint early in Window 4, before P6 M3 completes. Both are well-scoped (Resend + @react-pdf/renderer).                           | Window 4, early                |
 
 ### Architecture Risks
 
 | Risk                                                                                                                                                                                                                    | Impact                                 | Mitigation                                                                                                                                                                              | When to Address    |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| **Issue #700 — Contact vs. company data model** — Unresolved. Affects how preferences cascade, how the customer detail page organizes information, and how P14 (Portal) scopes data access.                             | High — P3/P5/P6/P14 all depend on this | Resolve before P3 M1 completes. InkSoft's model (organizations contain contacts) is the right B2B pattern — validate with Gary.                                                         | Before P3 M1 ships |
+| **Issue #700 — Contact vs. company data model** — Unresolved. Affects how preferences cascade, how the customer detail page organizes information, and how P14 (Portal) scopes data access.                             | High — P3/P5/P6/P14 all depend on this | Resolve before P3 M1 completes. The organizations-contain-contacts model is the standard B2B pattern — validate with Gary.                                                              | Before P3 M1 ships |
 | **Multi-process quote schema** — P6 is the screen print pilot, but the quote schema must accommodate DTF (P7) and DTF Press (P8) line items from day one. Over-engineering risks delay; under-engineering risks rework. | Medium — P7/P8 rework if wrong         | Design the polymorphic line item model during P6 M0. The existing `dtfLineItems` array on the quote entity suggests the pattern. Validate with a spike that models all 3 service types. | P6 M0–M1           |
 | **DTF codebase drift** — 560+ lines of DTF domain code (`dtf.service.ts`, `dtf-pricing.ts`, etc.) built during Phase 1 with mock data. May need refactoring when wired to real data and the P6 quote schema.            | Low-Medium — rework scoped to P7       | Audit existing DTF code during P7 M0. It's well-tested (90% threshold), so the risk is interface mismatch, not logic bugs.                                                              | P7 M0              |
 
 ### Validation Risks
 
-| Risk                                                                                                                                                                                                             | Impact                            | Mitigation                                                                                                                                                                                             | When to Address            |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
-| **P12 (Screen Room) is novel territory** — No competitor has screen tracking software. We don't know if shop owners will actually use it daily. The QR scanning UX must be faster than a whiteboard or it fails. | High — could be wasted investment | **Validate before building.** P12 M0 is explicitly a validation milestone (shop owner interview). Do not proceed to M1 without confirmed demand. If validation fails, reallocate effort to P11 or P13. | P12 M0 — before any code   |
-| **Batch production is a gap everyone has** — No competitor handles it well, but the data model is complex (batch entity linking jobs by shared design/ink/substrate).                                            | Medium — complexity risk          | Design the batch data model during P9 M0 research, but defer UI to P9 M3. The schema should support batching even if the full UI comes later.                                                          | P9 M0 (model) → P9 M3 (UI) |
-| **Customer portal scope creep** — P14 has 7 milestones (most of any project). Custom domains (M6) and full communication threads (M5) could expand scope significantly.                                          | Medium — timeline risk            | Hard-scope P14 to M0–M3 for Phase 2. M4–M6 are Phase 3 candidates. The portal is usable with just auth + order visibility + artwork approval.                                                          | P14 planning               |
+| Risk                                                                                                                                                                                                                                        | Impact                            | Mitigation                                                                                                                                                                                             | When to Address            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| **P12 (Screen Room) is novel territory** — Screen tracking is not addressed by existing shop management software. We don't know if shop owners will actually use it daily. The QR scanning UX must be faster than a whiteboard or it fails. | High — could be wasted investment | **Validate before building.** P12 M0 is explicitly a validation milestone (shop owner interview). Do not proceed to M1 without confirmed demand. If validation fails, reallocate effort to P11 or P13. | P12 M0 — before any code   |
+| **Batch production data model is complex** — The batch entity linking jobs by shared design/ink/substrate is a non-trivial data modeling challenge.                                                                                         | Medium — complexity risk          | Design the batch data model during P9 M0 research, but defer UI to P9 M3. The schema should support batching even if the full UI comes later.                                                          | P9 M0 (model) → P9 M3 (UI) |
+| **Customer portal scope creep** — P14 has 7 milestones (most of any project). Custom domains (M6) and full communication threads (M5) could expand scope significantly.                                                                     | Medium — timeline risk            | Hard-scope P14 to M0–M3 for Phase 2. M4–M6 are Phase 3 candidates. The portal is usable with just auth + order visibility + artwork approval.                                                          | P14 planning               |
 
 ---
 
@@ -420,19 +432,19 @@ These risks affect the pilot vertical (P4→P6→P9→P10) — the longest depen
 
 Previously open questions that have been resolved through research:
 
-| Decision               | Resolution                                                                                                                     | Source                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| **Cron alternative**   | Upstash QStash — HTTP-based, retries, no Vercel tier limit                                                                     | [Infrastructure](/engineering/architecture/infrastructure) |
-| **File storage**       | Supabase Storage — same SDK, RLS on buckets, CDN delivery                                                                      | [Infrastructure](/engineering/architecture/infrastructure) |
-| **Tax calculation**    | Simple rate lookup table for Phase 2. Single-state operation. Evaluate TaxJar for Phase 3 multi-state.                         | [Quoting & Pricing Research](/research/quoting-pricing)    |
-| **Portal auth model**  | Same Supabase Auth instance with `customer` role. RLS enforces isolation. Both InkSoft and YoPrint use this pattern.           | [Customer & Portal Research](/research/customer-portal)    |
-| **Payment processing** | Manual recording in Phase 2. Stripe as fast-follow (P10 M5). Never proprietary — Printavo's Payrix mistake is our opportunity. | [Infrastructure](/research/infrastructure-decisions)       |
-| **Email sending**      | Resend + React Email templates                                                                                                 | [Infrastructure](/research/infrastructure-decisions)       |
-| **PDF generation**     | `@react-pdf/renderer` — no headless browser needed                                                                             | [Infrastructure](/research/infrastructure-decisions)       |
+| Decision               | Resolution                                                                                                                            | Source                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Cron alternative**   | Upstash QStash — HTTP-based, retries, no Vercel tier limit                                                                            | [Infrastructure](/engineering/architecture/infrastructure) |
+| **File storage**       | Supabase Storage — same SDK, RLS on buckets, CDN delivery                                                                             | [Infrastructure](/engineering/architecture/infrastructure) |
+| **Tax calculation**    | Simple rate lookup table for Phase 2. Single-state operation. Evaluate TaxJar for Phase 3 multi-state.                                | [Quoting & Pricing Research](/research/quoting-pricing)    |
+| **Portal auth model**  | Same Supabase Auth instance with `customer` role. RLS enforces isolation. This is the standard pattern for B2B portals.               | [Customer & Portal Research](/research/customer-portal)    |
+| **Payment processing** | Manual recording in Phase 2. Stripe as fast-follow (P10 M5). Never proprietary — shops must own their payment processor relationship. | [Infrastructure](/research/infrastructure-decisions)       |
+| **Email sending**      | Resend + React Email templates                                                                                                        | [Infrastructure](/research/infrastructure-decisions)       |
+| **PDF generation**     | `@react-pdf/renderer` — no headless browser needed                                                                                    | [Infrastructure](/research/infrastructure-decisions)       |
 
 ## Open Questions
 
-- **Quote entity model** (P6 M0): Separate entities (quote → job → invoice) or unified entity (Printavo-style)? ADR-006 implies separate. Decision during P6 M0.
+- **Quote entity model** (P6 M0): Separate entities (quote → job → invoice) or unified entity (one entity with status progression)? ADR-006 implies separate. Decision during P6 M0.
 - **Quote revision tracking**: New version (v1, v2, v3) or new entity on customer decline? Decision during P6 M0.
 - **Contact vs. company cascade** (Issue #700): How do balance levels, credit terms, tax exemptions cascade? Company-level with contact overrides?
 - **Batch production data model**: How to link multiple jobs sharing design + ink colors? Auto-detect or manual batching?
@@ -441,6 +453,7 @@ Previously open questions that have been resolved through research:
 ## Related Documents
 
 - [Projects](/roadmap/projects) — detailed per-project breakdowns with user stories, milestones, and key decisions
+- [Product Vision](/product/vision) — strategic bets, feature definitions, milestone connections
 - [Product Design](/product/product-design) — scope and constraints
 - [User Journeys](/product/user-journeys) — what we're building toward
 - [Infrastructure](/engineering/architecture/infrastructure) — infrastructure gaps and recommendations
@@ -450,4 +463,3 @@ Previously open questions that have been resolved through research:
 - [Customer & Portal Research](/research/customer-portal) — CRM, artwork approval, portal models
 - [Supplier & Catalog Research](/research/supplier-catalog) — S&S/SanMar integration
 - [Infrastructure Decisions](/research/infrastructure-decisions) — option evaluations for horizontal enablers
-- [Changelog](/process/changelog/changelog) — what's been shipped

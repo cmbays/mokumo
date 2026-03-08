@@ -7,6 +7,7 @@ description: Detailed breakdown of each Phase 2 project with milestones, researc
 
 > Living document. Each project section is expanded as work begins.
 > See [Phase 2 Roadmap](/roadmap/phase-2) for the dependency graph and delivery strategy.
+> For product vision and strategic bets, see [Product Vision](/product/vision).
 
 ---
 
@@ -89,13 +90,13 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### Workspace Artifacts
 
-| Artifact                                                           | Description                                                                           |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `docs/workspace/20260228-customer-vertical/designs/design-spec.md` | Locked design spec — 15 artboards (A–O), canonical header, component-level CSS values |
-| `docs/workspace/20260228-customer-vertical/plan.md`                | Full implementation plan — Wave 0-3, parallelization model, 7 task specs              |
-| `docs/workspace/20260228-customer-vertical/breadboard.md`          | Affordance map with vertical slices V1-V8                                             |
-| `docs/workspace/20260228-customer-vertical/shaping.md`             | Shaped parts C1-C7                                                                    |
-| `docs/workspace/20260228-customer-vertical/manifest.yaml`          | YAML execution manifest for Wave 0-3 build sessions                                   |
+| Artifact                                                | Description                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `tmp/20260228-customer-vertical/designs/design-spec.md` | Locked design spec — 15 artboards (A–O), canonical header, component-level CSS values |
+| `tmp/20260228-customer-vertical/plan.md`                | Full implementation plan — Wave 0-3, parallelization model, 7 task specs              |
+| `tmp/20260228-customer-vertical/breadboard.md`          | Affordance map with vertical slices V1-V8                                             |
+| `tmp/20260228-customer-vertical/shaping.md`             | Shaped parts C1-C7                                                                    |
+| `tmp/20260228-customer-vertical/manifest.yaml`          | YAML execution manifest for Wave 0-3 build sessions                                   |
 
 ### Locked Design Decisions
 
@@ -112,10 +113,10 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 
 ### Research Findings
 
-- [x] **Correct B2B model** → InkSoft, YoPrint, DecoNetwork all use company/contact hierarchy. Printavo's flat model is the cautionary tale — shops outgrow it.
-- [x] **Nobody has a real activity timeline** → This is our differentiator. Powered by H1 (Activity Events system).
-- [x] **Nobody has preference cascading** → Garment/color favorites at company → contact level. Unique capability.
-- [x] **Tags for segmentation** → InkSoft does this. Essential for filtering (wholesale vs. retail, schools vs. corporate).
+- [x] **B2B data model** → Industry standard is company/contact hierarchy. Flat contact models don't scale for shops with multiple contacts per company.
+- [x] **Activity timeline** → Real-time activity feed per customer. Powered by H1 (Activity Events system).
+- [x] **Preference cascading** → Garment/color favorites at company → contact level.
+- [x] **Tags for segmentation** → Essential for filtering (wholesale vs. retail, schools vs. corporate).
 
 ### Open Questions
 
@@ -123,7 +124,7 @@ Full CRM for print shop customers. Contacts, companies, addresses, groups, activ
 - Customer portal implications for the data model (P14 auth model needs customer entity)
 - Customer import format — CSV? How do shops currently store customer data?
 
-> Paper sessions P5-P8 (Addresses, Groups, Contacts CRUD, Mobile Polish) pending — weekly budget resets ~March 5.
+> Paper sessions P5-P8 (Addresses, Groups, Contacts CRUD, Mobile Polish) pending.
 
 > See [Customer & Portal Research](/research/customer-portal) for competitive CRM analysis and our opportunity table.
 
@@ -150,7 +151,7 @@ Configurable pricing per service type. Quantity breaks, setup fees, margin indic
 
 ### Research Findings
 
-- [x] **Competitor pricing UX** → Printavo: unlimited matrices, quantity × color count, manual setup fees. YoPrint: presets + per-decoration-type matrices + flat matrix option. InkSoft: explicit `blank + print + setup = price` decomposition.
+- [x] **Industry pricing UX patterns** → Range from unlimited matrices with quantity × color count and manual setup fees, to presets + per-decoration-type matrices, to explicit `blank + print + setup = price` decomposition.
 - [x] **Industry standard** → Every competitor uses quantity × colors matrix. Setup fee per screen/color ($15-$35). Size upcharges (XXL+ = $2-$4). Rush markup (1.5x-2x).
 - [x] **Multi-service-type pricing shapes** → Screen Print: quantity × color count. DTF: transfer size × quantity. DTF Press: flat rate × quantity. Each axis is different but the configuration UX should be shared.
 
@@ -162,8 +163,8 @@ Configurable pricing per service type. Quantity breaks, setup fees, margin indic
 
 ### Key Decisions
 
-- **Setup fees as first-class citizens**: No competitor treats setup fees well. Ours auto-calculate based on color count × print locations, display transparently on the quote, allow per-location overrides, and include in margin calculations. This is a differentiator.
-- **Three-component decomposition**: `Blank Cost + Print Price + Setup Fee = Finished Price`. This is how shops actually think. InkSoft does this but with poor UX. We make it the core mental model.
+- **Setup fees as first-class citizens**: Auto-calculate based on color count × print locations, display transparently on the quote, allow per-location overrides, and include in margin calculations.
+- **Three-component decomposition**: `Blank Cost + Print Price + Setup Fee = Finished Price`. This is how shops actually think. We make it the core mental model with a purpose-built UX.
 - **Service-type polymorphism**: One pricing matrix UI, different "shapes" per service type. The matrix for screen print has a color count axis; the matrix for DTF has a transfer size axis. ADR-006 drives this.
 - **Financial precision**: All pricing calculations use `big.js` via `money.ts` helpers. No floating-point arithmetic on money. 100% test coverage on the calculation engine.
 
@@ -226,18 +227,18 @@ Customer
 
 **Absorbed issues**: #212 → M1 (storage schema), #164 → M7 (mockup), #507 → M7 (mockup)
 
-### 8 Competitive Differentiators
+### Key Capabilities
 
-No competitor has all of these. Research found gaps across every major platform (Printavo, InkSoft, DecoNetwork, YoPrint, GraphicsFlow):
-
-1. **Customer Art Library** — Cross-order vault per customer. Nobody else has this — even DecoNetwork's "past artwork" is order-scoped, not customer-scoped.
-2. **File Validation** — DPI check, vector vs raster detection, color mode, print-readiness badge. Table-stakes in packaging software, absent in every decorated apparel platform.
-3. **Art-to-Screen-Room Integration** — Approved artwork generates `ScreenRequirement[]` (ink, mesh, LPI, print order). Connects art complexity to production effort — no competitor does this.
-4. **Visual Proof Annotation** — Customers mark up proofs with positioned comments. Exists in packaging software (Ashore), not in decorated apparel shop management.
-5. **Art Department Workflow Board** — Dedicated Kanban: Received → In Progress → Separated → Proof Sent → Approved → Print-Ready. Not generic task lists.
-6. **Revision History with Visual Diff** — Side-by-side version comparison. YoPrint tracks versions; no competitor shows a visual diff.
+1. **Customer Art Library** — Cross-order vault per customer, not order-scoped.
+2. **File Validation** — DPI check, vector vs raster detection, color mode, print-readiness badge.
+3. **Art-to-Screen-Room Integration** — Approved artwork generates `ScreenRequirement[]` (ink, mesh, LPI, print order). Connects art complexity to production effort.
+4. **Visual Proof Annotation** — Customers mark up proofs with positioned comments.
+5. **Art Department Workflow Board** — Dedicated Kanban: Received → In Progress → Separated → Proof Sent → Approved → Print-Ready.
+6. **Revision History with Visual Diff** — Side-by-side version comparison with version tracking.
 7. **Smart Mockup from Catalog** — Leverage existing S&S catalog images + decoration zone metadata.
-8. **Color Count → Production Complexity** — Auto-connect detected color count to screen count → setup fees → pricing. No platform closes this loop automatically.
+8. **Color Count → Production Complexity** — Auto-connect detected color count to screen count → setup fees → pricing.
+
+> See [Artwork Management Research](/research/artwork-management) for domain analysis and architecture decisions.
 
 ### Key Decisions
 
@@ -245,7 +246,7 @@ No competitor has all of these. Research found gaps across every major platform 
 - **Color detection** (spike #725 validated): 3-path routing — SVG via `get-svg-colors` (exact), raster via `quantize` + CIEDE2000 merge (ΔE<10) + 2% coverage filter + `nearest-pantone` (ΔE 1–3 for spot colors), PSD via `ag-psd` (deferred M2). Always `flatten(garmentColor)` before raster detection. "Suggest and confirm" UX — never auto-populate pricing without explicit user confirmation.
 - **Storage** (spike #726 validated): Supabase Storage **Free tier** (1GB, $0) for POC/Beta. Migrate to Cloudflare R2 when PSDs ship or storage hits 800 MB (~$0.37/mo for full 3yr shop including PSDs). Rendition overhead is ×1.006–1.08 (near-zero). Sharp natively handles PNG/JPEG/WebP/SVG/GIF/TIFF — PSD/AI/PDF require preprocessing. Presigned upload URL pattern required (Vercel 4.5 MB body limit).
 - **Mockup rendering**: Hybrid — client-side SVG for interactive preview (quote building, job board), server-side Sharp for frozen snapshots at lifecycle events (quote sent, artwork approved, job created).
-- **Approval granularity**: Per-artwork within an order (YoPrint model). Approve front design, reject back design independently.
+- **Approval granularity**: Per-artwork within an order. Approve front design, reject back design independently.
 - **Legal record**: Immutable proof snapshot (not reference to mutable file) + who/what/when/IP/T&C version. Append-only — shop cannot retroactively modify approval records.
 - **Separation boundary**: Artwork vertical = system of record for separation metadata. Screen Room vertical = physical screen execution. Don't build separation software — be the system of record.
 
@@ -283,14 +284,11 @@ The pilot vertical. End-to-end screen print quoting with real garment data, pric
 
 ### Research Findings
 
-- [x] **Printavo model** → Quote = invoice at different statuses. Elegant but conflates revision history with payment history. Evaluate during M0.
-- [x] **YoPrint model** → Job presets for speed. Multi-process in one quote. Secondary matrix for two-sided jobs. Vendor costs inline.
-- [x] **DecoNetwork model** → Product-first flow with auto-mockup. Customer approval link converts to production-ready order.
-- [x] **InkSoft model** → `blank + print + setup = price`. Explicit decomposition. Good mental model, poor UX.
+- [x] **Industry quoting patterns studied** → Unified entity (quote = invoice at different statuses) vs. separate entities. Job presets for speed. Multi-process quotes. Product-first flows with auto-mockup. Explicit cost decomposition (`blank + print + setup = price`).
 
 ### Key Decisions (Pending)
 
-- **Quote entity model**: Separate entity (quote → job → invoice) or unified entity (Printavo-style, one entity with status progression)? ADR-006 currently implies separate entities. Decision in M0.
+- **Quote entity model**: Separate entity (quote → job → invoice) or unified entity (one entity with status progression)? ADR-006 currently implies separate entities. Decision in M0.
 - **Revision tracking**: When a customer declines and the shop revises, is this a new quote version (v1, v2, v3) or a new quote entity? Version approach preserves history; new entity is simpler.
 - **Multi-process support**: Even though this is the Screen Print pilot, the quote builder schema must support adding DTF or DTF Press line items to the same quote. Build the schema flexible, gate the UI.
 - **Approval flow**: Customer receives email with PDF attached + link to web approval page. One-click "Approve" button. On approval, status updates and shop gets notified. This requires H3 (Email) and a public-facing approval route.
@@ -298,7 +296,7 @@ The pilot vertical. End-to-end screen print quoting with real garment data, pric
 ### Architectural Bets
 
 - **Quote builder as composable steps**: Customer select → garment select → size entry → print config → pricing → review. Each step is a component that can be reused for DTF (P7) and DTF Press (P8). The "print config" step is the only service-type-specific part.
-- **Line item + imprint model**: Each line item (a garment) has one or more imprints (print locations). Each imprint has color count, artwork reference, and its own pricing. This is the Printavo model and the industry standard.
+- **Line item + imprint model**: Each line item (a garment) has one or more imprints (print locations). Each imprint has color count, artwork reference, and its own pricing. This is the industry standard for decorated apparel quoting.
 - **Price recalculation on change**: Any change to quantity, colors, or garment triggers re-pricing. The calculation pipeline runs in the domain layer (`pricing.service.ts`), not in the UI. This keeps pricing logic testable and service-type-agnostic.
 
 > See [Quoting & Pricing Research](/research/quoting-pricing) for competitor quoting flows, pricing matrix patterns, and lifecycle models.
@@ -309,7 +307,9 @@ The pilot vertical. End-to-end screen print quoting with real garment data, pric
 
 **Status**: Planned | **Priority**: Tier 2 (Widen) | **Blocked By**: P4, P6
 
-DTF-specific quoting with gang sheet builder, per-transfer pricing, and sheet cost optimization. This is the "Widen" phase — the P6 quote builder adapts to a fundamentally different pricing model. DTF uses CMYK process printing (unlimited colors in one pass), so color count is irrelevant. The pricing axis shifts from quantity × colors to transfer size × quantity.
+DTF-specific quoting with gang sheet builder, per-transfer pricing, sheet cost optimization, and Flexi RIP integration. This is the "Widen" phase — the P6 quote builder adapts to a fundamentally different pricing model. DTF uses CMYK process printing (unlimited colors in one pass), so color count is irrelevant. The pricing axis shifts from quantity × colors to transfer size × quantity.
+
+**Strategic context ([Vision Bet 6](/product/vision#bet-6-dtf-module-that-replaces-existing-tools))**: The DTF module must fully replace standalone DTF tools for our reference shop.
 
 ### User Story
 
@@ -317,13 +317,14 @@ DTF-specific quoting with gang sheet builder, per-transfer pricing, and sheet co
 
 ### Milestones
 
-| Milestone               | Status  | Key Deliverables                                                                                                       |
-| ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| M0: Research & Design   | Planned | DTF pricing model validation, gang sheet UX design, multi-process quote architecture                                   |
-| M1: DTF Line Items      | Planned | DTF-specific line item schema (artwork + size + quantity, no garment), size presets, service-type tab in quote builder |
-| M2: Gang Sheet Builder  | Planned | Sheet optimization algorithm (shelf-pack/bin-pack), visual layout preview, cost comparison across sheet tiers          |
-| M3: Pricing Integration | Planned | Wire DTF sheet tier pricing into quote calculator, margin display, material cost breakdown                             |
-| M4: Multi-Process       | Planned | Combined screen print + DTF on same quote (tab-based), shared garment cost allocation                                  |
+| Milestone                 | Status  | Key Deliverables                                                                                                                                       |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M0: Research & Design     | Planned | DTF pricing model validation, gang sheet UX design, multi-process quote architecture                                                                   |
+| M1: DTF Line Items        | Planned | DTF-specific line item schema (artwork + size + quantity, no garment), size presets, service-type tab in quote builder                                 |
+| M2: Gang Sheet Builder    | Planned | Sheet optimization algorithm (shelf-pack/bin-pack), visual layout preview, cost comparison across sheet tiers                                          |
+| M3: Pricing Integration   | Planned | Wire DTF sheet tier pricing into quote calculator, margin display, material cost breakdown                                                             |
+| M4: Multi-Process         | Planned | Combined screen print + DTF on same quote (tab-based), shared garment cost allocation                                                                  |
+| M5: Flexi RIP Integration | Planned | Export gang sheet file × quantity to SAi Flexi-monitored folder (Dropbox). Eliminates manual file duplication. Research SAi API for direct integration |
 
 ### Research Findings
 
@@ -332,7 +333,7 @@ DTF-specific quoting with gang sheet builder, per-transfer pricing, and sheet co
 - [x] **Per-sheet pricing model**: Price by sheet size at quantity tiers. 22"×24" = $18, 22"×48" = $27, 22"×100" = $57 (4Ink current pricing). Alternative: per-square-foot for wholesale volume.
 - [x] **No traditional setup fees**: No screens to burn, no separations. Some shops charge art prep ($10-$25) or minimum order fee ($15-$25).
 - [x] **Breakeven vs screen print**: ~838 shirts for 4-color design. Below that, DTF is cheaper. Above that, screen print wins on per-unit cost. For 8+ colors or photographic designs, DTF wins at any quantity.
-- [x] **Gang sheet layout software**: CADlink Digital Factory DTF (industry leading), AccuRIP, AcroRIP. Web-based: Antigro Designer. None integrate with quoting tools — this is a gap we fill.
+- [x] **Gang sheet layout software**: CADlink Digital Factory DTF (industry leading), AccuRIP, AcroRIP. Web-based: Antigro Designer. None currently integrate with quoting tools.
 - [x] **Production cost**: ~$0.40/transfer consumables (ink + film + powder). Press labor: $1.65-$2.50/garment. Total production cost: ~$4.35/finished garment.
 
 ### Key Decisions
@@ -411,10 +412,10 @@ Quote-to-job conversion, task tracking, production board with real persistence, 
 
 ### Research Findings
 
-- [x] **Quote → job transition** → Printavo: same entity at different statuses. YoPrint: separate entities with data inheritance. DecoNetwork: quote approval auto-converts. **Our bet**: separate entities (quote → job → invoice) for clean lifecycle tracking.
-- [x] **Notification patterns** → Printavo: automations on status change (SMS, email, payment request). YoPrint: real-time push + in-app. **Our approach**: event-driven (H1 Activity Events) — status changes emit events that trigger configurable notifications.
-- [x] **Production views** → YoPrint: Gantt + calendar + list (3 views, most flexible). Printavo: calendar + Power Scheduler ($249/mo tier). DecoNetwork: calendar only. **Our approach**: Board first, Calendar second, Timeline as Layer 5.
-- [x] **Batch production gap** → DecoNetwork users explicitly complain: "still have to process each individual order." No competitor handles batch production well. This is our opportunity.
+- [x] **Quote → job transition** → Three industry patterns: unified entity at different statuses, separate entities with data inheritance, or quote-approval auto-conversion. Our approach: separate entities (quote → job → invoice) for clean lifecycle tracking.
+- [x] **Notification patterns** → Industry patterns: automations on status change (SMS, email, payment request), real-time push + in-app. Our approach: event-driven (H1 Activity Events) — status changes emit events that trigger configurable notifications.
+- [x] **Production views** → Industry patterns: Gantt, calendar, list, kanban. Our approach: Board first, Calendar second, Timeline as stretch goal.
+- [x] **Batch production** → Common pain point — shops need to group jobs sharing design + ink colors for efficient press runs. Data model must support batch entity linking.
 
 ### Research Still Needed
 
@@ -428,7 +429,7 @@ Quote-to-job conversion, task tracking, production board with real persistence, 
 
 - **Batch production**: Data model must support a batch entity linking multiple jobs by shared attributes (design, ink colors, substrate). Batch-level status tracking (all jobs share "pressing" phase) with individual job tracking within the batch. Don't hard-code "one job = one press run."
 - **Multiple production views**: Same underlying data, different renderings. Board (kanban) for quick status scanning, Calendar for deadline planning, Timeline (Gantt) for capacity. The data model (jobs with start dates, due dates, statuses, assignments) supports all views from day one.
-- **Barcode scanning**: PWA camera scanning (phone points at barcode, browser-based, no app install) + handheld USB/Bluetooth scanner support (types barcode value into focused input field). Both work with a "scan input" field on the board view. YoPrint includes at all tiers ($69/mo) — Printavo gates to Premium ($249/mo). Differentiator if we include early.
+- **Barcode scanning**: PWA camera scanning (phone points at barcode, browser-based, no app install) + handheld USB/Bluetooth scanner support (types barcode value into focused input field). Both work with a "scan input" field on the board view. Include at all tiers from launch.
 - **TV board display**: Full-screen read-only board on shop floor monitor. Large cards, high contrast, no interactive controls. Polling refresh (30-60s) for Phase 2; Supabase Realtime for Phase 3. Scan is the input → board update is the output.
 - **Task templates per service type**: ADR-006 drives this. Screen print: 9 steps (Art finalize → Film → Coat → Expose → Wash → Register → Press → QC → Pack). DTF: 6 steps. DTF Press: 4 steps. Tasks are checkboxes within the job; progress bar on board cards shows % complete.
 
@@ -459,8 +460,8 @@ Invoice generation from completed jobs, tax handling, payment recording, reminde
 
 ### Research Findings
 
-- [x] **Payment integration** → Printavo forced Payrix (massive backlash, driving churn). YoPrint supports Stripe, Square, PayPal, Authorize.net. DecoNetwork uses DecoPay (Stripe-powered). **Our approach**: manual recording first, Stripe as fast-follow, never lock to one processor.
-- [x] **Tax calculation** → InkSoft uses TaxJar. Printavo relies on manual QBO config. DecoNetwork has Avalara. **Phase 2**: simple rate lookup table. Single-state operation doesn't need multi-jurisdiction complexity.
+- [x] **Payment integration** → Industry approaches: direct processor integration, multi-processor support (Stripe, Square, PayPal, Authorize.net), or processor-powered white-label. Our approach: manual recording first, Stripe as fast-follow, shop chooses their processor.
+- [x] **Tax calculation** → Industry approaches: TaxJar, Avalara, or manual rate configuration. **Phase 2**: simple rate lookup table. Single-state operation doesn't need multi-jurisdiction complexity.
 - [x] **Infrastructure decided** → Email via Resend (H3), PDF via @react-pdf/renderer (H4), reminders via QStash (H5). All evaluated and documented.
 
 ### Research Still Needed
@@ -472,9 +473,9 @@ Invoice generation from completed jobs, tax handling, payment recording, reminde
 
 ### Key Decisions
 
-- **Invoice entity model**: Depends on P6 M0 decision. If quote and invoice are separate entities, invoices link to jobs which link to quotes. If unified (Printavo-style), the entity just changes status. Separate entities are more flexible for revision history and payment tracking.
+- **Invoice entity model**: Depends on P6 M0 decision. If quote and invoice are separate entities, invoices link to jobs which link to quotes. If unified, the entity just changes status. Separate entities are more flexible for revision history and payment tracking.
 - **Tax approach (Phase 2)**: Simple rate lookup table. Shop configures a single tax rate (e.g., 8.25% for Texas). Applied to taxable line items. Tax-exempt customers flagged in P3. Evaluate TaxJar for Phase 3 multi-state.
-- **Payment strategy**: Manual recording only in M2-M4. Track payments against invoices (amount, date, method, reference). Stripe in M5 adds online collection. **Never proprietary payment processing** — Printavo's Payrix mistake is our opportunity.
+- **Payment strategy**: Manual recording only in M2-M4. Track payments against invoices (amount, date, method, reference). Stripe in M5 adds online collection. Never proprietary payment processing — shops must own their payment processor relationship.
 - **Invoice PDF design**: Professional, brandable. Shop logo, contact info, line items with descriptions, tax breakdown, payment terms, "Pay Online" button (when Stripe enabled). Doubles as the customer-facing invoice view.
 
 > See [Infrastructure Decisions](/research/infrastructure-decisions) for email, PDF, tax, and payment evaluations.
@@ -485,7 +486,7 @@ Invoice generation from completed jobs, tax handling, payment recording, reminde
 
 **Status**: Planned | **Priority**: Tier 3 | **Blocked By**: P9, P10
 
-Real metrics replacing mock data. Production KPIs, revenue tracking, customer insights. Every competitor tracks orders and money — **none tracks production operations**. Press utilization, cost per impression, screen room efficiency, on-time delivery — these are the metrics that actually drive a print shop's profitability, and no one surfaces them.
+Real metrics replacing mock data. Production KPIs, revenue tracking, customer insights. Production operations metrics — press utilization, cost per impression, screen room efficiency, on-time delivery — are underserved in existing shop management tools but drive real profitability.
 
 ### User Story
 
@@ -504,7 +505,7 @@ Real metrics replacing mock data. Production KPIs, revenue tracking, customer in
 
 ### Research Findings
 
-- [x] **No competitor tracks production operations** → Printavo: financial/sales only (total sales, AR, sales by customer). YoPrint: navigation hub, transactional reports only. DecoNetwork: sales + some production (gated to premium). InkSoft: storefront-focused, no shop-floor metrics. This is a massive differentiation opportunity.
+- [x] **Production operations metrics underserved** → Industry tools focus on financial/sales reporting (total sales, AR, sales by customer) and transactional reports. Shop-floor operational metrics (press utilization, setup time, defect rate) are largely absent from existing solutions.
 - [x] **Key benchmarks discovered**:
   - Press utilization: 20-30% typical, 40% is good, rarely exceeds 50%
   - Impressions/hour: 150-400 (automatic press, depending on crew size)
@@ -520,7 +521,7 @@ Real metrics replacing mock data. Production KPIs, revenue tracking, customer in
 
 - **Role-based dashboards**: Shop owner sees Mission Control + financials. Press operators see daily production board. Screen room sees resource queue. 3-6 dashboards total, not one monolithic view.
 - **Morning view as the default**: The dashboard opens to "what needs attention right now" — not historical charts. Blocked items first, then today's shipments, then at-risk items.
-- **Production metrics are the differentiator**: Every competitor shows revenue. We show utilization, setup time, defect rates, on-time delivery — the operational metrics that actually improve profitability.
+- **Production metrics as core value**: Beyond revenue tracking, surface utilization, setup time, defect rates, on-time delivery — the operational metrics that actually improve profitability.
 - **dbt-powered aggregations**: Complex metric calculations (turnaround time, on-time rate, customer concentration) run in dbt marts, not in application code. The app reads pre-computed views.
 
 > See [Competitive Analysis](/research/competitive-analysis) for competitor dashboard limitations and our opportunity.
@@ -531,7 +532,7 @@ Real metrics replacing mock data. Production KPIs, revenue tracking, customer in
 
 **Status**: Planned | **Priority**: Tier 3 | **Blocked By**: P9
 
-Real screen tracking linked to production jobs. Burn status, reclaim workflow, inventory management. No competitor has this — it's a unique differentiator and a novel territory.
+Real screen tracking linked to production jobs. Burn status, reclaim workflow, inventory management. Novel territory — screen tracking is not addressed by existing shop management software.
 
 > **Caution**: The UX must not be burdensome. If tracking screens requires more data entry than it saves in operational clarity, it fails. **Barcode/QR scanning is the key friction reducer** — without it, the system competes with whiteboards and will lose. With it, the system becomes faster than a whiteboard. Validate with the shop owner before investing deeply.
 
@@ -552,7 +553,7 @@ Real screen tracking linked to production jobs. Burn status, reclaim workflow, i
 ### Research Findings
 
 - [x] **Physical workflow mapped**: 10-step preparation (degreasing → coating → drying → exposing → washout → inspection → press registration). 5-step reclaiming (ink removal → decoat → haze removal → degrease → dry). **Drying is the primary bottleneck** (1-12 hours depending on equipment).
-- [x] **Current tracking methods**: (1) Memory, (2) Whiteboards, (3) Labels on frames, (4) Spreadsheets, (5) Four-cart physical system. **No software handles this** — not Printavo, not YoPrint, not any competitor.
+- [x] **Current tracking methods**: (1) Memory, (2) Whiteboards, (3) Labels on frames, (4) Spreadsheets, (5) Four-cart physical system. No existing shop management software addresses screen tracking.
 - [x] **Inventory formula**: Need 4-5x daily screen count in rotation. Small shop using 15 screens/day needs 60-75 in inventory.
 - [x] **Screen lifespan**: Aluminum frames last 100-500+ reclaim cycles. Replacement triggers: tension loss (<18 N/cm), mesh damage, permanent hazing.
 - [x] **Screen storage for repeat orders**: Shops hold burned screens 1-4 weeks for expected reorders. Some charge storage fees ($15-30/screen). This is a real workflow that needs a "stored" status.
@@ -602,7 +603,7 @@ Business configuration, API credential management (bring-your-own-token), notifi
 - [x] **Sidebar over tabs**: Tab UX breaks at 5-6+ sections. Settings will grow over time. Sidebar accommodates growth.
 - [x] **Auto-save vs. explicit save**: Simple toggles and text fields → auto-save with toast confirmation. API credentials and destructive actions → explicit "Save Changes" button with confirmation dialog.
 - [x] **Hardcoded values to extract**: `TAX_RATE = 0.1`, `CONTRACT_DISCOUNT_RATE = 0.07`, `DEPOSIT_DEFAULTS_BY_TIER`, `CANONICAL_TASKS` — all currently hardcoded in domain constants. These become shop-scoped configuration in P13.
-- [x] **Competitor comparison**: Printavo: store info, custom statuses, pricing matrices, team/permissions, notification triggers, integrations (Zapier, QBO). Linear: features toggle, members, labels, integrations, API, billing. Both use sidebar navigation.
+- [x] **Industry patterns**: Store info, custom statuses, pricing matrices, team/permissions, notification triggers, integrations. Sidebar navigation with grouped sections is the dominant pattern.
 
 ### Key Decisions
 
@@ -610,6 +611,85 @@ Business configuration, API credential management (bring-your-own-token), notifi
 - **Configuration drives behavior**: Tax rate flows into invoicing. Setup fees flow into pricing matrix. Active service types gate which quote builder tabs appear. This isn't just a settings page — it's the control plane for the entire system.
 - **Onboarding wizard**: First-run experience walks through essential settings (business info, tax rate, service types, supplier credentials). Settings page is the ongoing management surface; the wizard is the initial setup. Same underlying forms, different presentation.
 - **Role-based access**: Start simple — owner sees everything, press operator sees production only. Expand to granular permissions in M5. The role system must be designed from M0 even if the UI comes later.
+
+> See [Competitive Analysis](/research/competitive-analysis) for competitor settings patterns and feature comparison.
+
+---
+
+## P13a: Automations Engine
+
+**Status**: Planned | **Priority**: Tier 2 (M3) | **Blocked By**: P6, P9
+
+Pre-built automations covering the full quote-to-reorder lifecycle. Multi-step chains from day one. Ships with every new account.
+
+> **V1 Vision Bet 3**: Opinionated workflows with strong defaults. The automations engine is the primary mechanism for delivering this bet.
+
+### User Story
+
+> Gary accepts a quote from Coach Johnson. Immediately, three things happen: the quote status changes to "Accepted," a confirmation email goes to Coach Johnson ("Your order is confirmed — here's your receipt"), and a new production job is created on the board in "Art Prep" status. Gary didn't configure any of this — it was toggled on by default when he signed up. Later, when the job ships, another automation fires: the job status updates, an email with tracking goes to Coach Johnson, and an invoice is generated. Gary reviews the invoice, hits "Send," and a third automation schedules a payment reminder for 30 days later if it's not paid. All 13 automations shipped pre-configured. Gary turned off the "Send SMS on job status change" one because he doesn't use SMS, but left everything else on.
+
+### Milestones
+
+| Milestone               | Status  | Key Deliverables                                                                                 |
+| ----------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| M0: Research & Design   | Planned | Automation trigger/action taxonomy, multi-step chain architecture, pre-built automation catalog  |
+| M1: Engine Schema & API | Planned | Automation entity (trigger, conditions, action chain), execution log, toggle state per shop      |
+| M2: Pre-Built Library   | Planned | 13+ automations covering quote-to-reorder lifecycle. Each does one clear thing. Ships toggled on |
+| M3: Execution Pipeline  | Planned | QStash-powered execution with time-based delays, retry logic, execution logging                  |
+| M4: Management UI       | Planned | Toggle on/off per automation, execution history view, test/preview mode                          |
+
+### Key Decisions
+
+- **Pre-built, not configured**: 13+ automations ship toggled on. "When a quote is approved: change status + send confirmation email + create job" just works. Toggle off what you don't want.
+- **Multi-step chains**: Trigger > condition > action > delay > action. Not limited to single trigger → single action.
+- **Time-based delays on all tiers**: Schedule follow-up actions (payment reminders at T+30d) on every plan. Not premium-gated.
+- **Canonical status groups drive triggers**: Automations trigger on canonical group transitions (e.g., "when status group changes to Complete"), not on custom label names. This means custom statuses work with pre-built automations automatically. See [Product Vision § Custom Status Workflow](/product/vision#9-custom-status-workflow-design).
+- **Advanced mode (future)**: For shops that want to customize trigger/condition/action chains. Not V1 — toggle on/off is the V1 experience.
+
+### Dependencies
+
+- **P6 (Quoting)**: Quote status changes are the primary trigger source
+- **P9 (Jobs)**: Job creation and status changes are triggers and actions
+- **P10 (Invoicing)**: Invoice generation is an action; payment status is a trigger
+- **H3 (Email)**: Email sending is the most common action
+- **H5 (QStash)**: Time-based delays require background job scheduling
+
+---
+
+## P13b: Custom Status Workflow
+
+**Status**: Planned | **Priority**: Tier 2 (M3) | **Blocked By**: P6
+
+Status system that connects production reality to software automation. Statuses are not just labels — they drive dashboard counts, production board columns, automation triggers, and report calculations.
+
+> **V1 Vision §9**: Custom Status Workflow Design. This is the connective tissue between production reality and software automation.
+
+### User Story
+
+> Gary's shop has a unique step in their screen print process: after printing, they do a "spot check" before sending to curing. He wants a status for this. In Settings > Statuses, he sees the pre-configured screen print workflow: Art Prep → Screens → Printing → Curing → QC → Packing → Complete. He clicks "Add Status After Printing" and creates "Spot Check" — the system asks him to map it to a canonical group. He selects "In Progress" (because the job is still being worked on). Now his production board shows the Spot Check column between Printing and Curing. The automations that trigger on "In Progress" status group still work — his new status didn't break anything. On the customer portal, Coach Johnson still sees "In Production" (the customer-facing label for all "In Progress" statuses) — no confusing internal jargon leaks out.
+
+### Milestones
+
+| Milestone             | Status  | Key Deliverables                                                                                              |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| M0: Research & Design | Planned | Status taxonomy per service type, canonical group definitions, dual-label design                              |
+| M1: Schema & API      | Planned | Status entity with canonical group mapping, per-service-type defaults, sort order (float-based), color coding |
+| M2: Default Seeding   | Planned | Pre-configured status workflows per service type (screen print: 8 steps, DTF: 6 steps, embroidery: 6 steps)   |
+| M3: Customization UI  | Planned | Add/rename/reorder statuses in Settings. Each status maps to a canonical group. Drag-drop reordering          |
+
+### Key Decisions
+
+- **Canonical groups are system-level concepts**: Draft, Queued, In Progress, Complete, Cancelled, On Hold. The system understands these — they drive dashboard counts, production board columns, automation triggers, and report calculations.
+- **Custom labels are user-level display names**: A shop can rename "In Progress" to "On the Press" or "Printing." The label changes; the system behavior doesn't.
+- **Dual-label for customer-facing**: Admin sees "Awaiting Artwork" (internal). Customer sees "In Production" (simplified). Reduces customer confusion.
+- **Float-based sort order**: Drag-drop reordering without re-indexing. Float midpoint between neighbors avoids re-indexing entire lists.
+- **Service-type-specific defaults**: Screen print, DTF, and embroidery each seed different default status workflows on shop creation. All map to the same canonical groups.
+
+### Dependencies
+
+- **P6 (Quoting)**: Quote statuses (Draft, Sent, Accepted, Declined) are the first implementation
+- **P9 (Jobs)**: Job statuses are the primary use case for custom workflows
+- **P13a (Automations)**: Automations trigger on canonical group transitions — must be designed together
 
 > See [Competitive Analysis](/research/competitive-analysis) for competitor settings patterns and feature comparison.
 
@@ -639,10 +719,10 @@ Customer-facing portal for artwork approval, job status viewing, invoice payment
 
 ### Research Findings
 
-- [x] **Portal models** → Printavo: URL-per-invoice (no login, no history). YoPrint: full portal with persistent login, custom domain, per-artwork approval, payment, tracking. InkSoft: online stores + portal.
-- [x] **Best-in-class example** → YoPrint Pro: custom domain, full order history, per-artwork approval, payment collection (Stripe/Square/PayPal), shipment tracking, message history, white-labeled, mobile-optimized.
+- [x] **Portal models** → Range from URL-per-document (no login, no history) to full portal with persistent login, custom domain, per-artwork approval, payment, and tracking.
+- [x] **Best-in-class portal features** → Custom domain, full order history, per-artwork approval, payment collection (multiple processors), shipment tracking, message history, white-labeled, mobile-optimized.
 - [x] **Artwork approval flow** → Per-artwork granularity: approve front, reject back, approve sleeve — independently. Rejected artwork goes back for revision. Mobile-optimized.
-- [x] **Auth model recommendation** → Same Supabase Auth instance with `customer` role. RLS policies enforce data isolation. InkSoft and YoPrint both use this model. Simplest and sufficient.
+- [x] **Auth model recommendation** → Same Supabase Auth instance with `customer` role. RLS policies enforce data isolation. Standard B2B portal pattern. Simplest and sufficient.
 
 ### Research Still Needed
 
@@ -654,7 +734,7 @@ Customer-facing portal for artwork approval, job status viewing, invoice payment
 ### Key Decisions
 
 - **Auth model**: Same Supabase Auth instance with `customer` role. RLS policies enforce data isolation. One fewer infrastructure component. The customer role gets filtered views of their own data only.
-- **Persistent login over URL-per-invoice**: Customers log in once, see full order history. Printavo's URL-per-invoice model fails repeat customers. Persistent login builds the relationship.
+- **Persistent login over URL-per-invoice**: Customers log in once, see full order history. URL-per-document models break down for repeat customers. Persistent login builds the relationship.
 - **Per-artwork approval**: Approve/reject individual files within an order. Shop can configure whether production starts on approved locations before all artwork is approved (shop-level or job-level setting).
 - **Custom domain (M6)**: Design for it from M0 (domain routing, tenant-scoped rendering), but implement it last. High trust signal — the customer never sees our brand, only the shop's.
 - **White-labeled by default**: No "Powered by Mokumo" branding unless the shop opts in. B2B tool — the shop IS the brand.
@@ -727,10 +807,7 @@ A shop creates a store for a customer (e.g., a school's spirit wear program, a c
 
 ### Research Findings
 
-- **DecoNetwork**: Up to 500 stores on Premium. Team stores, fundraiser stores, corporate reorder programs. Store orders flow into production calendar automatically.
-- **InkSoft**: Online stores with Online Designer (customers customize products). Stores are quick to clone and launch.
-- **YoPrint**: No online stores (acknowledged gap).
-- **Printavo**: "Merch" feature on Premium ($249/mo) — group/team stores with aggregated orders.
+- [x] **Industry patterns studied** → Range from basic group/team stores at premium tiers to full storefront with product customization. Key capabilities: store cloning, automatic order flow into production pipeline, fundraiser and team store templates.
 
 ### Scope (Phase 3+)
 
