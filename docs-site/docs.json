@@ -19,7 +19,7 @@
       "groups": [
         {
           "group": "Overview",
-          "pages": ["introduction", "product/vision", "product/product-design", "product/prd"]
+          "pages": ["introduction", "product/vision", "product/product-design"]
         },
         {
           "group": "User Experience",
