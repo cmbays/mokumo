@@ -83,10 +83,12 @@ The result: a tool that feels like it was built by someone who runs a print shop
 
 ---
 
-_New ADRs added as significant decisions are made during Phase 2 build._
+_New ADRs added as significant decisions are made._
 
 ## Related Documents
 
 - [Product Design](/product/product-design) — scope and constraints
 - [Tech Stack](/engineering/architecture/tech-stack) — tool choices and rationale
 - [Architecture](/engineering/architecture/system-architecture) — layer structure
+
+> **Org-level foundations**: Mokumo's design ADRs implement principles from our organization-wide [Design Philosophy](https://breezy-bays-labs.mintlify.app/breezy-bays-labs/design) and [Engineering Standards](https://breezy-bays-labs.mintlify.app/breezy-bays-labs/engineering).

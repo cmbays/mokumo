@@ -19,30 +19,30 @@
       "groups": [
         {
           "group": "Overview",
-          "pages": ["introduction", "product/product-design", "product/prd"]
+          "pages": ["introduction", "product/vision", "product/product-design"]
         },
         {
           "group": "User Experience",
-          "pages": ["product/user-journeys", "product/interaction-design", "product/design-vision"]
+          "pages": ["product/user-journeys"]
         },
         {
           "group": "Domain",
           "pages": ["product/domain-glossary"]
         },
         {
-          "group": "Planning",
-          "pages": ["roadmap/phase-2", "roadmap/projects"]
-        },
-        {
-          "group": "Research",
+          "group": "Roadmap",
           "pages": [
-            "research/competitive-analysis",
-            "research/supplier-catalog",
-            "research/quoting-pricing",
-            "research/production-workflow",
-            "research/customer-portal",
-            "research/artwork-management",
-            "research/infrastructure-decisions"
+            "roadmap/overview",
+            "roadmap/m0-foundation",
+            "roadmap/m1-core-data",
+            "roadmap/m2-quote-to-cash",
+            "roadmap/m3-operational-depth",
+            "roadmap/m4-multi-service",
+            "roadmap/m5-analytics",
+            "roadmap/m6-polish-onboarding",
+            "roadmap/m7-hardening",
+            "roadmap/m8-beta-readiness",
+            "roadmap/m9-beta-launch"
           ]
         }
       ]
@@ -58,7 +58,8 @@
             "engineering/architecture/app-flow",
             "engineering/architecture/app-ia",
             "engineering/architecture/ddd-strategy",
-            "engineering/architecture/infrastructure"
+            "engineering/architecture/infrastructure",
+            "product/design-vision"
           ]
         },
         {

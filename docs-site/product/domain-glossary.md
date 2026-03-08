@@ -13,7 +13,7 @@ description: Print shop terminology and domain concepts used throughout Mokumo.
 
 | Term         | Definition                                                                                            |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
-| **Shop**     | The print business (4Ink). Single-tenant — one shop per deployment.                                   |
+| **Shop**     | The print business. Single-tenant — one shop per deployment.                                          |
 | **Customer** | A person or company who orders printed goods. May have contacts, addresses, and artwork.              |
 | **Contact**  | An individual person associated with a customer company.                                              |
 | **Quote**    | A priced proposal for a print job. Contains line items, garment selections, and pricing calculations. |

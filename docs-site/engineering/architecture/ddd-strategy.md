@@ -28,7 +28,7 @@ depends_on:
 2. [DDD Concepts Applied to Mokumo](#2-ddd-concepts-applied-to-mokumo)
 3. [Classification Definitions — Product / Domain / Tool](#3-classification-definitions--product--domain--tool)
 4. [Bounded Context Map](#4-bounded-context-map)
-5. [Data Architecture Implications (Phase 2)](#5-data-architecture-implications-phase-2)
+5. [Data Architecture Implications](#5-data-architecture-implications)
 6. [PM Tooling Integration](#6-pm-tooling-integration)
 7. [Work Orchestrator Integration](#7-work-orchestrator-integration)
 8. [Routing, State, Schema, and API Patterns](#8-routing-state-schema-and-api-patterns)
@@ -62,7 +62,7 @@ DDD has two halves:
 
 ### Why DDD Now for Mokumo
 
-We're transitioning from Phase 1 (frontend mockups) to Phase 2 (backend + real data). This is the ideal moment to establish DDD as our architectural lens because:
+We're transitioning from frontend mockups to a real backend with persistent data. This is the ideal moment to establish DDD as our architectural lens because:
 
 1. **Schemas are defined but not yet persisted** — we can restructure without migrating data.
 2. **The flat `vertical/*` label namespace** doesn't distinguish between things users DO (products) and things products USE (domains). This causes confusion in issue triage and pipeline orchestration.
@@ -71,7 +71,7 @@ We're transitioning from Phase 1 (frontend mockups) to Phase 2 (backend + real d
 
 ### What DDD Is NOT for Us
 
-- **Not a folder restructuring exercise.** We don't need `domain/`, `application/`, `infrastructure/` directories in Phase 1.
+- **Not a folder restructuring exercise.** We don't need `domain/`, `application/`, `infrastructure/` directories yet.
 - **Not microservices.** Mokumo is a monolith, and that's correct for a solo-dev + AI team. DDD bounded contexts map to logical modules, not physical services.
 - **Not academic purity.** We adapt DDD pragmatically. Evans himself says: "DDD is not about applying patterns — it's about understanding the domain."
 
@@ -81,9 +81,9 @@ We're transitioning from Phase 1 (frontend mockups) to Phase 2 (backend + real d
 
 ### Ubiquitous Language
 
-Our ubiquitous language is the vocabulary Gary (shop owner) uses. When Gary says a word, our code should use that exact word.
+Our ubiquitous language is the vocabulary the shop owner uses. When the shop owner says a word, our code should use that exact word.
 
-| Gary Says                  | Code Uses                       | NOT                                |
+| Shop Owner Says            | Code Uses                       | NOT                                |
 | -------------------------- | ------------------------------- | ---------------------------------- |
 | "Quote"                    | `Quote`, `quoteSchema`          | `Estimate`, `Proposal`, `Bid`      |
 | "Job"                      | `Job`, `jobSchema`              | `Order`, `WorkOrder`, `Task`       |
@@ -94,7 +94,7 @@ Our ubiquitous language is the vocabulary Gary (shop owner) uses. When Gary says
 | "Gang sheet" (DTF layout)  | `gangSheet`, `sheetCalculation` | `"layout"`, `"composition"`        |
 | "Mesh count" (screen spec) | `meshCount`                     | `"threadCount"`, `"screenDensity"` |
 
-**Rule**: When adding new entities, ask Gary what he calls it. If Gary doesn't have a word for it, that's a signal it may be infrastructure, not domain.
+**Rule**: When adding new entities, ask the shop owner what they call it. If they don't have a word for it, that's a signal it may be infrastructure, not domain.
 
 ### Bounded Contexts
 
@@ -109,7 +109,7 @@ A bounded context is a boundary within which a particular model is defined. The 
 | **Production** | Whose job this is (for art approval, pickup) | `name`, `contacts[].role === "art-approver"`                |
 | **CRM**        | Full relationship record                     | All fields — the "source of truth"                          |
 
-In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase 2, each bounded context will read from a shared customer aggregate but project only the fields it needs.
+Currently, we have a single `customerSchema` that serves all contexts. As the backend matures, each bounded context will read from a shared customer aggregate but project only the fields it needs.
 
 ### Entities, Value Objects, and Aggregates
 
@@ -120,8 +120,8 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 | **Aggregate**           | Cluster of entities + value objects treated as a single unit for data changes; has a root entity | `Quote` (root) + `QuoteLineItem[]` + `PrintLocationDetail[]`; `Job` (root) + `JobTask[]` + `JobNote[]` |
 | **Aggregate Root**      | The entity that controls access to everything inside the aggregate                               | `Quote` owns its line items; `Job` owns its tasks. External code references by root ID only.           |
 | **Domain Event**        | Something that happened in the domain; past tense, immutable fact                                | `QuoteAccepted`, `JobMovedToPress`, `InvoicePaid`, `ScreenBurned`                                      |
-| **Repository**          | Abstraction for aggregate persistence                                                            | `QuoteRepository.findById()`, `JobRepository.findByLane()` (Phase 2)                                   |
-| **Application Service** | Orchestrates use cases by coordinating domain objects                                            | `CreateQuoteService`, `MoveJobToLaneService` (Phase 2)                                                 |
+| **Repository**          | Abstraction for aggregate persistence                                                            | `QuoteRepository.findById()`, `JobRepository.findByLane()`                                             |
+| **Application Service** | Orchestrates use cases by coordinating domain objects                                            | `CreateQuoteService`, `MoveJobToLaneService`                                                           |
 
 ### Current Schema → DDD Mapping
 
@@ -172,10 +172,10 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 
 | Test                     | Domain                              | Tool                              |
 | ------------------------ | ----------------------------------- | --------------------------------- |
-| **Who uses it**          | End users (Gary) via the app        | Developers/agents during build    |
-| **Visible to Gary**      | Yes — appears in app UI             | No — invisible to end users       |
+| **Who uses it**          | End users (shop owner) via the app  | Developers/agents during build    |
+| **Visible to user**      | Yes — appears in app UI             | No — invisible to end users       |
 | **Deploys with the app** | Yes — part of the production bundle | Usually not — CI, scripts, skills |
-| **Business language**    | Uses Gary's vocabulary              | Uses developer vocabulary         |
+| **Business language**    | Uses shop owner's vocabulary        | Uses developer vocabulary         |
 
 ### Classification Table
 
@@ -185,7 +185,7 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 | ----------- | --------- | ------------ | ------------------- | ---------------------------- |
 | `dashboard` | Dashboard | `/dashboard` | Operations Overview | "Check what's blocked"       |
 | `quotes`    | Quotes    | `/quotes`    | Sales / Quoting     | "Create a quote for DTF"     |
-| `customers` | Customers | `/customers` | CRM                 | "Look up Gary's account"     |
+| `customers` | Customers | `/customers` | CRM                 | "Look up a customer account" |
 | `invoices`  | Invoices  | `/invoices`  | Billing             | "Send invoice for job #1024" |
 | `jobs`      | Jobs      | `/jobs`      | Production          | "Check press schedule"       |
 
@@ -275,17 +275,17 @@ In Phase 1, we have a single `customerSchema` that serves all contexts. In Phase
 
 | Classification        | Context                           | Rationale                                                                                                   |
 | --------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Core Domain**       | Quoting, Production               | These are the business differentiators. How Gary quotes and runs production is what makes 4Ink competitive. |
+| **Core Domain**       | Quoting, Production               | These are the business differentiators. How a shop quotes and runs production is the competitive advantage. |
 | **Supporting Domain** | Billing, CRM                      | Important but not differentiating. Standard invoicing and customer management patterns.                     |
 | **Generic Domain**    | Auth, Notifications, File Storage | Commodity infrastructure. Use off-the-shelf solutions (Supabase Auth, email services, S3).                  |
 
 ---
 
-## 5. Data Architecture Implications (Phase 2)
+## 5. Data Architecture Implications
 
 ### Database Schema Principles
 
-DDD tells us how to structure our database in Phase 2:
+DDD tells us how to structure our database:
 
 #### 1. One Table Per Aggregate Root
 
@@ -338,7 +338,7 @@ artworks              -- Uploaded artwork files + metadata
 
 #### 4. Event Sourcing Readiness
 
-Our existing `job.history[]` and `invoice.auditLog[]` already capture domain events. In Phase 2, consider an `events` table for cross-context event publishing:
+Our existing `job.history[]` and `invoice.auditLog[]` already capture domain events. Consider an `events` table for cross-context event publishing:
 
 ```sql
 domain_events (
@@ -504,7 +504,7 @@ The KB schema can add a `classification` computed field in a future migration.
 | **Domain (settings)** | React state (form) + save-to-server            | Configuration is typically edit-one-record-at-a-time                              |
 | **Domain (embedded)** | Lifted into parent product's state             | Garment selection state lives in the quote form, not in a garment context         |
 
-### Schema Organization (Phase 2)
+### Schema Organization
 
 ```
 lib/
@@ -534,7 +534,7 @@ lib/
 
 **Principle**: Aggregate schemas import value objects, never the reverse. Domain schemas never import from product schemas.
 
-### API Design (Phase 2)
+### API Design
 
 | Classification           | API Pattern                         | Examples                                                                              |
 | ------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------- |
@@ -555,18 +555,18 @@ When a new concept is introduced, use this flowchart:
                     New concept introduced
                             │
                             ▼
-                 Is it visible to Gary?
+                 Is it visible to the user?
                    /              \
                  NO                YES
                   │                 │
                   ▼                 ▼
-            It's a TOOL     Does Gary say "I need
+            It's a TOOL     Does the user say "I need
            (config/tools.json)   to go DO a ___"?
                               /              \
                             YES               NO
                              │                 │
                              ▼                 ▼
-                      Does it have a    Does Gary say "I need
+                      Does it have a    Does the user say "I need
                       multi-step        to SET UP my ___"?
                       workflow with       /           \
                       state transitions? YES           NO
@@ -583,15 +583,15 @@ When a new concept is introduced, use this flowchart:
 
 #### Example 1: "Embroidery service type"
 
-1. Is it visible to Gary? **Yes** — Gary quotes embroidery jobs.
-2. Does Gary say "I need to go DO embroidery"? **No** — he says "I need to **create a quote** for embroidery." The workflow is quoting. Embroidery is a service type modifier.
+1. Is it visible to the user? **Yes** — the shop owner quotes embroidery jobs.
+2. Does the user say "I need to go DO embroidery"? **No** — they say "I need to **create a quote** for embroidery." The workflow is quoting. Embroidery is a service type modifier.
 3. Does it have its own multi-step workflow? **No** — it modifies the quoting and production workflows.
 4. **Classification: Domain** (`domain/embroidery`) — similar to DTF. It's a service type with distinct pricing rules, not a standalone product.
 5. **Implementation**: Add `"embroidery"` to `serviceTypeEnum`, create `embroidery-pricing.ts` schema, add embroidery options to quote form.
 
 #### Example 2: "Customer portal"
 
-1. Is it visible to Gary? **Yes** — but it's visible to Gary's **customers**, not Gary himself.
+1. Is it visible to the user? **Yes** — but it's visible to the shop's **customers**, not the owner.
 2. Does a customer say "I need to go DO a \_\_\_"? **Yes** — "I need to check my order status", "I need to approve artwork."
 3. Does it have a multi-step workflow? **Yes** — view orders, approve artwork, download invoices.
 4. **Classification: Product** (`product/customer-portal`) — it's a distinct application surface with its own user journey.
@@ -599,15 +599,15 @@ When a new concept is introduced, use this flowchart:
 
 #### Example 3: "Tax rate configuration"
 
-1. Is it visible to Gary? **Yes** — Gary sets tax rates.
-2. Does Gary say "I need to go DO tax rates"? **No** — he says "I need to **set up** my tax rate."
+1. Is it visible to the user? **Yes** — the shop owner sets tax rates.
+2. Does the user say "I need to go DO tax rates"? **No** — they say "I need to **set up** my tax rate."
 3. Does it have a multi-step workflow? **No** — it's a single value (percentage) configured once.
 4. **Classification**: Not even a domain — it's a **value object** within the Billing context. Add `taxRate` field to a settings schema.
 
 #### Example 4: "Shopify integration"
 
-1. Is it visible to Gary? **Indirectly** — orders flow in from Shopify.
-2. Does Gary say "I need to go DO Shopify"? **No** — he says "I need to **set up** my Shopify connection."
+1. Is it visible to the user? **Indirectly** — orders flow in from Shopify.
+2. Does the user say "I need to go DO Shopify"? **No** — they say "I need to **set up** my Shopify connection."
 3. It's configuration + background sync, not a workflow.
 4. **Classification: Domain** (`domain/integrations` or `domain/shopify`) — it's a data pipeline that feeds into the Quoting and Production contexts.
 
@@ -632,7 +632,7 @@ Products and domains serve different user needs and should follow different UX p
 
 #### Product Workflow UX
 
-Products are where Gary **does work**. The UX optimizes for speed, clarity, and flow.
+Products are where the shop owner **does work**. The UX optimizes for speed, clarity, and flow.
 
 | Characteristic         | Pattern                                                 | Example                                               |
 | ---------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
@@ -642,11 +642,11 @@ Products are where Gary **does work**. The UX optimizes for speed, clarity, and 
 | **State transitions**  | Prominent action buttons with confirmation              | "Accept Quote" → "Convert to Job"                     |
 | **Empty state**        | Guided onboarding, "Create your first \_\_\_"           | "No quotes yet. Create your first quote →"            |
 | **Keyboard shortcuts** | Yes — power user acceleration                           | `N` for new, `E` for edit                             |
-| **Real-time updates**  | Yes (Phase 2) — board refreshes, status badges update   | Job moves on Kanban board                             |
+| **Real-time updates**  | Yes — board refreshes, status badges update             | Job moves on Kanban board                             |
 
 #### Domain Admin UX
 
-Domains are where Gary **configures** the system. The UX optimizes for accuracy, safety, and discoverability.
+Domains are where the shop owner **configures** the system. The UX optimizes for accuracy, safety, and discoverability.
 
 | Characteristic         | Pattern                                          | Example                                            |
 | ---------------------- | ------------------------------------------------ | -------------------------------------------------- |
@@ -686,7 +686,7 @@ PRODUCT UX (Quoting)                    DOMAIN ADMIN UX (Pricing Settings)
 
 Sometimes a domain entity grows complex enough to warrant richer UX. Signals:
 
-1. Gary says "I spend 20 minutes setting this up every time" → needs a wizard/guided flow
+1. The shop owner says "I spend 20 minutes setting this up every time" → needs a wizard/guided flow
 2. The configuration has **dependencies** (changing one value affects others) → needs preview/validation
 3. Multiple users will configure it independently → needs versioning/history
 

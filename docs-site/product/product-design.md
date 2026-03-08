@@ -1,19 +1,17 @@
 ---
-title: Phase 2 Product Design
-description: Problem statement, scope, design constraints, success criteria, and core principles for Phase 2 of Mokumo.
+title: Product Design
+description: Problem statement, scope, design constraints, success criteria, and core principles for Mokumo.
 ---
 
-# Phase 2 — Product Design Brief
+# Product Design Brief
 
 > Living document. Updated as scope evolves and research findings arrive.
 
 ## Problem Statement
 
-Phase 1 validated the UI and workflows with the shop owner through high-fidelity mockups. The shop owner confirmed: "this looks right." But the mockup has no persistence, no real data, and no backend. Every interaction resets on page reload.
+Decorated apparel shops need software that handles the complexity of multi-service-type production (screen printing, DTF, embroidery) without requiring the operator to become a data entry clerk. Every field, every click, every workflow must earn its place.
 
-Phase 2 transforms Mokumo from a clickable prototype into a functioning production system that the shop owner can use to run their business day-to-day.
-
-**The core tension**: a screen-printing shop needs software that handles the complexity of multi-service-type production (screen printing, DTF, DTF press) without requiring the operator to become a data entry clerk. Every field, every click, every workflow must earn its place.
+Mokumo transforms the shop from spreadsheets, whiteboards, and disconnected tools into a single production system the owner can use to run their business day-to-day.
 
 ### Needs
 
@@ -33,7 +31,7 @@ A **production-first** management system for small screen-printing shops. It tra
 
 **What it is NOT**: It is not an e-commerce platform, a design tool, an accounting system, or a CRM. It integrates with those things but does not replace them.
 
-## Phase 2 Scope
+## V1 Scope
 
 ### In Scope
 
@@ -53,11 +51,11 @@ A **production-first** management system for small screen-printing shops. It tra
 | **Integrations setup**     | Bring-your-own-token pattern for S&S API, future integrations                 |
 | **Analytics foundation**   | dbt pipeline, dimensional model, dashboard-level metrics                      |
 
-### Out of Scope (Phase 3+)
+### Out of Scope (Post-V1)
 
 - Customer self-service portal
 - Multi-user / role-based access (beyond single owner)
-- Native mobile app (responsive web only in Phase 2)
+- Native mobile app (responsive web only in V1)
 - Real-time updates (WebSockets / Supabase Realtime)
 - Purchase order generation
 - Shipping label printing / carrier integration
@@ -89,7 +87,7 @@ A **production-first** management system for small screen-printing shops. It tra
 1. **Production board is home** — the board is the primary interface. Everything radiates from it.
 2. **Jobs filter** — every element must earn its place. "Can this be removed without losing meaning?" If yes, remove it.
 3. **Progressive disclosure** — start simple, expand on demand. Don't show 40 fields when 6 will do.
-4. **Industry symmetry** — where suppliers (S&S, SanMar) and competitors (Printavo, InkSoft) have established conventions, follow them. Differentiate in the gaps, not the basics.
+4. **Industry symmetry** — where suppliers and existing tools have established conventions, follow them. Differentiate in the gaps, not the basics.
 5. **Automate the boring parts** — auto-populate tasks from service type, auto-calculate pricing from matrix, auto-link entities, auto-track activity.
 6. **Data entry is a last resort** — search, scan, select, or derive before asking the user to type.
 
@@ -98,5 +96,4 @@ A **production-first** management system for small screen-printing shops. It tra
 - [User Journeys](/product/user-journeys) — how users accomplish goals
 - [App Flow](/engineering/architecture/app-flow) — every screen and route
 - [App IA](/engineering/architecture/app-ia) — information architecture philosophy
-- [Phase 2 Roadmap](/roadmap/phase-2) — projects, milestones, dependencies
-- [PRD](/product/prd) — Phase 1 feature definitions (reference)
+- [Roadmap Overview](/roadmap/overview) — projects, milestones, dependencies

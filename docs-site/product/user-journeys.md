@@ -6,7 +6,6 @@ description: How the shop owner accomplishes goals in Mokumo. Story map, journey
 # User Journeys
 
 > Living document. Updated as verticals are built and user feedback is incorporated.
-> Phase 1 journeys are in [App Flow](/architecture/app-flow). This document expands them for Phase 2 with real data and backend flows.
 
 ## Story Map
 
@@ -158,9 +157,47 @@ Journeys are organized by **capability domain** — the high-level goal the user
 
 ---
 
+## Interaction Wiring
+
+How user actions in one place affect state in another — the wiring diagram between entities.
+
+### Quote → Job → Invoice Pipeline
+
+```
+Customer Inquiry
+    ↓
+Quote (draft → sent → accepted)
+    ↓ "Create Job from Quote"
+Job (ready → in_progress → review → done)
+    ↓ "Create Invoice from Job"
+Invoice (draft → sent → partial → paid)
+```
+
+**Key wiring**: Data inheritance at each transition. Customer, garments, pricing, and print locations flow forward without re-entry.
+
+### Board ↔ Detail Bidirectional Navigation
+
+```
+Board Card ←→ Job Detail ←→ Customer Detail
+                  ↕               ↕
+            Quote Detail    Invoice Detail
+```
+
+### Catalog → Quote Selection Flow
+
+```
+Quote Builder
+    → Search Catalog (inline or modal)
+    → Select Style + Color
+    → Enter Size Breakdown
+    → System Calculates Pricing (from matrix)
+    → Line Item Added to Quote
+```
+
+---
+
 ## Related Documents
 
 - [Product Design](/product/product-design) — scope and constraints
 - [App Flow](/engineering/architecture/app-flow) — screen inventory and navigation
-- [Interaction Design](/product/interaction-design) — how interactions wire together
-- [Phase 2 Roadmap](/roadmap/phase-2) — when journeys get built
+- [Roadmap Overview](/roadmap/overview) — when journeys get built
