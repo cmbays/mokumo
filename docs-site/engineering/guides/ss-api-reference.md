@@ -11,7 +11,7 @@ source: https://api.ssactivewear.com/V2/Products.aspx
 
 # S&S Activewear API Reference
 
-**Purpose**: Document the S&S Activewear API field structure so our Phase 1 mock data mirrors real API shapes. This ensures Phase 2 integration is a data source swap, not a refactor.
+**Purpose**: Document the S&S Activewear API field structure so our mock data mirrors real API shapes. This ensures live integration is a data source swap, not a refactor.
 
 **API Base**: `https://api.ssactivewear.com/v2/`
 **Auth**: Basic HTTP (Account Number + API Key)
@@ -99,7 +99,7 @@ interface SSPricing {
 }
 ```
 
-**Pricing tier insight**: Our simplified formula should acknowledge that real pricing has tiers. For Phase 1, we can use `piecePrice` as the base and show the tier structure exists. Phase 2 will implement actual tier calculation.
+**Pricing tier insight**: Our simplified formula should acknowledge that real pricing has tiers. Mock data uses `piecePrice` as the base and shows the tier structure exists. Live integration will implement actual tier calculation.
 
 ### Inventory Fields
 
@@ -183,7 +183,7 @@ Common patterns across shop management tools using the S&S API:
 - S&S pricing for base garment cost
 - Multi-supplier support (S&S Activewear, SanMar, alphabroder)
 
-**Our Phase 1 mock data should include ~30-50 colors** (realistic subset) with proper hex values, text colors, and family groupings. This makes the swatch grid feel authentic even with mock data.
+**Our mock data should include ~30-50 colors** (realistic subset) with proper hex values, text colors, and family groupings. This makes the swatch grid feel authentic even with mock data.
 
 ---
 
