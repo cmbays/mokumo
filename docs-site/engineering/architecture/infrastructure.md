@@ -177,5 +177,5 @@ Each capability is built **just ahead** of the vertical that needs it — not sp
 
 - [Tech Stack](/engineering/architecture/tech-stack) — tool choices and rationale
 - [System Architecture](/engineering/architecture/system-architecture) — layer structure
-- [Phase 2 Roadmap](/roadmap/phase-2) — project dependencies
+- [Roadmap Overview](/roadmap/overview) — project dependencies
 - [Design Vision](/product/design-vision) — ADRs for key infrastructure decisions

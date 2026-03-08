@@ -139,6 +139,6 @@ All one entity. Status determines whether it renders as "QUOTE" or "INVOICE."
 
 - [Competitive Analysis](/research/competitive-analysis) — full competitor profiles
 - [Supplier & Catalog](/research/supplier-catalog) — S&S pricing fields and tiers
-- [Projects: P4 Pricing Matrix](/roadmap/projects#p4-pricing-matrix) — project scope
-- [Projects: P6 Quoting](/roadmap/projects#p6-quoting--screen-print) — project scope
+- [M2 Quote to Cash: Pricing Matrix](/roadmap/m2-quote-to-cash) — project scope
+- [M2 Quote to Cash: Quoting](/roadmap/m2-quote-to-cash) — project scope
 - [Domain Glossary](/product/domain-glossary) — pricing terminology

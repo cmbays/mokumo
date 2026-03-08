@@ -246,4 +246,4 @@ Future              │ SanMar via PSRESTful ($100/year)
 - [S&S API Reference](/engineering/guides/ss-api-reference) — existing API integration guide
 - [Tech Stack](/engineering/architecture/tech-stack) — supplier adapter pattern
 - [Infrastructure](/engineering/architecture/infrastructure) — cron/background job strategy
-- [Phase 2 Roadmap](/roadmap/phase-2) — P2 Garments Catalog milestones
+- [Roadmap Overview](/roadmap/overview) — Garments Catalog milestones

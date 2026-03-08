@@ -134,6 +134,6 @@ This document captures the _evaluation process_ — why we chose each infrastruc
 ## Related Documents
 
 - [Infrastructure](/engineering/architecture/infrastructure) — technical spec and implementation details
-- [Phase 2 Roadmap](/roadmap/phase-2) — infrastructure blind spots table
+- [Roadmap Overview](/roadmap/overview) — infrastructure blind spots table
 - [Competitive Analysis](/research/competitive-analysis) — how competitors handle these capabilities
-- [Projects](/roadmap/projects) — horizontal enablers H1-H5
+- [M0 Foundation](/roadmap/m0-foundation) — horizontal enablers H1-H5

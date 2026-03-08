@@ -30,8 +30,20 @@
           "pages": ["product/domain-glossary"]
         },
         {
-          "group": "Planning",
-          "pages": ["roadmap/phase-2", "roadmap/projects"]
+          "group": "Roadmap",
+          "pages": [
+            "roadmap/overview",
+            "roadmap/m0-foundation",
+            "roadmap/m1-core-data",
+            "roadmap/m2-quote-to-cash",
+            "roadmap/m3-operational-depth",
+            "roadmap/m4-multi-service",
+            "roadmap/m5-analytics",
+            "roadmap/m6-polish-onboarding",
+            "roadmap/m7-hardening",
+            "roadmap/m8-beta-readiness",
+            "roadmap/m9-beta-launch"
+          ]
         },
         {
           "group": "Research",

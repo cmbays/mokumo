@@ -237,6 +237,6 @@ From the competitive research, these patterns are worth considering:
 ## Related Documents
 
 - [Product Design](/product/product-design) — scope and constraints
-- [Phase 2 Roadmap](/roadmap/phase-2) — project priorities
+- [Roadmap Overview](/roadmap/overview) — project priorities
 - [Domain Glossary](/product/domain-glossary) — print shop terminology
 - [Infrastructure](/engineering/architecture/infrastructure) — capability gaps

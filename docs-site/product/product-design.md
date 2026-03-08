@@ -98,5 +98,5 @@ A **production-first** management system for small screen-printing shops. It tra
 - [User Journeys](/product/user-journeys) — how users accomplish goals
 - [App Flow](/engineering/architecture/app-flow) — every screen and route
 - [App IA](/engineering/architecture/app-ia) — information architecture philosophy
-- [Phase 2 Roadmap](/roadmap/phase-2) — projects, milestones, dependencies
+- [Roadmap Overview](/roadmap/overview) — projects, milestones, dependencies
 - [PRD](/product/prd) — Phase 1 feature definitions (reference)

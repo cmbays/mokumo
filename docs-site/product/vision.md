@@ -7,7 +7,7 @@ description: 'What Mokumo is building, why, and how the pieces fit together. The
 
 > **What this document is**: The single source of truth for Mokumo's V1 product strategy. Every milestone, every feature, every architectural decision traces back to this document. When building any piece of the system, consult this to understand how it fits the whole.
 >
-> **What this document is not**: A roadmap (see [Phase 2 Delivery Strategy](/roadmap/phase-2)), a technical spec (see [System Architecture](/engineering/architecture/system-architecture)), or a PRD (see [PRD](/product/prd)). This is the strategic "why" and "how" that those documents implement.
+> **What this document is not**: A roadmap (see [Roadmap Overview](/roadmap/overview)), a technical spec (see [System Architecture](/engineering/architecture/system-architecture)), or a PRD (see [PRD](/product/prd)). This is the strategic "why" and "how" that those documents implement.
 
 ---
 
@@ -707,7 +707,7 @@ How we know V1 is working:
 
 | When you need...                      | Read                                                                 |
 | ------------------------------------- | -------------------------------------------------------------------- |
-| Milestone details and timelines       | [Phase 2 Delivery Strategy](/roadmap/phase-2)                        |
+| Milestone details and timelines       | [Roadmap Overview](/roadmap/overview)                                |
 | Feature specs and acceptance criteria | [PRD](/product/prd)                                                  |
 | Architecture layers and import rules  | [System Architecture](/engineering/architecture/system-architecture) |
 | Routes and navigation                 | [App Flow](/engineering/architecture/app-flow)                       |

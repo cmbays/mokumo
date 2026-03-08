@@ -188,7 +188,7 @@ Not Phase 2 scope, but capturing research for roadmap visibility.
 ## Related Documents
 
 - [Competitive Analysis](/research/competitive-analysis) — full competitor profiles
-- [Projects: P3 Customer Management](/roadmap/projects#p3-customer-management) — project scope
-- [Projects: P14 Customer Portal](/roadmap/projects#p14-customer-portal) — portal scope
-- [Projects: P16 Online Stores](/roadmap/projects#p16-online-stores) — future stores scope
+- [M0 Foundation: Customer Management](/roadmap/m0-foundation) — project scope
+- [M4 Multi-Service: Customer Portal](/roadmap/m4-multi-service) — portal scope
+- [M4 Multi-Service: Online Stores](/roadmap/m4-multi-service) — future stores scope
 - [User Journeys](/product/user-journeys) — Flow 1 (New Customer Quote), Flow 4 (Returning Customer)

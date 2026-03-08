@@ -85,5 +85,4 @@ All 7 verticals built as high-fidelity mockups with mock data:
 
 ## Related Documents
 
-- [Phase 2 Roadmap](/roadmap/phase-2) — what's planned
-- [Projects](/roadmap/projects) — project-level detail
+- [Roadmap Overview](/roadmap/overview) — what's planned

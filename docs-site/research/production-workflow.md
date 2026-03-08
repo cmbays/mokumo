@@ -143,7 +143,7 @@ Tasks are checkboxes within the job, not board columns. Progress bar on board ca
 ## Related Documents
 
 - [Competitive Analysis](/research/competitive-analysis) — full competitor profiles
-- [Projects: P9 Jobs & Production](/roadmap/projects#p9-jobs--production) — project scope and milestones
-- [Projects: P12 Screen Room](/roadmap/projects#p12-screen-room) — screen tracking scope
+- [M2 Quote to Cash: Jobs & Production](/roadmap/m2-quote-to-cash) — project scope and milestones
+- [M3 Operational Depth: Screen Room](/roadmap/m3-operational-depth) — screen tracking scope
 - [Design Vision](/product/design-vision) — ADR-001 (universal lanes), ADR-006 (service-type polymorphism)
 - [User Journeys](/product/user-journeys) — Flow 2 (Quote-to-Job-to-Invoice Pipeline)
