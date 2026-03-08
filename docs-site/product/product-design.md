@@ -89,7 +89,7 @@ A **production-first** management system for small screen-printing shops. It tra
 1. **Production board is home** — the board is the primary interface. Everything radiates from it.
 2. **Jobs filter** — every element must earn its place. "Can this be removed without losing meaning?" If yes, remove it.
 3. **Progressive disclosure** — start simple, expand on demand. Don't show 40 fields when 6 will do.
-4. **Industry symmetry** — where suppliers (S&S, SanMar) and competitors (Printavo, InkSoft) have established conventions, follow them. Differentiate in the gaps, not the basics.
+4. **Industry symmetry** — where suppliers and existing tools have established conventions, follow them. Differentiate in the gaps, not the basics.
 5. **Automate the boring parts** — auto-populate tasks from service type, auto-calculate pricing from matrix, auto-link entities, auto-track activity.
 6. **Data entry is a last resort** — search, scan, select, or derive before asking the user to type.
 

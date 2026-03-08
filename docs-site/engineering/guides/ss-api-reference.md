@@ -174,15 +174,14 @@ interface MockLineItem {
 
 ---
 
-## What Print Life Uses from S&S
+## Industry S&S Usage Patterns
 
-From our Playwright exploration, Print Life:
+Common patterns across shop management tools using the S&S API:
 
-- Fetches product catalog (12+ products visible in grid)
-- Shows color swatches per product (103 colors for Bella+Canvas 3001)
-- Displays live stock levels per size/color combo
-- Uses S&S pricing for base garment cost
-- Integrates with S&S Activewear, SanMar, and Alphabroder
+- Product catalog with color swatches per style (e.g., 100+ colors for popular styles like Bella+Canvas 3001)
+- Live stock levels per size/color combo
+- S&S pricing for base garment cost
+- Multi-supplier support (S&S Activewear, SanMar, alphabroder)
 
 **Our Phase 1 mock data should include ~30-50 colors** (realistic subset) with proper hex values, text colors, and family groupings. This makes the swatch grid feel authentic even with mock data.
 

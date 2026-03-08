@@ -34,7 +34,7 @@ Mokumo replaces this with a unified production dashboard that gives instant clar
 - Needs to know: What's blocked? What's due soon? What's next?
 - Works from desktop primarily (shop office)
 - Values speed and clarity over features
-- Current tools: Printavo (reference), spreadsheets, phone
+- Current tools: existing shop management software, spreadsheets, phone
 
 ---
 
