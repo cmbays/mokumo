@@ -35,11 +35,11 @@ Keyed by stage slug. Each entry **must** have a `description` field. Labels are 
 
 ## Consumers
 
-| Consumer           | Reads                                                       | Location                               |
-| ------------------ | ----------------------------------------------------------- | -------------------------------------- |
-| Pipeline entity    | `slug`, `stages`                                            | `scripts/lib/pipeline-entity.sh`       |
-| Pipeline gates     | `artifacts`, `gate`, `next`                                 | `scripts/lib/pipeline-gates.sh`        |
-| CLI help (planned) | `slug`, `label`, `description`, `flag`                      | `scripts/lib/pipeline-update.sh`       |
+| Consumer           | Reads                                  | Location                         |
+| ------------------ | -------------------------------------- | -------------------------------- |
+| Pipeline entity    | `slug`, `stages`                       | `scripts/lib/pipeline-entity.sh` |
+| Pipeline gates     | `artifacts`, `gate`, `next`            | `scripts/lib/pipeline-gates.sh`  |
+| CLI help (planned) | `slug`, `label`, `description`, `flag` | `scripts/lib/pipeline-update.sh` |
 
 ## Adding a new config file
 

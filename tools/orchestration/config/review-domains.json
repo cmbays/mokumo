@@ -135,9 +135,9 @@
     "description": "Supplier adapter implementations, HTTP clients, and canonical type mappings"
   },
   {
-    "pattern": "docs-site/**",
+    "pattern": "docs/**",
     "domain": "documentation",
-    "description": "Astro knowledge base with session docs, pipeline visualization, and search"
+    "description": "Repository documentation outside the app docs site, including PRDs, notes, and planning docs"
   },
   {
     "pattern": "docs-site/**",

@@ -136,3 +136,6 @@ excalidraw.log
 # Claude Code internal worktree-tracking state
 .claire/
 .env*.local
+
+*storybook.log
+storybook-static

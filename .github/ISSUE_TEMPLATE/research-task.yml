@@ -50,6 +50,7 @@ body:
         - Tool: Work Orchestrator
         - Tool: Skills Framework
         - Tool: Agent System
+        - Tool: Documentation Site
         - Tool: CI Pipeline
         - Tool: PM System
         - Tool: Database

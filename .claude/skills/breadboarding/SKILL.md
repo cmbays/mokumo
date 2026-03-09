@@ -40,8 +40,8 @@ Read these before starting:
 
 ### Outputs
 
-| File                                         | Contents                                                     |
-| -------------------------------------------- | ------------------------------------------------------------ |
+| File                                        | Contents                                                     |
+| ------------------------------------------- | ------------------------------------------------------------ |
 | `tmp/workspace/{pipeline-id}/breadboard.md` | Affordance tables, wiring, Mermaid diagrams, vertical slices |
 
 ### Handoff to Implementation Planning
