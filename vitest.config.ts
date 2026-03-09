@@ -9,7 +9,7 @@ const enableStorybookProject = process.env.STORYBOOK_TEST === '1'
 const storybookProjects = enableStorybookProject
   ? [
       {
-        extends: true,
+        extends: true as const,
         plugins: [
           // The plugin will run tests for the stories defined in your Storybook config
           // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
@@ -25,7 +25,7 @@ const storybookProjects = enableStorybookProject
             provider: playwright({}),
             instances: [
               {
-                browser: 'chromium',
+                browser: 'chromium' as const,
               },
             ],
           },
