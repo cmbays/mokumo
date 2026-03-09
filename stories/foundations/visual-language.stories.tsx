@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 
+import { cn } from '@shared/lib/cn'
 import { Badge } from '@shared/ui/primitives/badge'
 import {
   Card,
@@ -86,7 +87,10 @@ export const Overview: Story = {
                   {colorRoles.map((role) => (
                     <div
                       key={role.label}
-                      className={`${role.className} flex min-h-20 items-end rounded-lg p-4 text-sm font-medium shadow-sm`}
+                      className={cn(
+                        role.className,
+                        'flex min-h-20 items-end rounded-lg p-4 text-sm font-medium shadow-sm'
+                      )}
                     >
                       {role.label}
                     </div>

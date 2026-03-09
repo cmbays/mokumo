@@ -4,6 +4,7 @@ import { Badge } from './badge'
 import { Button } from './button'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -41,7 +42,9 @@ export const Triggered: Story = {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter showCloseButton>
-              <Button>Approve proof</Button>
+              <DialogClose asChild>
+                <Button>Approve proof</Button>
+              </DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -65,7 +68,9 @@ export const OpenConfirm: Story = {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter showCloseButton>
-              <Button variant="destructive">Archive quote</Button>
+              <DialogClose asChild>
+                <Button variant="destructive">Archive quote</Button>
+              </DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -19,11 +19,25 @@ export const States: Story = {
     return (
       <div className="grid max-w-xl gap-4 p-4">
         <Input placeholder="Default input" />
-        <Input defaultValue="Focused state preview" autoFocus />
+        <Input defaultValue="Ready for focus interaction" />
         <Input aria-invalid="true" defaultValue="Validation error" />
         <Input disabled defaultValue="Disabled input" />
       </div>
     )
+  },
+}
+
+export const Focused: Story = {
+  render: function Render() {
+    return (
+      <div className="grid max-w-xl gap-4 p-4">
+        <Input data-testid="focus-target" defaultValue="Focused state preview" />
+      </div>
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const input = canvasElement.querySelector<HTMLInputElement>('[data-testid="focus-target"]')
+    input?.focus()
   },
 }
 

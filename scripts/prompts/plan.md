@@ -7,9 +7,12 @@ Create both a human-readable implementation plan AND a machine-readable YAML exe
 ## Startup Sequence
 
 1. Read `CLAUDE.md` for project context and coding standards
-2. Read the breadboard doc: `tmp/breadboards/{VERTICAL}-breadboard.md`
-3. Read prior KB docs: {PRIOR_KB_DOCS}
-4. Read `docs-site/engineering/architecture/tech-stack.md` for technology choices
+2. Read the shaping artifact for `{VERTICAL}` and confirm the vertical is ready for implementation planning
+3. Read the breadboard doc: `tmp/breadboards/{VERTICAL}-breadboard.md`
+4. Read the breadboard reflection artifact for `{VERTICAL}` before planning implementation work
+5. Review the Paper MCP mockups (or canonical mockup placeholders) for `{VERTICAL}`
+6. Read prior KB docs: {PRIOR_KB_DOCS}
+7. Read `docs-site/engineering/architecture/tech-stack.md` for technology choices
 
 ## Skills to Use
 

@@ -17,7 +17,11 @@ depends_on:
 
 > Legacy note: This document is retained as a transitional reference while the shared design
 > system is being formalized. It is not the canonical location for new shared-system decisions.
-> Use it as extraction input until the new design-system content fully replaces it.
+> Use Storybook (`npm run storybook`) and the [Storybook structure guide](../guides/storybook-structure.md)
+> for all new shared-system examples and decisions. Use this document as extraction input until
+> the new design-system content fully replaces it. If a shared component or example is missing,
+> open a design-system documentation issue through the repo issue templates so it can be promoted
+> into the new system.
 
 ## Design Philosophy
 
@@ -539,6 +543,7 @@ shadcn/ui handles dark mode token mapping automatically. Custom elements should 
 
 - [CLAUDE.md](../../CLAUDE.md) — Design system summary, quality checklist
 - [TECH_STACK.md](../TECH_STACK.md) — Tool choices including styling stack
+- [storybook-structure.md](../guides/storybook-structure.md) — Storybook surface, canonical live examples
 - [SCREEN_AUDIT_PROTOCOL.md](./SCREEN_AUDIT_PROTOCOL.md) — 15-point quality audit
 - [UX_HEURISTICS.md](./UX_HEURISTICS.md) — 10-point UX quality checklist
 
@@ -550,4 +555,5 @@ shadcn/ui handles dark mode token mapping automatically. Custom elements should 
 | ---------- | ---------------------------------------------------------------------------------------------------------- |
 | 2026-02-04 | Initial guidelines (dbt-playground context)                                                                |
 | 2026-02-07 | Adapted for Mokumo: Tailwind v4 + shadcn/ui + next/font                                                    |
+| 2026-03-08 | Marked as legacy — superseded by the new design system and Storybook surface, retained for reference       |
 | 2026-03-02 | Two-pool color architecture, badge variants, encoding channel rules, categorical palette (+teal, +emerald) |
