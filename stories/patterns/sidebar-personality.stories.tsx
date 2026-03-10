@@ -75,9 +75,9 @@ const KEYFRAMES = `
     100% { transform: scale(1); }
   }
   @keyframes niji-pop {
-    0%   { transform: scale(0.92); opacity: 0.6; }
-    50%  { transform: scale(1.12); }
-    100% { transform: scale(1.06); opacity: 1; }
+    0%   { transform: scale(0.85); opacity: 0.5; }
+    50%  { transform: scale(1.18); }
+    100% { transform: scale(1.12); opacity: 1; }
   }
   @keyframes icon-rotate-out {
     from { opacity: 1; transform: rotate(0deg) scale(1); }
@@ -690,7 +690,7 @@ function SidebarPrototype() {
                       fontWeight: isActive ? (isLiquid ? 500 : 600) : 400,
                       fontFamily: 'inherit',
                       letterSpacing: isLiquid ? '0.01em' : '0em',
-                      transform: !isLiquid && isActive ? 'scale(1.06)' : 'scale(1)',
+                      transform: !isLiquid && isActive ? 'scale(1.12)' : 'scale(1)',
                       transition:
                         'color 0.2s ease, padding 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       outline: 'none',
