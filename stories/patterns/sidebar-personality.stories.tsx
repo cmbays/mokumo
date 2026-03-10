@@ -286,6 +286,32 @@ function LiquidActiveIndicator({
   glowing: boolean
   spinning: boolean
 }) {
+  // When `spinning` goes false (hover ended), keep running until the
+  // current cycle completes, then pause. This prevents freezing mid-rotation.
+  // Uses direct DOM manipulation to avoid setState-in-effect lint issues.
+  const ringRef = useRef<HTMLDivElement>(null)
+  const wantsPause = useRef(false)
+
+  // Start immediately on hover; on hover-end, flag for pause at cycle boundary
+  useEffect(() => {
+    const el = ringRef.current
+    if (!el) return
+    if (spinning) {
+      wantsPause.current = false
+      el.style.animationPlayState = 'running'
+    } else {
+      wantsPause.current = true
+      // If not currently animating (e.g., first render), just stay paused
+    }
+  }, [spinning])
+
+  const handleIteration = useCallback(() => {
+    // Fires at the end of each full 360° cycle
+    if (wantsPause.current && ringRef.current) {
+      ringRef.current.style.animationPlayState = 'paused'
+    }
+  }, [])
+
   return (
     <div
       style={{
@@ -320,6 +346,8 @@ function LiquidActiveIndicator({
         }}
       >
         <div
+          ref={ringRef}
+          onAnimationIteration={handleIteration}
           style={{
             position: 'absolute',
             width: '200%',
@@ -328,7 +356,7 @@ function LiquidActiveIndicator({
             left: '-50%',
             background: RING_GRADIENT,
             animation: 'spin-ring 9s linear infinite',
-            animationPlayState: spinning ? 'running' : 'paused',
+            animationPlayState: 'paused',
           }}
         />
       </div>
