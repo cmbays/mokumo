@@ -4,6 +4,33 @@ Mokumo's visual language. Consult before writing any UI component.
 
 ---
 
+## Cross-Repo Design System
+
+The organization-wide design system spec lives in `ops/standards/design-system/` (resolve via Cross-Repo Registry in MEMORY.md). That is the canonical private control plane — governance, token contracts, component specs, quality gates.
+
+This skill contains the **working reference** for Mokumo UI development: token values, badge recipes, encoding rules, and personality system details. If this skill and ops/ disagree, ops/ wins.
+
+### Source of Truth Order
+
+1. `ops/standards/design-system/` — policy, contracts, governance
+2. Token contract in `ops/.../tokens/` — machine-readable token schema
+3. This skill — working reference for Mokumo agents
+4. Storybook stories — runnable examples and visual verification
+5. `docs-site/` — public-facing documentation
+
+## 4-Layer Token Architecture
+
+```
+Layer 4: Personality Overrides   ← CSS classes (.personality-liquid, .light)
+Layer 3: Semantic Tokens (ds-)   ← Extends shadcn, personality-aware
+Layer 2: Categorical Palette     ← Entity/service identity colors
+Layer 1: Foundation              ← Status colors, surfaces, borders, spacing
+```
+
+All tokens in `globals.css`, exposed via `@theme inline`. Use Tailwind classes — never raw CSS variables in components.
+
+---
+
 ## Two Color Pools
 
 Colors are divided into two isolated pools. **Never cross-pollinate** — a status color must never identify an entity, and a categorical color must never represent a state.
@@ -20,15 +47,18 @@ Colors are divided into two isolated pools. **Never cross-pollinate** — a stat
 
 ### Categorical Palette — entity/service identity
 
-| Token   | Hex       | Tailwind       | Assigned To                                            |
-| ------- | --------- | -------------- | ------------------------------------------------------ |
-| purple  | `#a855f7` | `text-purple`  | Jobs                                                   |
-| magenta | `#ff50da` | `text-magenta` | Quotes                                                 |
-| teal    | `#2dd4bf` | `text-teal`    | Screen Print service                                   |
-| emerald | `#10b981` | `text-emerald` | Invoices                                               |
-| lime    | `#84cc16` | `text-lime`    | Embroidery service                                     |
-| brown   | `#c47a3a` | `text-brown`   | DTF service                                            |
-| yellow  | `#f5e642` | `text-yellow`  | Communication channels (email, SMS, portal, voicemail) |
+| Token    | Hex       | Tailwind        | Assigned To                                            |
+| -------- | --------- | --------------- | ------------------------------------------------------ |
+| purple   | `#a855f7` | `text-purple`   | Jobs                                                   |
+| magenta  | `#ff50da` | `text-magenta`  | Quotes                                                 |
+| emerald  | `#10b981` | `text-emerald`  | Invoices                                               |
+| amber    | `#f59e0b` | `text-amber`    | Customers                                              |
+| graphite | `#94a3b8` | `text-graphite` | Garments                                               |
+| cyan     | `#06b6d4` | `text-cyan`     | Home/Dashboard                                         |
+| teal     | `#2dd4bf` | `text-teal`     | Screen Print service                                   |
+| lime     | `#84cc16` | `text-lime`     | Embroidery service                                     |
+| brown    | `#c47a3a` | `text-brown`    | DTF service                                            |
+| yellow   | `#f5e642` | `text-yellow`   | Communication channels (email, SMS, portal, voicemail) |
 
 Each categorical color has `-hover` and `-bold` variants (e.g., `text-teal-hover`, `text-teal-bold`).
 
@@ -182,12 +212,15 @@ For technical diagrams (gang sheet viewer, screen room layout):
 
 ### Categorical Colors — Entity/Service Assignments
 
-| Color   | Entity  | Nav Icon | Left Border | Service                |
-| ------- | ------- | -------- | ----------- | ---------------------- |
-| purple  | Job     | Yes      | Yes         | —                      |
-| magenta | Quote   | Yes      | Yes         | —                      |
-| emerald | Invoice | Yes      | Yes         | —                      |
-| teal    | —       | —        | —           | Screen Print           |
-| lime    | —       | —        | —           | Embroidery             |
-| brown   | —       | —        | —           | DTF                    |
-| yellow  | —       | —        | Yes         | Communication channels |
+| Color    | Entity    | Nav Icon | Left Border | Service                |
+| -------- | --------- | -------- | ----------- | ---------------------- |
+| purple   | Job       | Yes      | Yes         | —                      |
+| magenta  | Quote     | Yes      | Yes         | —                      |
+| emerald  | Invoice   | Yes      | Yes         | —                      |
+| amber    | Customer  | Yes      | Yes         | —                      |
+| graphite | Garment   | Yes      | Yes         | —                      |
+| cyan     | Dashboard | Yes      | —           | —                      |
+| teal     | —         | —        | —           | Screen Print           |
+| lime     | —         | —        | —           | Embroidery             |
+| brown    | —         | —        | —           | DTF                    |
+| yellow   | —         | —        | Yes         | Communication channels |

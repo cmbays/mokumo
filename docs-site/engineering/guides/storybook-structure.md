@@ -78,28 +78,41 @@ Use colocated stories for:
 
 Colocation keeps examples discoverable and reduces drift during refactors.
 
-## Initial Scope
+## Personality System in Stories
 
-Because the design system is still being refined, start shallow:
+Foundation and pattern stories should demonstrate all personality x mode combinations where relevant:
 
-1. root-level overview and structure
-2. stable shared primitives
-3. a few shared patterns
+- **Niji Dark** (default) — the base visual treatment
+- **Niji Light** — light mode with the same neobrutalist character
+- **Liquid Metal Dark** — luxury chrome with gradient rings and grain
+- **Liquid Metal Light** — warm cream background with onyx accents
 
-Defer deeper feature stories until the design system stabilizes enough that the story surface will not churn heavily.
+Stories achieve this by applying CSS classes on the story wrapper:
 
-## Initial Story Targets
+- No classes = Niji Dark (default)
+- `.light` = Niji Light
+- `.personality-liquid` = Liquid Metal Dark
+- `.personality-liquid.light` = Liquid Metal Light
 
-- `Button`
-- `Input`
-- `Badge`
-- one root-level design system overview story
+The personality registry (`src/shared/lib/personality/`) provides `getPersonalityClasses()` for programmatic class generation.
 
-These are stable enough to create value now without overcommitting to a still-moving visual system.
+## Current Story Surface
 
-Current seed stories:
+Foundation stories (root `stories/`):
 
-- root overview story
-- one foundations story
-- one shared pattern story
-- primitive stories for `Button`, `Input`, `Badge`, `Select`, and `Dialog`
+- Design system overview
+- Color tokens (status + categorical palettes, surface tiers, personality semantics)
+- Entity palette (domain entities with color assignments and encoding rules)
+- Personality tokens (all 4 personality x mode combos side-by-side)
+- Visual language
+
+Pattern stories (root `stories/`):
+
+- Form section (quote intake example)
+- Sidebar personality prototype (interactive Niji vs Liquid Metal exploration)
+
+Colocated primitive stories (`src/shared/ui/primitives/`):
+
+- Button, Input, Badge, Dialog, Select
+
+Remaining primitives (28) will be added incrementally as verticals are built.
