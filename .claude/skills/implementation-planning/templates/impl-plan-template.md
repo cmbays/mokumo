@@ -22,7 +22,7 @@
 **Files:**
 
 - Create: `src/domain/entities/{entity}.ts`
-- Test: `__tests__/schemas/{vertical}.test.ts`
+- Test: `src/domain/entities/__tests__/{entity}.test.ts`
 
 **Steps:**
 

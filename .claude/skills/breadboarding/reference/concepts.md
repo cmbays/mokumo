@@ -345,7 +345,7 @@ Look for sections where tracing the wiring reveals a "pinch point" -- many affor
    classDef chunk fill:#87CEEB,stroke:#0288d1,color:#000,stroke-width:2px
    ```
 
-Chunks often map naturally to reusable components -- they become the shared components in `src/features/*/components/`.
+Chunks often map naturally to reusable components. Feature-scoped chunks belong in `src/features/*/components/`; cross-feature/design-system primitives belong in `src/shared/ui/primitives/`.
 
 ---
 

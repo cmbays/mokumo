@@ -45,7 +45,7 @@ import { cn } from '@shared/lib/cn'
 // Import mock data for dropdowns
 // import data from your domain layer
 
-// Define form schema with Zod (or import from @domain/{vertical}/schemas/)
+// Define form schema with Zod (or import from @domain/entities/)
 // const formSchema = z.object({
 //   customerId: z.string().min(1, "Select a customer"),
 //   lineItems: z.array(z.object({

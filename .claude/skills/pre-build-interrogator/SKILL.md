@@ -74,7 +74,7 @@ Example:
 | UI Element | Code Mechanism | Wiring |
 |-----------|----------------|--------|
 | Drag card between columns | dnd-kit DragOverlay + sortable | Updates job.status in local state |
-| Status column headers | Derived from JobStatus enum | Maps to status labels from entity schema |
+| Status column headers | Derived from JobStatus enum | Maps to `LANE_LABELS` / `PRODUCTION_STATE_LABELS` from `src/domain/constants/` |
 | Card click → Job Detail | Next.js Link on card surface | Routes to /jobs/[id] |
 
 ### 4. Write Spike Document
