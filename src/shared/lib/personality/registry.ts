@@ -7,6 +7,7 @@
  * 3. Done — all components automatically support it
  */
 
+import { cn } from '@shared/lib/cn'
 import type { PersonalityManifest, PersonalityName } from './types'
 
 export const PERSONALITIES: Record<PersonalityName, PersonalityManifest> = {
@@ -44,5 +45,5 @@ export function getPersonalityClasses(
   const classes: string[] = []
   if (manifest.cssClass) classes.push(manifest.cssClass)
   if (mode === 'light') classes.push('light')
-  return classes.join(' ')
+  return cn(...classes)
 }

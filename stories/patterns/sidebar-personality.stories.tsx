@@ -564,8 +564,8 @@ function Badge({
   // Light mode shadow for gradient badges — subtle depth behind the ring
   const lightShadow = lightMode && isLiquid ? '0 1px 4px rgba(0,0,0,0.12)' : undefined
 
-  if (gradient !== 'none' && interactive) {
-    // Spinning ring approach — only for interactive elements (buttons, CTAs)
+  if (gradient !== 'none') {
+    // Spinning ring approach — gradient chrome for all badges, animation only when interactive
     return (
       <span
         {...hoverProps}
@@ -601,8 +601,8 @@ function Badge({
               top: '-50%',
               left: '-50%',
               backgroundImage: gradient,
-              animation: 'badge-spin 4.5s linear infinite',
-              animationPlayState: hovered ? 'running' : 'paused',
+              animation: interactive ? 'badge-spin 4.5s linear infinite' : undefined,
+              animationPlayState: interactive && hovered ? 'running' : 'paused',
             }}
           />
         </span>
@@ -614,7 +614,7 @@ function Badge({
             borderRadius: 5,
             backgroundImage: gradient,
             pointerEvents: 'none',
-            opacity: hovered ? 0 : 1,
+            opacity: interactive && hovered ? 0 : 1,
             transition: 'opacity 0.2s ease',
           }}
         />
@@ -667,7 +667,6 @@ function CustomerDetailContent({
   personality: Personality
   mode: Mode
   isLiquid: boolean
-  sidebarTheme: ThemeValues
 }) {
   const ct = getContentTheme(personality, mode)
 
@@ -676,7 +675,6 @@ function CustomerDetailContent({
   const tabRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
   const tabContainerRef = useRef<HTMLDivElement>(null)
   const [tabIndicatorPos, setTabIndicatorPos] = useState({ left: 0, width: 0 })
-  const [noteHovered, setNoteHovered] = useState(false)
   const [clickedNode, setClickedNode] = useState<number | null>(null)
 
   // Update tab indicator position
@@ -691,7 +689,7 @@ function CustomerDetailContent({
       }
     }, 50)
     return () => clearTimeout(timer)
-  }, [activeTab])
+  }, [activeTab, personality, mode])
 
   const isDark = mode === 'dark'
 
@@ -816,7 +814,8 @@ function CustomerDetailContent({
           : ONYX_RING_GRADIENT
       const iconColor = isSelected ? ct.goldText : nijiColor
       return (
-        <div
+        <button
+          type="button"
           onClick={() => setClickedNode(isSelected ? null : index)}
           onMouseEnter={() => setDotHover(true)}
           onMouseLeave={() => setDotHover(false)}
@@ -831,6 +830,9 @@ function CustomerDetailContent({
             transition: 'transform 0.2s ease',
             animation: isSelected ? 'badge-glow 0.6s ease' : undefined,
             boxShadow: !isDark ? '0 1px 3px rgba(0,0,0,0.10)' : undefined,
+            border: 'none',
+            padding: 0,
+            background: 'transparent',
           }}
         >
           {/* Spinning ring */}
@@ -888,13 +890,14 @@ function CustomerDetailContent({
               style={{ color: iconColor, transition: 'color 0.3s ease' }}
             />
           </div>
-        </div>
+        </button>
       )
     }
     // Niji timeline dot — icon colored to match sidebar nav icon colors
     const isClicked = clickedNode === index
     return (
-      <div
+      <button
+        type="button"
         onClick={() => {
           setClickedNode(index)
           setTimeout(() => setClickedNode(null), 800)
@@ -913,10 +916,12 @@ function CustomerDetailContent({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          padding: 0,
+          background: 'transparent',
         }}
       >
         <Icon size={14} strokeWidth={2} style={{ color: nijiColor }} />
-      </div>
+      </button>
     )
   }
 
@@ -2081,7 +2086,7 @@ function SidebarPrototype() {
       top: activeRect.top - containerRect.top,
       height: activeRect.height,
     }
-  }, [activeHref])
+  }, [activeHref, personality, mode])
 
   const [indicatorPos, setIndicatorPos] = useState({ top: 0, height: 36 })
 
@@ -2682,12 +2687,7 @@ function SidebarPrototype() {
           </div>
 
           {/* Customer detail content — themed per personality */}
-          <CustomerDetailContent
-            personality={personality}
-            mode={mode}
-            isLiquid={isLiquid}
-            sidebarTheme={theme}
-          />
+          <CustomerDetailContent personality={personality} mode={mode} isLiquid={isLiquid} />
         </div>
       </div>
     </>

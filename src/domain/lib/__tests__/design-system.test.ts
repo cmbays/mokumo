@@ -41,6 +41,7 @@ describe('categoryBadge', () => {
     'amber',
     'graphite',
     'cyan',
+    'yellow',
   ]
 
   it.each(colors)('returns outline badge classes for %s', (color) => {
