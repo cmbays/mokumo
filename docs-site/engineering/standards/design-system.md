@@ -58,7 +58,7 @@ Adding a personality: one CSS override block + one registry entry in `src/shared
 | ---------------------------- | --------------------------------------------- |
 | Token definitions            | `src/app/globals.css`                         |
 | Personality types + registry | `src/shared/lib/personality/`                 |
-| Badge/dot utilities          | `src/domain/lib/design-system.ts`             |
+| Badge/dot utilities          | `src/shared/lib/design-system.ts`             |
 | Storybook config             | `.storybook/main.ts`, `.storybook/preview.ts` |
 
 ## Related

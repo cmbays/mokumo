@@ -115,4 +115,4 @@ Colocated primitive stories (`src/shared/ui/primitives/`):
 
 - Button, Input, Badge, Dialog, Select
 
-Remaining primitives (28) will be added incrementally as verticals are built.
+Remaining primitives will be added incrementally as verticals are built.

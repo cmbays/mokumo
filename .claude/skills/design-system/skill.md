@@ -23,7 +23,7 @@ The public org-level design system docs live in `docs/breezy-bays-labs/design-sy
 
 ## 4-Layer Token Architecture
 
-```
+```text
 Layer 4: Personality Overrides   ← CSS classes (.personality-liquid, .light)
 Layer 3: Semantic Tokens (ds-)   ← Extends shadcn, personality-aware
 Layer 2: Categorical Palette     ← Entity/service identity colors
@@ -136,7 +136,8 @@ import { dotColor } from '@shared/lib/design-system'
 
 ## Badge Utility API
 
-All utilities in `src/shared/lib/design-system.ts`:
+Canonical implementation: `src/domain/lib/design-system.ts`
+Import path for outer layers: `@shared/lib/design-system`
 
 | Function            | Input                   | Returns                                   | Use                   |
 | ------------------- | ----------------------- | ----------------------------------------- | --------------------- |
