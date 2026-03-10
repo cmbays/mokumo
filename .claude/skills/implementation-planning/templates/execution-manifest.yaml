@@ -18,8 +18,8 @@ waves:
           Read CLAUDE.md for coding standards (Zod-first types, Tailwind tokens).
 
           Build the Zod schemas and mock data for the VERTICAL vertical:
-          1. Define all entity schemas in src/domain/{vertical}/schemas/
-          2. Create realistic seed data in src/domain/{vertical}/
+          1. Define all entity schemas in src/domain/entities/
+          2. Create realistic seed data alongside entity files
           3. Export types via z.infer<typeof schema>
           4. Write schema tests in __tests__/
 
@@ -34,7 +34,7 @@ waves:
           Use the build-session-protocol skill to guide your workflow.
 
           Read tmp/workspace/{pipeline-id}/breadboard.md for the affordance map.
-          Read the schemas from src/domain/{vertical}/schemas/ (built in Wave 0).
+          Read the schemas from src/domain/entities/ (built in Wave 0).
 
           Build FEATURE_A:
           - Components: list specific components
@@ -50,7 +50,7 @@ waves:
           Use the build-session-protocol skill to guide your workflow.
 
           Read tmp/workspace/{pipeline-id}/breadboard.md for the affordance map.
-          Read the schemas from src/domain/{vertical}/schemas/ (built in Wave 0).
+          Read the schemas from src/domain/entities/ (built in Wave 0).
 
           Build FEATURE_B:
           - Components: list specific components
