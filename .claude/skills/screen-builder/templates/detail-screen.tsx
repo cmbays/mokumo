@@ -20,13 +20,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@shared/ui/primitives/breadcrumb'
-// import { StatusBadge } from "@/components/features/status-badge";
-// import { PriorityBadge } from "@/components/features/priority-badge";
+// import { StatusBadge } from "@features/{vertical}/components/status-badge";
+// import { PriorityBadge } from "@features/{vertical}/components/priority-badge";
 import { ArrowLeft } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 
 // Import mock data + constants
-// import { jobs, customers } from "@/lib/mock-data";
+// import data from your domain layer
 // import { PRODUCTION_STATE_LABELS } from "@domain/constants";
 
 // Next.js dynamic route params

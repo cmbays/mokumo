@@ -14,13 +14,11 @@ Read these files (do NOT skip any):
 
 1. `docs-site/engineering/architecture/app-flow.md` — find the route, layout, sections, key actions, breadcrumb trail
 2. `CLAUDE.md` — find the feature acceptance criteria
-3. `lib/schemas/` — identify which Zod schemas this screen needs
-4. `lib/mock-data.ts` — identify which mock data to import
-5. `lib/constants.ts` — identify which label/color mappings to use
-6. `components/ui/` — check what shadcn/ui primitives are installed
-7. `components/features/` — check what shared components already exist (StatusBadge, PriorityBadge, DataTable, EmptyState, PageHeader, etc.)
+3. `src/domain/*/schemas/` — identify which Zod schemas this screen needs
+4. `src/shared/ui/primitives/` — check what shadcn/ui primitives are installed
+5. `src/features/*/components/` — check what shared feature components already exist
 
-If a required shared component doesn't exist yet, build it first in `components/features/`.
+If a required shared component doesn't exist yet, build it first in the appropriate feature's `components/` directory or in `src/shared/ui/`.
 
 ### 2. Select Template
 
@@ -43,11 +41,9 @@ Follow these rules strictly:
 **Component rules**:
 
 - Server component by default. Only add `"use client"` when hooks/events/browser APIs are needed.
-- Import from `@/components/ui/` for shadcn primitives
-- Import from `@/components/features/` for shared domain components
-- Import from `@/lib/schemas/` for types (use `z.infer<typeof schema>`)
-- Import from `@/lib/mock-data` for data
-- Import from `@/lib/constants` for label/color mappings
+- Import from `@shared/ui/primitives/` for shadcn primitives
+- Import from `@features/*/components/` for shared feature components
+- Import from `@domain/*/schemas/` for types (use `z.infer<typeof schema>`)
 - Use `cn()` from `@shared/lib/cn` for conditional classes — never concatenate className strings
 
 **Design system** (reference `.claude/skills/screen-builder/reference/design-tokens-quick-ref.md`):

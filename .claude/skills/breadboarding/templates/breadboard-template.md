@@ -135,10 +135,10 @@ flowchart TB
 
 ## Component Boundaries
 
-| Component | Place(s) | Contains Affordances | Location                   | Shared? |
-| --------- | -------- | -------------------- | -------------------------- | ------- |
-|           |          |                      | `components/features/`     | Yes     |
-|           |          |                      | `app/(dashboard)/{route}/` | No      |
+| Component | Place(s) | Contains Affordances | Location                     | Shared? |
+| --------- | -------- | -------------------- | ---------------------------- | ------- |
+|           |          |                      | `src/features/*/components/` | Yes     |
+|           |          |                      | `app/(dashboard)/{route}/`   | No      |
 
 ---
 

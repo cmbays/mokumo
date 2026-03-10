@@ -2,7 +2,7 @@
 
 What's available. Check here before creating new components.
 
-## shadcn/ui Primitives (`components/ui/`)
+## shadcn/ui Primitives (`src/shared/ui/primitives/`)
 
 | Component     | File                | Use                                                                         |
 | ------------- | ------------------- | --------------------------------------------------------------------------- |
@@ -35,7 +35,7 @@ Common ones you may need: `checkbox`, `radio-group`, `switch`, `skeleton`, `prog
 | Sidebar   | `sidebar.tsx` | App sidebar with nav links |
 | Topbar    | `topbar.tsx`  | Top bar                    |
 
-## Shared Feature Components (`components/features/`)
+## Shared Feature Components (`src/features/*/components/`)
 
 Check this directory before building. After Step 1, these should exist:
 
@@ -47,15 +47,13 @@ Check this directory before building. After Step 1, these should exist:
 | PriorityBadge | `priority-badge.tsx` | Priority → color badge                | Planned (Step 1) |
 | EmptyState    | `empty-state.tsx`    | Icon + message + optional CTA         | Planned (Step 1) |
 
-## Data Layer (`lib/`)
+## Data Layer (`src/domain/`)
 
-| File                  | Exports                                                                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `schemas/job.ts`      | `jobSchema`, `Job`, `ProductionState`, `Priority`                                                                                       |
-| `schemas/quote.ts`    | `quoteSchema`, `Quote`, `QuoteStatus`                                                                                                   |
-| `schemas/customer.ts` | `customerSchema`, `Customer`                                                                                                            |
-| `schemas/garment.ts`  | `garmentSchema`, `Garment`                                                                                                              |
-| `schemas/screen.ts`   | `screenSchema`, `Screen`, `BurnStatus`                                                                                                  |
-| `constants.ts`        | `PRODUCTION_STATE_LABELS`, `PRODUCTION_STATE_COLORS`, `PRIORITY_LABELS`, `PRIORITY_COLORS`, `BURN_STATUS_LABELS`, `QUOTE_STATUS_LABELS` |
-| `mock-data.ts`        | `jobs`, `customers`, `quotes`, `screens`                                                                                                |
-| `utils.ts`            | `cn()` (clsx + tailwind-merge)                                                                                                          |
+| Path                            | Exports                                           |
+| ------------------------------- | ------------------------------------------------- |
+| `src/domain/jobs/schemas/`      | `jobSchema`, `Job`, `ProductionState`, `Priority` |
+| `src/domain/quotes/schemas/`    | `quoteSchema`, `Quote`, `QuoteStatus`             |
+| `src/domain/customers/schemas/` | `customerSchema`, `Customer`                      |
+| `src/domain/garments/schemas/`  | `garmentSchema`, `Garment`                        |
+| `src/domain/screens/schemas/`   | `screenSchema`, `Screen`, `BurnStatus`            |
+| `src/shared/lib/cn.ts`          | `cn()` (clsx + tailwind-merge)                    |

@@ -17,7 +17,7 @@ Read these before forming any opinion:
 3. `CLAUDE.md` — Design System section for visual constraints.
 4. `docs-site/engineering/standards/design-system.md` — Component engineering rules.
 5. `PROGRESS.md` — What's built and what's in flight.
-6. `lib/schemas/` — Data model. Know what entities exist.
+6. `src/domain/*/schemas/` — Data model. Know what entities exist.
 
 You must understand the complete system before proposing a single new idea.
 
@@ -38,7 +38,7 @@ After reading everything, analyze:
 Before proposing features, validate your assumptions:
 
 - **User research**: Review any user feedback, competitor screenshots, or pain point documentation in `inbox/screenshots/`
-- **Data model check**: Confirm proposed features can be supported by existing schemas in `lib/schemas/`
+- **Data model check**: Confirm proposed features can be supported by existing schemas in `src/domain/*/schemas/`
 - **Tech feasibility**: Verify proposed features work within the stack defined in `docs-site/engineering/architecture/tech-stack.md`
 - **Deliverables**: This step produces a validated understanding of constraints before feature ideation
 

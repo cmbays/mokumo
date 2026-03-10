@@ -35,7 +35,7 @@ Read these before starting:
 2. `tmp/workspace/{pipeline-id}/frame.md` — problem/outcome context
 3. `CLAUDE.md` — project standards, design system
 4. `docs-site/engineering/architecture/app-flow.md` — routes, page structure, navigation
-5. `lib/schemas/` — Zod schemas for relevant data types
+5. `src/domain/*/schemas/` — Zod schemas for relevant data types
 6. Existing code (if mapping an existing system)
 
 ### Outputs

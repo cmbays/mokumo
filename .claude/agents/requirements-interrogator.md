@@ -16,9 +16,8 @@ The cost of building the wrong thing is 10x the cost of asking one more question
 
 1. Read `docs-site/engineering/architecture/app-flow.md` — find the screen's route, sections, actions, states, cross-links
 2. Read `CLAUDE.md` — find the feature's acceptance criteria and project standards
-3. Read `lib/schemas/` — understand the data model for relevant entities
-4. Read `lib/mock-data.ts` — understand available data shapes and relationships
-5. Read `PROGRESS.md` — understand what's already built and what this step can depend on
+3. Read `src/domain/*/schemas/` — understand the data model for relevant entities
+4. Read `src/domain/*/entities/` — understand entity shapes and relationships
 
 ## Workflow
 

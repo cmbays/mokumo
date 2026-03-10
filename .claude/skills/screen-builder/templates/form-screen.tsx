@@ -43,9 +43,9 @@ import { Plus, Trash2 } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 
 // Import mock data for dropdowns
-// import { customers } from "@/lib/mock-data";
+// import data from your domain layer
 
-// Define form schema with Zod (or import from lib/schemas/)
+// Define form schema with Zod (or import from @domain/{vertical}/schemas/)
 // const formSchema = z.object({
 //   customerId: z.string().min(1, "Select a customer"),
 //   lineItems: z.array(z.object({
