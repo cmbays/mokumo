@@ -192,25 +192,44 @@ type ThemeValues = {
 }
 
 // Icon color map (resolved per mode)
-function getIconColor(color: string | undefined, mode: Mode): string | undefined {
-  if (!color) return undefined
-  const dark: Record<string, string> = {
+const ICON_COLORS: Record<Mode, Record<string, string>> = {
+  dark: {
     purple: '#a855f7',
     magenta: '#ff50da',
     emerald: '#10b981',
     action: '#2ab9ff',
     teal: '#2dd4bf',
     warning: '#ffc663',
-  }
-  const light: Record<string, string> = {
+  },
+  light: {
     purple: '#7c3aed',
     magenta: '#d946c7',
     emerald: '#059669',
     action: '#0077cc',
     teal: '#0d9488',
     warning: '#d97706',
-  }
-  return mode === 'dark' ? dark[color] : light[color]
+  },
+}
+
+function getIconColor(color: string | undefined, mode: Mode): string | undefined {
+  if (!color) return undefined
+  return ICON_COLORS[mode][color]
+}
+
+/** Resolve the accent color for the active nav item (Niji indicator border) */
+function getActiveAccentColor(href: string, mode: Mode, fallback: string): string {
+  const item = NAV_ITEMS.find((i) => i.href === href)
+  if (!item?.iconColor) return fallback
+  return ICON_COLORS[mode][item.iconColor] || fallback
+}
+
+/** Resolve an accent background (10% opacity version) for Niji indicator fill */
+function accentToBg(hex: string): string {
+  // Convert hex to rgba at 10%
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r},${g},${b},0.10)`
 }
 
 // ─── Noise SVG (for Liquid Metal grain) ─────────────────────────────────────────
@@ -222,13 +241,15 @@ const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='h
 function NijiActiveIndicator({
   top,
   height,
-  theme,
   collapsed,
+  accentColor,
+  accentBg,
 }: {
   top: number
   height: number
-  theme: ThemeValues
   collapsed: boolean
+  accentColor: string
+  accentBg: string
 }) {
   return (
     <div
@@ -239,10 +260,11 @@ function NijiActiveIndicator({
         right: collapsed ? 6 : 8,
         height,
         borderRadius: 6,
-        background: theme.sidebarActiveBg,
-        border: `1.5px solid ${theme.sidebarActive}`,
-        boxShadow: `3px 3px 0px ${theme.sidebarActive}33`,
-        transition: 'top 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.2s ease, right 0.2s ease',
+        background: accentBg,
+        border: `1.5px solid ${accentColor}`,
+        boxShadow: `3px 3px 0px ${accentColor}33`,
+        transition:
+          'top 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.2s ease, right 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
         zIndex: 0,
       }}
     />
@@ -557,26 +579,29 @@ function SidebarPrototype() {
               padding: '4px 8px',
               position: 'relative',
               zIndex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
+              overflow: 'clip',
             }}
           >
             {/* Sliding indicator */}
-            {isLiquid ? (
-              <LiquidActiveIndicator
-                top={indicatorPos.top}
-                height={indicatorPos.height}
-                theme={theme}
-                collapsed={collapsed}
-              />
-            ) : (
-              <NijiActiveIndicator
-                top={indicatorPos.top}
-                height={indicatorPos.height}
-                theme={theme}
-                collapsed={collapsed}
-              />
-            )}
+            {(() => {
+              const nijiAccent = getActiveAccentColor(activeHref, mode, theme.sidebarActive)
+              return isLiquid ? (
+                <LiquidActiveIndicator
+                  top={indicatorPos.top}
+                  height={indicatorPos.height}
+                  theme={theme}
+                  collapsed={collapsed}
+                />
+              ) : (
+                <NijiActiveIndicator
+                  top={indicatorPos.top}
+                  height={indicatorPos.height}
+                  collapsed={collapsed}
+                  accentColor={nijiAccent}
+                  accentBg={accentToBg(nijiAccent)}
+                />
+              )
+            })()}
 
             {/* Main nav items */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
@@ -610,12 +635,18 @@ function SidebarPrototype() {
                       border: 'none',
                       background: 'transparent',
                       cursor: 'pointer',
-                      color: isActive ? theme.sidebarActive : theme.sidebarMuted,
+                      color: isActive
+                        ? isLiquid
+                          ? theme.sidebarActive
+                          : getIconColor(item.iconColor, mode) || theme.sidebarActive
+                        : theme.sidebarMuted,
                       fontSize: item.indent ? 12 : 13,
                       fontWeight: isActive ? (isLiquid ? 500 : 600) : 400,
                       fontFamily: 'inherit',
                       letterSpacing: isLiquid ? '0.01em' : '0em',
-                      transition: 'color 0.2s ease, padding 0.2s ease',
+                      transform: !isLiquid && isActive ? 'scale(1.03)' : 'scale(1)',
+                      transition:
+                        'color 0.2s ease, padding 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       outline: 'none',
                       animation:
                         isActive && bounceKey > 0
@@ -631,7 +662,11 @@ function SidebarPrototype() {
                       strokeWidth={isLiquid ? 1.5 : 2}
                       style={{
                         flexShrink: 0,
-                        color: isActive ? theme.sidebarActive : iconClr || theme.sidebarMuted,
+                        color: isActive
+                          ? isLiquid
+                            ? theme.sidebarActive
+                            : iconClr || theme.sidebarActive
+                          : iconClr || theme.sidebarMuted,
                         transition: 'color 0.2s ease',
                       }}
                     />
