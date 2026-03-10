@@ -802,7 +802,7 @@ function CustomerDetailContent({
   }
 
   // Interactive timeline dot with icon
-  const timelineDot = (type: TimelineType, index: number) => {
+  const TimelineDot = ({ type, index }: { type: TimelineType; index: number }) => {
     const isSelected = clickedNode === index
     const [dotHover, setDotHover] = useState(false)
     const { icon: Icon, nijiColor } = TIMELINE_ICONS[type]
@@ -1369,7 +1369,7 @@ function CustomerDetailContent({
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {/* Timeline item 1 — Job */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 14 }}>
-              {timelineDot('job', 0)}
+              <TimelineDot type="job" index={0} />
               <div style={{ flex: 1, fontSize: 13 }}>
                 <span style={{ color: ct.textMed }}>Job </span>
                 <span style={{ color: ct.textLow }}>#2847</span>
@@ -1384,7 +1384,7 @@ function CustomerDetailContent({
 
             {/* Timeline item 2 — Invoice */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 14 }}>
-              {timelineDot('invoice', 1)}
+              <TimelineDot type="invoice" index={1} />
               <div style={{ flex: 1, fontSize: 13 }}>
                 <span style={{ color: ct.textMed }}>Invoice </span>
                 <span style={{ color: ct.textLow }}>#1156</span>
@@ -1398,7 +1398,7 @@ function CustomerDetailContent({
 
             {/* Timeline item 3 — Note */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 14 }}>
-              {timelineDot('note', 2)}
+              <TimelineDot type="note" index={2} />
               <div style={{ flex: 1, fontSize: 13, color: ct.textSec, fontStyle: 'italic' }}>
                 &ldquo;Tom mentioned they want custom hoodies for the upcoming season&rdquo;
               </div>
@@ -1408,7 +1408,7 @@ function CustomerDetailContent({
 
             {/* Timeline item 4 — Quote */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 14 }}>
-              {timelineDot('quote', 3)}
+              <TimelineDot type="quote" index={3} />
               <div style={{ flex: 1, fontSize: 13 }}>
                 <span style={{ color: ct.textMed }}>Quote </span>
                 <span style={{ color: ct.textLow }}>#1892</span>
@@ -1429,7 +1429,7 @@ function CustomerDetailContent({
                 opacity: 0.5,
               }}
             >
-              {timelineDot('job', 4)}
+              <TimelineDot type="job" index={4} />
               <div style={{ flex: 1, fontSize: 13 }}>
                 <span style={{ color: ct.textSec }}>Job </span>
                 <span style={{ color: ct.textLow }}>#2641</span>
