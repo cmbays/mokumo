@@ -46,6 +46,7 @@ research → interview → shaping → breadboarding → reflection
 | Impl Planning     | `/impl-planning`         | skill                                               | Waves, sessions, YAML manifests               |
 | Build             | `frontend-builder`       | agent                                               | Screens, components                           |
 | Review            | `build-session-protocol` | `design-auditor` + `build-reviewer` + `finance-sme` | Findings, fixes                               |
+| Merge             | `gh pr merge`            | —                                                   | Merged PR on main                             |
 
 ### Design Mockup Phase Details
 

@@ -49,11 +49,11 @@ Check this directory before building. After Step 1, these should exist:
 
 ## Data Layer (`src/domain/`)
 
-| Path                            | Exports                                           |
-| ------------------------------- | ------------------------------------------------- |
-| `src/domain/jobs/schemas/`      | `jobSchema`, `Job`, `ProductionState`, `Priority` |
-| `src/domain/quotes/schemas/`    | `quoteSchema`, `Quote`, `QuoteStatus`             |
-| `src/domain/customers/schemas/` | `customerSchema`, `Customer`                      |
-| `src/domain/garments/schemas/`  | `garmentSchema`, `Garment`                        |
-| `src/domain/screens/schemas/`   | `screenSchema`, `Screen`, `BurnStatus`            |
-| `src/shared/lib/cn.ts`          | `cn()` (clsx + tailwind-merge)                    |
+| Path                              | Exports                                           |
+| --------------------------------- | ------------------------------------------------- |
+| `src/domain/entities/job.ts`      | `jobSchema`, `Job`, `ProductionState`, `Priority` |
+| `src/domain/entities/quote.ts`    | `quoteSchema`, `Quote`, `QuoteStatus`             |
+| `src/domain/entities/customer.ts` | `customerSchema`, `Customer`                      |
+| `src/domain/entities/garment.ts`  | `garmentSchema`, `Garment`                        |
+| `src/domain/entities/screen.ts`   | `screenSchema`, `Screen`, `BurnStatus`            |
+| `src/shared/lib/cn.ts`            | `cn()` (clsx + tailwind-merge)                    |

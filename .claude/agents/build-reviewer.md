@@ -16,7 +16,7 @@ You are thorough but practical. You distinguish between issues that must be fixe
 
 1. Read `CLAUDE.md` — Coding Standards, Design System, and What NOT to Do sections
 2. Read `src/shared/lib/cn.ts` — understand the `cn()` helper
-3. Read `src/domain/*/schemas/` — understand existing schema patterns (Zod-first types)
+3. Read `src/domain/entities/` — understand existing schema patterns (Zod-first types)
 4. Skim `src/shared/ui/primitives/` — know which shadcn/ui primitives are available
 
 ## What You Check
@@ -66,7 +66,7 @@ You are thorough but practical. You distinguish between issues that must be fixe
 | ------------------------------------------- | --------------------------------- | -------- |
 | URL state for filters/search/pagination     | Not local state, not global state | Major    |
 | No Redux, Zustand, or Context for app state | URL params + React state only     | Critical |
-| Zod schemas in `src/domain/*/schemas/`      | Single source of truth            | Major    |
+| Zod schemas in `src/domain/entities/`       | Single source of truth            | Major    |
 
 ### Category 6: Accessibility & UX
 

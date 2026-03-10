@@ -21,7 +21,7 @@
 
 **Files:**
 
-- Create: `src/domain/{vertical}/schemas/{vertical}.ts`
+- Create: `src/domain/entities/{entity}.ts`
 - Test: `__tests__/schemas/{vertical}.test.ts`
 
 **Steps:**

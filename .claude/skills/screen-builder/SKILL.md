@@ -14,7 +14,7 @@ Read these files (do NOT skip any):
 
 1. `docs-site/engineering/architecture/app-flow.md` — find the route, layout, sections, key actions, breadcrumb trail
 2. `CLAUDE.md` — find the feature acceptance criteria
-3. `src/domain/*/schemas/` — identify which Zod schemas this screen needs
+3. `src/domain/entities/` — identify which Zod schemas this screen needs
 4. `src/shared/ui/primitives/` — check what shadcn/ui primitives are installed
 5. `src/features/*/components/` — check what shared feature components already exist
 
@@ -43,7 +43,7 @@ Follow these rules strictly:
 - Server component by default. Only add `"use client"` when hooks/events/browser APIs are needed.
 - Import from `@shared/ui/primitives/` for shadcn primitives
 - Import from `@features/*/components/` for shared feature components
-- Import from `@domain/*/schemas/` for types (use `z.infer<typeof schema>`)
+- Import from `@domain/entities/` for types (use `z.infer<typeof schema>`)
 - Use `cn()` from `@shared/lib/cn` for conditional classes — never concatenate className strings
 
 **Design system** (reference `.claude/skills/screen-builder/reference/design-tokens-quick-ref.md`):

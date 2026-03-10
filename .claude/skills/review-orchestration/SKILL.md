@@ -48,7 +48,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
 2. Run `git diff $BASE --stat` to get file list and line counts
 3. Run `git diff $BASE --name-only` to get the changed files
 4. Run `git log --oneline -5` to capture commit metadata
-5. Produce a `PRFacts` object conforming to `prFactsSchema` from `src/domain/lib/schemas/review-pipeline.ts`:
+5. Produce a `PRFacts` object conforming to `prFactsSchema` from `src/domain/entities/review-pipeline.ts`:
    - `branch`: current branch name from `git branch --show-current`
    - `baseBranch`: `"main"` (or `"HEAD~1"` for local-only runs)
    - `files`: array of `fileChangeSchema` objects (`path`, `additions`, `deletions`, `status`)
@@ -154,7 +154,7 @@ Run all 6 stages in sequence. Each stage's output is the next stage's input. Do 
      - Instruction to output structured JSON conforming to `ReviewFinding[]`
      - Reference to `tools/orchestration/config/review-rules.json` for the rule IDs to check against
 2. Agents run in parallel (use a single message with multiple Task tool calls)
-3. Each agent returns `ReviewFinding[]` JSON. Parse and validate against `reviewFindingSchema` from `src/domain/lib/schemas/review-pipeline.ts`.
+3. Each agent returns `ReviewFinding[]` JSON. Parse and validate against `reviewFindingSchema` from `src/domain/entities/review-pipeline.ts`.
 4. If an agent returns invalid JSON or times out: log as a `GapLogEntry` with `concern: "agent-dispatch-failure"` and continue
 
 **Agent prompt template**:

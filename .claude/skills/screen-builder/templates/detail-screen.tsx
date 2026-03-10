@@ -58,10 +58,7 @@ export default async function ExampleDetailPage({ params }: PageProps) {
       {/* Breadcrumb — match APP_FLOW breadcrumb trail */}
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
+          {/* Use buildBreadcrumbs() utility — never include "Dashboard" label */}
           <BreadcrumbItem>
             <BreadcrumbLink href="/items">Items</BreadcrumbLink>
           </BreadcrumbItem>

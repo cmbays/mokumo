@@ -65,5 +65,5 @@ For each canonical doc, check these items against the actual codebase.
 - [ ] Feature IDs in PRD match references in IMPLEMENTATION_PLAN
 - [ ] Tech stack versions in TECH_STACK match CLAUDE.md summary
 - [ ] Design tokens in CLAUDE.md match FRONTEND_GUIDELINES
-- [ ] Schema entities in `src/domain/*/schemas/` match entities in APP_FLOW data sources
+- [ ] Schema entities in `src/domain/entities/` match entities in APP_FLOW data sources
 - [ ] PROGRESS.md step numbers match IMPLEMENTATION_PLAN step numbers

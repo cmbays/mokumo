@@ -131,8 +131,8 @@ Once the PR is merged, close out the pipeline's working artifacts:
 ## Rules
 
 - **Never modify tests to make them pass** — fix the implementation
-- **Never use floating-point arithmetic for financial data** — use `big.js` via `src/shared/lib/helpers/money.ts`
-- **Never push directly to main** — always branch + PR
+- **Never use floating-point arithmetic for financial data** — use `big.js` via `src/domain/lib/money.ts`
+- **Never push directly to main or production** — always branch + PR
 - **Never skip self-review** — even for small changes
 - **Always apply labels** from the PM label schema when creating GitHub Issues
 - **Always run build + test + typecheck** before creating PR
