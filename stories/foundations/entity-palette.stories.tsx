@@ -8,9 +8,11 @@ import {
   Hammer,
   Image,
   LayoutDashboard,
+  Moon,
   Printer,
   Receipt,
   Shirt,
+  Sun,
   Users,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -255,7 +257,7 @@ function EntityPalettePage() {
               fontSize: 13,
             }}
           >
-            {mode === 'dark' ? '☀ Light' : '● Dark'}
+            {mode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
 

@@ -1242,7 +1242,7 @@ function CustomerDetailContent({
           ].map((c) => (
             <div key={c.email} style={{ display: 'flex', alignItems: 'center', height: 28 }}>
               <div style={{ width: 20, flexShrink: 0, fontSize: 12, color: ct.goldText }}>
-                {c.star ? '★' : ''}
+                {c.star ? <Star size={12} fill={ct.goldText} stroke="none" /> : null}
               </div>
               <div
                 style={{

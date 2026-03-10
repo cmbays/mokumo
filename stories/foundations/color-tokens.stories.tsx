@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
+import { Moon, Sun } from 'lucide-react'
 
 const meta = {
   title: 'Foundations/Color Tokens',
@@ -188,7 +189,7 @@ function ColorTokensPage() {
               fontSize: 13,
             }}
           >
-            {mode === 'dark' ? '☀ Light' : '● Dark'}
+            {mode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
 
