@@ -62,19 +62,19 @@
   --color-warning-hover: var(--warning-hover);
   --color-warning-bold: var(--warning-bold);
 
-  /* Design system: card type accent colors */
-  --color-purple: #a855f7;
-  --color-purple-hover: #9333ea;
-  --color-purple-bold: #c084fc;
-  --color-magenta: #ff50da;
-  --color-magenta-hover: #e040c0;
-  --color-magenta-bold: #ff85e6;
-  --color-lime: #84cc16;
-  --color-lime-hover: #65a30d;
-  --color-lime-bold: #a3e635;
-  --color-brown: #c47a3a;
-  --color-brown-hover: #a8652e;
-  --color-brown-bold: #d9954f;
+  /* Design system: categorical entity/service colors */
+  --color-purple: var(--purple);
+  --color-purple-hover: var(--purple-hover);
+  --color-purple-bold: var(--purple-bold);
+  --color-magenta: var(--magenta);
+  --color-magenta-hover: var(--magenta-hover);
+  --color-magenta-bold: var(--magenta-bold);
+  --color-lime: var(--lime);
+  --color-lime-hover: var(--lime-hover);
+  --color-lime-bold: var(--lime-bold);
+  --color-brown: var(--brown);
+  --color-brown-hover: var(--brown-hover);
+  --color-brown-bold: var(--brown-bold);
   --color-teal: var(--teal);
   --color-teal-hover: var(--teal-hover);
   --color-teal-bold: var(--teal-bold);
@@ -84,6 +84,15 @@
   --color-yellow: var(--yellow);
   --color-yellow-hover: var(--yellow-hover);
   --color-yellow-bold: var(--yellow-bold);
+  --color-amber: var(--amber);
+  --color-amber-hover: var(--amber-hover);
+  --color-amber-bold: var(--amber-bold);
+  --color-graphite: var(--graphite);
+  --color-graphite-hover: var(--graphite-hover);
+  --color-graphite-bold: var(--graphite-bold);
+  --color-cyan: var(--cyan);
+  --color-cyan-hover: var(--cyan-hover);
+  --color-cyan-bold: var(--cyan-bold);
 
   /* Design system: surface colors */
   --color-surface: var(--surface);
@@ -111,13 +120,37 @@
   --mobile-card-gap: 0.75rem;
   --mobile-sheet-max-height: 85vh;
   --mobile-fab-size: 3.5rem;
+
+  /* ─── Design System: ds- prefixed semantic tokens ─────────────────────── */
+  /* These extend shadcn tokens for concepts shadcn doesn't cover.          */
+  /* Personality CSS classes override these values.                          */
+
+  /* Surface tiers (beyond shadcn background/card) */
+  --color-ds-surface-inner: var(--ds-surface-inner);
+  --color-ds-surface-thumb: var(--ds-surface-thumb);
+
+  /* Text hierarchy (beyond shadcn foreground/muted-foreground) */
+  --color-ds-text-dim: var(--ds-text-dim);
+  --color-ds-text-micro: var(--ds-text-micro);
+
+  /* Accent system — personality-dependent emphasis */
+  --color-ds-accent-emphasis: var(--ds-accent-emphasis);
+  --color-ds-neutral-emphasis: var(--ds-neutral-emphasis);
+
+  /* Call-to-action */
+  --color-ds-cta-bg: var(--ds-cta-bg);
+  --color-ds-cta-text: var(--ds-cta-text);
+
+  /* Dividers */
+  --color-ds-divider: var(--ds-divider);
+  --color-ds-border-subtle: var(--ds-border-subtle);
 }
 
-/* =====================
-   DARK MODE (Default)
+/* =====================================================================
+   DARK MODE (Default) — Niji personality
    Ghostty Niji theme palette
    "Linear Calm + Raycast Polish + Neobrutalist Delight"
-   ===================== */
+   ===================================================================== */
 
 :root {
   --radius: 0.5rem;
@@ -160,7 +193,7 @@
   --input: rgba(255, 255, 255, 0.12);
   --ring: #2ab9ff;
 
-  /* Status colors — Niji palette, Neobrutalist attention layer */
+  /* Status colors — Niji palette */
   --action: #2ab9ff;
   --action-hover: #1da0e0;
   --action-bold: #8efff3;
@@ -177,6 +210,7 @@
   --warning-hover: #e6b050;
   --warning-bold: #fff700;
 
+  /* Categorical colors — entity/service identity (dark mode) */
   --purple: #a855f7;
   --purple-hover: #9333ea;
   --purple-bold: #c084fc;
@@ -204,6 +238,21 @@
   --yellow: #f5e642;
   --yellow-hover: #dccc28;
   --yellow-bold: #fef3a0;
+
+  /* NEW: Amber — Customers */
+  --amber: #f59e0b;
+  --amber-hover: #d97706;
+  --amber-bold: #fbbf24;
+
+  /* NEW: Graphite — Garments (high-contrast neutral) */
+  --graphite: #94a3b8;
+  --graphite-hover: #b0bec9;
+  --graphite-bold: #cbd5e1;
+
+  /* NEW: Cyan — Home/Dashboard */
+  --cyan: #06b6d4;
+  --cyan-hover: #0891b2;
+  --cyan-bold: #22d3ee;
 
   /* Charts — Niji rainbow */
   --chart-1: #2ab9ff;
@@ -237,7 +286,521 @@
   --sidebar-accent-foreground: rgba(255, 255, 255, 0.87);
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #2ab9ff;
+
+  /* ─── ds- semantic tokens: Niji dark (default) ──────────────────────── */
+
+  /* Surface tiers */
+  --ds-surface-inner: var(--background, #141515);
+  --ds-surface-thumb: #1a1b1c;
+
+  /* Text hierarchy */
+  --ds-text-dim: rgba(255, 255, 255, 0.32);
+  --ds-text-micro: rgba(255, 255, 255, 0.2);
+
+  /* Accent system — Niji uses action blue as accent */
+  --ds-accent-emphasis: var(--action, #2ab9ff);
+  --ds-accent-glow: none;
+  --ds-neutral-emphasis: var(--muted-foreground, rgba(255, 255, 255, 0.6));
+  --ds-neutral-glow: none;
+
+  /* Call-to-action */
+  --ds-cta-bg: rgba(42, 185, 255, 0.12);
+  --ds-cta-text: var(--action, #2ab9ff);
+
+  /* Dividers */
+  --ds-divider: rgba(255, 255, 255, 0.08);
+  --ds-border-subtle: rgba(255, 255, 255, 0.1);
+
+  /* Personality behavior — Niji: neobrutalist shadows, no gradient rings */
+  --ds-shadow-offset: 1.5px;
+  --ds-text-shadow: none;
+  --ds-gradient-borders: 0;
+
+  /* Complex treatments — Niji: no gradient rings, simple health dot */
+  --ds-accent-ring: none;
+  --ds-neutral-ring: none;
+  --ds-health-dot: radial-gradient(
+    ellipse 58% 72% at 38% 32%,
+    #86efac 0%,
+    #54ca74 30%,
+    #2d9f56 55%,
+    rgba(22, 78, 44, 0.5) 70%,
+    transparent 85%
+  );
+  --ds-health-glow: 0 0 10px 3px rgba(84, 202, 116, 0.5);
 }
+
+/* =====================================================================
+   LIGHT MODE — Niji personality
+   ===================================================================== */
+
+.light {
+  /* Background */
+  --background: #fafaf9;
+  --foreground: rgba(0, 0, 0, 0.87);
+  --surface: #f0f0ee;
+  --elevated: #ffffff;
+
+  /* Card */
+  --card: #ffffff;
+  --card-foreground: rgba(0, 0, 0, 0.87);
+
+  /* Popover */
+  --popover: #ffffff;
+  --popover-foreground: rgba(0, 0, 0, 0.87);
+
+  /* Primary — darker blue for light bg */
+  --primary: #0077cc;
+  --primary-foreground: #ffffff;
+
+  /* Secondary */
+  --secondary: #f0f0ee;
+  --secondary-foreground: rgba(0, 0, 0, 0.87);
+
+  /* Muted */
+  --muted: #f0f0ee;
+  --muted-foreground: rgba(0, 0, 0, 0.45);
+
+  /* Accent */
+  --accent: #eeeeec;
+  --accent-foreground: rgba(0, 0, 0, 0.87);
+
+  /* Destructive */
+  --destructive: #dc2626;
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: #0077cc;
+
+  /* Status colors — darker for light bg */
+  --action: #0077cc;
+  --action-hover: #005fa3;
+  --action-bold: #38bdf8;
+
+  --success: #059669;
+  --success-hover: #047857;
+  --success-bold: #34d399;
+
+  --error: #dc2626;
+  --error-hover: #b91c1c;
+  --error-bold: #f87171;
+
+  --warning: #d97706;
+  --warning-hover: #b45309;
+  --warning-bold: #fbbf24;
+
+  /* Categorical colors — darker for light bg */
+  --purple: #7c3aed;
+  --purple-hover: #6d28d9;
+  --purple-bold: #a78bfa;
+
+  --magenta: #d946c7;
+  --magenta-hover: #c026a8;
+  --magenta-bold: #f0abfc;
+
+  --lime: #65a30d;
+  --lime-hover: #4d7c0f;
+  --lime-bold: #84cc16;
+
+  --brown: #a8652e;
+  --brown-hover: #8b5125;
+  --brown-bold: #c47a3a;
+
+  --teal: #0d9488;
+  --teal-hover: #0f766e;
+  --teal-bold: #2dd4bf;
+
+  --emerald: #059669;
+  --emerald-hover: #047857;
+  --emerald-bold: #34d399;
+
+  --yellow: #ca8a04;
+  --yellow-hover: #a16207;
+  --yellow-bold: #facc15;
+
+  --amber: #d97706;
+  --amber-hover: #b45309;
+  --amber-bold: #f59e0b;
+
+  --graphite: #64748b;
+  --graphite-hover: #475569;
+  --graphite-bold: #94a3b8;
+
+  --cyan: #0891b2;
+  --cyan-hover: #0e7490;
+  --cyan-bold: #06b6d4;
+
+  /* Charts */
+  --chart-1: #0077cc;
+  --chart-2: #059669;
+  --chart-3: #d97706;
+  --chart-4: #dc2626;
+  --chart-5: #d946c7;
+
+  /* Canvas — light mode */
+  --canvas-border: rgba(0, 0, 0, 0.12);
+  --canvas-margin-zone: rgba(0, 0, 0, 0.03);
+  --canvas-safe-zone: rgba(202, 138, 4, 0.35);
+  --canvas-label: rgba(0, 0, 0, 0.87);
+  --canvas-dim-label: rgba(0, 0, 0, 0.45);
+  --canvas-spacing-line: rgba(0, 0, 0, 0.15);
+  --canvas-spacing-label: rgba(0, 0, 0, 0.3);
+  --canvas-void: rgba(0, 0, 0, 0.02);
+  --canvas-void-label: rgba(0, 0, 0, 0.15);
+
+  /* Urgency */
+  --urgency-critical: var(--error);
+  --urgency-high: var(--warning);
+  --urgency-low: var(--muted-foreground);
+
+  /* Sidebar */
+  --sidebar: #f8f8f7;
+  --sidebar-foreground: rgba(0, 0, 0, 0.87);
+  --sidebar-primary: #0077cc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eeeeec;
+  --sidebar-accent-foreground: rgba(0, 0, 0, 0.87);
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #0077cc;
+
+  /* ─── ds- semantic tokens: Niji light ─────────────────────────────── */
+
+  --ds-surface-inner: var(--background, #fafaf9);
+  --ds-surface-thumb: #f3f3f2;
+
+  --ds-text-dim: rgba(0, 0, 0, 0.32);
+  --ds-text-micro: rgba(0, 0, 0, 0.16);
+
+  --ds-accent-emphasis: var(--action, #0077cc);
+  --ds-accent-glow: none;
+  --ds-neutral-emphasis: rgba(0, 0, 0, 0.55);
+  --ds-neutral-glow: none;
+
+  --ds-cta-bg: rgba(0, 119, 204, 0.1);
+  --ds-cta-text: var(--action, #0077cc);
+
+  --ds-divider: rgba(0, 0, 0, 0.06);
+  --ds-border-subtle: rgba(0, 0, 0, 0.1);
+
+  --ds-shadow-offset: 1.5px;
+  --ds-text-shadow: none;
+  --ds-gradient-borders: 0;
+
+  --ds-accent-ring: none;
+  --ds-neutral-ring: none;
+  --ds-health-dot: radial-gradient(circle at 38% 32%, #34d399 0%, #059669 50%, transparent 80%);
+  --ds-health-glow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+/* =====================================================================
+   LIQUID METAL — Dark mode overrides
+   ===================================================================== */
+
+.personality-liquid {
+  /* Background — deeper, cooler */
+  --background: #09090d;
+  --foreground: rgba(255, 255, 255, 0.87);
+  --surface: #1a1b20;
+  --elevated: #1e2028;
+
+  --card: #1e2028;
+  --card-foreground: rgba(255, 255, 255, 0.87);
+
+  --popover: #1e2028;
+  --popover-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Primary — gold */
+  --primary: #e8af48;
+  --primary-foreground: #000000;
+
+  --secondary: #1a1b20;
+  --secondary-foreground: rgba(255, 255, 255, 0.87);
+
+  --muted: #13141a;
+  --muted-foreground: rgba(255, 255, 255, 0.42);
+
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: rgba(255, 255, 255, 0.87);
+
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.07);
+  --ring: #e8af48;
+
+  /* Sidebar — deep with subtle transparency */
+  --sidebar: rgba(14, 13, 18, 0.92);
+  --sidebar-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-primary: #e8af48;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #e8af48;
+
+  /* ─── ds- semantic tokens: Liquid Metal dark ─────────────────────── */
+
+  --ds-surface-inner: #13141a;
+  --ds-surface-thumb: #181a1c;
+
+  --ds-text-dim: rgba(255, 255, 255, 0.32);
+  --ds-text-micro: rgba(255, 255, 255, 0.25);
+
+  /* Accent = gold, Neutral = silver */
+  --ds-accent-emphasis: #e8af48;
+  --ds-accent-glow: 0px 0px 12px rgba(196, 151, 70, 0.25);
+  --ds-neutral-emphasis: #c0c0d4;
+  --ds-neutral-glow: 0px 0px 10px rgba(138, 138, 158, 0.25);
+
+  --ds-cta-bg: #172040;
+  --ds-cta-text: rgba(180, 210, 255, 0.88);
+
+  --ds-divider: rgba(255, 255, 255, 0.06);
+  --ds-border-subtle: rgba(255, 255, 255, 0.08);
+
+  --ds-shadow-offset: 0;
+  --ds-text-shadow: none;
+  --ds-gradient-borders: 1;
+
+  /* Gold accent ring */
+  --ds-accent-ring: conic-gradient(
+    from 0deg,
+    #533517 0%,
+    #7a5530 5%,
+    #c49746 12%,
+    #feeaa5 19%,
+    #c49746 22%,
+    #ffc0cb 22%,
+    #ffc0cb 23.5%,
+    #ffffff 23.5%,
+    #ffffff 26.5%,
+    #b8d4e8 26.5%,
+    #b8d4e8 28%,
+    #c49746 28%,
+    #feeaa5 35%,
+    #c49746 42%,
+    #7a5530 48%,
+    #533517 50%,
+    #7a5530 55%,
+    #c49746 62%,
+    #feeaa5 69%,
+    #c49746 72%,
+    #ffc0cb 72%,
+    #ffc0cb 73.5%,
+    #ffffff 73.5%,
+    #ffffff 76.5%,
+    #b8d4e8 76.5%,
+    #b8d4e8 78%,
+    #c49746 78%,
+    #feeaa5 85%,
+    #c49746 92%,
+    #7a5530 98%,
+    #533517 100%
+  );
+
+  /* Silver neutral ring */
+  --ds-neutral-ring: conic-gradient(
+    from 0deg,
+    #2a2a32 0%,
+    #4a4a56 5%,
+    #8a8a9e 12%,
+    #d8d8e4 19%,
+    #8a8a9e 22%,
+    #d0c8dc 22%,
+    #d0c8dc 23.5%,
+    #ffffff 23.5%,
+    #ffffff 26.5%,
+    #b8d4e8 26.5%,
+    #b8d4e8 28%,
+    #8a8a9e 28%,
+    #d8d8e4 35%,
+    #8a8a9e 42%,
+    #4a4a56 48%,
+    #2a2a32 50%,
+    #4a4a56 55%,
+    #8a8a9e 62%,
+    #d8d8e4 69%,
+    #8a8a9e 72%,
+    #d0c8dc 72%,
+    #d0c8dc 73.5%,
+    #ffffff 73.5%,
+    #ffffff 76.5%,
+    #b8d4e8 76.5%,
+    #b8d4e8 78%,
+    #8a8a9e 78%,
+    #d8d8e4 85%,
+    #8a8a9e 92%,
+    #4a4a56 98%,
+    #2a2a32 100%
+  );
+
+  /* Health orb — rich radial gradient with glow */
+  --ds-health-dot:
+    radial-gradient(
+      ellipse 58% 72% at 38% 32%,
+      #86efac 0%,
+      #54ca74 20%,
+      #2d9f56 42%,
+      rgba(22, 78, 44, 0.55) 62%,
+      transparent 82%
+    ),
+    radial-gradient(
+      ellipse 50% 62% at 62% 60%,
+      rgba(36, 152, 65, 0.55) 0%,
+      rgba(12, 80, 30, 0.24) 45%,
+      transparent 72%
+    );
+  --ds-health-glow: 0px 0px 10px 3.8px rgba(68, 204, 106, 0.42);
+}
+
+/* =====================================================================
+   LIQUID METAL — Light mode overrides
+   ===================================================================== */
+
+.personality-liquid.light {
+  /* Background — warm cream */
+  --background: #faf8f4;
+  --foreground: rgba(20, 16, 8, 0.94);
+  --surface: rgba(255, 255, 255, 0.52);
+  --elevated: rgba(255, 255, 255, 0.72);
+
+  --card: rgba(255, 255, 255, 0.72);
+  --card-foreground: rgba(20, 16, 8, 0.94);
+
+  --popover: rgba(255, 255, 255, 0.9);
+  --popover-foreground: rgba(20, 16, 8, 0.94);
+
+  /* Primary — dark gold */
+  --primary: #b8860b;
+  --primary-foreground: #ffffff;
+
+  --secondary: rgba(255, 255, 255, 0.52);
+  --secondary-foreground: rgba(20, 16, 8, 0.87);
+
+  --muted: rgba(0, 0, 0, 0.04);
+  --muted-foreground: rgba(30, 22, 10, 0.38);
+
+  --accent: rgba(0, 0, 0, 0.04);
+  --accent-foreground: rgba(20, 16, 8, 0.87);
+
+  --destructive: #dc2626;
+
+  --border: rgba(0, 0, 0, 0.07);
+  --input: rgba(0, 0, 0, 0.07);
+  --ring: #b8860b;
+
+  /* Sidebar */
+  --sidebar: rgba(250, 248, 244, 0.92);
+  --sidebar-foreground: rgba(30, 22, 10, 0.87);
+  --sidebar-primary: #b8860b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(0, 0, 0, 0.04);
+  --sidebar-accent-foreground: rgba(30, 22, 10, 0.87);
+  --sidebar-border: rgba(0, 0, 0, 0.07);
+  --sidebar-ring: #b8860b;
+
+  /* ─── ds- semantic tokens: Liquid Metal light ────────────────────── */
+
+  --ds-surface-inner: #faf8f4;
+  --ds-surface-thumb: rgba(255, 255, 255, 0.42);
+
+  --ds-text-dim: rgba(20, 16, 8, 0.34);
+  --ds-text-micro: rgba(20, 16, 8, 0.22);
+
+  /* Accent = dark gold, Neutral = onyx */
+  --ds-accent-emphasis: #6b4f0a;
+  --ds-accent-glow: 0px 0px 10px rgba(196, 151, 70, 0.19);
+  --ds-neutral-emphasis: #1a1a28;
+  --ds-neutral-glow: 0px 0px 8px rgba(10, 10, 20, 0.19);
+
+  --ds-cta-bg: #dbeafe;
+  --ds-cta-text: #1d4ed8;
+
+  --ds-divider: rgba(0, 0, 0, 0.07);
+  --ds-border-subtle: rgba(0, 0, 0, 0.09);
+
+  --ds-shadow-offset: 0;
+  --ds-text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
+  --ds-gradient-borders: 1;
+
+  /* Gold accent ring (same as dark — gold works on both) */
+  --ds-accent-ring: conic-gradient(
+    from 0deg,
+    #533517 0%,
+    #7a5530 5%,
+    #c49746 12%,
+    #feeaa5 19%,
+    #c49746 22%,
+    #ffc0cb 22%,
+    #ffc0cb 23.5%,
+    #ffffff 23.5%,
+    #ffffff 26.5%,
+    #b8d4e8 26.5%,
+    #b8d4e8 28%,
+    #c49746 28%,
+    #feeaa5 35%,
+    #c49746 42%,
+    #7a5530 48%,
+    #533517 50%,
+    #7a5530 55%,
+    #c49746 62%,
+    #feeaa5 69%,
+    #c49746 72%,
+    #ffc0cb 72%,
+    #ffc0cb 73.5%,
+    #ffffff 73.5%,
+    #ffffff 76.5%,
+    #b8d4e8 76.5%,
+    #b8d4e8 78%,
+    #c49746 78%,
+    #feeaa5 85%,
+    #c49746 92%,
+    #7a5530 98%,
+    #533517 100%
+  );
+
+  /* Onyx neutral ring — dark metallic for light bg */
+  --ds-neutral-ring: conic-gradient(
+    from 0deg,
+    #0c0c10 0%,
+    #1c1c26 5%,
+    #3a3a4a 12%,
+    #8a8a9a 19%,
+    #3a3a4a 22%,
+    #b0b0be 22%,
+    #b0b0be 23.5%,
+    #f0f0f4 23.5%,
+    #f0f0f4 26.5%,
+    #8a9aaa 26.5%,
+    #8a9aaa 28%,
+    #3a3a4a 28%,
+    #8a8a9a 35%,
+    #3a3a4a 42%,
+    #1c1c26 48%,
+    #0c0c10 50%,
+    #1c1c26 55%,
+    #3a3a4a 62%,
+    #8a8a9a 69%,
+    #3a3a4a 72%,
+    #b0b0be 72%,
+    #b0b0be 73.5%,
+    #f0f0f4 73.5%,
+    #f0f0f4 76.5%,
+    #8a9aaa 76.5%,
+    #8a9aaa 78%,
+    #3a3a4a 78%,
+    #8a8a9a 85%,
+    #3a3a4a 92%,
+    #1c1c26 98%,
+    #0c0c10 100%
+  );
+
+  --ds-health-dot: radial-gradient(circle at 38% 32%, #34d399 0%, #059669 50%, transparent 80%);
+  --ds-health-glow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+/* =====================================================================
+   Utilities
+   ===================================================================== */
 
 /* Mobile safe area padding */
 @utility pb-safe {
