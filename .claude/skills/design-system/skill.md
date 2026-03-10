@@ -10,13 +10,16 @@ The organization-wide design system spec lives in `ops/standards/design-system/`
 
 This skill contains the **working reference** for Mokumo UI development: token values, badge recipes, encoding rules, and personality system details. If this skill and ops/ disagree, ops/ wins.
 
+The public org-level design system docs live in `docs/breezy-bays-labs/design-system/` (resolve via Cross-Repo Registry). These cover philosophy and principles for external audiences. They never expose internal token values, file paths, or agent instructions.
+
 ### Source of Truth Order
 
 1. `ops/standards/design-system/` — policy, contracts, governance
 2. Token contract in `ops/.../tokens/` — machine-readable token schema
 3. This skill — working reference for Mokumo agents
 4. Storybook stories — runnable examples and visual verification
-5. `docs-site/` — public-facing documentation
+5. `docs-site/` — product-specific public documentation
+6. `docs/breezy-bays-labs/design-system/` — org-level public foundations
 
 ## 4-Layer Token Architecture
 
