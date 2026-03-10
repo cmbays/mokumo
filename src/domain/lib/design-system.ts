@@ -19,7 +19,17 @@
 export type StatusRole = 'action' | 'success' | 'warning' | 'error'
 
 /** Categorical colors — entity/service identity */
-export type CategoryColor = 'purple' | 'magenta' | 'teal' | 'emerald' | 'lime' | 'brown' | 'yellow'
+export type CategoryColor =
+  | 'purple'
+  | 'magenta'
+  | 'teal'
+  | 'emerald'
+  | 'lime'
+  | 'brown'
+  | 'yellow'
+  | 'amber'
+  | 'graphite'
+  | 'cyan'
 
 // ---------------------------------------------------------------------------
 // Filled badge: colored bg + text + border (STATUS ONLY)
@@ -54,6 +64,9 @@ const CATEGORY_BADGE_MAP: Record<CategoryColor, string> = {
   lime: 'text-lime border border-lime/20',
   brown: 'text-brown border border-brown/20',
   yellow: 'text-yellow border border-yellow/20',
+  amber: 'text-amber border border-amber/20',
+  graphite: 'text-graphite border border-graphite/20',
+  cyan: 'text-cyan border border-cyan/20',
 }
 
 export function categoryBadge(color: CategoryColor): string {
@@ -88,6 +101,9 @@ const TEXT_TO_BG_MAP: Record<string, string> = {
   'text-lime': 'bg-lime',
   'text-brown': 'bg-brown',
   'text-yellow': 'bg-yellow',
+  'text-amber': 'bg-amber',
+  'text-graphite': 'bg-graphite',
+  'text-cyan': 'bg-cyan',
   'text-success': 'bg-success',
   'text-action': 'bg-action',
 }

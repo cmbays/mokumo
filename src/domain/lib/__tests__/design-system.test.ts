@@ -31,7 +31,18 @@ describe('MUTED_BADGE', () => {
 })
 
 describe('categoryBadge', () => {
-  const colors: CategoryColor[] = ['purple', 'magenta', 'teal', 'emerald', 'lime', 'brown']
+  const colors: CategoryColor[] = [
+    'purple',
+    'magenta',
+    'teal',
+    'emerald',
+    'lime',
+    'brown',
+    'amber',
+    'graphite',
+    'cyan',
+    'yellow',
+  ]
 
   it.each(colors)('returns outline badge classes for %s', (color) => {
     const result = categoryBadge(color)
@@ -67,6 +78,9 @@ describe('textToBgColor', () => {
     ['text-emerald', 'bg-emerald'],
     ['text-lime', 'bg-lime'],
     ['text-brown', 'bg-brown'],
+    ['text-amber', 'bg-amber'],
+    ['text-graphite', 'bg-graphite'],
+    ['text-cyan', 'bg-cyan'],
     ['text-success', 'bg-success'],
     ['text-action', 'bg-action'],
   ] as const)('maps %s → %s', (text, expected) => {
