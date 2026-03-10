@@ -276,11 +276,15 @@ function LiquidActiveIndicator({
   height,
   theme,
   collapsed,
+  glowing,
+  spinning,
 }: {
   top: number
   height: number
   theme: ThemeValues
   collapsed: boolean
+  glowing: boolean
+  spinning: boolean
 }) {
   return (
     <div
@@ -294,15 +298,16 @@ function LiquidActiveIndicator({
         transition: 'top 0.38s cubic-bezier(0.16, 1, 0.3, 1), left 0.3s ease, right 0.3s ease',
       }}
     >
-      {/* Glow */}
+      {/* Glow — pulses brighter on selection, subtle at rest */}
       <div
         style={{
           position: 'absolute',
           inset: -2,
           borderRadius: 14,
           background: '#c49746',
-          opacity: 0.12,
-          filter: 'blur(6px)',
+          opacity: glowing ? 0.28 : 0.1,
+          filter: glowing ? 'blur(10px)' : 'blur(6px)',
+          transition: 'opacity 0.15s ease-out, filter 0.15s ease-out',
         }}
       />
       {/* Ring clip + conic gradient */}
@@ -322,7 +327,8 @@ function LiquidActiveIndicator({
             top: '-50%',
             left: '-50%',
             background: RING_GRADIENT,
-            animation: 'spin-ring 4.5s linear infinite',
+            animation: 'spin-ring 9s linear infinite',
+            animationPlayState: spinning ? 'running' : 'paused',
           }}
         />
       </div>
@@ -351,6 +357,9 @@ function SidebarPrototype() {
   const navRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const navContainerRef = useRef<HTMLDivElement>(null)
   const [bounceKey, setBounceKey] = useState(0)
+  const [liquidGlow, setLiquidGlow] = useState(false)
+  const [sidebarHovered, setSidebarHovered] = useState(false)
+  const glowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const theme = THEMES[personality][mode]
   const isLiquid = personality === 'liquid'
@@ -386,6 +395,11 @@ function SidebarPrototype() {
   function handleNavClick(href: string) {
     setActiveHref(href)
     setBounceKey((k) => k + 1)
+
+    // Liquid metal: brief glow pulse on selection
+    if (glowTimer.current) clearTimeout(glowTimer.current)
+    setLiquidGlow(true)
+    glowTimer.current = setTimeout(() => setLiquidGlow(false), 600)
   }
 
   function handleModeToggle() {
@@ -418,6 +432,8 @@ function SidebarPrototype() {
       >
         {/* ── Sidebar ── */}
         <aside
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
           style={{
             position: 'relative',
             width: sidebarWidth,
@@ -591,6 +607,8 @@ function SidebarPrototype() {
                   height={indicatorPos.height}
                   theme={theme}
                   collapsed={collapsed}
+                  glowing={liquidGlow}
+                  spinning={sidebarHovered}
                 />
               ) : (
                 <NijiActiveIndicator
