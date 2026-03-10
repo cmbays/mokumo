@@ -434,7 +434,7 @@ function SidebarPrototype() {
     setMode((m) => (m === 'dark' ? 'light' : 'dark'))
   }
 
-  const sidebarWidth = collapsed ? 64 : 240
+  const sidebarWidth = collapsed ? 64 : 216
   const transitionDuration = isLiquid ? '0.38s' : '0.22s'
   const transitionTiming = isLiquid
     ? 'cubic-bezier(0.16, 1, 0.3, 1)'
@@ -690,6 +690,7 @@ function SidebarPrototype() {
                       fontWeight: isActive ? (isLiquid ? 500 : 600) : 400,
                       fontFamily: 'inherit',
                       letterSpacing: isLiquid ? '0.01em' : '0em',
+                      transformOrigin: 'left center',
                       transform: !isLiquid && isActive ? 'scale(1.12)' : 'scale(1)',
                       transition:
                         'color 0.2s ease, padding 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
