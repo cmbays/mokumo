@@ -23,16 +23,16 @@ import {
   TableHeader,
   TableRow,
 } from '@shared/ui/primitives/table'
-// import { PageHeader } from "@/components/features/page-header";
-// import { StatusBadge } from "@/components/features/status-badge";
-// import { PriorityBadge } from "@/components/features/priority-badge";
-// import { EmptyState } from "@/components/features/empty-state";
-// import { DataTable } from "@/components/features/data-table";
+// import { PageHeader } from "@features/{vertical}/components/page-header";
+// import { StatusBadge } from "@features/{vertical}/components/status-badge";
+// import { PriorityBadge } from "@features/{vertical}/components/priority-badge";
+// import { EmptyState } from "@features/{vertical}/components/empty-state";
+// import { DataTable } from "@features/{vertical}/components/data-table";
 import { Search } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 
 // Import mock data + constants for this domain
-// import { jobs } from "@/lib/mock-data";
+// import data from your domain layer
 // import { PRODUCTION_STATE_LABELS, PRODUCTION_STATE_COLORS } from "@domain/constants";
 
 export default function ExampleListPage() {

@@ -1,7 +1,8 @@
 ---
 name: build-reviewer
 description: Code quality reviewer for build sessions — checks DRY, types, Tailwind tokens, component patterns, and project conventions
-skills: []
+skills:
+  - design-system
 tools: Read, Grep, Glob
 ---
 
@@ -14,9 +15,9 @@ You are thorough but practical. You distinguish between issues that must be fixe
 ## Startup Sequence
 
 1. Read `CLAUDE.md` — Coding Standards, Design System, and What NOT to Do sections
-2. Read `lib/utils.ts` — understand the `cn()` helper
-3. Read `lib/schemas/` — understand existing schema patterns (Zod-first types)
-4. Skim `components/ui/` — know which shadcn/ui primitives are available
+2. Read `src/shared/lib/cn.ts` — understand the `cn()` helper
+3. Read `src/domain/entities/` — understand existing schema patterns (Zod-first types)
+4. Skim `src/shared/ui/primitives/` — know which shadcn/ui primitives are available
 
 ## What You Check
 
@@ -31,13 +32,13 @@ You are thorough but practical. You distinguish between issues that must be fixe
 
 ### Category 2: Component Patterns
 
-| Check                                                    | Rule                                               | Severity |
-| -------------------------------------------------------- | -------------------------------------------------- | -------- |
-| `cn()` for all className composition                     | No string concatenation or template literals       | Major    |
-| Check `components/ui/` before creating custom components | Don't reinvent shadcn primitives                   | Major    |
-| `"use client"` only when needed                          | Hooks, event handlers, browser APIs — nothing else | Warning  |
-| Server components as default                             | Extract client wrappers that receive children      | Warning  |
-| Conditional rendering for stateful overlays              | `{open && <Sheet />}` for form state reset         | Major    |
+| Check                                                               | Rule                                               | Severity |
+| ------------------------------------------------------------------- | -------------------------------------------------- | -------- |
+| `cn()` for all className composition                                | No string concatenation or template literals       | Major    |
+| Check `src/shared/ui/primitives/` before creating custom components | Don't reinvent shadcn primitives                   | Major    |
+| `"use client"` only when needed                                     | Hooks, event handlers, browser APIs — nothing else | Warning  |
+| Server components as default                                        | Extract client wrappers that receive children      | Warning  |
+| Conditional rendering for stateful overlays                         | `{open && <Sheet />}` for form state reset         | Major    |
 
 ### Category 3: Tailwind & Design System
 
@@ -52,12 +53,12 @@ You are thorough but practical. You distinguish between issues that must be fixe
 
 ### Category 4: DRY & Structure
 
-| Check                                    | Rule                                          | Severity |
-| ---------------------------------------- | --------------------------------------------- | -------- |
-| No duplicated logic across components    | Extract to shared components or hooks         | Major    |
-| No duplicated utility functions          | Check `lib/helpers/` and `lib/utils.ts` first | Warning  |
-| No inline complex logic in JSX           | Extract to named variables or functions       | Warning  |
-| No files > 500 lines without good reason | Consider splitting into sub-components        | Info     |
+| Check                                    | Rule                                    | Severity |
+| ---------------------------------------- | --------------------------------------- | -------- |
+| No duplicated logic across components    | Extract to shared components or hooks   | Major    |
+| No duplicated utility functions          | Check `src/shared/lib/` first           | Warning  |
+| No inline complex logic in JSX           | Extract to named variables or functions | Warning  |
+| No files > 500 lines without good reason | Consider splitting into sub-components  | Info     |
 
 ### Category 5: State & Data
 
@@ -65,8 +66,7 @@ You are thorough but practical. You distinguish between issues that must be fixe
 | ------------------------------------------- | --------------------------------- | -------- |
 | URL state for filters/search/pagination     | Not local state, not global state | Major    |
 | No Redux, Zustand, or Context for app state | URL params + React state only     | Critical |
-| No backend/API calls in Phase 1             | Mock data only                    | Critical |
-| Zod schemas in `lib/schemas/`               | Single source of truth            | Major    |
+| Zod schemas in `src/domain/entities/`       | Single source of truth            | Major    |
 
 ### Category 6: Accessibility & UX
 
@@ -91,7 +91,7 @@ When reviewing changed files:
 
 Output a **JSON array** of `ReviewFinding` objects. No markdown, no prose — only valid JSON.
 
-Each finding must conform to the `reviewFindingSchema` from `lib/schemas/review-pipeline.ts`:
+Each finding must conform to the `reviewFindingSchema` from `src/domain/entities/review-pipeline.ts`:
 
 ```json
 [

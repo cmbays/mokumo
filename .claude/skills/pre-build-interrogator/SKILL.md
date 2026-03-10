@@ -14,9 +14,8 @@ Read these files to understand what's planned:
 
 1. `docs-site/engineering/architecture/app-flow.md` — find the screen's route, sections, actions, states
 2. `CLAUDE.md` — find the feature's acceptance criteria
-3. `lib/schemas/` — understand the data model
-4. `lib/mock-data.ts` — understand available data shapes
-5. `PROGRESS.md` — understand what's already built
+3. `src/domain/entities/` — understand the data model
+4. `PROGRESS.md` — understand what's already built
 
 ### 2. Interrogate
 
@@ -75,7 +74,7 @@ Example:
 | UI Element | Code Mechanism | Wiring |
 |-----------|----------------|--------|
 | Drag card between columns | dnd-kit DragOverlay + sortable | Updates job.status in local state |
-| Status column headers | Derived from JobStatus enum | Maps to constants.ts STATUS_LABELS |
+| Status column headers | Derived from JobStatus enum | Maps to `LANE_LABELS` / `PRODUCTION_STATE_LABELS` from `src/domain/constants/` |
 | Card click → Job Detail | Next.js Link on card surface | Routes to /jobs/[id] |
 
 ### 4. Write Spike Document

@@ -21,9 +21,8 @@
 
 **Files:**
 
-- Create: `lib/schemas/{vertical}.ts`
-- Create: `lib/mock-data/{vertical}.ts`
-- Test: `__tests__/schemas/{vertical}.test.ts`
+- Create: `src/domain/entities/{entity}.ts`
+- Test: `src/domain/entities/__tests__/{entity}.test.ts`
 
 **Steps:**
 
@@ -45,7 +44,7 @@
 **Files:**
 
 - Create: `app/(dashboard)/{route}/page.tsx`
-- Create: `components/features/{component}.tsx`
+- Create: `src/features/{vertical}/components/{component}.tsx`
 
 **Steps:**
 
@@ -61,7 +60,7 @@
 **Files:**
 
 - Create: `app/(dashboard)/{route}/page.tsx`
-- Create: `components/features/{component}.tsx`
+- Create: `src/features/{vertical}/components/{component}.tsx`
 
 **Steps:**
 

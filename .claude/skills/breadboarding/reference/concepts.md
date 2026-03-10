@@ -166,7 +166,7 @@ If you can't name it specifically, you probably don't understand the design yet.
 Affordance groupings naturally reveal component boundaries:
 
 1. **Affordances in the same Place that share state** → likely one component
-2. **Affordances that appear in multiple Places** → shared component in `components/features/`
+2. **Affordances that appear in multiple Places** → shared primitive in `src/shared/ui/primitives/` (cross-vertical) or shared component in `src/features/*/components/` (within a feature)
 3. **Affordances unique to one Place** → local component or inline in page
 
 ### Shared Component Indicators
@@ -345,7 +345,7 @@ Look for sections where tracing the wiring reveals a "pinch point" -- many affor
    classDef chunk fill:#87CEEB,stroke:#0288d1,color:#000,stroke-width:2px
    ```
 
-Chunks often map naturally to reusable components -- they become the shared components in `components/features/`.
+Chunks often map naturally to reusable components. Feature-scoped chunks belong in `src/features/*/components/`; cross-feature/design-system primitives belong in `src/shared/ui/primitives/`.
 
 ---
 

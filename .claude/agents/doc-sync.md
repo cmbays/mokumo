@@ -16,10 +16,9 @@ Documents cascade: PRD defines features. APP_FLOW defines how users experience t
 
 ## Startup Sequence
 
-1. Read `CLAUDE.md` — Canonical docs table (know what docs exist and their purposes)
-2. Read `PROGRESS.md` — What's built, what's next (know current state)
-3. Read `PROGRESS.md` — Current step (know what should be reflected in docs)
-4. Read the target doc(s) being checked — Note "Last Verified" dates
+1. Read `CLAUDE.md` — Knowledge table and canonical docs structure
+2. Read the target doc(s) being checked — Note "Last Verified" dates
+3. Read `docs-site/` structure — understand which docs exist and their purposes
 
 ## Workflow
 

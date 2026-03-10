@@ -131,8 +131,8 @@ Once the PR is merged, close out the pipeline's working artifacts:
 ## Rules
 
 - **Never modify tests to make them pass** — fix the implementation
-- **Never use floating-point arithmetic for financial data** — use `big.js` via `lib/helpers/money.ts`
-- **Never push directly to main** — always branch + PR
+- **Never use floating-point arithmetic for financial data** — use `big.js` via `src/domain/lib/money.ts`
+- **Never push directly to main or production** — always branch + PR
 - **Never skip self-review** — even for small changes
 - **Always apply labels** from the PM label schema when creating GitHub Issues
 - **Always run build + test + typecheck** before creating PR
@@ -141,7 +141,7 @@ Once the PR is merged, close out the pipeline's working artifacts:
 ## Tips
 
 - Read existing code before writing new code — understand patterns in use
-- Check `components/ui/` for shadcn primitives before creating custom components
+- Check `src/shared/ui/primitives/` for shadcn primitives before creating custom components
 - Use `cn()` from `@shared/lib/cn` for all className composition
 - Keep PRs focused — one logical change per PR
 - If you discover work outside your task's scope, file a GitHub Issue instead of doing it
