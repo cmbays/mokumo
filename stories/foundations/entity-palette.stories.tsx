@@ -87,17 +87,10 @@ const ENTITIES: EntityDef[] = [
   },
   {
     name: 'Artwork',
-    token: 'teal',
+    token: 'yellow',
     icon: Image,
     pool: 'entity',
     description: 'Design artwork files',
-  },
-  {
-    name: 'Screens',
-    token: 'action',
-    icon: Printer,
-    pool: 'service',
-    description: 'Screen print production',
   },
 ]
 
@@ -181,7 +174,7 @@ function EntityRow({ entity }: { entity: EntityDef }) {
             height: 24,
             borderRadius: 4,
             backgroundColor: `var(--${entity.token})`,
-            border: '1px solid rgba(128,128,128,0.2)',
+            border: '1px solid var(--border)',
           }}
           title={`--${entity.token}`}
         />
@@ -191,7 +184,7 @@ function EntityRow({ entity }: { entity: EntityDef }) {
             height: 24,
             borderRadius: 4,
             backgroundColor: `var(--${entity.token}-hover)`,
-            border: '1px solid rgba(128,128,128,0.2)',
+            border: '1px solid var(--border)',
           }}
           title={`--${entity.token}-hover`}
         />
@@ -201,7 +194,7 @@ function EntityRow({ entity }: { entity: EntityDef }) {
             height: 24,
             borderRadius: 4,
             backgroundColor: `var(--${entity.token}-bold)`,
-            border: '1px solid rgba(128,128,128,0.2)',
+            border: '1px solid var(--border)',
           }}
           title={`--${entity.token}-bold`}
         />

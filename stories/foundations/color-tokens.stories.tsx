@@ -48,7 +48,7 @@ const CATEGORICAL_COLORS: ColorDef[] = [
   { name: 'Teal', token: 'teal', role: 'Screen Print (service)' },
   { name: 'Lime', token: 'lime', role: 'Embroidery (service)' },
   { name: 'Brown', token: 'brown', role: 'DTF (service)' },
-  { name: 'Yellow', token: 'yellow', role: 'Communication channels' },
+  { name: 'Yellow', token: 'yellow', role: 'Artwork' },
   { name: 'Amber', token: 'amber', role: 'Customers' },
   { name: 'Graphite', token: 'graphite', role: 'Garments' },
   { name: 'Cyan', token: 'cyan', role: 'Home / Dashboard' },
@@ -63,7 +63,7 @@ function ColorSwatch({ token, variant }: { token: string; variant: 'base' | 'hov
         height: 48,
         borderRadius: 6,
         backgroundColor: `var(${varName})`,
-        border: '1px solid rgba(128,128,128,0.2)',
+        border: '1px solid var(--border)',
       }}
       title={varName}
     />
@@ -131,7 +131,7 @@ function DsTokenRow({
           height: 48,
           borderRadius: 6,
           backgroundColor: `var(${varName})`,
-          border: '1px solid rgba(128,128,128,0.2)',
+          border: '1px solid var(--border)',
         }}
       />
       <div style={{ flex: 1 }}>

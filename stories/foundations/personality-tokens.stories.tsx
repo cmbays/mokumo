@@ -270,7 +270,7 @@ function PersonalityTokensPage() {
     <div
       style={{
         padding: 32,
-        backgroundColor: '#0a0a0a',
+        backgroundColor: 'hsl(0 0% 4%)',
         minHeight: '100vh',
         fontFamily: 'system-ui',
       }}
@@ -283,7 +283,14 @@ function PersonalityTokensPage() {
           marginBottom: 24,
         }}
       >
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>
+        <h1
+          style={{
+            fontSize: 24,
+            fontWeight: 700,
+            color: 'hsl(0 0% 95%)',
+            letterSpacing: '-0.02em',
+          }}
+        >
           Personality × Mode
         </h1>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -297,9 +304,9 @@ function PersonalityTokensPage() {
               style={{
                 padding: '4px 12px',
                 borderRadius: 4,
-                border: '1px solid rgba(255,255,255,0.15)',
-                backgroundColor: selected === opt.key ? 'rgba(255,255,255,0.12)' : 'transparent',
-                color: selected === opt.key ? '#fff' : 'rgba(255,255,255,0.5)',
+                border: '1px solid hsl(0 0% 100% / 0.15)',
+                backgroundColor: selected === opt.key ? 'hsl(0 0% 100% / 0.12)' : 'transparent',
+                color: selected === opt.key ? 'hsl(0 0% 95%)' : 'hsl(0 0% 100% / 0.5)',
                 fontSize: 12,
                 cursor: 'pointer',
               }}
