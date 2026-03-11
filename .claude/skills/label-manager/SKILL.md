@@ -38,14 +38,14 @@ gh issue list --repo cmbays/mokumo --state open --limit 200 \
 
 For each issue, verify:
 
-| Check                  | Rule                                               | Severity |
-| ---------------------- | -------------------------------------------------- | -------- |
-| Has `type:*` label     | Exactly one type label                             | Critical |
-| Has `priority:*` label | Exactly one priority label                         | Critical |
-| Has scope label        | At least one `product:*`, `domain:*`, or `tool:*`  | Critical |
-| No deprecated labels   | No `vertical/*`, `enhancement`, `bug` (unprefixed) | Warning  |
-| Separator consistency  | All labels use `:` separator per ADR-031           | Warning  |
-| Valid label values     | Labels match known taxonomy values                 | Warning  |
+| Check                  | Rule                                                                            | Severity |
+| ---------------------- | ------------------------------------------------------------------------------- | -------- |
+| Has `type:*` label     | Exactly one type label (feature, bug, chore, research, design, docs, polish)    | Critical |
+| Has `priority:*` label | Exactly one priority label (now, soon, later)                                   | Critical |
+| Has `domain:*` label   | At least one `domain:*` if work touches app domain code                         | Warning  |
+| No deprecated labels   | No `product:*`, `tool:*`, `pipeline:*`, `source:*`, `vertical/*`, `enhancement` | Warning  |
+| Separator consistency  | All labels use `:` separator per ADR-031                                        | Warning  |
+| Valid label values     | Labels match known taxonomy values                                              | Warning  |
 
 #### Step 3: Generate Report
 
@@ -58,23 +58,23 @@ For each issue, verify:
 
 ### Critical — Missing Required Labels
 
-| Issue | Title              | Missing                                            |
-| ----- | ------------------ | -------------------------------------------------- |
-| #123  | Fix mobile layout  | No priority:\* label                               |
-| #156  | Add export feature | No scope label (product:\*, domain:\*, or tool:\*) |
+| Issue | Title              | Missing               |
+| ----- | ------------------ | --------------------- |
+| #123  | Fix mobile layout  | No `priority:*` label |
+| #156  | Add export feature | No `type:*` label     |
 
 ### Warning — Deprecated Labels
 
-| Issue | Title         | Deprecated Label     | Replacement         |
-| ----- | ------------- | -------------------- | ------------------- |
-| #89   | Update styles | `enhancement`        | `type:feature`      |
-| #102  | Fix nav       | `vertical/dashboard` | `product:dashboard` |
+| Issue | Title         | Deprecated Label | Replacement     |
+| ----- | ------------- | ---------------- | --------------- |
+| #89   | Update styles | `enhancement`    | `type:feature`  |
+| #102  | Fix nav       | `product:quotes` | `domain:quotes` |
 
 ### Warning — Separator Inconsistency
 
-| Issue | Title      | Labels                              | Issue                    |
-| ----- | ---------- | ----------------------------------- | ------------------------ |
-| #134  | Add charts | `product:dashboard`, `type:feature` | Mixed : and / separators |
+| Issue | Title      | Labels                          | Issue                    |
+| ----- | ---------- | ------------------------------- | ------------------------ |
+| #134  | Add charts | `domain:quotes`, `type/feature` | Mixed : and / separators |
 
 ### Summary
 
@@ -90,11 +90,11 @@ Present fixes for approval:
 ```markdown
 ## Proposed Label Fixes
 
-| Issue | Action        | Details                                    |
-| ----- | ------------- | ------------------------------------------ |
-| #123  | Add label     | `priority:later` (default for unlabeled)   |
-| #89   | Replace label | `enhancement` → `type:feature`             |
-| #102  | Replace label | `vertical/dashboard` → `product:dashboard` |
+| Issue | Action        | Details                                  |
+| ----- | ------------- | ---------------------------------------- |
+| #123  | Add label     | `priority:later` (default for unlabeled) |
+| #89   | Replace label | `enhancement` → `type:feature`           |
+| #102  | Replace label | `product:quotes` → `domain:quotes`       |
 
 Apply these fixes? (yes/no/edit)
 ```
@@ -108,8 +108,8 @@ gh issue edit 123 --add-label "priority:later"
 # Replace deprecated label
 gh issue edit 89 --remove-label "enhancement" --add-label "type:feature"
 
-# Replace with correct namespace
-gh issue edit 102 --remove-label "vertical/dashboard" --add-label "product:dashboard"
+# Replace deprecated namespace
+gh issue edit 102 --remove-label "product:quotes" --add-label "domain:quotes"
 ```
 
 ### Mode 2: Classify (Single Issue)
@@ -126,13 +126,11 @@ gh issue view <number> --json title,body,labels --jq '{title, body, labels: [.la
 
 Based on the issue title and body, suggest labels across all dimensions:
 
-| Dimension | Analysis                                                                            | Suggestion       |
-| --------- | ----------------------------------------------------------------------------------- | ---------------- |
-| Type      | Keywords: "add", "new" → feature; "broken", "crash" → bug; "investigate" → research | `type:feature`   |
-| Priority  | Severity indicators, milestone context                                              | `priority:soon`  |
-| Product   | UI areas mentioned                                                                  | `product:quotes` |
-| Domain    | Data entities referenced                                                            | `domain:pricing` |
-| Tool      | Infrastructure keywords                                                             | —                |
+| Dimension | Analysis                                                                            | Suggestion      |
+| --------- | ----------------------------------------------------------------------------------- | --------------- |
+| Type      | Keywords: "add", "new" → feature; "broken", "crash" → bug; "investigate" → research | `type:feature`  |
+| Priority  | Severity indicators, milestone context                                              | `priority:soon` |
+| Domain    | Data entities and UI areas referenced                                               | `domain:quotes` |
 
 #### Step 3: Present Suggestion
 
@@ -141,7 +139,7 @@ Based on the issue title and body, suggest labels across all dimensions:
 
 - `type:feature` — new functionality
 - `priority:soon` — not urgent, good for next cycle
-- `product:quotes` — quote form UI
+- `domain:quotes` — quote form UI
 - `domain:colors` — color entity involvement
 
 Apply? (yes/no/edit)
@@ -177,7 +175,7 @@ gh label list --repo cmbays/mokumo --limit 100 --json name,color,description
 ### Extra in mokumo (not in ops canonical)
 
 - `good first issue` — deprecated per ops standard
-- `infrastructure` — should be `area:ci` or specific `tool:*`
+- `infrastructure` — should be `type:chore` + `area:ci`
 - `low-priority` — should be `priority:later`
 
 ### Separator Standard
@@ -197,11 +195,12 @@ gh label list --repo cmbays/mokumo --limit 100 --json name,color,description
 
 ### Known Issues (as of 2026-03-11)
 
-1. **Separator migration in progress**: ADR-031 standardizes on `:` separator. Legacy `/` labels may still exist in the repo and should be migrated.
-2. **Scope labels registered**: Mokumo's `product:*`, `domain:*`, `tool:*` namespaces are registered as per-repo extensions in ADR-031.
-3. **Deprecated labels still present**: `vertical/*`, unprefixed `interview`, `testing`, etc.
+1. **Separator migration complete**: ADR-031 standardizes on `:` separator. Legacy `/` labels should be removed.
+2. **Taxonomy simplified**: `product:*`, `tool:*`, `pipeline:*`, `source:*` are deprecated. All scope uses `domain:*` (10 values) plus `area:*` for cross-cutting.
+3. **Type labels aligned with ops**: 7 types — feature, bug, chore, research, design, docs, polish. Old types (tech-debt, refactor, tooling, feedback, ux-review) are deprecated.
+4. **Deprecated labels still present**: `vertical/*`, unprefixed labels, old `product:*`/`tool:*` labels pending removal.
 
-ADR-031 resolves the separator and priority-tier questions. The label-manager skill flags remaining legacy labels for migration.
+ADR-031 resolves the separator, priority-tier, and taxonomy simplification questions. The label-manager skill flags remaining legacy labels for migration.
 
 ## Rules
 

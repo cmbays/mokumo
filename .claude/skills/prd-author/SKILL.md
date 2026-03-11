@@ -135,7 +135,7 @@ If the user wants a GitHub issue to track the PRD:
 ```bash
 gh issue create --repo cmbays/mokumo \
   --title "[PRD] <Feature Name>" \
-  --label "type:research,priority:soon" \
+  --label "type:research,priority:soon,domain:quotes" \
   --body "PRD authored: \`ops/prd/mokumo/features/<feature-name>.md\`
 
 ## Status

@@ -147,9 +147,9 @@ Present the full report for review:
 
 ### In Progress (N)
 
-| Issue | Title                   | Assignee | Labels                         |
-| ----- | ----------------------- | -------- | ------------------------------ |
-| #245  | Add garment size matrix | cmbays   | type:feature, product:garments |
+| Issue | Title                   | Assignee | Labels                        |
+| ----- | ----------------------- | -------- | ----------------------------- |
+| #245  | Add garment size matrix | cmbays   | type:feature, domain:garments |
 
 ### Blocked (N)
 
@@ -207,7 +207,7 @@ After approval, the user may choose to:
 # Post as a GitHub issue (cycle summary)
 gh issue create --repo cmbays/mokumo \
   --title "Cycle Report: YYYY-MM-DD" \
-  --label "type:tooling,tool:pm-system" \
+  --label "type:chore,area:docs" \
   --body "[report content]"
 
 # Post to Linear as a status update (if Linear integration active)

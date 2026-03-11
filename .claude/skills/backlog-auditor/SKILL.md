@@ -64,11 +64,11 @@ gh issue list --repo cmbays/mokumo --state open --limit 500 \
   --json number,title,labels \
   --jq '[.[] | select([.labels[].name | startswith("priority:")] | any | not) | {number, title, labels: [.labels[].name]}]'
 
-# Issues missing scope label (product:*, domain:*, or tool:*)
+# Issues missing domain:* label (recommended for domain-touching work)
 gh issue list --repo cmbays/mokumo --state open --limit 500 \
   --json number,title,labels \
   --jq '[.[] | select(
-    ([.labels[].name | (startswith("product:") or startswith("domain:") or startswith("tool:"))] | any | not)
+    ([.labels[].name | startswith("domain:")] | any | not)
   ) | {number, title, labels: [.labels[].name]}]'
 ```
 
@@ -125,7 +125,7 @@ Present findings grouped by action type and severity:
 | Issue | Title              | Missing               |
 | ----- | ------------------ | --------------------- |
 | #123  | Fix mobile layout  | No `priority:*` label |
-| #156  | Add export feature | No scope label        |
+| #156  | Add export feature | No `domain:*` label   |
 
 _Recommendation_: Run `/label-manager` for detailed label fixes.
 
@@ -192,7 +192,7 @@ Present actionable fixes for each finding. Group by action type:
 | Issue | Add Labels       |
 | ----- | ---------------- |
 | #123  | `priority:later` |
-| #156  | `product:quotes` |
+| #156  | `domain:quotes`  |
 
 ### Close as Duplicate (N issues)
 

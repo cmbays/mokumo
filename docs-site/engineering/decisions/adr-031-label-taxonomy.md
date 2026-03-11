@@ -1,6 +1,6 @@
 ---
 title: 'ADR-031: Label Taxonomy Standardization'
-description: 'Adopt colon separator for GitHub labels org-wide, align mokumo taxonomy with ops canonical standard, and define per-repo extension rules.'
+description: 'Adopt colon separator for GitHub labels org-wide, simplify mokumo taxonomy to ~28 labels aligned with ops standard, consolidate product/tool/pipeline/source into domain:* and type:chore.'
 category: decision
 status: active
 adr_status: proposed
@@ -70,19 +70,9 @@ Replace mokumo's 5-tier priority with the ops 3-tier:
 
 **Rationale:** Per ops standard — "if it's not worth doing, close the issue." Three tiers reduce decision fatigue. `low` and `later` are indistinguishable in practice for a solo dev. `icebox` items should be closed with a comment explaining why they're parked.
 
-### 3. Register mokumo's per-repo extensions in ops standard
+### 3. Register mokumo's `domain:*` labels as per-repo extensions
 
-Mokumo's `product:*`, `domain:*`, and `tool:*` labels are valid per-repo extensions of the org-wide `area:*` and `domain:*` namespaces. They should be formally registered.
-
-**Mapping to ops namespaces:**
-
-| Mokumo namespace | Ops namespace                        | Rationale                                                          |
-| ---------------- | ------------------------------------ | ------------------------------------------------------------------ |
-| `product:*`      | New: `product:*` (mokumo-specific)   | More granular than `area:*` — represents user-facing product areas |
-| `domain:*`       | `domain:*` (already in ops standard) | Same concept, same namespace                                       |
-| `tool:*`         | New: `tool:*` (mokumo-specific)      | Developer infrastructure, more specific than `area:*`              |
-
-The ops standard's `area:*` namespace (ci, docs, deps) remains org-wide. `product:*` and `tool:*` are registered as mokumo-specific extensions.
+Mokumo's `domain:*` labels (10 values derived from `src/domain/` entities) are registered as per-repo extensions of the ops-standard `domain:*` namespace. The ops standard's `area:*` namespace (ci, docs, deps) remains org-wide. Mokumo adds `area:mobile` as a repo-specific `area:*` extension.
 
 ### 4. Adopt `status:*` labels from ops standard
 
@@ -94,22 +84,56 @@ Mokumo currently uses project board fields for status. We will also create the o
 
 All unprefixed labels that have namespaced equivalents will be deprecated:
 
-| Deprecated         | Replacement                              |
-| ------------------ | ---------------------------------------- |
-| `interview`        | `source:interview`                       |
-| `testing`          | `source:testing`                         |
-| `cool-down`        | `source:cool-down`                       |
-| `idea`             | `source:idea`                            |
-| `review`           | `source:review`                          |
-| `infrastructure`   | `tool:ci-pipeline` or `area:ci`          |
-| `low-priority`     | `priority:later`                         |
-| `pipeline-type`    | Remove (use `pipeline:*` labels instead) |
-| `good first issue` | Remove (no external contributors)        |
-| `github_actions`   | `area:ci`                                |
+| Deprecated         | Replacement                             |
+| ------------------ | --------------------------------------- |
+| `interview`        | Remove (source namespace removed)       |
+| `testing`          | Remove (source namespace removed)       |
+| `cool-down`        | Remove (source namespace removed)       |
+| `idea`             | Remove (source namespace removed)       |
+| `review`           | Remove (source namespace removed)       |
+| `infrastructure`   | `type:chore` + `area:ci`                |
+| `low-priority`     | `priority:later`                        |
+| `pipeline-type`    | Remove (pipeline type tracked on board) |
+| `good first issue` | Remove (no external contributors)       |
+| `github_actions`   | `area:ci`                               |
 
-### 6. Add `type:ux-review` to ops standard
+### 6. Align `type:*` with ops 7-type standard
 
-Mokumo's pm.md defines `type/ux-review` which is not in the ops standard. Propose adding `type:ux-review` as an org-wide type label — UX review items are relevant across products.
+Replace mokumo's 8 ad-hoc type labels with the ops canonical 7 types:
+
+| Old (mokumo)     | New (ops standard) | Migration                               |
+| ---------------- | ------------------ | --------------------------------------- |
+| `type:feature`   | `type:feature`     | Keep                                    |
+| `type:bug`       | `type:bug`         | Keep                                    |
+| `type:tech-debt` | `type:chore`       | Merge — maintenance work is a chore     |
+| `type:refactor`  | `type:chore`       | Merge — restructuring is maintenance    |
+| `type:tooling`   | `type:chore`       | Merge — tooling is maintenance          |
+| `type:feedback`  | `type:polish`      | Rename — feedback drives polish         |
+| `type:ux-review` | `type:design`      | Rename — UX review is a design activity |
+| `type:research`  | `type:research`    | Keep                                    |
+| _(new)_          | `type:docs`        | New — documentation-only work           |
+
+**Rationale:** Fewer type labels reduce decision fatigue. `chore` is a well-understood convention (conventional commits) that naturally absorbs tech-debt, refactoring, and tooling. `design` covers both architecture and UX decisions. `polish` covers feedback-driven refinements.
+
+### 7. Consolidate `product:*` into `domain:*`
+
+Product areas (`product:quotes`, `product:jobs`, etc.) map 1:1 to domain entities from the codebase. Maintaining separate `product:*` and `domain:*` namespaces creates a "where does it go?" decision that slows agents down.
+
+**Decision:** Remove the `product:*` namespace entirely. All scope labels use `domain:*`, derived from `src/domain/` entities:
+
+`domain:customers`, `domain:garments`, `domain:colors`, `domain:screens`, `domain:pricing`, `domain:artwork`, `domain:dtf`, `domain:quotes`, `domain:jobs`, `domain:invoices`
+
+**Rationale:** The product areas ARE the domains. A quote issue touches `src/domain/quotes/` — one label, one namespace, no ambiguity.
+
+### 8. Remove `tool:*`, `pipeline:*`, `source:*` namespaces
+
+These namespaces added complexity without proportional value:
+
+- **`tool:*`** (6 labels) — developer infrastructure labels. Tooling work is now `type:chore` with an optional `area:*` label.
+- **`pipeline:*`** (4 labels) — pipeline types are tracked on the project board's Pipeline Stage field, not labels.
+- **`source:*`** (5 labels) — provenance tracking was rarely used and not actionable.
+
+**Rationale:** 15 fewer labels. Agents had to choose between `product:*`, `domain:*`, and `tool:*` — now there's one scope namespace (`domain:*`) plus org-wide `area:*` for cross-cutting concerns.
 
 ## Migration Plan
 
@@ -156,14 +180,19 @@ gh label delete "priority/next" --yes
 - Ops label sync script works correctly on mokumo
 - `.github` org templates align with repo labels
 - Simplified priority model reduces decision fatigue
+- One scope namespace (`domain:*`) eliminates the "product vs domain vs tool" decision
+- ~28 total labels (down from ~55+) — less cognitive load for agents and humans
+- `type:*` aligns with conventional commits vocabulary (`feat`, `fix`, `chore`, `docs`)
 
 ### Negative
 
 - One-time migration cost for ~50 existing issues
 - `priority:soon` replaces the more intuitive `priority/next` — minor naming loss
 - Closing `icebox` items requires human review to avoid losing valid deferred work
+- Provenance tracking (`source:*`) is lost — if needed later, can be re-added
 
 ### Neutral
 
-- `product:*` and `tool:*` become mokumo-specific extensions — other repos don't need them
 - `status:*` labels coexist with board fields — slight redundancy, but different access patterns (CLI vs UI)
+- Pipeline type tracking moves from labels to board fields — same data, different mechanism
+- Pure infrastructure issues may only have `type:chore` + `priority:*` without a `domain:*` label — this is intentional
