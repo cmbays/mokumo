@@ -8,6 +8,7 @@ description: TypeScript type safety for Mokumo — eliminates `any` types, desig
 ## Process
 
 When invoked:
+
 1. Run `npx tsc --noEmit` to capture the full error output before making changes
 2. Identify the root cause (unsound inference, missing constraints, implicit `any`, wrong boundary)
 3. Craft a solution using the Mokumo type hierarchy below — prefer Zod inference, then Drizzle inference, then explicit generics
@@ -32,7 +33,10 @@ explicit generic                ← only when no runtime source exists
 
 ```ts
 // ✗ — manual interface drifts from runtime schema
-interface Customer { id: string; name: string }
+interface Customer {
+  id: string
+  name: string
+}
 
 // ✓ — Zod schema is the single source of truth
 export type Customer = z.infer<typeof customerSchema>
@@ -66,12 +70,18 @@ export function assertNever(value: never, message: string): never {
 
 function invoiceStatusLabel(status: InvoiceStatus): string {
   switch (status) {
-    case 'draft':   return 'Draft'
-    case 'sent':    return 'Sent'
-    case 'partial': return 'Partial Payment'
-    case 'paid':    return 'Paid'
-    case 'void':    return 'Void'
-    default: return assertNever(status, 'Unhandled InvoiceStatus')
+    case 'draft':
+      return 'Draft'
+    case 'sent':
+      return 'Sent'
+    case 'partial':
+      return 'Partial Payment'
+    case 'paid':
+      return 'Paid'
+    case 'void':
+      return 'Void'
+    default:
+      return assertNever(status, 'Unhandled InvoiceStatus')
     // TS error here if a new enum value is added without updating this switch
   }
 }
@@ -83,11 +93,11 @@ Use `satisfies` when you need a config map keyed by an enum. Preserves literal v
 
 ```ts
 const invoiceStatusConfig = {
-  draft:   { label: 'Draft',           color: 'text-sand-11' },
-  sent:    { label: 'Sent',            color: 'text-sky-11'  },
-  partial: { label: 'Partial Payment', color: 'text-amber-11'},
-  paid:    { label: 'Paid',            color: 'text-jade-11' },
-  void:    { label: 'Void',            color: 'text-red-11'  },
+  draft: { label: 'Draft', color: 'text-sand-11' },
+  sent: { label: 'Sent', color: 'text-sky-11' },
+  partial: { label: 'Partial Payment', color: 'text-amber-11' },
+  paid: { label: 'Paid', color: 'text-jade-11' },
+  void: { label: 'Void', color: 'text-red-11' },
 } satisfies Record<InvoiceStatus, { label: string; color: string }>
 // TS error if any InvoiceStatus key is missing from this object
 ```
@@ -152,7 +162,7 @@ const data: unknown = await res.json() // explicit annotation required — .json
 const user = userSchema.parse(data) // throws ZodError with detail if malformed
 
 // ✗ — implicit any leaking from external source
-const result = await res.json()  // type is any, bypasses all checks
+const result = await res.json() // type is any, bypasses all checks
 ```
 
 ### 7. URL Search Params (Next.js App Router)
@@ -166,14 +176,14 @@ const status = searchParams.status as InvoiceStatus
 // ✓ — parse and validate at the server component boundary
 const paramsSchema = z.object({
   status: invoiceStatusEnum.optional(),
-  page:   z.coerce.number().int().min(1).default(1),
-  q:      z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  q: z.string().optional(),
 })
 
 const params = paramsSchema.parse({
   status: searchParams.status,
-  page:   searchParams.page,
-  q:      searchParams.q,
+  page: searchParams.page,
+  q: searchParams.q,
 })
 // params.status → InvoiceStatus | undefined
 // params.page   → number (coerced from string, defaulted to 1)
@@ -188,15 +198,15 @@ Server actions in `src/features/*/actions/` receive raw `FormData` or plain obje
 import { z } from 'zod'
 
 const createInvoiceSchema = z.object({
-  orderId:  z.string().uuid(),
-  mode:     itemizationModeEnum,
+  orderId: z.string().uuid(),
+  mode: itemizationModeEnum,
   discount: discountSchema.optional(),
 })
 
 export async function createInvoiceAction(formData: FormData) {
   const parsed = createInvoiceSchema.safeParse({
-    orderId:  formData.get('orderId'),
-    mode:     formData.get('mode'),
+    orderId: formData.get('orderId'),
+    mode: formData.get('mode'),
     discount: formData.get('discount') ? JSON.parse(formData.get('discount') as string) : undefined,
   })
   if (!parsed.success) {
@@ -214,7 +224,7 @@ Port contracts (`ICustomerRepository`, etc.) use `type` aliases, same as everyth
 ```ts
 // ✓ — type alias, method types derived from Zod
 export type ICustomerRepository = {
-  findById(id: string): Promise<Customer | null>  // Customer = z.infer<typeof customerSchema>
+  findById(id: string): Promise<Customer | null> // Customer = z.infer<typeof customerSchema>
   list(filters: CustomerFilters): Promise<CustomerListResult>
 }
 ```
@@ -227,10 +237,14 @@ export type ICustomerRepository = {
 
 ```ts
 // ✗
-function getProperty(obj: any, key: string): any { return obj[key] }
+function getProperty(obj: any, key: string): any {
+  return obj[key]
+}
 
 // ✓
-function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] { return obj[key] }
+function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+  return obj[key]
+}
 ```
 
 ### Type guards for unknown API responses

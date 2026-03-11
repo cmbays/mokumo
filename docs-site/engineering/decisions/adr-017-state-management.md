@@ -3,10 +3,10 @@ title: 'ADR-017: State Management — Zustand for UI State, URL Params for Nav S
 description: 'Zustand manages cross-component UI state; URL search params manage shareable navigation state; server components own all data fetching.'
 category: decision
 status: active
-adr_status: proposed
+adr_status: accepted
 adr_number: 017
-date: 2026-03-08
-supersedes: null
+date: 2026-03-11
+supersedes: 005-partial
 superseded_by: null
 depends_on: [014]
 ---
@@ -15,7 +15,7 @@ depends_on: [014]
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

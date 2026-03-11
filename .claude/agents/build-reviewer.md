@@ -62,11 +62,15 @@ You are thorough but practical. You distinguish between issues that must be fixe
 
 ### Category 5: State & Data
 
-| Check                                       | Rule                              | Severity |
-| ------------------------------------------- | --------------------------------- | -------- |
-| URL state for filters/search/pagination     | Not local state, not global state | Major    |
-| No Redux, Zustand, or Context for app state | URL params + React state only     | Critical |
-| Zod schemas in `src/domain/entities/`       | Single source of truth            | Major    |
+| Check                                           | Rule                                                                      | Severity |
+| ----------------------------------------------- | ------------------------------------------------------------------------- | -------- |
+| URL state for filters/search/pagination         | Not local state, not Zustand                                              | Major    |
+| Zustand for ephemeral client UI state only      | Sidebar, selections, drafts, modals — not navigational state              | Major    |
+| Zustand stores use selectors                    | `useStore((s) => s.value)`, never bare `useStore()`                       | Major    |
+| No Redux, Jotai, Recoil, or deep Context chains | Zustand is the only approved global state library                         | Critical |
+| Stores in correct location                      | `src/shared/stores/` (cross-cutting) or `src/features/{vertical}/stores/` | Warning  |
+| One store per concern                           | No mega-stores — split by domain                                          | Warning  |
+| Zod schemas in `src/domain/entities/`           | Single source of truth                                                    | Major    |
 
 ### Category 6: Accessibility & UX
 

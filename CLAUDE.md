@@ -37,7 +37,7 @@ cd ~/Github/mokumo-worktrees/session-MMDD-topic && npm install
 
 Next.js 16 (App Router, TypeScript, Turbopack), Tailwind CSS, shadcn/ui (Radix), Lucide icons,
 React Hook Form + Zod, TanStack Table, dnd-kit, Framer Motion, Supabase (Postgres + Auth),
-Drizzle ORM. URL query params for state — no global state libraries.
+Drizzle ORM, Zustand (client UI state). URL query params for navigational state.
 
 ## Architecture
 
@@ -54,7 +54,7 @@ Clean Architecture: `domain/` → `infrastructure/` → `features/` → `shared/
 6. **Port interfaces** — code against `ICustomerRepository` etc. Wiring in `src/infrastructure/bootstrap.ts` only.
 7. **Repository imports** — from `@infra/repositories/{domain}` only. Never from `_providers/*`.
 8. **Logging** — `logger` from `@shared/lib/logger`, never `console.log`.
-9. **URL state** — filters, search, pagination in URL query params.
+9. **URL state** — filters, search, pagination in URL query params. Zustand for ephemeral client UI state (sidebar, selections, drafts). No Redux, no deep Context chains.
 10. **`cn()` for classNames** — from `@shared/lib/cn`, never string concatenation.
 11. **Breadcrumbs** — use `buildBreadcrumbs()`, never include `"Dashboard"` label.
 12. **TooltipProvider** — one global in `app/(dashboard)/layout.tsx`. Never per-component.
@@ -78,7 +78,7 @@ feature/session branches ──PR──→ main ──merge──→ production
 
 - No separate CSS files — Tailwind only
 - No emoji icons — Lucide only
-- No global state (Redux, Zustand)
+- No Redux, Jotai, Recoil, or deep React Context chains — Zustand only for client UI state
 - No `any` types — Zod inference or explicit types
 - No colors outside design token palette
 - No decorative gradients — color = meaning
