@@ -14,17 +14,17 @@ This document is the canonical reference for Mokumo's agent architecture. It def
 
 ## Quick Reference
 
-| Agent                       | Use When                                       | Preloaded Skills                                           |
-| --------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
-| `design-composer`           | Design mockup phase (after breadboarding)      | design-system, design-mockup                               |
-| `frontend-builder`          | Building screens or components                 | design-system, breadboarding, screen-builder, quality-gate |
-| `design-auditor`            | Design review checkpoints                      | design-system, design-audit                                |
-| `build-reviewer`            | Code quality review (auto-dispatched)          | design-system                                              |
-| `finance-sme`               | Financial calculation review (auto-dispatched) | —                                                          |
-| `requirements-interrogator` | Before building complex features               | pre-build-interrogator                                     |
-| `feature-strategist`        | Competitive analysis, feature planning         | feature-strategy                                           |
-| `doc-sync`                  | Syncing docs with code changes                 | doc-sync                                                   |
-| `secretary` (Ada)           | Project pulse, 1:1 check-ins, strategic advice | one-on-one, cool-down                                      |
+| Agent                       | Use When                                       | Preloaded Skills                                                                |
+| --------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| `design-composer`           | Design mockup phase (after breadboarding)      | design-system, design-mockup                                                    |
+| `frontend-builder`          | Building screens or components                 | design-system, breadboarding, screen-builder, quality-gate, mobile-first-design |
+| `design-auditor`            | Design review checkpoints                      | design-system, design-audit, mobile-first-design                                |
+| `build-reviewer`            | Code quality review (auto-dispatched)          | design-system                                                                   |
+| `finance-sme`               | Financial calculation review (auto-dispatched) | —                                                                               |
+| `requirements-interrogator` | Before building complex features               | pre-build-interrogator                                                          |
+| `feature-strategist`        | Competitive analysis, feature planning         | feature-strategy                                                                |
+| `doc-sync`                  | Syncing docs with code changes                 | doc-sync                                                                        |
+| `secretary` (Ada)           | Project pulse, 1:1 check-ins, strategic advice | one-on-one, cool-down                                                           |
 
 ## Orchestration: The Vertical Pipeline
 
@@ -77,6 +77,7 @@ Gate outcomes: `fail` → fix and re-run | `pass_with_warnings` → file issues,
 | `breadboard-reflection`   | After breadboarding                    | — (standalone)                                                    |
 | `screen-builder`          | During build                           | frontend-builder                                                  |
 | `quality-gate`            | After completing a screen              | frontend-builder                                                  |
+| `mobile-first-design`     | Building any screen, component, layout | frontend-builder, design-auditor                                  |
 | `design-audit`            | Design review checkpoints              | design-auditor                                                    |
 | `shaping`                 | After interview                        | — (standalone)                                                    |
 | `vertical-discovery`      | Start of new vertical                  | — (standalone)                                                    |

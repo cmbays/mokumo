@@ -17,6 +17,8 @@ Read these files (do NOT skip any):
 3. `src/domain/entities/` — identify which Zod schemas this screen needs
 4. `src/shared/ui/primitives/` — check what shadcn/ui primitives are installed
 5. `src/features/*/components/` — check what shared feature components already exist
+6. `.claude/skills/mobile-first-design/reference/mobile-standards.md` — breakpoints, touch targets, responsive patterns
+7. `docs-site/engineering/standards/animation.md` — motion durations, easing, GPU performance rules
 
 If a required shared component doesn't exist yet, build it first in the appropriate feature's `components/` directory or in `src/shared/ui/`.
 
@@ -86,9 +88,11 @@ Run the quality checklist (`.claude/skills/screen-builder/checklists/quality-che
 - [ ] Color: monochrome base, status colors for meaning only
 - [ ] Interactive states: hover, focus-visible, active, disabled on all interactive elements
 - [ ] Icons: Lucide only, consistent sizes
-- [ ] Motion: respects `prefers-reduced-motion`
+- [ ] Motion: respects `prefers-reduced-motion` (see `docs-site/engineering/standards/animation.md`)
 - [ ] States: empty + error states designed
 - [ ] Accessibility: keyboard nav, ARIA labels, 4.5:1 contrast
+- [ ] Mobile-first: base layout is mobile, breakpoints add complexity (see `mobile-first-design` skill)
+- [ ] Touch targets: all interactive elements >= 44x44px
 - [ ] Jobs Filter: every element earns its place
 
 Run the cross-link checklist (`.claude/skills/screen-builder/checklists/cross-link-checklist.md`):

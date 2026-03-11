@@ -63,5 +63,6 @@ Adding a personality: one CSS override block + one registry entry in `src/shared
 
 ## Related
 
+- [Animation Standards](./animation.md) — Motion durations, easing, GPU performance, reduced-motion compliance
 - [Storybook Structure](../guides/storybook-structure.md) — placement rules, colocation, scope
 - [Coding Standards](./coding-standards.md) — `cn()` for classNames, Lucide icons only, Tailwind only

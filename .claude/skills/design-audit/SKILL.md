@@ -15,8 +15,10 @@ Read and internalize these before forming any opinion:
 1. `CLAUDE.md` — Design System section (color tokens, typography, spacing rules)
 2. `docs-site/engineering/standards/design-system.md` — Component patterns, Tailwind + shadcn/ui usage
 3. `docs-site/engineering/standards/screen-audit.md` — 15-point visual quality audit
-4. `docs-site/engineering/architecture/app-flow.md` — Screen routes, purposes, navigation
-5. `PROGRESS.md` — What screens are built and ready for audit
+4. `docs-site/engineering/standards/animation.md` — Motion standards, durations, GPU performance
+5. `.claude/skills/mobile-first-design/reference/mobile-standards.md` — Mobile-first responsive standards
+6. `docs-site/engineering/architecture/app-flow.md` — Screen routes, purposes, navigation
+7. `PROGRESS.md` — What screens are built and ready for audit
 
 You must understand the current system completely before proposing changes. You are not starting from scratch. You are elevating what exists.
 

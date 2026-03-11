@@ -78,9 +78,13 @@
 - Is there motion that exists for no reason?
 - Does the app feel responsive to interaction?
 - Is `prefers-reduced-motion` respected?
+- Are durations within range (150-300ms for most interactions)?
+- Are only `transform` and `opacity` animated (GPU-composited)?
 
-**Pass**: Spring transitions on modals/drawers, hover transitions on cards, reduced-motion media query.
-**Fail**: Jarring animations, motion for decoration only, no reduced-motion support.
+**Reference**: `docs-site/engineering/standards/animation.md` for duration scale, easing presets, and anti-patterns.
+
+**Pass**: Spring transitions on modals/drawers, hover transitions on cards, reduced-motion media query, GPU-only properties.
+**Fail**: Jarring animations, motion for decoration only, no reduced-motion support, animating layout properties.
 
 ## 9. Empty States
 
@@ -109,12 +113,13 @@
 
 ## 12. Dark Mode / Theming
 
-- Dark mode is the default and only theme in Phase 1
-- Do all tokens, shadows, and contrast ratios hold up?
-- Are backgrounds using the correct scale (`bg-primary` → `bg-elevated` → `bg-surface`)?
+- Does the UI respect the user's system preference (via next-themes)?
+- Do all tokens, shadows, and contrast ratios hold up in both dark and light modes?
+- Are backgrounds using the correct scale (`bg-background` → `bg-card` → `bg-surface`)?
+- Are all colors from design system tokens (no hardcoded hex)?
 
-**Pass**: Consistent dark theme, proper background layering, readable text at all levels.
-**Fail**: White text on light backgrounds, incorrect background layer usage.
+**Pass**: Consistent theming in both modes, proper background layering, readable text at all levels.
+**Fail**: Hardcoded colors that break in one mode, incorrect background layer usage.
 
 ## 13. Density (Jobs Filter)
 
@@ -125,13 +130,21 @@
 **Pass**: Every element serves a purpose, no redundant labels, clean layout.
 **Fail**: Duplicate information, labels that restate obvious context, unnecessary decorative elements.
 
-## 14. Responsiveness
+## 14. Responsiveness (Mobile-First)
 
-- Does every screen work at mobile, tablet, and desktop viewports?
-- Are touch targets sized for thumbs (min 44x44px)?
-- Does the layout adapt fluidly, not just snap at breakpoints?
+- Is the base layout (no breakpoint prefix) designed for mobile (375px)?
+- Does content stack single-column on mobile and expand to multi-column at `md:`/`lg:`?
+- Are touch targets >= 44x44px with >= 8px spacing between them?
+- Are primary actions within thumb reach zone (bottom of viewport) on mobile?
+- Do data tables have a mobile alternative (card list, stacked view)?
+- Are forms single-column on mobile?
+- Does the layout work at 320px without horizontal overflow?
+- Is body text >= 16px (prevents iOS auto-zoom)?
 
-**Note**: Phase 1 is desktop-first (shop owner uses desktop). Mobile consideration is secondary but should not be broken.
+**Reference**: `.claude/skills/mobile-first-design/reference/mobile-standards.md` for full breakpoint map, touch target rules, and responsive patterns.
+
+**Pass**: Mobile-first markup, clean breakpoint transitions from 320px to 1440px+, thumb-friendly actions.
+**Fail**: Desktop-only layout, tiny touch targets, hover-only interactions, horizontal scroll on mobile.
 
 ## 15. Accessibility
 

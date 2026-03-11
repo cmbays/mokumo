@@ -117,8 +117,10 @@ Before running the audit, ensure:
 | Do transitions feel natural and purposeful?   | Tailwind `transition-*` for hover, Framer Motion for layout |
 | Is there motion that exists for no reason?    | Remove decorative animations                                |
 | Does the page feel responsive to interaction? | Immediate feedback on click/hover                           |
+| Are only GPU-composited properties animated?  | `transform` and `opacity` only — no layout properties       |
+| Are durations appropriate?                    | 150–300ms for most interactions                             |
 
-**Check**: Respects `prefers-reduced-motion`.
+**Check**: Respects `prefers-reduced-motion`. See [Animation Standards](./animation.md) for full reference.
 
 ---
 
@@ -165,15 +167,16 @@ Before running the audit, ensure:
 
 ### Responsive & Accessible (12-15)
 
-#### 12. Dark Mode
+#### 12. Dark / Light Mode
 
 | Question                                        | Pass Criteria                                  |
 | ----------------------------------------------- | ---------------------------------------------- |
-| Do all semantic colors hold up?                 | Using `bg-background`, `text-foreground`, etc. |
+| Does the UI work in both dark and light modes?  | Test both via system preference toggle         |
+| Do all semantic colors hold up in both modes?   | Using `bg-background`, `text-foreground`, etc. |
 | Are there hardcoded colors bypassing the theme? | No hex values in component code                |
-| Are shadows appropriate?                        | Subtle or removed                              |
+| Are shadows appropriate in both modes?          | Subtle or removed                              |
 
-**Note**: Dark mode is default. Verify all elements use Tailwind semantic classes.
+**Note**: Theme managed by `next-themes` (system preference by default). Verify all elements use Tailwind semantic classes in both modes.
 
 #### 13. Density
 
@@ -183,15 +186,18 @@ Before running the audit, ensure:
 | Are there redundant elements?                   | No duplicate information         |
 | Is every element earning its place?             | Justify each element's existence |
 
-#### 14. Responsiveness
+#### 14. Responsiveness (Mobile-First)
 
-| Question                                       | Pass Criteria               |
-| ---------------------------------------------- | --------------------------- |
-| Does the layout handle different window sizes? | Test 1280px, 1440px, 1920px |
-| Does content remain readable at all widths?    | No horizontal overflow      |
-| Are controls accessible at all sizes?          | Touch targets adequate      |
+| Question                                                | Pass Criteria                                     |
+| ------------------------------------------------------- | ------------------------------------------------- |
+| Is the base layout (no breakpoint prefix) mobile-first? | Single column, stacked on mobile (375px)          |
+| Does the layout work at all viewport widths?            | Test 320px, 375px, 768px, 1024px, 1280px, 1440px  |
+| Are touch targets >= 44x44px?                           | Buttons, links, icons, form controls meet minimum |
+| Are primary actions within thumb reach on mobile?       | Bottom of viewport, not top                       |
+| Do data tables have a mobile alternative?               | Card list or stacked view below `md:`             |
+| Is body text >= 16px?                                   | Prevents iOS auto-zoom on input focus             |
 
-**Note**: Desktop-first. Mobile is Phase 2 scope.
+**Reference**: `.claude/skills/mobile-first-design/reference/mobile-standards.md` for full standards.
 
 #### 15. Accessibility
 
@@ -314,6 +320,7 @@ For **every element** on the screen, ask these five questions:
 
 - [FRONTEND_GUIDELINES.md](./FRONTEND_GUIDELINES.md) — Design tokens and component patterns
 - [UX_HEURISTICS.md](./UX_HEURISTICS.md) — 10-point UX quality checklist
+- [Animation Standards](./animation.md) — Motion durations, easing, GPU performance
 - [APP_FLOW_STANDARD.md](./APP_FLOW_STANDARD.md) — User flow documentation standard
 - [CLAUDE.md](../../CLAUDE.md) — Quality Checklist (distilled version of this audit)
 
@@ -321,7 +328,8 @@ For **every element** on the screen, ask these five questions:
 
 ## Version History
 
-| Date       | Change                                                          |
-| ---------- | --------------------------------------------------------------- |
-| 2026-02-04 | Initial protocol (as PLAYGROUND_AUDIT_PROTOCOL.md)              |
-| 2026-02-07 | Adapted for Mokumo: renamed, updated examples, fixed references |
+| Date       | Change                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| 2026-02-04 | Initial protocol (as PLAYGROUND_AUDIT_PROTOCOL.md)                                          |
+| 2026-02-07 | Adapted for Mokumo: renamed, updated examples, fixed references                             |
+| 2026-03-11 | Updated: mobile-first responsiveness (#14), animation standards (#8), dark/light mode (#12) |

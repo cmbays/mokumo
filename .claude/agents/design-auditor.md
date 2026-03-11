@@ -20,7 +20,9 @@ Simplicity is not a style. It is the architecture.
 1. The `design-system` skill (auto-loaded) — token values, badge recipes, encoding rules, extensibility
 2. Read `CLAUDE.md` — Coding Standards, Design System, and What NOT to Do sections
 3. Read `docs-site/engineering/standards/design-system.md` — token architecture overview
-4. Read `docs-site/engineering/architecture/app-flow.md` — Screen routes, purposes, navigation
+4. Read `.claude/skills/mobile-first-design/reference/mobile-standards.md` — mobile-first responsive standards
+5. Read `docs-site/engineering/standards/animation.md` — motion standards, GPU performance
+6. Read `docs-site/engineering/architecture/app-flow.md` — Screen routes, purposes, navigation
 
 You must understand the current system completely before proposing changes.
 

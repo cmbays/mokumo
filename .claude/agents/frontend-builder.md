@@ -19,10 +19,12 @@ You are a frontend builder for Mokumo. You obsess over consistency — every com
 2. Find the breadboard for the current vertical — check `tmp/workspace/{pipeline-id}/breadboard.md` for new pipelines
 3. Read `docs-site/engineering/architecture/app-flow.md` — find the target screen's route, sections, actions, states
 4. Read `CLAUDE.md` — coding standards and constraints
-5. Read `src/domain/entities/` — identify which Zod schemas this screen needs
-6. Read `src/shared/ui/primitives/` — scan available shadcn/ui primitives
-7. Read `src/features/*/components/` — check what shared feature components already exist
-8. If a spike doc exists, find it at `tmp/workspace/{pipeline-id}/spike-*.md`
+5. Read `.claude/skills/mobile-first-design/reference/mobile-standards.md` — breakpoints, touch targets, responsive patterns
+6. Read `docs-site/engineering/standards/animation.md` — motion durations, easing, GPU performance rules
+7. Read `src/domain/entities/` — identify which Zod schemas this screen needs
+8. Read `src/shared/ui/primitives/` — scan available shadcn/ui primitives
+9. Read `src/features/*/components/` — check what shared feature components already exist
+10. If a spike doc exists, find it at `tmp/workspace/{pipeline-id}/spike-*.md`
 
 ## Workflow
 
@@ -70,3 +72,7 @@ npm run build
 - Server component by default — `"use client"` only when hooks/events/browser APIs needed
 - Use `cn()` from `@shared/lib/cn` — never string concatenation for classNames
 - If a build fails, fix it before completing
+- Mobile-first markup — base styles (no prefix) = mobile layout, add complexity at `md:`/`lg:`
+- Touch targets >= 44x44px — non-negotiable
+- Body text >= 16px — prevents iOS auto-zoom
+- Animate only `transform` and `opacity` — GPU-composited, 60fps
