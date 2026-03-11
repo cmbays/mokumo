@@ -58,6 +58,7 @@ Clean Architecture: `domain/` → `infrastructure/` → `features/` → `shared/
 10. **`cn()` for classNames** — from `@shared/lib/cn`, never string concatenation.
 11. **Breadcrumbs** — use `buildBreadcrumbs()`, never include `"Dashboard"` label.
 12. **TooltipProvider** — one global in `app/(dashboard)/layout.tsx`. Never per-component.
+13. **Branded entity IDs** — use `CustomerId`, `QuoteId`, `JobId`, etc. from `@domain/lib/branded`. New ports, repos, and domain rules MUST use branded ID types, not plain `string`. Cast at boundaries via `brandId<T>()`. See ADR-030.
 
 ## Pre-Build Ritual
 
@@ -85,6 +86,7 @@ feature/session branches ──PR──→ main ──merge──→ production
 - No pushing to `main` or `production` directly
 - No `console.log` in production code
 - No hardcoded URLs — env vars only
+- No plain `string` for entity IDs in new code — use branded types from `@domain/lib/branded`
 
 ## Hot Files — NEVER commit on feature branches
 
