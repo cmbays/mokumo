@@ -21,6 +21,16 @@ The public org-level design system docs live in `docs/breezy-bays-labs/design-sy
 5. `docs-site/` — product-specific public documentation
 6. `docs/breezy-bays-labs/design-system/` — org-level public foundations
 
+## Relationship to shadcn Skill
+
+The `shadcn` skill (`.claude/skills/shadcn/`) covers the **primitive layer** — correct Radix component APIs, CLI usage, composition patterns (FieldGroup for forms, ToggleGroup for options, etc.). This skill covers the **application layer** — Mokumo's token architecture, badge recipes, color encoding rules, and personality system.
+
+When both skills are loaded:
+
+- Use **shadcn rules** for component structure and API correctness
+- Use **this skill** for color, token, and visual encoding decisions
+- If shadcn defaults conflict with Mokumo tokens (e.g., `bg-primary` vs `ds-` tokens), this skill wins
+
 ## 4-Layer Token Architecture
 
 ```text
