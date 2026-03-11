@@ -41,6 +41,8 @@ Follow the `screen-builder` skill workflow for the build process: preflight, tem
 - `@domain/entities/` — Zod schemas and types
 - `@shared/lib/cn` — `cn()` for classNames
 - `@shared/lib/design-system` — `statusBadge()`, `categoryBadge()`, `dotColor()`
+- `@shared/stores/` — cross-cutting Zustand stores (sidebar, selections, command palette)
+- `@features/{vertical}/stores/` — feature-scoped Zustand stores
 
 **Design system** (from auto-loaded skill):
 
@@ -63,6 +65,14 @@ npx tsc --noEmit
 npm run lint
 npm run build
 ```
+
+**State management**:
+
+- URL params for navigational state (filters, search, pagination, active tabs)
+- Zustand for ephemeral client UI state (sidebar toggle, batch selections, draft edits, command palette)
+- `useState` for component-local state (input values, toggles)
+- Scoped React Context only for parent-to-child prop drilling within a single component tree
+- Always use Zustand selectors: `useStore((s) => s.value)`, never bare `useStore()`
 
 ## Rules
 

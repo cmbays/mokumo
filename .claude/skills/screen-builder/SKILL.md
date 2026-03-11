@@ -78,6 +78,14 @@ Follow these rules strictly:
 - Status filter → `?status=` URL param
 - Use `useSearchParams()` (requires `"use client"`)
 
+**Zustand state** (for ephemeral client UI):
+
+- Sidebar open/closed → `@shared/stores/ui-store`
+- Batch selections (e.g., select rows for bulk action) → feature-scoped store in `src/features/{vertical}/stores/`
+- Multi-step wizard progress, draft edits before save → Zustand store
+- Always use selectors: `useStore((s) => s.value)`, never bare `useStore()`
+- Do NOT use Zustand for filters, search, or pagination — those belong in URL params
+
 ### 4. Verify
 
 Run the quality checklist (`.claude/skills/screen-builder/checklists/quality-checklist.md`):

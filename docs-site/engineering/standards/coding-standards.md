@@ -93,7 +93,7 @@ infrastructure/ → domain/ only
 
 ## State Management
 
-### URL State for Filters
+### URL State for Navigational State
 
 Filters, search terms, pagination, and view preferences live in URL query params:
 
@@ -106,7 +106,43 @@ const status = searchParams.get('status') ?? 'all'
 const [status, setStatus] = useState('all')
 ```
 
-**Not using**: Redux, Zustand, Jotai, Recoil, or any global state library.
+### Zustand for Ephemeral Client UI State
+
+Use Zustand for client-side state that doesn't belong in URLs and doesn't need to survive a page refresh:
+
+```typescript
+// Good — sidebar toggle, command palette, batch selections
+import { create } from 'zustand'
+
+const useSidebarStore = create<SidebarState>()((set) => ({
+  isOpen: true,
+  toggle: () => set((s) => ({ isOpen: !s.isOpen })),
+}))
+
+// In component — selector-based subscription, only re-renders when isOpen changes
+const isOpen = useSidebarStore((s) => s.isOpen)
+```
+
+**When to use which**:
+
+| State type                                          | Where it lives         |
+| --------------------------------------------------- | ---------------------- |
+| Filters, search, pagination, active tab             | URL query params       |
+| Sidebar open/closed, command palette, modals        | Zustand store          |
+| Multi-step form wizard progress                     | Zustand store          |
+| Batch selections (e.g., select garments for action) | Zustand store          |
+| Optimistic UI updates, draft edits before save      | Zustand store          |
+| Component-local UI (toggle, input value)            | `useState`             |
+| Scoped parent-to-child prop drilling avoidance      | React Context (scoped) |
+
+**Store conventions**:
+
+- Stores live in `src/shared/stores/` (cross-cutting) or `src/features/{vertical}/stores/` (feature-scoped)
+- One store per concern — `ui-store.ts`, `selection-store.ts`, not one mega-store
+- Always use selectors: `useStore((s) => s.value)`, never `useStore()` (subscribes to everything)
+- Name files `{concern}-store.ts`, export hook as `use{Concern}Store`
+
+**Not using**: Redux, Jotai, Recoil, or deep React Context chains for cross-cutting state.
 
 ---
 
@@ -160,16 +196,18 @@ Apply to all new code:
 
 ## Naming Conventions
 
-| Thing            | Convention                  | Example                    |
-| ---------------- | --------------------------- | -------------------------- |
-| Files            | kebab-case                  | `quote-builder.tsx`        |
-| Components       | PascalCase                  | `QuoteBuilder`             |
-| Functions        | camelCase                   | `calculateQuoteTotal`      |
-| Zod schemas      | camelCase + `Schema` suffix | `quoteSchema`              |
-| Types (from Zod) | PascalCase                  | `Quote`                    |
-| Database columns | snake_case                  | `created_at`               |
-| CSS variables    | kebab-case with `--` prefix | `--background`             |
-| Environment vars | SCREAMING_SNAKE             | `NEXT_PUBLIC_SUPABASE_URL` |
+| Thing            | Convention                   | Example                    |
+| ---------------- | ---------------------------- | -------------------------- |
+| Files            | kebab-case                   | `quote-builder.tsx`        |
+| Components       | PascalCase                   | `QuoteBuilder`             |
+| Functions        | camelCase                    | `calculateQuoteTotal`      |
+| Zod schemas      | camelCase + `Schema` suffix  | `quoteSchema`              |
+| Types (from Zod) | PascalCase                   | `Quote`                    |
+| Database columns | snake_case                   | `created_at`               |
+| Zustand stores   | kebab-case + `-store` suffix | `ui-store.ts`              |
+| Zustand hooks    | `use` + PascalCase + `Store` | `useUIStore`               |
+| CSS variables    | kebab-case with `--` prefix  | `--background`             |
+| Environment vars | SCREAMING_SNAKE              | `NEXT_PUBLIC_SUPABASE_URL` |
 
 ---
 
