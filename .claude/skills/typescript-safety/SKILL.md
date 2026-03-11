@@ -59,7 +59,8 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusEnum>
 Compiler enforces every case is handled. Required for all status-dispatch logic.
 
 ```ts
-function assertNever(value: never, message: string): never {
+// Canonical location: src/shared/lib/assert-never.ts — import from there, don't redeclare inline
+export function assertNever(value: never, message: string): never {
   throw new Error(`${message}: ${JSON.stringify(value)}`)
 }
 
@@ -91,27 +92,31 @@ const invoiceStatusConfig = {
 // TS error if any InvoiceStatus key is missing from this object
 ```
 
-### 4. Branded UUID Types (domain IDs)
+### 4. Branded UUID Types (domain IDs) — forward-looking pattern
+
+> **Note:** The existing codebase uses plain `string` UUIDs throughout. This is the target pattern for new ports and cross-domain lookup functions — adopt it incrementally, not retroactively in bulk.
 
 Raw `string` UUIDs are interchangeable at compile time — you can pass a `CustomerId` where an `OrderId` is expected and TS won't catch it. Branding prevents this.
 
 ```ts
-// Define branded types in domain entity files
-type Brand<T, B extends string> = T & { readonly __brand: B }
+// Define branded types in domain entity files using Zod's built-in brand support
+export const customerIdSchema = z.string().uuid().brand<'CustomerId'>()
+export const orderIdSchema    = z.string().uuid().brand<'OrderId'>()
+export const invoiceIdSchema  = z.string().uuid().brand<'InvoiceId'>()
 
-export type CustomerId = Brand<string, 'CustomerId'>
-export type OrderId    = Brand<string, 'OrderId'>
-export type InvoiceId  = Brand<string, 'InvoiceId'>
+export type CustomerId = z.infer<typeof customerIdSchema>
+export type OrderId    = z.infer<typeof orderIdSchema>
+export type InvoiceId  = z.infer<typeof invoiceIdSchema>
 
-// Constructor — Zod refinement is the right entry point
-export const customerIdSchema = z.string().uuid().transform(s => s as CustomerId)
+// ✗ — compiles but is wrong (existing pattern — acceptable on legacy call sites)
+function getInvoice(id: string) { ... }
 
-// ✗ — compiles but is wrong
-function getInvoice(id: CustomerId) { ... }
-getInvoice(orderId) // TS error: Argument of type 'OrderId' is not assignable to 'CustomerId' ✓
+// ✓ — new ports should use branded types
+function getInvoice(id: InvoiceId) { ... }
+getInvoice(orderId) // TS error: type 'OrderId' is not assignable to 'InvoiceId' ✓
 ```
 
-Use branded ID types for any cross-domain lookup function where a wrong ID would cause a silent data leak.
+Use `z.string().uuid().brand<'X'>()` — not a manual `as CustomerId` cast — so the brand is enforced at the Zod parse boundary, not just asserted.
 
 ### 5. Drizzle Row Types (infrastructure layer only)
 
@@ -132,7 +137,7 @@ function mapRow(row: ActivityRow): CustomerActivity {
 }
 ```
 
-**Drizzle types stay in `_providers/supabase/`** — never leak into domain or feature layers.
+**Drizzle types stay within the `_providers/` subtree** (i.e., `_providers/supabase/*`) — never leak into domain or feature layers. Mock providers don't use Drizzle at all; only the supabase provider imports table schemas.
 
 ### 6. Parse at Every Boundary
 
@@ -143,21 +148,73 @@ All external data (DB rows, API responses, form submissions, URL params) must pa
 const activity = customerActivitySchema.parse(rawRow)
 
 // ✓ — external API boundary
-const data: unknown = await res.json()
+const data: unknown = await res.json() // explicit annotation required — .json() returns `any`
 const user = userSchema.parse(data) // throws ZodError with detail if malformed
 
 // ✗ — implicit any leaking from external source
 const result = await res.json()  // type is any, bypasses all checks
 ```
 
-### 7. Port Interfaces — Zod-derived method signatures
+### 7. URL Search Params (Next.js App Router)
 
-Port interfaces (`ICustomerRepository`, etc.) are the only place `interface` appears in the codebase — and even these derive their data types from Zod schemas, not manual type annotations.
+CLAUDE.md requires all filter/search/pagination state in URL query params. `searchParams` in server components is typed as `Record<string, string | string[] | undefined>` — always parse through Zod before use.
 
 ```ts
-// ✓ — method parameter/return types derived from Zod
-export interface ICustomerRepository {
-  findById(id: CustomerId): Promise<Customer | null>  // Customer = z.infer<typeof customerSchema>
+// ✗ — implicit any, no validation
+const status = searchParams.status as InvoiceStatus
+
+// ✓ — parse and validate at the server component boundary
+const paramsSchema = z.object({
+  status: invoiceStatusEnum.optional(),
+  page:   z.coerce.number().int().min(1).default(1),
+  q:      z.string().optional(),
+})
+
+const params = paramsSchema.parse({
+  status: searchParams.status,
+  page:   searchParams.page,
+  q:      searchParams.q,
+})
+// params.status → InvoiceStatus | undefined
+// params.page   → number (coerced from string, defaulted to 1)
+```
+
+### 8. Server Action Input Validation
+
+Server actions in `src/features/*/actions/` receive raw `FormData` or plain objects. Always validate inputs with Zod before passing to domain logic.
+
+```ts
+'use server'
+import { z } from 'zod'
+
+const createInvoiceSchema = z.object({
+  orderId:  z.string().uuid(),
+  mode:     itemizationModeEnum,
+  discount: discountSchema.optional(),
+})
+
+export async function createInvoiceAction(formData: FormData) {
+  const parsed = createInvoiceSchema.safeParse({
+    orderId:  formData.get('orderId'),
+    mode:     formData.get('mode'),
+    discount: formData.get('discount') ? JSON.parse(formData.get('discount') as string) : undefined,
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.flatten() }
+  }
+  // parsed.data is fully typed — pass to domain service
+  return invoiceService.create(parsed.data)
+}
+```
+
+### 9. Port Contracts — Zod-derived method signatures
+
+Port contracts (`ICustomerRepository`, etc.) use `type` aliases, same as everything else. Data types in method signatures derive from Zod schemas — no manual type annotations.
+
+```ts
+// ✓ — type alias, method types derived from Zod
+export type ICustomerRepository = {
+  findById(id: string): Promise<Customer | null>  // Customer = z.infer<typeof customerSchema>
   list(filters: CustomerFilters): Promise<CustomerListResult>
 }
 ```
