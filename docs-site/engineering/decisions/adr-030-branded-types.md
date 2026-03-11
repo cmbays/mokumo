@@ -50,6 +50,20 @@ We explicitly decline using branded types to encode status transitions (e.g., `t
 3. **CRUD mismatch**: The pattern works best with functional pipelines (`ship(approve(order))`). Our architecture loads entities, mutates status, and persists — a fundamentally different data flow.
 4. **Runtime guards suffice**: ADR-019 establishes per-entity state machines in `domain/rules/` that catch invalid transitions before persistence. These are testable, debuggable, and produce meaningful error messages.
 
+### Why `unique symbol` Over Zod `.brand()`
+
+Zod provides a built-in `.brand<'X'>()` method that also creates nominally distinct types. We considered both approaches:
+
+|                                | `unique symbol` intersection                                        | Zod `.brand()`                                              |
+| ------------------------------ | ------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Framework dependency**       | None — pure TypeScript                                              | Tied to Zod's type internals                                |
+| **Branding without parse**     | `brandId<T>(raw)` — one cast                                        | Requires `schema.parse()` or falls back to `as` cast anyway |
+| **Structural reproducibility** | Impossible — `unique symbol` is opaque outside the declaring module | Possible — Zod's `BRAND` symbol is importable               |
+| **Runtime cost**               | Zero                                                                | Zod parse overhead (if using parse for branding)            |
+| **Fits our boundary**          | Yes — repos already validate via Drizzle/Zod, then brand the result | Awkward — would add a second parse step solely for branding |
+
+Both approaches prevent cross-entity ID mixups equally well. We chose `unique symbol` because our branding boundary is repository return sites where data has already been validated. Adding a Zod parse step solely to brand an ID adds overhead without additional safety. The `brandId<T>()` helper is a deliberate, explicit cast at a point where the value has already been proven valid.
+
 ## Adoption Strategy
 
 Branded IDs are adopted **incrementally**, not via big-bang migration:
