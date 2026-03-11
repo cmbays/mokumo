@@ -102,7 +102,7 @@ gh api repos/cmbays/mokumo/milestones \
 #### 2f: Historical Velocity (Last 4 Weeks)
 
 ```bash
-# Issues closed per week for the last 4 weeks
+# Issues closed and PRs merged per week for the last 4 weeks
 for i in 0 1 2 3; do
   START=$((7 * ($i + 1)))
   END=$((7 * $i))
@@ -112,8 +112,14 @@ for i in 0 1 2 3; do
       ((.closedAt | fromdateiso8601) > (now - ($START * 86400))) and
       ((.closedAt | fromdateiso8601) <= (now - ($END * 86400)))
     )] | length")
+  PR_COUNT=$(gh pr list --repo cmbays/mokumo --state merged --limit 200 \
+    --json mergedAt \
+    --jq "[.[] | select(
+      ((.mergedAt | fromdateiso8601) > (now - ($START * 86400))) and
+      ((.mergedAt | fromdateiso8601) <= (now - ($END * 86400)))
+    )] | length")
   WEEK_LABEL="Week -$((i))"
-  echo "$WEEK_LABEL: $COUNT issues closed"
+  echo "$WEEK_LABEL: $COUNT issues closed, $PR_COUNT PRs merged"
 done
 ```
 

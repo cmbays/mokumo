@@ -32,8 +32,9 @@ gh issue list --repo cmbays/mokumo --state open --limit 500 \
   > /tmp/mokumo-backlog-audit.json
 
 # Quick count
-gh issue list --repo cmbays/mokumo --state open --limit 1 \
-  --json number --jq 'length'
+gh api search/issues \
+  -f q='repo:cmbays/mokumo is:issue is:open' \
+  --jq '.total_count'
 ```
 
 ### Step 2: Run Hygiene Checks
@@ -100,7 +101,7 @@ gh issue list --repo cmbays/mokumo --state open --limit 500 \
   ) | {number, title}]'
 ```
 
-#### Check 5: Orphaned Issues (no milestone, no project)
+#### Check 5: Unscheduled Issues (no milestone)
 
 ```bash
 # Issues with no milestone
@@ -154,7 +155,7 @@ _Recommendation_: Close one and reference the other, or merge scope.
 
 _Recommendation_: Add acceptance criteria before moving to priority:now.
 
-### Info: Orphaned Issues — No Milestone (N issues)
+### Info: Unscheduled Issues — No Milestone (N issues)
 
 | Issue | Title              | Priority      |
 | ----- | ------------------ | ------------- |
@@ -170,7 +171,7 @@ _Recommendation_: Assign to current or future milestone during betting.
 | Stale (30+ days)            | N     | Warning  |
 | Potential duplicates        | N     | Warning  |
 | Missing acceptance criteria | N     | Info     |
-| Orphaned (no milestone)     | N     | Info     |
+| Unscheduled (no milestone)  | N     | Info     |
 | **Total findings**          | **N** |          |
 ```
 

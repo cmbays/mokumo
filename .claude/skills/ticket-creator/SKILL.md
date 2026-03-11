@@ -33,10 +33,13 @@ Creates GitHub issues from structured inputs (implementation plans, PRDs, or ad-
 
 ### Step 2: Gather Context
 
-1. Read the current label taxonomy from `docs-site/process/pm.md` § Label Taxonomy
-2. Read the canonical ops standard from `~/Github/ops/standards/github-labels.md` for org-wide labels
-3. Check the current milestone: `gh api repos/cmbays/mokumo/milestones --jq '.[] | select(.state=="open") | .title'`
-4. If batch: read the full implementation plan or PRD
+1. Check live repo labels: `gh label list --repo cmbays/mokumo --json name --jq '.[].name' | sort`
+2. Read the current label taxonomy from `docs-site/process/pm.md` § Label Taxonomy
+3. Read the canonical ops standard from `~/Github/ops/standards/github-labels.md` for org-wide labels
+4. Check the current milestone: `gh api repos/cmbays/mokumo/milestones --jq '.[] | select(.state=="open") | .title'`
+5. If batch: read the full implementation plan or PRD
+
+**Always validate proposed labels against the live repo label set from step 1.** Prefer existing labels over inventing new ones.
 
 ### Step 3: Draft Issues
 

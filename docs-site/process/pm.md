@@ -5,7 +5,7 @@
 > How we track and manage work. Complement to `CLAUDE.md` (how we build) and `how-we-work.md` (methodology).
 > Agents read this at session start for PM context.
 
-### Org-Wide Alignment
+## Org-Wide Alignment
 
 This document defines mokumo-specific PM conventions. The org-wide label standard lives at `~/Github/ops/standards/github-labels.md`.
 
@@ -17,9 +17,9 @@ This document defines mokumo-specific PM conventions. The org-wide label standar
 - **Scope labels**: `domain:*` (10 values derived from `src/domain/` entities)
 - **Status labels**: `status:triage`, `status:blocked`, `status:needs-input`, `status:in-progress` adopted from ops
 
-### PM Skills
+## PM Skills
 
-Six skills automate common PM tasks:
+Five skills automate common PM tasks:
 
 | Skill             | Purpose                                                                                |
 | ----------------- | -------------------------------------------------------------------------------------- |
