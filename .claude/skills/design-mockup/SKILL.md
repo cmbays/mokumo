@@ -24,6 +24,19 @@ Read the validated breadboard for this vertical. Extract:
 
 ### 2. Component Inventory
 
+Before classifying affordances, **check what already exists upstream**:
+
+```bash
+# Search registries for components that might match an affordance
+npx shadcn@latest search @shadcn -q "<affordance keyword>"
+npx shadcn@latest search @tailark -q "<affordance keyword>"
+
+# Get docs, examples, and API references for candidate components
+npx shadcn@latest docs <component>
+```
+
+This prevents reinventing primitives that shadcn or community registries already provide. The `shadcn` skill (auto-loaded) provides composition rules and correct API patterns for any component you discover.
+
 For each UI Place, classify every affordance:
 
 | Affordance | Exists? | Location | Needs Work? |
@@ -34,6 +47,7 @@ Categories:
 
 - **Exists, ready** — shadcn primitive or shared component, no changes needed
 - **Exists, needs variant** — component exists but needs a new variant or prop
+- **Available upstream** — shadcn or community registry has a component; run `npx shadcn@latest add` to install
 - **New component needed** — describe what it is, where it belongs, what props it takes
 - **New token needed** — a color, spacing, or pattern not in the design system yet
 

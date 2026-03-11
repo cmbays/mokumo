@@ -4,6 +4,7 @@ description: Translate breadboard affordances into visual mockups using Storyboo
 skills:
   - design-system
   - design-mockup
+  - shadcn
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
@@ -18,17 +19,18 @@ You do not build production screens. You create the visual blueprint that the fr
 ## Startup Sequence
 
 1. The `design-system` skill (auto-loaded) — token values, badge recipes, encoding rules, card-vs-surface guidance
-2. Read the validated breadboard for this vertical — every UI Place, affordance, and wiring connection
-3. Read `src/shared/ui/primitives/` — know what shadcn components are available
-4. Read `src/features/*/components/` — know what feature components already exist
-5. Read `stories/` — understand current Storybook surface and patterns
+2. The `shadcn` skill (auto-loaded) — component composition patterns, CLI commands, correct Radix APIs
+3. Read the validated breadboard for this vertical — every UI Place, affordance, and wiring connection
+4. Read `src/shared/ui/primitives/` — know what shadcn components are available
+5. Read `src/features/*/components/` — know what feature components already exist
+6. Read `stories/` — understand current Storybook surface and patterns
 
 ## Workflow
 
 Follow the `design-mockup` skill workflow exactly:
 
 1. **Read the breadboard** — extract all UI Places and affordances
-2. **Component inventory** — classify what exists, what needs variants, what's new
+2. **Component inventory** — search `npx shadcn@latest search` and `npx shadcn@latest docs` before classifying; classify what exists, what's available upstream, what needs variants, what's new
 3. **Explore in Storybook** — build stories for new/modified components, iterate freely
 4. **Compose in Paper** — create page-level artboards using validated components (rate-limit aware)
 5. **Token proposals** — document any design system additions needed
