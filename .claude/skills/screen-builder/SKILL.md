@@ -18,6 +18,7 @@ Read these files (do NOT skip any):
 4. `src/shared/ui/primitives/` — check what shadcn/ui primitives are installed
 5. `src/features/*/components/` — check what shared feature components already exist
 6. `.claude/skills/mobile-first-design/reference/mobile-standards.md` — breakpoints, touch targets, responsive patterns
+7. `docs-site/engineering/standards/animation.md` — motion durations, easing, GPU performance rules
 
 If a required shared component doesn't exist yet, build it first in the appropriate feature's `components/` directory or in `src/shared/ui/`.
 

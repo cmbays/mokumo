@@ -25,8 +25,8 @@ Mokumo uses Tailwind v4 default breakpoints. No custom overrides.
 
 Always write base (mobile) styles first, then layer on larger breakpoints:
 
-```
-className="flex flex-col gap-4 md:flex-row md:gap-6 lg:gap-8"
+```tsx
+className = 'flex flex-col gap-4 md:flex-row md:gap-6 lg:gap-8'
 ```
 
 Never use `max-*:` prefixes. That's desktop-first thinking.
@@ -197,7 +197,7 @@ Always single-column on mobile. Two-column at `md:` only for short, related fiel
 Primary form/page actions anchor to the viewport bottom on mobile for thumb reach:
 
 ```tsx
-<div className="fixed bottom-0 inset-x-0 p-4 bg-background border-t md:static md:border-t-0 md:p-0 md:flex md:justify-end md:gap-4">
+<div className="fixed bottom-0 inset-x-0 border-t bg-background p-4 pb-[env(safe-area-inset-bottom)] md:static md:border-t-0 md:p-0 md:pb-0 md:flex md:justify-end md:gap-4">
   <Button variant="outline" className="w-full md:w-auto">
     Cancel
   </Button>

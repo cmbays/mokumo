@@ -115,8 +115,9 @@ Content appears or disappears.
 // Dropdown menu (Radix handles via shadcn)
 // Tooltip show/hide (Radix handles via shadcn)
 
-// Accordion content
-<AccordionContent className="overflow-hidden transition-all duration-200
+// Accordion content (shadcn/Radix uses transition-all internally for height animation —
+// this is an acceptable exception since the keyframe handles the actual motion)
+<AccordionContent className="overflow-hidden duration-200
   data-[state=closed]:animate-accordion-up
   data-[state=open]:animate-accordion-down">
 ```
@@ -178,7 +179,7 @@ Skeleton shimmer, spinners, progress bars.
 <div className="motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:scale-105">
 
 // Alternative: reduce (not remove) motion
-<div className="transition-opacity duration-200 motion-safe:transition-all motion-safe:duration-300">
+<div className="transition-opacity duration-200 motion-safe:transition-[transform,opacity] motion-safe:duration-300">
 ```
 
 ### Framer Motion Approach
@@ -209,14 +210,14 @@ function AnimatedCard({ children }: { children: React.ReactNode }) {
 
 ## Anti-Patterns
 
-| Don't                               | Why                                               | Do Instead                                                     |
-| ----------------------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
-| Animate on page load for decoration | Slows perceived performance                       | Animate only meaningful state changes                          |
-| Use `transition-all`                | Animates unintended properties, hurts performance | Be explicit: `transition-transform`, `transition-opacity`      |
-| Animation duration > 500ms          | Feels sluggish                                    | Keep under 300ms for most interactions                         |
-| Bouncy springs on data-dense UI     | Distracting in productivity software              | Reserve springs for playful moments (empty states, onboarding) |
-| Animate layout properties           | Layout thrash, dropped frames                     | Use `transform` and `opacity` only                             |
-| Skip `prefers-reduced-motion`       | Accessibility violation, motion sensitivity       | Always provide reduced-motion alternative                      |
+| Don't                               | Why                                               | Do Instead                                                                                                                                                                                                            |
+| ----------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Animate on page load for decoration | Slows perceived performance                       | Animate only meaningful state changes                                                                                                                                                                                 |
+| Use `transition-all`                | Animates unintended properties, hurts performance | Be explicit: `transition-transform`, `transition-opacity`. **Exception**: shadcn/Radix primitives (Button, Accordion) ship with `transition-all` from the generator — accept these until a coordinated cleanup lands. |
+| Animation duration > 500ms          | Feels sluggish                                    | Keep under 300ms for most interactions                                                                                                                                                                                |
+| Bouncy springs on data-dense UI     | Distracting in productivity software              | Reserve springs for playful moments (empty states, onboarding)                                                                                                                                                        |
+| Animate layout properties           | Layout thrash, dropped frames                     | Use `transform` and `opacity` only                                                                                                                                                                                    |
+| Skip `prefers-reduced-motion`       | Accessibility violation, motion sensitivity       | Always provide reduced-motion alternative                                                                                                                                                                             |
 
 ## Related
 

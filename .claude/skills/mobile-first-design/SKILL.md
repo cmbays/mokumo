@@ -51,7 +51,7 @@ Run this checklist on every screen:
 
 - [ ] All tap targets >= 44x44px (buttons, links, icons, form controls)
 - [ ] Minimum 8px spacing between adjacent tap targets
-- [ ] Primary actions within thumb reach zone (bottom 60% of viewport)
+- [ ] Primary actions within thumb reach zone (bottom 40% of viewport)
 - [ ] Destructive actions NOT in easy-reach zone (require deliberate reach)
 - [ ] No hover-only interactions — everything works with tap
 - [ ] Swipe gestures have visible affordances (don't rely on discovery)
@@ -107,7 +107,7 @@ Verify at these widths (browser DevTools or responsive mode):
 Primary form actions anchor to viewport bottom on mobile:
 
 ```tsx
-<div className="fixed bottom-0 inset-x-0 p-4 bg-background border-t md:static md:border-0 md:p-0 md:flex md:justify-end md:gap-4">
+<div className="fixed bottom-0 inset-x-0 border-t bg-background p-4 pb-[env(safe-area-inset-bottom)] md:static md:border-0 md:p-0 md:pb-0 md:flex md:justify-end md:gap-4">
   <Button variant="outline" className="w-full md:w-auto">
     Cancel
   </Button>
