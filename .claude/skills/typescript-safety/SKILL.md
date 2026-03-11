@@ -102,31 +102,39 @@ const invoiceStatusConfig = {
 // TS error if any InvoiceStatus key is missing from this object
 ```
 
-### 4. Branded UUID Types (domain IDs) — forward-looking pattern
+### 4. Branded Entity IDs (ADR-030) — REQUIRED for new code
 
-> **Note:** The existing codebase uses plain `string` UUIDs throughout. This is the target pattern for new ports and cross-domain lookup functions — adopt it incrementally, not retroactively in bulk.
+All entity ID types live in `@domain/lib/branded`. They use `unique symbol` intersection for true nominal safety — stronger than Zod's `.brand()` because the phantom property is globally unique.
 
-Raw `string` UUIDs are interchangeable at compile time — you can pass a `CustomerId` where an `OrderId` is expected and TS won't catch it. Branding prevents this.
+**Import and use branded IDs in all new ports, repos, rules, and actions:**
 
 ```ts
-// Define branded types in domain entity files using Zod's built-in brand support
-export const customerIdSchema = z.string().uuid().brand<'CustomerId'>()
-export const orderIdSchema    = z.string().uuid().brand<'OrderId'>()
-export const invoiceIdSchema  = z.string().uuid().brand<'InvoiceId'>()
+import { type CustomerId, type QuoteId, type InvoiceId, brandId } from '@domain/lib/branded'
 
-export type CustomerId = z.infer<typeof customerIdSchema>
-export type OrderId    = z.infer<typeof orderIdSchema>
-export type InvoiceId  = z.infer<typeof invoiceIdSchema>
-
-// ✗ — compiles but is wrong (existing pattern — acceptable on legacy call sites)
+// ✗ — compiles but is wrong (legacy pattern — acceptable on existing call sites)
 function getInvoice(id: string) { ... }
 
-// ✓ — new ports should use branded types
+// ✓ — new code MUST use branded types
 function getInvoice(id: InvoiceId) { ... }
-getInvoice(orderId) // TS error: type 'OrderId' is not assignable to 'InvoiceId' ✓
+getInvoice(quoteId) // TS error: 'QuoteId' is not assignable to 'InvoiceId' ✓
 ```
 
-Use `z.string().uuid().brand<'X'>()` — not a manual `as CustomerId` cast — so the brand is enforced at the Zod parse boundary, not just asserted.
+**Branding boundary** — cast at validation boundaries (DB reads, Zod parse, factory functions):
+
+```ts
+// In repository implementations (the "branding boundary"):
+const customer = customerSchema.parse(rawRow)
+return { ...customer, id: brandId<CustomerId>(customer.id) }
+
+// In factory functions:
+function createQuote(input: QuoteInput): Quote & { id: QuoteId } {
+  return { ...input, id: brandId<QuoteId>(crypto.randomUUID()) }
+}
+```
+
+**Available ID types:** `CustomerId`, `QuoteId`, `JobId`, `InvoiceId`, `ContactId`, `AddressId`, `GroupId`, `ScreenId`, `ArtworkId`, `NoteId`, `CreditMemoId`, `PricingTemplateId`, `ScratchNoteId`, `MockupTemplateId`
+
+> **Migration strategy:** Existing code using plain `string` IDs is acceptable — adopt branded types incrementally when files are touched during vertical builds. Do NOT bulk-migrate.
 
 ### 5. Drizzle Row Types (infrastructure layer only)
 
@@ -217,14 +225,21 @@ export async function createInvoiceAction(formData: FormData) {
 }
 ```
 
-### 9. Port Contracts — Zod-derived method signatures
+### 9. Port Contracts — Zod-derived method signatures with branded IDs
 
-Port contracts (`ICustomerRepository`, etc.) use `type` aliases, same as everything else. Data types in method signatures derive from Zod schemas — no manual type annotations.
+Port contracts (`ICustomerRepository`, etc.) use `type` aliases, same as everything else. Data types in method signatures derive from Zod schemas. **New ports MUST use branded ID types.**
 
 ```ts
-// ✓ — type alias, method types derived from Zod
+import { type CustomerId } from '@domain/lib/branded'
+
+// ✗ — plain string ID (legacy pattern)
 export type ICustomerRepository = {
-  findById(id: string): Promise<Customer | null> // Customer = z.infer<typeof customerSchema>
+  findById(id: string): Promise<Customer | null>
+}
+
+// ✓ — branded ID prevents cross-entity mixups
+export type ICustomerRepository = {
+  findById(id: CustomerId): Promise<Customer | null>
   list(filters: CustomerFilters): Promise<CustomerListResult>
 }
 ```
