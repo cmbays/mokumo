@@ -1,9 +1,9 @@
 ---
 title: 'ADR-031: Label Taxonomy Standardization'
-description: 'Adopt colon separator for GitHub labels org-wide, simplify mokumo taxonomy to ~28 labels aligned with ops standard, consolidate product/tool/pipeline/source into domain:* and type:chore.'
+description: 'Adopt colon separator for GitHub labels org-wide, simplify mokumo taxonomy to ~32 labels aligned with ops standard, consolidate product/tool/pipeline/source into domain:* and type:chore.'
 category: decision
 status: active
-adr_status: proposed
+adr_status: accepted
 adr_number: 031
 date: 2026-03-11
 supersedes: null
@@ -15,7 +15,7 @@ depends_on: []
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -181,7 +181,7 @@ gh label delete "priority/next" --yes
 - `.github` org templates align with repo labels
 - Simplified priority model reduces decision fatigue
 - One scope namespace (`domain:*`) eliminates the "product vs domain vs tool" decision
-- ~28 total labels (down from ~55+) — less cognitive load for agents and humans
+- ~32 total labels (down from ~55+) — less cognitive load for agents and humans
 - `type:*` aligns with conventional commits vocabulary (`feat`, `fix`, `chore`, `docs`)
 
 ### Negative

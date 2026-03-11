@@ -208,4 +208,4 @@ ADR-031 resolves the separator, priority-tier, and taxonomy simplification quest
 - **Never auto-apply labels to existing issues** — always present for review
 - **Audit before migration** — always run Mode 1 before Mode 3 fixes
 - **Preserve issue history** — add replacement labels before removing deprecated ones
-- **Default priority is `priority:soon`** — when no priority exists, suggest next, not now
+- **Default priority is `priority:soon`** — when no priority exists, suggest soon, not now

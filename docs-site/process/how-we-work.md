@@ -116,7 +116,7 @@ The [Mokumo board](https://github.com/users/cmbays/projects/4) is the visual lay
 | View             | Layout                          | Purpose                        |
 | ---------------- | ------------------------------- | ------------------------------ |
 | Board            | Kanban by Status                | See workflow state at a glance |
-| By Product       | Table grouped by Product        | Scope per product area         |
+| By Domain        | Table grouped by Domain         | Scope per domain area          |
 | Pipeline Tracker | Table grouped by Pipeline Stage | Track active pipelines         |
 | Roadmap          | Timeline                        | Visual planning                |
 
