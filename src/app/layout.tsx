@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { Toaster } from '@shared/ui/primitives/sonner'
+import { ThemeProvider } from '@shared/ui/primitives/theme-provider'
 import { cn } from '@shared/lib/cn'
 import './globals.css'
 
@@ -31,10 +32,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={cn(inter.variable, jetbrainsMono.variable, 'antialiased')}>
-        {children}
-        <Toaster richColors position="bottom-right" />
+        <ThemeProvider>
+          {children}
+          <Toaster richColors position="bottom-right" />
+        </ThemeProvider>
       </body>
     </html>
   )
