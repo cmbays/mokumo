@@ -1,8 +1,30 @@
 # Project Management — PM.md
 
-> **Last Verified**: 2026-02-16
+> **Last Verified**: 2026-03-11
 >
-> How we work. Complement to `CLAUDE.md` (how we build). Agents read this at session start for PM context.
+> How we track and manage work. Complement to `CLAUDE.md` (how we build) and `how-we-work.md` (methodology).
+> Agents read this at session start for PM context.
+
+### Org-Wide Alignment
+
+This document defines mokumo-specific PM conventions. The org-wide label standard lives at `~/Github/ops/standards/github-labels.md`. Key differences pending resolution:
+
+- **Separator**: Ops canonical uses `:` (`type:bug`), this doc uses `/` (`type/bug`). Actual repo labels use both. An ADR is needed to standardize.
+- **Scope labels**: Mokumo uses `product/*`, `domain/*`, `tool/*` (more granular than ops `area:*` + `domain:*`). These are valid per-repo extensions but should be formally registered.
+- **Priority tiers**: Mokumo has 5 (`now`, `next`, `later`, `low`, `icebox`), ops has 3 (`now`, `soon`, `later`). Needs reconciliation.
+
+Until the ADR resolves the separator question, use **whatever convention exists on the label** — don't create new labels without checking `gh label list` first.
+
+### PM Skills
+
+Two skills automate common PM tasks (invoke via `/ticket-creator` or `/label-manager`):
+
+| Skill            | Purpose                                                                        |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `ticket-creator` | Convert impl plans, PRDs, or discoveries into GitHub issues with proper labels |
+| `label-manager`  | Audit label hygiene, detect missing/deprecated labels, propose fixes           |
+
+Both follow the **audit/suggest/approve pattern** — they never auto-execute.
 
 ---
 
@@ -234,7 +256,7 @@ The scope dimension uses three prefixes depending on the nature of the work:
 
 ### Deprecated Labels (Pending Removal)
 
-These `vertical/*` labels existed in the old taxonomy. They have been replaced by the `product/*`, `domain/*`, and `tool/*` dimensions above. They will be removed during the next grooming session.
+These labels exist in the repo but are superseded. Use the `/label-manager` skill to audit and migrate. They will be removed during label migration (see `~/Github/ops/playbooks/label-migration.md`).
 
 | Old Label                      | Replacement                                                            |
 | ------------------------------ | ---------------------------------------------------------------------- |
