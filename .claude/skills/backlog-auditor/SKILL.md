@@ -54,21 +54,21 @@ gh issue list --repo cmbays/mokumo --state open --limit 500 \
 #### Check 2: Missing Required Labels
 
 ```bash
-# Issues missing type/* label
+# Issues missing type:* label
 gh issue list --repo cmbays/mokumo --state open --limit 500 \
   --json number,title,labels \
-  --jq '[.[] | select([.labels[].name | startswith("type/")] | any | not) | {number, title, labels: [.labels[].name]}]'
+  --jq '[.[] | select([.labels[].name | startswith("type:")] | any | not) | {number, title, labels: [.labels[].name]}]'
 
-# Issues missing priority/* label
+# Issues missing priority:* label
 gh issue list --repo cmbays/mokumo --state open --limit 500 \
   --json number,title,labels \
-  --jq '[.[] | select([.labels[].name | startswith("priority/")] | any | not) | {number, title, labels: [.labels[].name]}]'
+  --jq '[.[] | select([.labels[].name | startswith("priority:")] | any | not) | {number, title, labels: [.labels[].name]}]'
 
-# Issues missing scope label (product/*, domain/*, or tool/*)
+# Issues missing scope label (product:*, domain:*, or tool:*)
 gh issue list --repo cmbays/mokumo --state open --limit 500 \
   --json number,title,labels \
   --jq '[.[] | select(
-    ([.labels[].name | (startswith("product/") or startswith("domain/") or startswith("tool/"))] | any | not)
+    ([.labels[].name | (startswith("product:") or startswith("domain:") or startswith("tool:"))] | any | not)
   ) | {number, title, labels: [.labels[].name]}]'
 ```
 
@@ -96,7 +96,7 @@ gh issue list --repo cmbays/mokumo --state open --limit 500 \
   --json number,title,body,labels \
   --jq '[.[] | select(
     (.body | test("acceptance criteria|\\- \\[[ x]\\]|## criteria|## AC"; "i") | not)
-    and ([.labels[].name] | any(startswith("type/feature") or startswith("type/bug")))
+    and ([.labels[].name] | any(startswith("type:feature") or startswith("type:bug")))
   ) | {number, title}]'
 ```
 
@@ -124,7 +124,7 @@ Present findings grouped by action type and severity:
 
 | Issue | Title              | Missing               |
 | ----- | ------------------ | --------------------- |
-| #123  | Fix mobile layout  | No `priority/*` label |
+| #123  | Fix mobile layout  | No `priority:*` label |
 | #156  | Add export feature | No scope label        |
 
 _Recommendation_: Run `/label-manager` for detailed label fixes.
@@ -133,8 +133,8 @@ _Recommendation_: Run `/label-manager` for detailed label fixes.
 
 | Issue | Title                  | Days Stale | Last Label    |
 | ----- | ---------------------- | ---------- | ------------- |
-| #89   | Research DTF pricing   | 45         | type/research |
-| #91   | Evaluate chart library | 67         | type/research |
+| #89   | Research DTF pricing   | 45         | type:research |
+| #91   | Evaluate chart library | 67         | type:research |
 
 _Possible actions_: Close, re-prioritize, or add comment with status update.
 
@@ -150,15 +150,15 @@ _Recommendation_: Close one and reference the other, or merge scope.
 
 | Issue | Title            | Type         |
 | ----- | ---------------- | ------------ |
-| #134  | Add price matrix | type/feature |
+| #134  | Add price matrix | type:feature |
 
-_Recommendation_: Add acceptance criteria before moving to priority/now.
+_Recommendation_: Add acceptance criteria before moving to priority:now.
 
 ### Info: Orphaned Issues — No Milestone (N issues)
 
 | Issue | Title              | Priority      |
 | ----- | ------------------ | ------------- |
-| #201  | Refactor auth flow | priority/next |
+| #201  | Refactor auth flow | priority:soon |
 
 _Recommendation_: Assign to current or future milestone during betting.
 
@@ -191,8 +191,8 @@ Present actionable fixes for each finding. Group by action type:
 
 | Issue | Add Labels       |
 | ----- | ---------------- |
-| #123  | `priority/later` |
-| #156  | `product/quotes` |
+| #123  | `priority:later` |
+| #156  | `product:quotes` |
 
 ### Close as Duplicate (N issues)
 
@@ -217,7 +217,7 @@ gh issue close 91 --repo cmbays/mokumo \
   --comment "Closing as stale (67 days, no activity). Superseded by #210. Reopen if still relevant."
 
 # Add missing labels
-gh issue edit 123 --repo cmbays/mokumo --add-label "priority/later"
+gh issue edit 123 --repo cmbays/mokumo --add-label "priority:later"
 
 # Close duplicate with reference
 gh issue close 178 --repo cmbays/mokumo \

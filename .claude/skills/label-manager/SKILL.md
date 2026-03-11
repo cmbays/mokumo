@@ -40,11 +40,11 @@ For each issue, verify:
 
 | Check                  | Rule                                               | Severity |
 | ---------------------- | -------------------------------------------------- | -------- |
-| Has `type/*` label     | Exactly one type label                             | Critical |
-| Has `priority/*` label | Exactly one priority label                         | Critical |
-| Has scope label        | At least one `product/*`, `domain/*`, or `tool/*`  | Critical |
+| Has `type:*` label     | Exactly one type label                             | Critical |
+| Has `priority:*` label | Exactly one priority label                         | Critical |
+| Has scope label        | At least one `product:*`, `domain:*`, or `tool:*`  | Critical |
 | No deprecated labels   | No `vertical/*`, `enhancement`, `bug` (unprefixed) | Warning  |
-| Separator consistency  | All labels use same separator (/ or :)             | Warning  |
+| Separator consistency  | All labels use `:` separator per ADR-031           | Warning  |
 | Valid label values     | Labels match known taxonomy values                 | Warning  |
 
 #### Step 3: Generate Report
@@ -58,23 +58,23 @@ For each issue, verify:
 
 ### Critical — Missing Required Labels
 
-| Issue | Title              | Missing                                          |
-| ----- | ------------------ | ------------------------------------------------ |
-| #123  | Fix mobile layout  | No priority/\* label                             |
-| #156  | Add export feature | No scope label (product/_, domain/_, or tool/\*) |
+| Issue | Title              | Missing                                            |
+| ----- | ------------------ | -------------------------------------------------- |
+| #123  | Fix mobile layout  | No priority:\* label                               |
+| #156  | Add export feature | No scope label (product:\*, domain:\*, or tool:\*) |
 
 ### Warning — Deprecated Labels
 
 | Issue | Title         | Deprecated Label     | Replacement         |
 | ----- | ------------- | -------------------- | ------------------- |
-| #89   | Update styles | `enhancement`        | `type/feature`      |
-| #102  | Fix nav       | `vertical/dashboard` | `product/dashboard` |
+| #89   | Update styles | `enhancement`        | `type:feature`      |
+| #102  | Fix nav       | `vertical/dashboard` | `product:dashboard` |
 
 ### Warning — Separator Inconsistency
 
 | Issue | Title      | Labels                              | Issue                    |
 | ----- | ---------- | ----------------------------------- | ------------------------ |
-| #134  | Add charts | `product:dashboard`, `type/feature` | Mixed : and / separators |
+| #134  | Add charts | `product:dashboard`, `type:feature` | Mixed : and / separators |
 
 ### Summary
 
@@ -92,9 +92,9 @@ Present fixes for approval:
 
 | Issue | Action        | Details                                    |
 | ----- | ------------- | ------------------------------------------ |
-| #123  | Add label     | `priority/later` (default for unlabeled)   |
-| #89   | Replace label | `enhancement` → `type/feature`             |
-| #102  | Replace label | `vertical/dashboard` → `product/dashboard` |
+| #123  | Add label     | `priority:later` (default for unlabeled)   |
+| #89   | Replace label | `enhancement` → `type:feature`             |
+| #102  | Replace label | `vertical/dashboard` → `product:dashboard` |
 
 Apply these fixes? (yes/no/edit)
 ```
@@ -103,13 +103,13 @@ Apply these fixes? (yes/no/edit)
 
 ```bash
 # Add missing label
-gh issue edit 123 --add-label "priority/later"
+gh issue edit 123 --add-label "priority:later"
 
 # Replace deprecated label
-gh issue edit 89 --remove-label "enhancement" --add-label "type/feature"
+gh issue edit 89 --remove-label "enhancement" --add-label "type:feature"
 
 # Replace with correct namespace
-gh issue edit 102 --remove-label "vertical/dashboard" --add-label "product/dashboard"
+gh issue edit 102 --remove-label "vertical/dashboard" --add-label "product:dashboard"
 ```
 
 ### Mode 2: Classify (Single Issue)
@@ -128,10 +128,10 @@ Based on the issue title and body, suggest labels across all dimensions:
 
 | Dimension | Analysis                                                                            | Suggestion       |
 | --------- | ----------------------------------------------------------------------------------- | ---------------- |
-| Type      | Keywords: "add", "new" → feature; "broken", "crash" → bug; "investigate" → research | `type/feature`   |
-| Priority  | Severity indicators, milestone context                                              | `priority/next`  |
-| Product   | UI areas mentioned                                                                  | `product/quotes` |
-| Domain    | Data entities referenced                                                            | `domain/pricing` |
+| Type      | Keywords: "add", "new" → feature; "broken", "crash" → bug; "investigate" → research | `type:feature`   |
+| Priority  | Severity indicators, milestone context                                              | `priority:soon`  |
+| Product   | UI areas mentioned                                                                  | `product:quotes` |
+| Domain    | Data entities referenced                                                            | `domain:pricing` |
 | Tool      | Infrastructure keywords                                                             | —                |
 
 #### Step 3: Present Suggestion
@@ -139,10 +139,10 @@ Based on the issue title and body, suggest labels across all dimensions:
 ```markdown
 **Suggested labels for #234 "Add color preview to quote form":**
 
-- `type/feature` — new functionality
-- `priority/next` — not urgent, good for next cycle
-- `product/quotes` — quote form UI
-- `domain/colors` — color entity involvement
+- `type:feature` — new functionality
+- `priority:soon` — not urgent, good for next cycle
+- `product:quotes` — quote form UI
+- `domain:colors` — color entity involvement
 
 Apply? (yes/no/edit)
 ```
@@ -177,14 +177,14 @@ gh label list --repo cmbays/mokumo --limit 100 --json name,color,description
 ### Extra in mokumo (not in ops canonical)
 
 - `good first issue` — deprecated per ops standard
-- `infrastructure` — should be `area:ci` or specific `tool/*`
-- `low-priority` — should be `priority/later`
+- `infrastructure` — should be `area:ci` or specific `tool:*`
+- `low-priority` — should be `priority:later`
 
-### Separator Inconsistency
+### Separator Standard
 
-- Ops standard uses `:` (type:bug)
-- Mokumo uses mixed `/` and `:` (type/bug, product:quotes)
-- DECISION NEEDED: Standardize on one separator
+- Org-wide standard uses `:` separator per ADR-031 (`type:bug`, `priority:now`)
+- All new labels must use `:` separator
+- Legacy `/` labels should be migrated during label migration cycles
 ```
 
 ## Label Taxonomy Reference
@@ -197,11 +197,11 @@ gh label list --repo cmbays/mokumo --limit 100 --json name,color,description
 
 ### Known Issues (as of 2026-03-11)
 
-1. **Separator inconsistency**: Ops uses `:`, mokumo pm.md documents `/`, actual repo has both
-2. **Taxonomy scope mismatch**: Mokumo has product/domain/tool namespaces not in ops standard
+1. **Separator migration in progress**: ADR-031 standardizes on `:` separator. Legacy `/` labels may still exist in the repo and should be migrated.
+2. **Scope labels registered**: Mokumo's `product:*`, `domain:*`, `tool:*` namespaces are registered as per-repo extensions in ADR-031.
 3. **Deprecated labels still present**: `vertical/*`, unprefixed `interview`, `testing`, etc.
 
-These are tracked for resolution. The label-manager skill works with whatever convention is in use and flags inconsistencies.
+ADR-031 resolves the separator and priority-tier questions. The label-manager skill flags remaining legacy labels for migration.
 
 ## Rules
 
@@ -209,4 +209,4 @@ These are tracked for resolution. The label-manager skill works with whatever co
 - **Never auto-apply labels to existing issues** — always present for review
 - **Audit before migration** — always run Mode 1 before Mode 3 fixes
 - **Preserve issue history** — add replacement labels before removing deprecated ones
-- **Default priority is `priority/next`** — when no priority exists, suggest next, not now
+- **Default priority is `priority:soon`** — when no priority exists, suggest next, not now

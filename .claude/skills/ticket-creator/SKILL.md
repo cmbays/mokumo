@@ -46,10 +46,10 @@ For each issue, determine:
 | ------------------ | -------------------------------------------------------------------------------------------------------- | ------------- |
 | **Title**          | From plan task name or discovery                                                                         | Yes           |
 | **Template**       | Match to: feature-request, bug, research, tracking-issue                                                 | Yes           |
-| **Type label**     | Classify: `type/feature`, `type/bug`, `type/research`, `type/tech-debt`, `type/refactor`, `type/tooling` | Yes           |
-| **Priority label** | From plan priority or `priority/next` default                                                            | Yes           |
-| **Scope label**    | At least one: `product/*`, `domain/*`, or `tool/*`                                                       | Yes           |
-| **Pipeline label** | If part of a pipeline: `pipeline/vertical`, `pipeline/horizontal`, etc.                                  | Optional      |
+| **Type label**     | Classify: `type:feature`, `type:bug`, `type:research`, `type:tech-debt`, `type:refactor`, `type:tooling` | Yes           |
+| **Priority label** | From plan priority or `priority:soon` default                                                            | Yes           |
+| **Scope label**    | At least one: `product:*`, `domain:*`, or `tool:*`                                                       | Yes           |
+| **Pipeline label** | If part of a pipeline: `pipeline:vertical`, `pipeline:horizontal`, etc.                                  | Optional      |
 | **Milestone**      | Current open milestone if applicable                                                                     | Optional      |
 | **Body**           | Description + acceptance criteria + "Files to Read"                                                      | Yes           |
 | **Parent**         | Epic issue number for sub-issues                                                                         | If applicable |
@@ -63,8 +63,8 @@ For each issue, determine:
 
 | #   | Title                              | Template        | Labels                                                     | Milestone | Parent |
 | --- | ---------------------------------- | --------------- | ---------------------------------------------------------- | --------- | ------ |
-| 1   | [Feature] Add price matrix editor  | feature-request | type/feature, priority/now, product/quotes, domain/pricing | D-Day     | #144   |
-| 2   | [Bug] Fix rounding on bulk pricing | bug             | type/bug, priority/now, domain/pricing                     | D-Day     | —      |
+| 1   | [Feature] Add price matrix editor  | feature-request | type:feature, priority:now, product:quotes, domain:pricing | D-Day     | #144   |
+| 2   | [Bug] Fix rounding on bulk pricing | bug             | type:bug, priority:now, domain:pricing                     | D-Day     | —      |
 
 ### Issue 1: [Feature] Add price matrix editor
 
@@ -88,14 +88,14 @@ After approval, create each issue:
 gh issue create --repo cmbays/mokumo \
   --template feature-request.yml \
   --title "[Feature] Add price matrix editor" \
-  --label "type/feature,priority/now,product/quotes,domain/pricing" \
+  --label "type:feature,priority:now,product:quotes,domain:pricing" \
   --milestone "D-Day" \
   --body "..."
 
 # For quick issues (no template)
 gh issue create --repo cmbays/mokumo \
   --title "Fix rounding on bulk pricing" \
-  --label "type/bug,priority/now,domain/pricing" \
+  --label "type:bug,priority:now,domain:pricing" \
   --body "..."
 ```
 
@@ -127,8 +127,8 @@ Output a summary of created issues:
 
 | Issue | Title                             | Labels                                     | Milestone |
 | ----- | --------------------------------- | ------------------------------------------ | --------- |
-| #251  | [Feature] Add price matrix editor | type/feature, priority/now, product/quotes | D-Day     |
-| #252  | Fix rounding on bulk pricing      | type/bug, priority/now, domain/pricing     | D-Day     |
+| #251  | [Feature] Add price matrix editor | type:feature, priority:now, product:quotes | D-Day     |
+| #252  | Fix rounding on bulk pricing      | type:bug, priority:now, domain:pricing     | D-Day     |
 
 Sub-issue links: #251 → parent #144, #252 → standalone
 ```
@@ -147,18 +147,18 @@ Sub-issue links: #251 → parent #144, #252 → standalone
 
 See `docs-site/process/pm.md` § Label Taxonomy for the full reference. Key labels:
 
-**Type** (required, pick one): `type/feature`, `type/bug`, `type/research`, `type/tech-debt`, `type/refactor`, `type/tooling`, `type/feedback`
+**Type** (required, pick one): `type:feature`, `type:bug`, `type:research`, `type:tech-debt`, `type:refactor`, `type:tooling`, `type:feedback`
 
-**Priority** (required, pick one): `priority/now`, `priority/next`, `priority/later`, `priority/low`, `priority/icebox`
+**Priority** (required, pick one): `priority:now`, `priority:soon`, `priority:later`
 
 **Scope** (required, pick at least one):
 
-- `product/*` — things users DO (dashboard, quotes, customers, invoices, jobs)
-- `domain/*` — things products USE (garments, pricing, screens, colors, dtf)
-- `tool/*` — how we BUILD (agent-system, skills-framework, ci-pipeline, pm-system)
+- `product:*` — things users DO (dashboard, quotes, customers, invoices, jobs)
+- `domain:*` — things products USE (garments, pricing, screens, colors, dtf)
+- `tool:*` — how we BUILD (agent-system, skills-framework, ci-pipeline, pm-system)
 
 ## Tips
 
-- For implementation plans with waves, create all wave issues at once but set later waves to `priority/next` or `priority/later`
-- Tag discovered work as `source/review` or `source/cool-down` to track where issues originate
-- When in doubt about priority, default to `priority/next` — let the human promote to `priority/now` during betting
+- For implementation plans with waves, create all wave issues at once but set later waves to `priority:soon` or `priority:later`
+- Tag discovered work as `source:review` or `source:cool-down` to track where issues originate
+- When in doubt about priority, default to `priority:soon` — let the human promote to `priority:now` during betting

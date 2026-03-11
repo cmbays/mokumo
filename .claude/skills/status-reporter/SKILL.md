@@ -135,8 +135,8 @@ Present the full report for review:
 
 | Issue | Title               | Type         | Milestone |
 | ----- | ------------------- | ------------ | --------- |
-| #234  | Add customer search | type/feature | D-Day     |
-| #238  | Fix quote rounding  | type/bug     | D-Day     |
+| #234  | Add customer search | type:feature | D-Day     |
+| #238  | Fix quote rounding  | type:bug     | D-Day     |
 
 #### PRs Merged (N)
 
@@ -149,7 +149,7 @@ Present the full report for review:
 
 | Issue | Title                   | Assignee | Labels                         |
 | ----- | ----------------------- | -------- | ------------------------------ |
-| #245  | Add garment size matrix | cmbays   | type/feature, product/garments |
+| #245  | Add garment size matrix | cmbays   | type:feature, product:garments |
 
 ### Blocked (N)
 
@@ -207,7 +207,7 @@ After approval, the user may choose to:
 # Post as a GitHub issue (cycle summary)
 gh issue create --repo cmbays/mokumo \
   --title "Cycle Report: YYYY-MM-DD" \
-  --label "type/tooling,tool/pm-system" \
+  --label "type:tooling,tool:pm-system" \
   --body "[report content]"
 
 # Post to Linear as a status update (if Linear integration active)

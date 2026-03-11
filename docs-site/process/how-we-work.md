@@ -96,18 +96,18 @@ We chose GitHub Issues over Linear, Jira, and Notion. The reasoning:
 
 ### The 5-Dimension Label Taxonomy
 
-Labels are the organizational backbone. Every issue needs three: `type/*` + `priority/*` + one scope label (`product/*`, `domain/*`, or `tool/*`).
+Labels are the organizational backbone. Every issue needs three: `type:*` + `priority:*` + one scope label (`product:*`, `domain:*`, or `tool:*`).
 
 | Dimension               | Purpose             | Examples                                             |
 | ----------------------- | ------------------- | ---------------------------------------------------- |
-| `type/*`                | What kind of work   | feature, bug, research, tech-debt, refactor, tooling |
-| `priority/*`            | When to do it       | now, next, later, low, icebox                        |
-| `product/*`             | Things users DO     | quotes, jobs, customers, invoices, dashboard         |
-| `domain/*`              | Things products USE | garments, pricing, colors, dtf, screens              |
-| `tool/*`                | How we BUILD        | work-orchestrator, ci-pipeline, pm-system            |
-| `pipeline/*` (optional) | Pipeline type       | vertical, horizontal, polish, bug-fix                |
-| `phase/*` (optional)    | Which project phase | 1, 2, 3                                              |
-| `source/*` (optional)   | How we found it     | interview, testing, review, cool-down                |
+| `type:*`                | What kind of work   | feature, bug, research, tech-debt, refactor, tooling |
+| `priority:*`            | When to do it       | now, soon, later                                     |
+| `product:*`             | Things users DO     | quotes, jobs, customers, invoices, dashboard         |
+| `domain:*`              | Things products USE | garments, pricing, colors, dtf, screens              |
+| `tool:*`                | How we BUILD        | work-orchestrator, ci-pipeline, pm-system            |
+| `pipeline:*` (optional) | Pipeline type       | vertical, horizontal, polish, bug-fix                |
+| `phase:*` (optional)    | Which project phase | 1, 2, 3                                              |
+| `source:*` (optional)   | How we found it     | interview, testing, review, cool-down                |
 
 Labels encode stable categorical metadata. Runtime state (status, effort, pipeline stage) lives on board fields.
 
@@ -130,10 +130,10 @@ Four YAML issue forms enforce consistent structure:
 
 | Template        | Auto-Label      | Purpose                                    |
 | --------------- | --------------- | ------------------------------------------ |
-| Feature Request | `type/feature`  | New functionality with acceptance criteria |
-| Bug Report      | `type/bug`      | Something broken, with reproduction steps  |
-| Research Task   | `type/research` | Investigation with specific questions      |
-| Tracking Issue  | `type/tooling`  | Multi-part coordination with sub-issues    |
+| Feature Request | `type:feature`  | New functionality with acceptance criteria |
+| Bug Report      | `type:bug`      | Something broken, with reproduction steps  |
+| Research Task   | `type:research` | Investigation with specific questions      |
+| Tracking Issue  | `type:tooling`  | Multi-part coordination with sub-issues    |
 
 Blank issues are disabled. All issues go through a template.
 
@@ -148,8 +148,8 @@ Three automated layers:
 | Action              | Trigger                | Effect                                                          |
 | ------------------- | ---------------------- | --------------------------------------------------------------- |
 | Auto-add to project | Issue/PR opened        | Every new item appears on the board                             |
-| PR Labeler          | PR opened/synced       | `product/*` / `domain/*` / `tool/*` labels applied by file path |
-| Template labels     | Issue created via form | `type/*` label from template config                             |
+| PR Labeler          | PR opened/synced       | `product:*` / `domain:*` / `tool:*` labels applied by file path |
+| Template labels     | Issue created via form | `type:*` label from template config                             |
 
 ### `work progress`
 

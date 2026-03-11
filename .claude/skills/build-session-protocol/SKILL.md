@@ -39,7 +39,7 @@ After implementation is complete, run automated review orchestration:
 8. **Act on the gate decision** returned by the skill:
    - `fail`: Fix all critical findings, re-run orchestration from Stage 1
    - `needs_fixes`: Fix all major findings, re-run orchestration from Stage 1
-   - `pass_with_warnings`: Proceed to Phase 3; file warning findings as GitHub Issues with labels: `vertical/<name>`, `type/tech-debt`, `source/review`, `priority/low` or `priority/medium`
+   - `pass_with_warnings`: Proceed to Phase 3; file warning findings as GitHub Issues with labels: `product:<name>` or `domain:<name>`, `type:tech-debt`, `source:review`, `priority:later`
    - `pass`: Proceed directly to Phase 3
 
 9. **Do not proceed to Phase 3** until the gate decision is `pass` or `pass_with_warnings`.
@@ -98,10 +98,10 @@ EOF
 14. Address all critical and major CodeRabbit comments
 15. For remaining items (minor, style, suggestions):
     - Create GitHub Issues with labels:
-      - `product/<name>` or `domain/<name>` — which product or domain
-      - `type/tech-debt` — deferred review item
-      - `source/review` — originated from code review
-      - `priority/low` or `priority/medium` — based on impact
+      - `product:<name>` or `domain:<name>` — which product or domain
+      - `type:tech-debt` — deferred review item
+      - `source:review` — originated from code review
+      - `priority:later` — deferred for future cycle
 
 ### Phase 5: Final Check
 

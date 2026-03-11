@@ -7,24 +7,28 @@
 
 ### Org-Wide Alignment
 
-This document defines mokumo-specific PM conventions. The org-wide label standard lives at `~/Github/ops/standards/github-labels.md`. Key differences pending resolution:
+This document defines mokumo-specific PM conventions. The org-wide label standard lives at `~/Github/ops/standards/github-labels.md`.
 
-- **Separator**: Ops canonical uses `:` (`type:bug`), this doc uses `/` (`type/bug`). Actual repo labels use both. An ADR is needed to standardize.
-- **Scope labels**: Mokumo uses `product/*`, `domain/*`, `tool/*` (more granular than ops `area:*` + `domain:*`). These are valid per-repo extensions but should be formally registered.
-- **Priority tiers**: Mokumo has 5 (`now`, `next`, `later`, `low`, `icebox`), ops has 3 (`now`, `soon`, `later`). Needs reconciliation.
+**ADR-031** (proposed) standardizes the label taxonomy:
 
-Until the ADR resolves the separator question, use **whatever convention exists on the label** — don't create new labels without checking `gh label list` first.
+- **Separator**: Colon (`:`) adopted org-wide — `type:bug`, `priority:now`
+- **Priority**: 3-tier model — `now`, `soon`, `later`
+- **Scope labels**: `product:*`, `domain:*`, `tool:*` registered as mokumo-specific extensions
+- **Status labels**: `status:triage`, `status:blocked`, `status:needs-input`, `status:in-progress` adopted from ops
 
 ### PM Skills
 
-Two skills automate common PM tasks (invoke via `/ticket-creator` or `/label-manager`):
+Six skills automate common PM tasks:
 
-| Skill            | Purpose                                                                        |
-| ---------------- | ------------------------------------------------------------------------------ |
-| `ticket-creator` | Convert impl plans, PRDs, or discoveries into GitHub issues with proper labels |
-| `label-manager`  | Audit label hygiene, detect missing/deprecated labels, propose fixes           |
+| Skill             | Purpose                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `ticket-creator`  | Convert impl plans, PRDs, or discoveries into GitHub issues with proper labels         |
+| `label-manager`   | Audit label hygiene, detect missing/deprecated labels, propose fixes                   |
+| `prd-author`      | Generate structured PRD drafts from research, competitive analysis, and domain context |
+| `backlog-auditor` | Maintain backlog hygiene — find stale issues, duplicates, missing labels               |
+| `status-reporter` | Generate progress summaries from GitHub Issues, PRs, and project boards                |
 
-Both follow the **audit/suggest/approve pattern** — they never auto-execute.
+All follow the **audit/suggest/approve pattern** — they never auto-execute.
 
 ---
 
@@ -36,32 +40,32 @@ _All commands target `cmbays/mokumo`. Project board: [Mokumo](https://github.com
 ### Find work
 
 ```bash
-# Priority/now issues (current cycle)
-gh issue list -l priority/now --json number,title,labels,milestone
+# Priority:now issues (current cycle)
+gh issue list -l priority:now --json number,title,labels,milestone
 
-# Priority/next issues (up next)
-gh issue list -l priority/next --json number,title,labels,milestone
+# Priority:soon issues (up next)
+gh issue list -l priority:soon --json number,title,labels,milestone
 
 # Issues assigned to a milestone
 gh issue list --milestone "D-Day" --json number,title,state,labels
 
 # Issues by product
-gh issue list -l product/quotes --json number,title,state
+gh issue list -l product:quotes --json number,title,state
 ```
 
 ### Create an issue
 
 ```bash
-# Use a template (recommended — auto-applies type/* label)
+# Use a template (recommended — auto-applies type:* label)
 gh issue create --template feature-request.yml \
   --title "[Feature] Add color preview" \
   --body "..." \
-  --label "domain/colors,priority/next"
+  --label "domain:colors,priority:soon"
 
-# Quick issue (add type/* + priority/* + domain/* labels manually)
+# Quick issue (add type:* + priority:* + domain:* labels manually)
 gh issue create \
   --title "Fix price rounding on mobile" \
-  --label "type/bug,priority/now,domain/pricing" \
+  --label "type:bug,priority:now,domain:pricing" \
   --body "..."
 ```
 
@@ -69,7 +73,7 @@ gh issue create \
 
 ```bash
 # Add/remove labels
-gh issue edit 123 --add-label "priority/now" --remove-label "priority/next"
+gh issue edit 123 --add-label "priority:now" --remove-label "priority:soon"
 
 # Assign to milestone
 gh issue edit 123 --milestone "D-Day"
@@ -131,14 +135,14 @@ Status lives on the **board field**, not in labels. Labels encode stable metadat
 
 | Metadata          | Mechanism          | Example                                      |
 | ----------------- | ------------------ | -------------------------------------------- |
-| What kind of work | `type/*` label     | `type/feature`, `type/bug`                   |
-| When to do it     | `priority/*` label | `priority/now`, `priority/next`              |
-| Which product     | `product/*` label  | `product/quotes`, `product/jobs`             |
-| Which domain      | `domain/*` label   | `domain/pricing`, `domain/garments`          |
-| Which tool        | `tool/*` label     | `tool/work-orchestrator`, `tool/ci-pipeline` |
-| Pipeline type     | `pipeline/*` label | `pipeline/vertical`, `pipeline/horizontal`   |
-| Which phase       | `phase/*` label    | `phase/1`                                    |
-| How we found it   | `source/*` label   | `source/interview`, `source/review`          |
+| What kind of work | `type:*` label     | `type:feature`, `type:bug`                   |
+| When to do it     | `priority:*` label | `priority:now`, `priority:soon`              |
+| Which product     | `product:*` label  | `product:quotes`, `product:jobs`             |
+| Which domain      | `domain:*` label   | `domain:pricing`, `domain:garments`          |
+| Which tool        | `tool:*` label     | `tool:work-orchestrator`, `tool:ci-pipeline` |
+| Pipeline type     | `pipeline:*` label | `pipeline:vertical`, `pipeline:horizontal`   |
+| Which phase       | `phase:*` label    | `phase:1`                                    |
+| How we found it   | `source:*` label   | `source:interview`, `source:review`          |
 | Current state     | Board Status field | In Progress, In Review                       |
 | Toward what goal  | Milestone          | D-Day                                        |
 
@@ -146,7 +150,7 @@ Status lives on the **board field**, not in labels. Labels encode stable metadat
 
 ## 3. Label Taxonomy
 
-_Every issue needs three labels: `type/_`+`priority/_` + one scope label (`product/_`, `domain/_`, or `tool/_`). Additional dimensions (`pipeline/_`, `phase/_`, `source/_`) are optional._
+_Every issue needs three labels: `type:*` + `priority:*` + one scope label (`product:*`, `domain:*`, or `tool:*`). Additional dimensions (`pipeline:*`, `phase:*`, `source:*`) are optional._
 _Labels encode stable categorical metadata. Runtime state (status, effort, pipeline stage) lives on project board fields._
 
 ### Taxonomy Overview
@@ -155,96 +159,94 @@ The scope dimension uses three prefixes depending on the nature of the work:
 
 | Prefix      | What it represents                              | Litmus test                                                 |
 | ----------- | ----------------------------------------------- | ----------------------------------------------------------- |
-| `product/*` | Things users DO                                 | "A user says: I need to go DO a \_\_\_"                     |
-| `domain/*`  | Things products USE — configuration/entity data | "This is something products USE, not something users GO DO" |
-| `tool/*`    | How we BUILD — developer infrastructure         | "Affects how we BUILD, not what we build"                   |
+| `product:*` | Things users DO                                 | "A user says: I need to go DO a \_\_\_"                     |
+| `domain:*`  | Things products USE — configuration/entity data | "This is something products USE, not something users GO DO" |
+| `tool:*`    | How we BUILD — developer infrastructure         | "Affects how we BUILD, not what we build"                   |
 
 ### Required Dimensions
 
-#### `type/*` — What kind of work
+#### `type:*` — What kind of work
 
 | Label            | Description                      | Auto-applied by          |
 | ---------------- | -------------------------------- | ------------------------ |
-| `type/bug`       | Something broken                 | Bug Report template      |
-| `type/feature`   | New functionality                | Feature Request template |
-| `type/feedback`  | User or tester feedback          | —                        |
-| `type/research`  | Investigation or analysis needed | Research Task template   |
-| `type/tech-debt` | Technical debt or cleanup        | —                        |
-| `type/refactor`  | Code restructuring               | —                        |
-| `type/tooling`   | Developer tooling and workflow   | Tracking Issue template  |
-| `type/ux-review` | UX design review item            | —                        |
+| `type:bug`       | Something broken                 | Bug Report template      |
+| `type:feature`   | New functionality                | Feature Request template |
+| `type:feedback`  | User or tester feedback          | —                        |
+| `type:research`  | Investigation or analysis needed | Research Task template   |
+| `type:tech-debt` | Technical debt or cleanup        | —                        |
+| `type:refactor`  | Code restructuring               | —                        |
+| `type:tooling`   | Developer tooling and workflow   | Tracking Issue template  |
+| `type:ux-review` | UX design review item            | —                        |
 
-#### `priority/*` — When to do it
+#### `priority:*` — When to do it
 
-| Label             | Description                                  |
-| ----------------- | -------------------------------------------- |
-| `priority/now`    | Current cycle — actively working or next up  |
-| `priority/next`   | Next cycle — groomed and ready (~8-10 items) |
-| `priority/later`  | Future cycle — planned but not scheduled     |
-| `priority/low`    | Low urgency — do when convenient             |
-| `priority/icebox` | Not planned — parked indefinitely            |
+| Label            | Description                                  |
+| ---------------- | -------------------------------------------- |
+| `priority:now`   | Current cycle — actively working or next up  |
+| `priority:soon`  | Next cycle — groomed and ready (~8-10 items) |
+| `priority:later` | Future cycle — planned but not scheduled     |
 
-#### `product/*` — Things users DO
+#### `product:*` — Things users DO
 
 | Label               | Display Name       |
 | ------------------- | ------------------ |
-| `product/dashboard` | Product: Dashboard |
-| `product/quotes`    | Product: Quotes    |
-| `product/customers` | Product: Customers |
-| `product/invoices`  | Product: Invoices  |
-| `product/jobs`      | Product: Jobs      |
+| `product:dashboard` | Product: Dashboard |
+| `product:quotes`    | Product: Quotes    |
+| `product:customers` | Product: Customers |
+| `product:invoices`  | Product: Invoices  |
+| `product:jobs`      | Product: Jobs      |
 
-#### `domain/*` — Things products USE
-
-| Label                    | Display Name            |
-| ------------------------ | ----------------------- |
-| `domain/garments`        | Domain: Garments        |
-| `domain/screens`         | Domain: Screens         |
-| `domain/pricing`         | Domain: Pricing         |
-| `domain/colors`          | Domain: Colors          |
-| `domain/dtf`             | Domain: Direct-to-Film  |
-| `domain/screen-printing` | Domain: Screen Printing |
-| `domain/mobile`          | Domain: Mobile          |
-
-#### `tool/*` — How we BUILD
+#### `domain:*` — Things products USE
 
 | Label                    | Display Name            |
 | ------------------------ | ----------------------- |
-| `tool/work-orchestrator` | Tool: Work Orchestrator |
-| `tool/skills-framework`  | Tool: Skills Framework  |
-| `tool/agent-system`      | Tool: Agent System      |
-| `tool/knowledge-base`    | Tool: Knowledge Base    |
-| `tool/ci-pipeline`       | Tool: CI Pipeline       |
-| `tool/pm-system`         | Tool: PM System         |
+| `domain:garments`        | Domain: Garments        |
+| `domain:screens`         | Domain: Screens         |
+| `domain:pricing`         | Domain: Pricing         |
+| `domain:colors`          | Domain: Colors          |
+| `domain:dtf`             | Domain: Direct-to-Film  |
+| `domain:screen-printing` | Domain: Screen Printing |
+| `domain:mobile`          | Domain: Mobile          |
+
+#### `tool:*` — How we BUILD
+
+| Label                    | Display Name            |
+| ------------------------ | ----------------------- |
+| `tool:work-orchestrator` | Tool: Work Orchestrator |
+| `tool:skills-framework`  | Tool: Skills Framework  |
+| `tool:agent-system`      | Tool: Agent System      |
+| `tool:knowledge-base`    | Tool: Knowledge Base    |
+| `tool:ci-pipeline`       | Tool: CI Pipeline       |
+| `tool:pm-system`         | Tool: PM System         |
 
 ### Optional Dimensions
 
-#### `pipeline/*` — Which pipeline type
+#### `pipeline:*` — Which pipeline type
 
 | Label                 | Description                        |
 | --------------------- | ---------------------------------- |
-| `pipeline/vertical`   | Full product feature build         |
-| `pipeline/polish`     | UX refinements, smoke test fixes   |
-| `pipeline/horizontal` | Cross-cutting infrastructure work  |
-| `pipeline/bug-fix`    | Quick cycle for identified defects |
+| `pipeline:vertical`   | Full product feature build         |
+| `pipeline:polish`     | UX refinements, smoke test fixes   |
+| `pipeline:horizontal` | Cross-cutting infrastructure work  |
+| `pipeline:bug-fix`    | Quick cycle for identified defects |
 
-#### `phase/*` — Which project phase
+#### `phase:*` — Which project phase
 
 | Label     | Description                            |
 | --------- | -------------------------------------- |
-| `phase/1` | Phase 1 — frontend mockups             |
-| `phase/2` | Phase 2 — backend + feedback iteration |
-| `phase/3` | Phase 3 — production app               |
+| `phase:1` | Phase 1 — frontend mockups             |
+| `phase:2` | Phase 2 — backend + feedback iteration |
+| `phase:3` | Phase 3 — production app               |
 
-#### `source/*` — How we found it
+#### `source:*` — How we found it
 
 | Label              | Description                       |
 | ------------------ | --------------------------------- |
-| `source/interview` | From user/owner interview         |
-| `source/testing`   | Discovered during testing         |
-| `source/cool-down` | Identified during cool-down cycle |
-| `source/idea`      | Idea or suggestion                |
-| `source/review`    | From code review                  |
+| `source:interview` | From user/owner interview         |
+| `source:testing`   | Discovered during testing         |
+| `source:cool-down` | Identified during cool-down cycle |
+| `source:idea`      | Idea or suggestion                |
+| `source:review`    | From code review                  |
 
 ### GitHub Defaults (Kept)
 
@@ -260,46 +262,46 @@ These labels exist in the repo but are superseded. Use the `/label-manager` skil
 
 | Old Label                      | Replacement                                                            |
 | ------------------------------ | ---------------------------------------------------------------------- |
-| `vertical/dashboard`           | `product/dashboard`                                                    |
-| `vertical/quoting`             | `product/quotes`                                                       |
-| `vertical/customers`           | `product/customers`                                                    |
-| `vertical/invoicing`           | `product/invoices`                                                     |
-| `vertical/jobs`                | `product/jobs`                                                         |
-| `vertical/garments`            | `domain/garments`                                                      |
-| `vertical/screen-room`         | `domain/screens`                                                       |
-| `vertical/price-matrix`        | `domain/pricing`                                                       |
-| `vertical/colors`              | `domain/colors`                                                        |
-| `vertical/mobile-optimization` | `domain/mobile`                                                        |
-| `vertical/infrastructure`      | `tool/ci-pipeline` (infra) or nearest `tool/*`                         |
-| `vertical/devx`                | `tool/work-orchestrator`, `tool/skills-framework`, or nearest `tool/*` |
-| `vertical/meta`                | Use `tool/pm-system` instead                                           |
-| `enhancement`                  | GitHub default — use `type/feature` instead                            |
+| `vertical/dashboard`           | `product:dashboard`                                                    |
+| `vertical/quoting`             | `product:quotes`                                                       |
+| `vertical/customers`           | `product:customers`                                                    |
+| `vertical/invoicing`           | `product:invoices`                                                     |
+| `vertical/jobs`                | `product:jobs`                                                         |
+| `vertical/garments`            | `domain:garments`                                                      |
+| `vertical/screen-room`         | `domain:screens`                                                       |
+| `vertical/price-matrix`        | `domain:pricing`                                                       |
+| `vertical/colors`              | `domain:colors`                                                        |
+| `vertical/mobile-optimization` | `domain:mobile`                                                        |
+| `vertical/infrastructure`      | `tool:ci-pipeline` (infra) or nearest `tool:*`                         |
+| `vertical/devx`                | `tool:work-orchestrator`, `tool:skills-framework`, or nearest `tool:*` |
+| `vertical/meta`                | Use `tool:pm-system` instead                                           |
+| `enhancement`                  | GitHub default — use `type:feature` instead                            |
 
 ### Rules
 
-1. **Every issue needs `type/*` + `priority/*` + at least one scope label** (`product/*`, `domain/*`, or `tool/*`) — no exceptions
-2. **One `type/*` per issue** — if it's both a feature and a refactor, pick the primary
-3. **Multiple scope labels OK** — cross-cutting work can have 2+ labels (e.g., `product/quotes` + `domain/pricing`)
-4. **`pipeline/*` is optional** — add to indicate the pipeline type for `work launch`
-5. **`phase/*` is optional** — add when phase assignment is clear
-6. **`source/*` is optional** — add when provenance matters (review findings, interview decisions)
-7. **Templates auto-apply `type/*`** — agents still add `priority/*` + scope labels manually
+1. **Every issue needs `type:*` + `priority:*` + at least one scope label** (`product:*`, `domain:*`, or `tool:*`) — no exceptions
+2. **One `type:*` per issue** — if it's both a feature and a refactor, pick the primary
+3. **Multiple scope labels OK** — cross-cutting work can have 2+ labels (e.g., `product:quotes` + `domain:pricing`)
+4. **`pipeline:*` is optional** — add to indicate the pipeline type for `work launch`
+5. **`phase:*` is optional** — add when phase assignment is clear
+6. **`source:*` is optional** — add when provenance matters (review findings, interview decisions)
+7. **Templates auto-apply `type:*`** — agents still add `priority:*` + scope labels manually
 
 ---
 
 ## 4. Issue Templates
 
 _Four YAML issue forms enforce structure. Blank issues are disabled — all issues go through a template._
-_Templates auto-apply `type/_`labels. Agents and humans add`priority/_` + scope labels (`product/_`, `domain/_`, or `tool/_`) after creation.\*
+_Templates auto-apply `type:*` labels. Agents and humans add `priority:*` + scope labels (`product:*`, `domain:*`, or `tool:*`) after creation._
 
 ### Template Chooser
 
 | Template            | Use when                                          | Auto-label      |
 | ------------------- | ------------------------------------------------- | --------------- |
-| **Feature Request** | Adding new functionality or enhancing existing    | `type/feature`  |
-| **Bug Report**      | Something is broken or behaves unexpectedly       | `type/bug`      |
-| **Research Task**   | Investigating a question or exploring an approach | `type/research` |
-| **Tracking Issue**  | Coordinating a multi-part effort with sub-issues  | `type/tooling`  |
+| **Feature Request** | Adding new functionality or enhancing existing    | `type:feature`  |
+| **Bug Report**      | Something is broken or behaves unexpectedly       | `type:bug`      |
+| **Research Task**   | Investigating a question or exploring an approach | `type:research` |
+| **Tracking Issue**  | Coordinating a multi-part effort with sub-issues  | `type:tooling`  |
 
 ### Feature Request Fields
 
@@ -310,7 +312,7 @@ _Templates auto-apply `type/_`labels. Agents and humans add`priority/_` + scope 
 | Product/Tool        | Yes      | Dropdown synced with `config/products.json` + `config/tools.json` |
 | Acceptance Criteria | Yes      | How do we know this is done?                                      |
 | Files to Read       | No       | Entry points for agents picking up the issue                      |
-| Priority            | No       | now / next / later / icebox                                       |
+| Priority            | No       | now / soon / later                                                |
 | Phase               | No       | Phase 1 / Phase 2 / Phase 3                                       |
 
 ### Bug Report Fields
@@ -473,14 +475,14 @@ This prevents stale issues and ensures each sub-issue has full context from the 
 gh issue create \
   --title "[Tracking] DTF Pricing Pipeline" \
   --template tracking-issue.yml \
-  --label "type/tooling,priority/now,domain/dtf,pipeline/vertical" \
+  --label "type:tooling,priority:now,domain:dtf,pipeline:vertical" \
   --milestone "D-Day"
 
 # 2. Create first stage sub-issue
 gh issue create \
   --title "[Research] DTF Pricing — competitor analysis" \
   --template research-task.yml \
-  --label "type/research,priority/now,domain/dtf"
+  --label "type:research,priority:now,domain:dtf"
 
 # 3. Link as sub-issue (see Section 5 for GraphQL command)
 ```
@@ -532,7 +534,7 @@ As a pipeline advances through stages, agents create issues for the current stag
 gh issue create \
   --title "[Research] DTF Pricing — competitor analysis" \
   --template research-task.yml \
-  --label "type/research,priority/now,domain/dtf"
+  --label "type:research,priority:now,domain:dtf"
 
 # Link as sub-issue of the epic (Section 5 commands)
 # Update Pipeline Stage field on the board (via web UI or GraphQL)
@@ -552,15 +554,15 @@ See `CLAUDE.md` Knowledge Base section for the format.
 
 ## 8. Agent Conventions
 
-_Agents find work via `priority/_`labels, create issues via templates, and update status via`gh issue edit`.*
-*Comment routing: `@cmbays` for human-needed decisions. Regular comments for agent-to-agent context.\*
+_Agents find work via `priority:*` labels, create issues via templates, and update status via `gh issue edit`._
+_Comment routing: `@cmbays` for human-needed decisions. Regular comments for agent-to-agent context._
 
 ### Finding Work
 
 At session start, agents should:
 
 1. Read `PROGRESS.md` if it exists (generated by `work progress`)
-2. Check assigned issues: `gh issue list -l priority/now --json number,title,labels`
+2. Check assigned issues: `gh issue list -l priority:now --json number,title,labels`
 3. Check the session prompt (`.session-prompt.md`) for specific task instructions
 4. Read the implementation plan if one is referenced
 
@@ -572,13 +574,13 @@ Agents create issues when they discover work outside their current task scope:
 # Use a template — gets auto-label
 gh issue create --template feature-request.yml \
   --title "[Feature] Discovered need for X" \
-  --label "product/quotes,priority/next" \
+  --label "product:quotes,priority:soon" \
   --body "..."
 
 # For deferred review items
 gh issue create \
   --title "Address CodeRabbit feedback on QuoteForm" \
-  --label "type/tech-debt,priority/later,product/quotes,source/review" \
+  --label "type:tech-debt,priority:later,product:quotes,source:review" \
   --body "..."
 ```
 
@@ -586,13 +588,13 @@ gh issue create \
 
 ```bash
 # Starting work
-gh issue edit 123 --add-label "priority/now"
+gh issue edit 123 --add-label "priority:now"
 
 # Work complete
 gh issue close 123 --comment "Resolved in PR #456"
 
 # Defer to next cycle
-gh issue edit 123 --remove-label "priority/now" --add-label "priority/next"
+gh issue edit 123 --remove-label "priority:now" --add-label "priority:soon"
 ```
 
 ### Comment Routing
@@ -609,9 +611,9 @@ gh issue edit 123 --remove-label "priority/now" --add-label "priority/next"
 
 When creating any issue, agents must ensure:
 
-- [ ] Has `type/*` label (or use a template that auto-applies it)
-- [ ] Has `priority/*` label
-- [ ] Has at least one scope label: `product/*`, `domain/*`, or `tool/*`
+- [ ] Has `type:*` label (or use a template that auto-applies it)
+- [ ] Has `priority:*` label
+- [ ] Has at least one scope label: `product:*`, `domain:*`, or `tool:*`
 - [ ] Body has enough context for another agent to pick it up
 - [ ] "Files to Read" section populated if relevant
 - [ ] Linked to parent issue as sub-issue if part of an epic
@@ -675,8 +677,8 @@ _Actions are the safety net. The `work` CLI is the agent happy path._
 | Action                   | Trigger                                            | What it does                                                                   | File                                                    |
 | ------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------- |
 | **Auto-add to project**  | Issue opened, PR opened/ready_for_review           | Adds to [Mokumo](https://github.com/users/cmbays/projects/4) board             | `.github/workflows/auto-project.yml`                    |
-| **PR Labeler**           | PR opened/synchronized (via `pull_request_target`) | Applies `product/*` / `domain/*` / `tool/*` labels based on changed file paths | `.github/workflows/labeler.yml` + `.github/labeler.yml` |
-| **Template auto-labels** | Issue created via template                         | Applies `type/*` label from template's `labels:` field                         | `.github/ISSUE_TEMPLATE/*.yml`                          |
+| **PR Labeler**           | PR opened/synchronized (via `pull_request_target`) | Applies `product:*` / `domain:*` / `tool:*` labels based on changed file paths | `.github/workflows/labeler.yml` + `.github/labeler.yml` |
+| **Template auto-labels** | Issue created via template                         | Applies `type:*` label from template's `labels:` field                         | `.github/ISSUE_TEMPLATE/*.yml`                          |
 | **CI**                   | Push/PR                                            | Build, test, typecheck                                                         | `.github/workflows/ci.yml`                              |
 
 ### PR Labeler Path Mapping
@@ -685,12 +687,12 @@ From `.github/labeler.yml`:
 
 | Path Pattern                                                 | Label             |
 | ------------------------------------------------------------ | ----------------- |
-| `app/(dashboard)/quotes/**`                                  | `product/quotes`  |
-| `app/(dashboard)/jobs/**`                                    | `product/jobs`    |
-| `app/(dashboard)/garments/**`                                | `domain/garments` |
-| `app/(dashboard)/settings/pricing/**`                        | `domain/pricing`  |
-| `app/(dashboard)/settings/colors/**`                         | `domain/colors`   |
-| `knowledge-base/**`, `scripts/**`, `config/**`, `.github/**` | `tool/pm-system`  |
+| `app/(dashboard)/quotes/**`                                  | `product:quotes`  |
+| `app/(dashboard)/jobs/**`                                    | `product:jobs`    |
+| `app/(dashboard)/garments/**`                                | `domain:garments` |
+| `app/(dashboard)/settings/pricing/**`                        | `domain:pricing`  |
+| `app/(dashboard)/settings/colors/**`                         | `domain:colors`   |
+| `knowledge-base/**`, `scripts/**`, `config/**`, `.github/**` | `tool:pm-system`  |
 
 Cross-cutting paths (`lib/schemas/**`, `docs/**`, `components/ui/**`) are deliberately unmapped — not every PR needs an auto-label.
 
@@ -698,7 +700,7 @@ Cross-cutting paths (`lib/schemas/**`, `docs/**`, `components/ui/**`) are delibe
 
 | Task            | How                                                          |
 | --------------- | ------------------------------------------------------------ |
-| Find work       | Read `PROGRESS.md`, query `gh issue list -l priority/now`    |
+| Find work       | Read `PROGRESS.md`, query `gh issue list -l priority:now`    |
 | Create issues   | `gh issue create --template ...` with required labels        |
 | Update status   | `gh issue edit` to add/remove labels, assign milestones      |
 | Link sub-issues | GraphQL `addSubIssue` mutation                               |
