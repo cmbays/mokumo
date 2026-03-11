@@ -22,7 +22,7 @@ This skill defines the end-to-end completion flow for every build session in Mok
 3. Read relevant breadboard/plan docs referenced in the prompt
 4. Build the feature following TDD principles where applicable
 5. Run `npm run build` and `npm test` to verify no regressions
-6. Run `npx tsc --noEmit` to verify type safety
+6. Run `npx tsc --noEmit` to verify type safety — if errors, invoke `typescript-safety` skill before proceeding
 
 ### Phase 2: Self-Review
 

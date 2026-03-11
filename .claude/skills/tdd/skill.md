@@ -46,7 +46,7 @@ CI will hard-fail if coverage drops below 100% on these files.
 
 | Stage      | TDD Role                                                                                                                                                                   |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Plan**   | Output must include function signatures and expected input/output contracts per module. These are the "wished-for APIs" — design happens here.                             |
+| **Plan**   | Output must include function signatures and expected input/output contracts per module. These are the "wished-for APIs" — design happens here. Invoke `typescript-safety` when designing new Zod schemas, port interfaces, or complex generic types. |
 | **Build**  | Invoke `superpowers:test-driven-development` at session start. RED → GREEN → REFACTOR for each function. Do not create a PR until `npm run test:coverage` thresholds pass. |
 | **Review** | Include `npm run test:coverage` output in PR description. Coverage regressions block merge.                                                                                |
 
