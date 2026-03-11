@@ -137,6 +137,22 @@ depends_on: []
 
 ---
 
+## Client State
+
+| Tool        | Version | Purpose                                                                                |
+| ----------- | ------- | -------------------------------------------------------------------------------------- |
+| **Zustand** | ^5.0.11 | Lightweight external store for ephemeral client UI state (sidebar, selections, drafts) |
+
+**Why Zustand**: React Context re-renders all consumers when any value changes. Zustand uses external stores with selector-based subscriptions — only components reading the changed slice re-render. At ~1KB gzipped, it adds negligible bundle weight. Zustand v5 is the approved version (uses `useSyncExternalStore` natively).
+
+**When to use**: Ephemeral client UI state that doesn't belong in URLs and doesn't need to survive a page refresh — sidebar toggle, command palette, batch selections, multi-step wizard progress, draft edits before save, optimistic UI updates.
+
+**When NOT to use**: Don't use Zustand for navigational state (filters, search, pagination, active tabs) — those belong in URL query params. Don't use Zustand for component-local state (input values, simple toggles) — `useState` is fine. Don't create a single mega-store — split by concern (`ui-store.ts`, `selection-store.ts`).
+
+**Store conventions**: Cross-cutting stores in `src/shared/stores/`, feature-scoped stores in `src/features/{vertical}/stores/`. Always use selectors: `useStore((s) => s.value)`, never bare `useStore()`.
+
+---
+
 ## Testing
 
 | Tool                 | Version | Purpose                                                                       |
@@ -268,7 +284,7 @@ depends_on: []
 | **tRPC**                                  | DAL + Zod already provides type safety. Overkill for single-user app.           |
 | **GraphQL**                               | Adds complexity with no benefit for single-client app.                          |
 | **Separate API server** (Express/Fastify) | Next.js Server Components + Server Actions + Route Handlers cover all patterns. |
-| **Global state** (Redux/Zustand)          | Still not needed. URL params + React state + Server Components.                 |
+| **Redux, Jotai, Recoil**                  | Zustand covers client UI state. URL params for navigational state.              |
 
 ---
 
@@ -278,7 +294,7 @@ These packages must NOT be added without discussion:
 
 | Package                                 | Reason                                                                           |
 | --------------------------------------- | -------------------------------------------------------------------------------- |
-| Redux, Zustand, Jotai, Recoil           | No global state — use URL params + React state                                   |
+| Redux, Jotai, Recoil                    | Zustand is the approved client state library — no other global state libraries   |
 | Axios, ky, got                          | No HTTP clients in Phase 1 — mock data only                                      |
 | styled-components, Emotion, CSS Modules | Tailwind utilities only                                                          |
 | Material UI, Chakra UI, Ant Design      | shadcn/ui only                                                                   |

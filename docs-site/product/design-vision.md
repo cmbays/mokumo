@@ -63,11 +63,11 @@ The result: a tool that feels like it was built by someone who runs a print shop
 
 ---
 
-### ADR-005: URL State Over Global State Libraries
+### ADR-005: URL State for Navigational State
 
 **Context**: Filters, search terms, pagination, and view preferences need to persist across navigation.
 
-**Decision**: URL query params for all UI state. No Redux, Zustand, Jotai, or Recoil.
+**Decision**: URL query params for navigational state (filters, search, pagination, active tabs). _Refined by ADR-007._
 
 **Consequences**: State is shareable (copy URL), bookmarkable, and survives page reloads. Server components can read state from the URL. Trade-off: URL can get long with many filters (mitigated by sensible defaults and optional params).
 
@@ -80,6 +80,16 @@ The result: a tool that feels like it was built by someone who runs a print shop
 **Decision**: Service type determines which task template auto-populates when a job is created. Shared entity model with service-type-specific behavior via canonical task lists.
 
 **Consequences**: One `jobs` table, one board, one set of components. Service type is a property, not a separate codepath. Trade-off: custom production steps require template configuration, not code changes.
+
+---
+
+### ADR-007: Zustand for Ephemeral Client UI State
+
+**Context**: The blanket "no global state" rule (ADR-005) became too restrictive as the app grew. Complex client interactions — sidebar toggle, batch selections, multi-step wizards, command palette, draft edits — don't belong in URL params (not navigational) and cause prop drilling or deep Context chains when forced through React state alone. React Context re-renders all consumers on any change, causing performance issues at scale.
+
+**Decision**: Adopt Zustand for ephemeral client UI state. URL params remain for navigational state (ADR-005 still applies there). No Redux, Jotai, Recoil, or deep Context chains. Refines ADR-005 scope.
+
+**Consequences**: Clear decision matrix — URL params for navigational state, Zustand for ephemeral UI, `useState` for component-local, scoped Context for parent-child drilling. Selector-based subscriptions prevent unnecessary re-renders. One store per concern, not one mega-store. Trade-off: one more dependency (~1KB gzipped), developers must learn when to use which pattern.
 
 ---
 
