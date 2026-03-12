@@ -69,29 +69,34 @@ Gate outcomes: `fail` → fix and re-run | `pass_with_warnings` → file issues,
 
 ## Skill Registry
 
-| Skill                     | Trigger                                | Preloaded By                                                      |
-| ------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
-| `design-system`           | Any UI work (auto-loaded)              | design-composer, frontend-builder, design-auditor, build-reviewer |
-| `design-mockup`           | After breadboard-reflection            | design-composer                                                   |
-| `breadboarding`           | After shaping                          | frontend-builder                                                  |
-| `breadboard-reflection`   | After breadboarding                    | — (standalone)                                                    |
-| `screen-builder`          | During build                           | frontend-builder                                                  |
-| `quality-gate`            | After completing a screen              | frontend-builder                                                  |
-| `mobile-first-design`     | Building any screen, component, layout | frontend-builder, design-auditor                                  |
-| `design-audit`            | Design review checkpoints              | design-auditor                                                    |
-| `shaping`                 | After interview                        | — (standalone)                                                    |
-| `vertical-discovery`      | Start of new vertical                  | — (standalone)                                                    |
-| `implementation-planning` | After design sign-off                  | — (standalone)                                                    |
-| `pre-build-interrogator`  | Before complex features                | requirements-interrogator                                         |
-| `feature-strategy`        | Feature planning                       | feature-strategist                                                |
-| `doc-sync`                | After completing steps                 | doc-sync                                                          |
-| `build-session-protocol`  | Build sessions                         | — (standalone)                                                    |
-| `review-orchestration`    | Auto-invoked by build-session-protocol | — (auto-invoked)                                                  |
-| `one-on-one`              | 1:1 check-ins                          | secretary                                                         |
-| `cool-down`               | Between build cycles                   | secretary                                                         |
-| `tdd`                     | Writing tests                          | — (standalone)                                                    |
-| `gary-tracker`            | Questions for user                     | — (standalone)                                                    |
-| `learnings-synthesis`     | After sessions                         | — (standalone)                                                    |
+| Skill                     | Trigger                                         | Preloaded By                                                      |
+| ------------------------- | ----------------------------------------------- | ----------------------------------------------------------------- |
+| `design-system`           | Any UI work (auto-loaded)                       | design-composer, frontend-builder, design-auditor, build-reviewer |
+| `design-mockup`           | After breadboard-reflection                     | design-composer                                                   |
+| `breadboarding`           | After shaping                                   | frontend-builder                                                  |
+| `breadboard-reflection`   | After breadboarding                             | — (standalone)                                                    |
+| `screen-builder`          | During build                                    | frontend-builder                                                  |
+| `quality-gate`            | After completing a screen                       | frontend-builder                                                  |
+| `mobile-first-design`     | Building any screen, component, layout          | frontend-builder, design-auditor                                  |
+| `design-audit`            | Design review checkpoints                       | design-auditor                                                    |
+| `shaping`                 | After interview                                 | — (standalone)                                                    |
+| `vertical-discovery`      | Start of new vertical                           | — (standalone)                                                    |
+| `implementation-planning` | After design sign-off                           | — (standalone)                                                    |
+| `pre-build-interrogator`  | Before complex features                         | requirements-interrogator                                         |
+| `feature-strategy`        | Feature planning                                | feature-strategist                                                |
+| `doc-sync`                | After completing steps                          | doc-sync                                                          |
+| `build-session-protocol`  | Build sessions                                  | — (standalone)                                                    |
+| `review-orchestration`    | Auto-invoked by build-session-protocol          | — (auto-invoked)                                                  |
+| `one-on-one`              | 1:1 check-ins                                   | secretary                                                         |
+| `cool-down`               | Between build cycles                            | secretary                                                         |
+| `tdd`                     | Writing tests                                   | — (standalone)                                                    |
+| `gary-tracker`            | Questions for user                              | — (standalone)                                                    |
+| `learnings-synthesis`     | After sessions                                  | — (standalone)                                                    |
+| `ticket-creator`          | After impl plan approval, or `/ticket-creator`  | — (standalone)                                                    |
+| `label-manager`           | Before betting, or `/label-manager`             | — (standalone)                                                    |
+| `backlog-auditor`         | Weekly hygiene, or `/backlog-auditor`           | — (standalone)                                                    |
+| `prd-author`              | Starting new feature/vertical, or `/prd-author` | — (standalone)                                                    |
+| `status-reporter`         | End of cycle, or `/status-reporter`             | — (standalone)                                                    |
 
 ## Agent Design Principles
 
