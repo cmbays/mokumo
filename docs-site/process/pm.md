@@ -247,7 +247,7 @@ These labels exist in the repo but are superseded. Use the `/label-manager` skil
 | `tool:work-orchestrator`       | `type:chore` + relevant `area:*`                |
 | `tool:skills-framework`        | `type:chore` + relevant `area:*`                |
 | `tool:agent-system`            | `type:chore` + relevant `area:*`                |
-| `tool:knowledge-base`          | `type:chore` + `area:docs`                      |
+| `tool:docs-site`               | `type:chore` + `area:docs`                      |
 | `tool:ci-pipeline`             | `type:chore` + `area:ci`                        |
 | `tool:pm-system`               | `type:chore` + `area:docs`                      |
 | `pipeline:vertical`            | Removed — pipeline type tracked on board fields |
@@ -542,16 +542,6 @@ gh issue create \
 # Update Pipeline Stage field on the board (via web UI or GraphQL)
 ```
 
-### KB Session Docs
-
-Every pipeline stage that produces artifacts should create a KB session doc:
-
-```
-knowledge-base/src/content/sessions/YYYY-MM-DD-kebab-topic.md
-```
-
-See `CLAUDE.md` Knowledge Base section for the format.
-
 ---
 
 ## 8. Agent Conventions
@@ -687,30 +677,30 @@ _Actions are the safety net. The `work` CLI is the agent happy path._
 
 From `.github/labeler.yml`:
 
-| Path Pattern                                                 | Label              |
-| ------------------------------------------------------------ | ------------------ |
-| `app/(dashboard)/quotes/**`                                  | `domain:quotes`    |
-| `app/(dashboard)/jobs/**`                                    | `domain:jobs`      |
-| `app/(dashboard)/customers/**`                               | `domain:customers` |
-| `app/(dashboard)/garments/**`                                | `domain:garments`  |
-| `app/(dashboard)/settings/pricing/**`                        | `domain:pricing`   |
-| `app/(dashboard)/settings/colors/**`                         | `domain:colors`    |
-| `knowledge-base/**`, `scripts/**`, `config/**`, `.github/**` | `area:ci`          |
-| `docs-site/**`                                               | `area:docs`        |
+| Path Pattern                            | Label              |
+| --------------------------------------- | ------------------ |
+| `app/(dashboard)/quotes/**`             | `domain:quotes`    |
+| `app/(dashboard)/jobs/**`               | `domain:jobs`      |
+| `app/(dashboard)/customers/**`          | `domain:customers` |
+| `app/(dashboard)/garments/**`           | `domain:garments`  |
+| `app/(dashboard)/settings/pricing/**`   | `domain:pricing`   |
+| `app/(dashboard)/settings/colors/**`    | `domain:colors`    |
+| `scripts/**`, `config/**`, `.github/**` | `area:ci`          |
+| `docs-site/**`                          | `area:docs`        |
 
 Cross-cutting paths (`lib/schemas/**`, `docs/**`, `components/ui/**`) are deliberately unmapped — not every PR needs an auto-label.
 
 ### What Agents Handle
 
-| Task            | How                                                          |
-| --------------- | ------------------------------------------------------------ |
-| Find work       | Read `PROGRESS.md`, query `gh issue list -l priority:now`    |
-| Create issues   | `gh issue create --template ...` with required labels        |
-| Update status   | `gh issue edit` to add/remove labels, assign milestones      |
-| Link sub-issues | GraphQL `addSubIssue` mutation                               |
-| Create PRs      | `gh pr create` with template body                            |
-| Close issues    | `gh issue close --comment "Resolved in PR #N"`               |
-| Write KB docs   | Create session doc in `knowledge-base/src/content/sessions/` |
+| Task            | How                                                       |
+| --------------- | --------------------------------------------------------- |
+| Find work       | Read `PROGRESS.md`, query `gh issue list -l priority:now` |
+| Create issues   | `gh issue create --template ...` with required labels     |
+| Update status   | `gh issue edit` to add/remove labels, assign milestones   |
+| Link sub-issues | GraphQL `addSubIssue` mutation                            |
+| Create PRs      | `gh pr create` with template body                         |
+| Close issues    | `gh issue close --comment "Resolved in PR #N"`            |
+| Write docs      | Create or update docs in `docs-site/`                     |
 
 ### What Humans Handle
 

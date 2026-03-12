@@ -139,3 +139,10 @@ excalidraw.log
 
 *storybook.log
 storybook-static
+
+# AI tool configs (other tools)
+.augment/
+.kiro/
+
+# Superpowers skill lock (local tooling state)
+skills-lock.json
