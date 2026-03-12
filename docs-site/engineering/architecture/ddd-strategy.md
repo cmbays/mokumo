@@ -209,7 +209,7 @@ Currently, we have a single `customerSchema` that serves all contexts. As the ba
 | `work-orchestrator` | Work Orchestrator | Pipeline orchestration scripts   |
 | `skills-framework`  | Skills Framework  | AI skill definitions             |
 | `agent-system`      | Agent System      | AI agent definitions             |
-| `knowledge-base`    | Knowledge Base    | Astro documentation site         |
+| `docs-site`         | Docs Site         | Mintlify documentation site      |
 | `ci-pipeline`       | CI Pipeline       | GitHub Actions workflows         |
 | `pm-system`         | PM System         | Labels, templates, project board |
 
@@ -381,7 +381,7 @@ The flat `vertical/*` namespace merges products, domains, and tools into one dim
 | --------- | ----------- | ------------------ | ----- | ------------------------------------------ |
 | Product   | `product/`  | `#2563EB` (blue)   | 5     | `product/quotes`, `product/jobs`           |
 | Domain    | `domain/`   | `#7C3AED` (purple) | 7     | `domain/garments`, `domain/pricing`        |
-| Tool      | `tool/`     | `#0EA5E9` (sky)    | 6     | `tool/knowledge-base`, `tool/pm-system`    |
+| Tool      | `tool/`     | `#0EA5E9` (sky)    | 6     | `tool/docs-site`, `tool/pm-system`         |
 | Pipeline  | `pipeline/` | `#F59E0B` (amber)  | 4     | `pipeline/vertical`, `pipeline/horizontal` |
 
 #### Migration Mapping

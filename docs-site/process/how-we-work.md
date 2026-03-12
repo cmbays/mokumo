@@ -178,16 +178,15 @@ Each level builds on the previous. We don't skip levels — each one validates t
 
 How the tools work together:
 
-| Tool                  | Location                    | Purpose                                                                   |
-| --------------------- | --------------------------- | ------------------------------------------------------------------------- |
-| **Work Orchestrator** | `scripts/work.sh`           | Session lifecycle — worktrees, Zellij, Claude launch, progress reporting  |
-| **Skills Framework**  | `.claude/skills/`           | Domain expertise containers — shaping, breadboarding, quality gates       |
-| **Agent System**      | `.claude/agents/`           | Specialized AI assistants with own context windows                        |
-| **Knowledge Base**    | `knowledge-base/`           | Astro-powered institutional memory — pipelines, tools, products, strategy |
-| **CI Pipeline**       | `.github/workflows/`        | Auto-add, auto-label, CI checks                                           |
-| **PM System**         | GitHub Issues + Projects v2 | Labels, board, milestones, templates — the coordination backbone          |
+| Tool                 | Location                    | Purpose                                                             |
+| -------------------- | --------------------------- | ------------------------------------------------------------------- |
+| **Skills Framework** | `.claude/skills/`           | Domain expertise containers — shaping, breadboarding, quality gates |
+| **Agent System**     | `.claude/agents/`           | Specialized AI assistants with own context windows                  |
+| **Docs Site**        | `docs-site/`                | Mintlify-powered product and engineering documentation              |
+| **CI Pipeline**      | `.github/workflows/`        | Auto-add, auto-label, CI checks                                     |
+| **PM System**        | GitHub Issues + Projects v2 | Labels, board, milestones, templates — the coordination backbone    |
 
-The Work Orchestrator creates the execution environment. Skills and agents provide domain expertise. The Knowledge Base provides institutional memory. The CI Pipeline automates sync. The PM System provides the coordination layer. Each tool has its own KB docs in `knowledge-base/src/content/tools/`.
+Skills and agents provide domain expertise. The Docs Site provides documentation. The CI Pipeline automates sync. The PM System provides the coordination layer.
 
 ---
 
@@ -244,7 +243,6 @@ Well within Hobby plan limits.
 
 - Worktree workflow — identical
 - PR process — identical (still merge to `main`)
-- `work.sh` orchestrator — no changes needed
 - Stacked PRs — still work the same
 
 The ONLY new step: when you want to update the live app, merge `main` into `production`.

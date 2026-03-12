@@ -180,7 +180,7 @@ depends_on: []
 
 ## Database & Auth
 
-> Installed 2026-02-18 (Wave 0 of epic #529). See `knowledge-base/src/content/pipelines/` for session record.
+> Installed 2026-02-18 (Wave 0 of epic #529).
 
 | Tool                      | Version | Purpose                                                 |
 | ------------------------- | ------- | ------------------------------------------------------- |

@@ -453,7 +453,7 @@ describe('label lookups', () => {
   })
 
   it('toolLabel returns correct label for known slug', () => {
-    expect(toolLabel('knowledge-base')).toBe('Knowledge Base')
+    expect(toolLabel('work-orchestrator')).toBe('Work Orchestrator')
   })
 
   it('stageLabel returns correct label for known slug', () => {
