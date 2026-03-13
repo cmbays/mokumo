@@ -1093,7 +1093,7 @@ describe('buildFullMatrixData — maxColors nullish coalescing', () => {
     // Kills LogicalOperator mutant: matrix.maxColors && 8
     // With && mutant: undefined && 8 = undefined → Array.from({length:undefined}) = []
     // All rows would have 0 cells.
-    const noMaxColorsMatrix: ScreenPrintMatrix = { ...spMatrix, maxColors: undefined }
+    const noMaxColorsMatrix = { ...spMatrix, maxColors: undefined } as unknown as ScreenPrintMatrix
     const noMaxColorsTemplate: PricingTemplate = {
       ...spTemplate,
       matrix: noMaxColorsMatrix,

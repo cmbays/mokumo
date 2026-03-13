@@ -1,4 +1,5 @@
 // src/domain/lib/__tests__/money.steps.ts
+import { expect } from 'vitest'
 import { Given, When, Then } from 'quickpickle'
 import { money, round2, toNumber, toFixed2, formatCurrency, formatCurrencyCompact } from '../money'
 import { need } from '../../__tests__/support/world'

@@ -1,4 +1,5 @@
 // src/domain/services/__tests__/pricing.steps.ts
+import { expect } from 'vitest'
 import { Given, When, Then } from 'quickpickle'
 import { need } from '../../__tests__/support/world'
 import type { MokumoWorld } from '../../__tests__/support/world'
@@ -197,14 +198,6 @@ function recordPrice(world: PricingWorld, price: number): void {
     world.priceA = price
   } else {
     world.priceB = price
-  }
-}
-
-function recordDtfPrice(world: PricingWorld, price: number): void {
-  if (world.dtfPriceA === undefined) {
-    world.dtfPriceA = price
-  } else {
-    world.dtfPriceB = price
   }
 }
 
