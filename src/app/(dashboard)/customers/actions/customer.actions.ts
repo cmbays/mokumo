@@ -12,6 +12,7 @@ import { logger } from '@shared/lib/logger'
 import { ok, err } from '@infra/repositories/_shared/result'
 import type { Result } from '@infra/repositories/_shared/result'
 import type { Customer } from '@domain/entities/customer'
+import { activityEventService } from '@infra/repositories/activity-events'
 
 const log = logger.child({ domain: 'customers' })
 
@@ -109,6 +110,19 @@ export async function createCustomer(
     })
 
     log.info('Customer created', { id: customer.id, shopId: session.shopId })
+
+    // Record audit event — fire-and-forget (non-critical path)
+    activityEventService
+      .record({
+        shopId: session.shopId,
+        entityType: 'customer',
+        entityId: customer.id,
+        eventType: 'created',
+        actorType: 'staff',
+        actorId: session.userId,
+      })
+      .catch((e) => log.warn('Activity event record failed (non-fatal)', { err: e }))
+
     revalidatePath('/customers')
     return ok(customer)
   } catch (e) {
@@ -148,6 +162,20 @@ export async function updateCustomer(
   try {
     const customer = await repoUpdateCustomer(id, parsed.data)
     log.info('Customer updated', { id })
+
+    // Record audit event — fire-and-forget (non-critical path)
+    activityEventService
+      .record({
+        shopId: session.shopId,
+        entityType: 'customer',
+        entityId: id,
+        eventType: 'updated',
+        actorType: 'staff',
+        actorId: session.userId,
+        metadata: { fields: Object.keys(parsed.data) },
+      })
+      .catch((e) => log.warn('Activity event record failed (non-fatal)', { err: e }))
+
     revalidatePath('/customers')
     revalidatePath(`/customers/${id}`)
     return ok(customer)
