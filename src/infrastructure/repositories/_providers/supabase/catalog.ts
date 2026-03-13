@@ -384,14 +384,71 @@ export type CatalogColorSupplementRow = {
 }
 
 /**
+ * Inner fetch for color supplement. Not shop-scoped — cached globally.
+ *
+ * Cache invalidation: revalidateTag('catalog') or revalidateTag('catalog-colors') after
+ * catalog sync. Color data changes only when sync-pipeline runs (weekly), so 1-hour TTL
+ * keeps the cache fresh without adding DB load.
+ */
+const _fetchCatalogColorSupplementCached = unstable_cache(
+  async (): Promise<CatalogColorSupplementRow[]> => {
+    const { db } = await import('@shared/lib/supabase/db')
+
+    let rows: unknown[]
+    try {
+      const result = await db.execute(sql`
+        SELECT
+          cs.style_number,
+          cc.id          AS color_id,
+          cc.name        AS color_name,
+          cc.hex1,
+          cc.color_family_name,
+          cc.color_group_name
+        FROM catalog_colors cc
+        JOIN catalog_styles cs ON cs.id = cc.style_id
+        ORDER BY cs.style_number, cc.name
+      `)
+      rows = result as unknown[]
+    } catch (err) {
+      repoLogger.error('getCatalogColorSupplement db.execute failed', { err })
+      throw err
+    }
+
+    repoLogger.info('Fetched color supplement', { count: rows.length })
+
+    return (
+      rows as Array<{
+        style_number: string
+        color_id: string
+        color_name: string
+        hex1: string | null
+        color_family_name: string | null
+        color_group_name: string | null
+      }>
+    ).map((r) => ({
+      styleNumber: r.style_number,
+      id: r.color_id,
+      name: r.color_name,
+      hex1: r.hex1,
+      colorFamilyName: r.color_family_name,
+      colorGroupName: r.color_group_name,
+    }))
+  },
+  ['catalog-color-supplement'],
+  { revalidate: 3600, tags: ['catalog', 'catalog-colors'] }
+)
+
+/**
  * Fetch slim color data for all styles — used to build color filter UI + swatch strips.
  *
  * Returns per-color rows with (styleNumber, id, name, hex1, colorFamilyName, colorGroupName).
- * No images — avoids the 17 MB image payload. Not cached (query is fast: ~50-100 ms,
- * single-pass on catalog_colors with index on style_id).
+ * No images — avoids the 17 MB image payload.
+ *
+ * Cached globally for 1 hour (tags: catalog, catalog-colors). Color data is not shop-scoped,
+ * so a single global cache entry serves all shops. The auth check below prevents unauthenticated
+ * reads but is kept outside the cache closure so session state is never cached.
  *
  * Security: requires an authenticated session. Returns [] if unauthenticated.
- * Color data is not shop-scoped (no preferences); auth is required to prevent anonymous reads.
  */
 export async function getCatalogColorSupplement(): Promise<CatalogColorSupplementRow[]> {
   const session = await verifySession()
@@ -399,48 +456,7 @@ export async function getCatalogColorSupplement(): Promise<CatalogColorSupplemen
     repoLogger.warn('getCatalogColorSupplement called without authenticated session')
     return []
   }
-
-  const { db } = await import('@shared/lib/supabase/db')
-
-  let rows: unknown[]
-  try {
-    const result = await db.execute(sql`
-      SELECT
-        cs.style_number,
-        cc.id          AS color_id,
-        cc.name        AS color_name,
-        cc.hex1,
-        cc.color_family_name,
-        cc.color_group_name
-      FROM catalog_colors cc
-      JOIN catalog_styles cs ON cs.id = cc.style_id
-      ORDER BY cs.style_number, cc.name
-    `)
-    rows = result as unknown[]
-  } catch (err) {
-    repoLogger.error('getCatalogColorSupplement db.execute failed', { err })
-    throw err
-  }
-
-  repoLogger.info('Fetched color supplement', { count: rows.length })
-
-  return (
-    rows as Array<{
-      style_number: string
-      color_id: string
-      color_name: string
-      hex1: string | null
-      color_family_name: string | null
-      color_group_name: string | null
-    }>
-  ).map((r) => ({
-    styleNumber: r.style_number,
-    id: r.color_id,
-    name: r.color_name,
-    hex1: r.hex1,
-    colorFamilyName: r.color_family_name,
-    colorGroupName: r.color_group_name,
-  }))
+  return _fetchCatalogColorSupplementCached()
 }
 
 // ---------------------------------------------------------------------------
