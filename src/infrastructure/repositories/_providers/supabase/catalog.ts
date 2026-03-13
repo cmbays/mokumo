@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { z } from 'zod'
 import { unstable_cache } from 'next/cache'
 import { sql, eq, and, min, inArray } from 'drizzle-orm'
@@ -390,13 +391,17 @@ export type CatalogColorSupplementRow = {
  * catalog sync. Color data changes only when sync-pipeline runs (weekly), so 1-hour TTL
  * keeps the cache fresh without adding DB load.
  */
-const _fetchCatalogColorSupplementCached = unstable_cache(
-  async (): Promise<CatalogColorSupplementRow[]> => {
-    const { db } = await import('@shared/lib/supabase/db')
+// NOTE: unstable_cache is intentionally NOT used here — the serialized payload
+// is ~7 MB (38K color rows) which exceeds Next.js's 2MB cache limit and causes
+// an unhandled rejection on every request. React cache() deduplicates within a
+// single render cycle. Cross-request caching for this dataset requires Upstash
+// Redis and is tracked for a future milestone.
+const _fetchCatalogColorSupplementCached = cache(async (): Promise<CatalogColorSupplementRow[]> => {
+  const { db } = await import('@shared/lib/supabase/db')
 
-    let rows: unknown[]
-    try {
-      const result = await db.execute(sql`
+  let rows: unknown[]
+  try {
+    const result = await db.execute(sql`
         SELECT
           cs.style_number,
           cc.id          AS color_id,
@@ -408,35 +413,32 @@ const _fetchCatalogColorSupplementCached = unstable_cache(
         JOIN catalog_styles cs ON cs.id = cc.style_id
         ORDER BY cs.style_number, cc.name
       `)
-      rows = result as unknown[]
-    } catch (err) {
-      repoLogger.error('getCatalogColorSupplement db.execute failed', { err })
-      throw err
-    }
+    rows = result as unknown[]
+  } catch (err) {
+    repoLogger.error('getCatalogColorSupplement db.execute failed', { err })
+    throw err
+  }
 
-    repoLogger.info('Fetched color supplement', { count: rows.length })
+  repoLogger.info('Fetched color supplement', { count: rows.length })
 
-    return (
-      rows as Array<{
-        style_number: string
-        color_id: string
-        color_name: string
-        hex1: string | null
-        color_family_name: string | null
-        color_group_name: string | null
-      }>
-    ).map((r) => ({
-      styleNumber: r.style_number,
-      id: r.color_id,
-      name: r.color_name,
-      hex1: r.hex1,
-      colorFamilyName: r.color_family_name,
-      colorGroupName: r.color_group_name,
-    }))
-  },
-  ['catalog-color-supplement'],
-  { revalidate: 3600, tags: ['catalog', 'catalog-colors'] }
-)
+  return (
+    rows as Array<{
+      style_number: string
+      color_id: string
+      color_name: string
+      hex1: string | null
+      color_family_name: string | null
+      color_group_name: string | null
+    }>
+  ).map((r) => ({
+    styleNumber: r.style_number,
+    id: r.color_id,
+    name: r.color_name,
+    hex1: r.hex1,
+    colorFamilyName: r.color_family_name,
+    colorGroupName: r.color_group_name,
+  }))
+})
 
 /**
  * Fetch slim color data for all styles — used to build color filter UI + swatch strips.

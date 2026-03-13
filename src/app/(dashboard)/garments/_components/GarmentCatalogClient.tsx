@@ -472,7 +472,7 @@ export function GarmentCatalogClient({
       {/* Grid View */}
       {view === 'grid' ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {visibleGarments.map((garment) => (
+          {visibleGarments.map((garment, i) => (
             <GarmentCard
               key={garment.id}
               garment={garment}
@@ -483,6 +483,7 @@ export function GarmentCatalogClient({
               frontImageUrl={skuToCardImageUrl.get(garment.sku)}
               normalizedColors={styleSwatches[garment.sku]}
               overrideBasePrice={skuToBasePrice.get(garment.sku) ?? null}
+              index={i}
             />
           ))}
         </div>
