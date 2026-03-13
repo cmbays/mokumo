@@ -206,9 +206,9 @@ export function ActivityFeed({
         {activities.length === 0 && !loadingMore && (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <MessageSquare className="size-6 text-muted-foreground/50" aria-hidden="true" />
-            <p className="text-sm font-medium text-foreground">No activity yet</p>
+            <p className="text-sm font-medium text-foreground">Nothing here yet</p>
             <p className="text-sm text-muted-foreground">
-              Add a note above to start the activity timeline.
+              Add a note to get the conversation started.
             </p>
           </div>
         )}

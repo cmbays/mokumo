@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@shared/ui/primitives/tabs'
 import {
@@ -108,9 +108,17 @@ export function CustomerTabs({
     }
   }
 
-  function tabLabel(tab: string): string {
+  function tabLabel(tab: string): ReactNode {
     const count = getTabCount(tab)
-    return count ? `${TAB_LABELS[tab]} (${count})` : TAB_LABELS[tab]
+    if (!count) return TAB_LABELS[tab]
+    return (
+      <>
+        {TAB_LABELS[tab]}
+        <span className="ml-1.5 rounded bg-muted px-1.5 py-0 text-[10px] font-medium leading-5 text-muted-foreground tabular-nums">
+          {count}
+        </span>
+      </>
+    )
   }
 
   const triggerClass =

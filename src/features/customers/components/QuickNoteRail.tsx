@@ -71,7 +71,7 @@ export function QuickNoteRail({ customerId, onNoteSaved, onSave }: QuickNoteRail
           size="sm"
           disabled={!content.trim() || saving}
           onClick={handleSave}
-          className={cn('relative', content.trim() && !saving && 'shadow-brutal shadow-black/50')}
+          className={cn('relative', content.trim() && !saving && 'shadow-brutal shadow-action/30')}
         >
           {saving ? (
             <>

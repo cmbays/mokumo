@@ -68,11 +68,11 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
             {customer.company}
           </h1>
 
-          {/* Lifecycle dot indicator */}
-          <LifecycleBadge stage={customer.lifecycleStage} />
+          {/* Lifecycle dot — compact in header; full label visible on hover */}
+          <LifecycleBadge stage={customer.lifecycleStage} compact />
 
-          {/* Health dot indicator */}
-          <HealthBadge status={customer.healthStatus} />
+          {/* Health dot — compact in header; full label visible on hover */}
+          <HealthBadge status={customer.healthStatus} compact />
 
           {/* Type tags — monochrome muted pill */}
           {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
