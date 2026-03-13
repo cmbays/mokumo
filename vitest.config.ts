@@ -71,6 +71,7 @@ export default defineConfig({
             'src/domain/__tests__/support/world.ts',
             'src/domain/__tests__/support/shared-money.steps.ts',
             'src/domain/lib/__tests__/money.steps.ts',
+            'src/domain/services/__tests__/pricing.steps.ts',
           ],
         },
       },
