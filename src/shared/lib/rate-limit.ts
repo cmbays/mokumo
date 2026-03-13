@@ -20,8 +20,14 @@ const SIGNIN_WINDOW = '15 m'
 const ADMIN_SYNC_ATTEMPTS = 5
 const ADMIN_SYNC_WINDOW = '1 m'
 
+// 1 execution per 10 minutes — prevents double-fires from timing jitter at
+// 15-min cron cadence while giving genuine runs headroom to complete.
+const CRON_SYNC_ATTEMPTS = 1
+const CRON_SYNC_WINDOW = '10 m'
+
 let _signInLimiter: Ratelimit | null = null
 let _adminSyncLimiter: Ratelimit | null = null
+let _cronSyncLimiter: Ratelimit | null = null
 
 function getSignInLimiter(): Ratelimit | null {
   const redis = getRedis()
@@ -47,6 +53,19 @@ function getAdminSyncLimiter(): Ratelimit | null {
     })
   }
   return _adminSyncLimiter
+}
+
+function getCronSyncLimiter(): Ratelimit | null {
+  const redis = getRedis()
+  if (!redis) return null
+  if (!_cronSyncLimiter) {
+    _cronSyncLimiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(CRON_SYNC_ATTEMPTS, CRON_SYNC_WINDOW),
+      prefix: 'rate_limit:cron_sync_inventory',
+    })
+  }
+  return _cronSyncLimiter
 }
 
 /**
@@ -101,6 +120,29 @@ export async function checkSignInRateLimit(key: string): Promise<{ limited: bool
     return { limited: !success }
   } catch (err) {
     rateLimitLogger.error('rate_limit.redis_error', { error: String(err) })
+    return { limited: false }
+  }
+}
+
+/**
+ * Rate limit guard for the inventory sync cron endpoint.
+ * Allows at most 1 execution per 10 minutes (fixed key, not IP-based).
+ *
+ * Rationale for 10-minute window at 15-minute cadence: prevents double-fires
+ * from timing jitter while giving genuine runs headroom to complete.
+ *
+ * Intentionally fails OPEN (allows) when Redis is unavailable — cron syncs
+ * must not be silently blocked by Redis outages. CRON_SECRET bearer auth provides
+ * the primary security boundary for the cron path.
+ */
+export async function checkCronInventorySyncRateLimit(): Promise<{ limited: boolean }> {
+  const limiter = getCronSyncLimiter()
+  if (!limiter) return { limited: false } // fail open regardless of environment
+  try {
+    const { success } = await limiter.limit('cron-sync-inventory')
+    return { limited: !success }
+  } catch (err) {
+    rateLimitLogger.error('rate_limit.cron_sync.redis_error', { error: String(err) })
     return { limited: false }
   }
 }

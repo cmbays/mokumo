@@ -16,8 +16,13 @@ vi.mock('@shared/lib/logger', () => ({
 
 vi.mock('@shared/lib/rate-limit', () => ({
   checkAdminSyncRateLimit: vi.fn(),
+  checkCronInventorySyncRateLimit: vi.fn(),
   getClientIp: (request: Request) =>
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+}))
+
+vi.mock('next/cache', () => ({
+  revalidateTag: vi.fn(),
 }))
 
 vi.mock('@shared/lib/admin-auth', () => ({
@@ -33,9 +38,10 @@ vi.mock('@infra/services/inventory-sync.service', () => ({
 }))
 
 import { GET, POST } from '../route'
-import { checkAdminSyncRateLimit } from '@shared/lib/rate-limit'
+import { checkAdminSyncRateLimit, checkCronInventorySyncRateLimit } from '@shared/lib/rate-limit'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { syncInventoryFromSupplier } from '@infra/services/inventory-sync.service'
+import { revalidateTag } from 'next/cache'
 
 const CRON_SECRET = 'test-cron-secret'
 
@@ -57,6 +63,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv('CRON_SECRET', CRON_SECRET)
   vi.mocked(checkAdminSyncRateLimit).mockResolvedValue({ limited: false })
+  vi.mocked(checkCronInventorySyncRateLimit).mockResolvedValue({ limited: false })
   vi.mocked(validateAdminSecret).mockReturnValue({ valid: true })
   vi.mocked(syncInventoryFromSupplier).mockResolvedValue({ synced: 10, rawInserted: 50, errors: 0 })
 })
@@ -98,6 +105,17 @@ describe('GET /api/catalog/sync-inventory', () => {
     expect(body.timestamp).toBeDefined()
   })
 
+  it('calls revalidateTag("inventory") after a successful sync', async () => {
+    await GET(makeGetRequest())
+    expect(revalidateTag).toHaveBeenCalledWith('inventory', {})
+  })
+
+  it('does not call revalidateTag when sync throws', async () => {
+    vi.mocked(syncInventoryFromSupplier).mockRejectedValueOnce(new Error('DB down'))
+    await GET(makeGetRequest())
+    expect(revalidateTag).not.toHaveBeenCalled()
+  })
+
   it('returns 500 when syncInventoryFromSupplier throws', async () => {
     vi.mocked(syncInventoryFromSupplier).mockRejectedValueOnce(new Error('DB down'))
     const response = await GET(makeGetRequest())
@@ -110,6 +128,29 @@ describe('GET /api/catalog/sync-inventory', () => {
     const response = await GET(makeGetRequest({ headers: { authorization: 'Bearer bad' } }))
     expect(response.status).toBe(401)
     expect(syncInventoryFromSupplier).not.toHaveBeenCalled()
+  })
+
+  describe('cron rate limiting', () => {
+    it('returns 429 with Retry-After: 600 when cron rate limited', async () => {
+      vi.mocked(checkCronInventorySyncRateLimit).mockResolvedValue({ limited: true })
+      const response = await GET(makeGetRequest())
+      expect(response.status).toBe(429)
+      expect(response.headers.get('Retry-After')).toBe('600')
+      const body = await response.json()
+      expect(body.error).toBe('Too many requests')
+    })
+
+    it('does not call sync service when cron rate limited', async () => {
+      vi.mocked(checkCronInventorySyncRateLimit).mockResolvedValue({ limited: true })
+      await GET(makeGetRequest())
+      expect(syncInventoryFromSupplier).not.toHaveBeenCalled()
+    })
+
+    it('calls sync service when cron rate limit allows', async () => {
+      vi.mocked(checkCronInventorySyncRateLimit).mockResolvedValue({ limited: false })
+      await GET(makeGetRequest())
+      expect(syncInventoryFromSupplier).toHaveBeenCalledOnce()
+    })
   })
 })
 
@@ -152,6 +193,11 @@ describe('POST /api/catalog/sync-inventory', () => {
       expect(body.rawInserted).toBe(50)
       expect(body.errors).toBe(0)
       expect(body.timestamp).toBeDefined()
+    })
+
+    it('calls revalidateTag("inventory") after a successful sync', async () => {
+      await POST(makePostRequest())
+      expect(revalidateTag).toHaveBeenCalledWith('inventory', {})
     })
 
     it('returns 500 when syncInventoryFromSupplier throws', async () => {
