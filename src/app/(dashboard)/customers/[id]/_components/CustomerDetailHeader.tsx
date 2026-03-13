@@ -58,13 +58,14 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
   })
 
   return (
-    <div className="space-y-3">
-      {/* ---- Section 2: Company row ----------------------------------------- */}
+    <div className="space-y-4">
+      {/* ---- Section 1: Company row ----------------------------------------- */}
       {/* Left group (name + badges) can wrap freely; right group (buttons) never wraps */}
       <div className="flex items-start gap-3">
         {/* Name + badges — wrappable flex-1 group */}
-        <div className="flex-1 min-w-0 flex items-center flex-wrap gap-3">
-          <h1 className="text-3xl font-black text-foreground tracking-tight shrink-0">
+        <div className="flex-1 min-w-0 flex items-center flex-wrap gap-2.5">
+          {/* Company name — Niji spec: 26px, weight 700, tight tracking */}
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] leading-8 text-foreground shrink-0">
             {customer.company}
           </h1>
 
@@ -74,35 +75,43 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
           {/* Health dot — compact in header; full label visible on hover */}
           <HealthBadge status={customer.healthStatus} compact />
 
-          {/* Type tags — monochrome muted pill */}
+          {/* Type tags — amber categorical identity badges */}
           {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
         </div>
 
         {/* Action buttons — always right-aligned, never wrap */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Archive button */}
+          {/* Archive — plain secondary outline, no destructive color in header */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setArchiveOpen(true)}
             aria-label="Archive customer"
-            className="text-error/70 border-error/30 hover:text-error hover:border-error/50 hover:bg-error/5 focus-visible:ring-error/50"
+            className="text-muted-foreground shadow-[1.5px_1.5px_0_rgba(0,0,0,0.06)]"
           >
             <Archive className="size-4" aria-hidden="true" />
             <span className="hidden md:inline">Archive</span>
           </Button>
 
-          {/* Edit Customer button — action blue, neobrutalist shadow */}
+          {/* Edit Customer — Niji CTA: light action bg + action text, offset shadow */}
           <Button
             size="sm"
             onClick={() => setEditOpen(true)}
-            className="bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+            className={cn(
+              'bg-action/10 text-action font-semibold border border-action/30',
+              'shadow-[1.5px_1.5px_0_rgba(0,119,204,0.2)]',
+              'hover:bg-action/15 active:scale-95 transition-all duration-150'
+            )}
           >
             <Pencil className="size-4" />
             Edit Customer
           </Button>
         </div>
       </div>
+
+      {/* ---- Section 2: Stats strip ----------------------------------------- */}
+      {/* Niji spec: divider-separated cells with 19px numbers + 10px uppercase labels */}
+      <CustomerQuickStats stats={stats} variant="cells" />
 
       {/* ---- Section 3: Contacts row ---------------------------------------- */}
       {/* Fixed-width column slots — all contacts aligned vertically */}
@@ -121,33 +130,34 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
                 {/* Star / spacer — 18px fixed width */}
                 {contact.isPrimary ? (
                   <Star
-                    className="size-4 shrink-0 fill-warning text-warning"
+                    className="size-3 shrink-0 fill-warning text-warning"
                     aria-label="Primary contact"
                   />
                 ) : (
-                  <span className="w-4 shrink-0" aria-hidden="true" />
+                  <span className="w-3 shrink-0" aria-hidden="true" />
                 )}
 
                 {/* Name — fixed minimum width */}
                 <span
                   className={cn(
-                    'min-w-36 shrink-0 font-medium',
-                    contact.isPrimary ? 'text-foreground' : 'text-muted-foreground'
+                    'min-w-[130px] shrink-0 text-[13px]',
+                    contact.isPrimary ? 'text-foreground font-semibold' : 'text-muted-foreground'
                   )}
                 >
                   {contact.name}
                 </span>
 
-                {/* Role badge */}
+                {/* Role badge — neutral silver, compact padding */}
                 {roleLabel && (
-                  <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+                  <span className="shrink-0 min-w-[160px] rounded border border-border px-1.5 py-px text-[11px] font-semibold text-muted-foreground">
                     {roleLabel}
                   </span>
                 )}
+                {!roleLabel && <span className="min-w-[160px] shrink-0" aria-hidden="true" />}
 
                 {/* Email — copy-to-clipboard, flex:1 */}
                 {contact.email && (
-                  <span className="flex-1 min-w-0">
+                  <span className="flex-1 min-w-0 min-w-[200px]">
                     {/* Desktop: copy button */}
                     <span className="hidden md:inline">
                       <CopyButton value={contact.email} label="email" />
@@ -186,9 +196,6 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
           })}
         </div>
       )}
-
-      {/* ---- Section 4: Stats strip ----------------------------------------- */}
-      <CustomerQuickStats stats={stats} variant="header" />
 
       {/* ---- Modals --------------------------------------------------------- */}
       {editOpen && (

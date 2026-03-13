@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@shared/ui/primitives/tabs'
+import { Tabs, TabsContent } from '@shared/ui/primitives/tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +47,22 @@ type CustomerTabsProps = {
   initialNextCursor: string | null
 }
 
+// All tab values in desktop render order
+const DESKTOP_TABS = [
+  'activity',
+  'quotes',
+  'jobs',
+  'invoices',
+  'artwork',
+  'screens',
+  'preferences',
+  'contacts',
+  'details',
+  'notes',
+] as const
+
+type DesktopTab = (typeof DESKTOP_TABS)[number]
+
 // Primary tabs shown directly on mobile
 const PRIMARY_TABS = ['activity', 'quotes', 'jobs', 'invoices', 'notes'] as const
 
@@ -83,6 +99,25 @@ export function CustomerTabs({
   const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'activity'
   const [activeTab, setActiveTab] = useState(defaultTab)
   const screens = deriveScreensFromJobs(customer.id, jobs)
+
+  // ── Sliding tab indicator (desktop only) ──────────────────────────────────
+  const desktopContainerRef = useRef<HTMLDivElement>(null)
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
+
+  useEffect(() => {
+    // Small delay ensures layout is settled after tab change
+    const timer = setTimeout(() => {
+      const container = desktopContainerRef.current
+      const activeBtn = tabRefs.current.get(activeTab)
+      if (container && activeBtn) {
+        const cRect = container.getBoundingClientRect()
+        const bRect = activeBtn.getBoundingClientRect()
+        setIndicatorStyle({ left: bRect.left - cRect.left, width: bRect.width })
+      }
+    }, 20)
+    return () => clearTimeout(timer)
+  }, [activeTab])
 
   const isSecondaryActive = (SECONDARY_TABS as readonly string[]).includes(activeTab)
 
@@ -121,65 +156,102 @@ export function CustomerTabs({
     )
   }
 
-  const triggerClass =
-    'shrink-0 min-h-(--mobile-touch-target) md:min-h-0 px-2 text-xs md:text-sm md:px-3'
-
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      {/* Desktop: all 10 tabs visible */}
+      {/* ── Desktop: sliding badge indicator tab bar ── */}
       <div className="hidden md:block overflow-x-auto scrollbar-none border-b border-border">
-        <TabsList variant="line" className="w-max min-w-full justify-start gap-0 pb-0">
-          <TabsTrigger value="activity" className={triggerClass}>
-            Activity
-          </TabsTrigger>
-          <TabsTrigger value="quotes" className={triggerClass}>
-            {tabLabel('quotes')}
-          </TabsTrigger>
-          <TabsTrigger value="jobs" className={triggerClass}>
-            {tabLabel('jobs')}
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className={triggerClass}>
-            {tabLabel('invoices')}
-          </TabsTrigger>
-          <TabsTrigger value="artwork" className={triggerClass}>
-            {tabLabel('artwork')}
-          </TabsTrigger>
-          <TabsTrigger value="screens" className={triggerClass}>
-            {tabLabel('screens')}
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className={triggerClass}>
-            Preferences
-          </TabsTrigger>
-          <TabsTrigger value="contacts" className={triggerClass}>
-            {tabLabel('contacts')}
-          </TabsTrigger>
-          <TabsTrigger value="details" className={triggerClass}>
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="notes" className={triggerClass}>
-            {tabLabel('notes')}
-          </TabsTrigger>
-        </TabsList>
+        {/* Relative container for the absolute indicator */}
+        <div
+          ref={desktopContainerRef}
+          className="relative flex w-max min-w-full items-center pb-1 pt-1"
+          role="tablist"
+          aria-label="Customer tabs"
+        >
+          {/* Niji sliding badge indicator — animates with spring curve */}
+          {indicatorStyle.width > 0 && (
+            <div
+              className="absolute top-1 bottom-1 rounded-md bg-action/[0.08] border-[1.5px] border-action pointer-events-none"
+              style={{
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                boxShadow: '1.5px 1.5px 0 rgba(0,119,204,0.2)',
+                transition:
+                  'left 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Tab buttons */}
+          {DESKTOP_TABS.map((tab) => {
+            const isActive = activeTab === tab
+            return (
+              <button
+                key={tab}
+                ref={(el) => {
+                  if (el) tabRefs.current.set(tab, el)
+                  else tabRefs.current.delete(tab)
+                }}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'relative z-10 shrink-0 px-3 py-2 text-[13px]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+                  isActive
+                    ? 'text-foreground font-semibold'
+                    : 'text-muted-foreground font-normal hover:text-foreground'
+                )}
+                style={{
+                  transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                  transformOrigin: 'center center',
+                  transition:
+                    'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                }}
+              >
+                {tabLabel(tab)}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Mobile: 5 primary tabs + "More" dropdown — horizontally scrollable */}
+      {/* ── Mobile: 5 primary tabs + "More" dropdown ── */}
       <div className="md:hidden overflow-x-auto scrollbar-none -mx-4 px-4">
-        <TabsList
-          variant="line"
-          className="w-max min-w-full justify-start gap-0 border-b border-border pb-0"
+        <div
+          className="flex w-max min-w-full items-center border-b border-border"
+          role="tablist"
+          aria-label="Customer tabs"
         >
-          {PRIMARY_TABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab} className={triggerClass}>
-              {tabLabel(tab)}
-            </TabsTrigger>
-          ))}
+          {PRIMARY_TABS.map((tab) => {
+            const isActive = activeTab === tab
+            return (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'shrink-0 min-h-[var(--mobile-touch-target)] px-2 text-xs border-b-2 transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive
+                    ? 'border-action text-action font-medium'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tabLabel(tab)}
+              </button>
+            )
+          })}
 
           {/* "More" dropdown for secondary tabs */}
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
                 'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 px-2 text-xs transition-colors active:scale-95',
-                'min-h-(--mobile-touch-target)',
+                'min-h-[var(--mobile-touch-target)]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isSecondaryActive
                   ? 'border-action text-action font-medium'
@@ -196,7 +268,7 @@ export function CustomerTabs({
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    'min-h-(--mobile-touch-target)',
+                    'min-h-[var(--mobile-touch-target)]',
                     activeTab === tab && 'text-action font-medium'
                   )}
                 >
@@ -205,9 +277,10 @@ export function CustomerTabs({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </TabsList>
+        </div>
       </div>
 
+      {/* ── Tab content panels ── */}
       <TabsContent value="activity" className="mt-4">
         <ActivityFeed
           customerId={customer.id}
