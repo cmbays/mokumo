@@ -21,6 +21,7 @@ import type {
   AddressInput,
   AddressRow,
 } from '@domain/ports/customer-contact.port'
+import type { ContactId, AddressId } from '@domain/lib/branded'
 
 export async function getCustomers(): Promise<Customer[]> {
   return customers.map((c) => structuredClone(c))
@@ -143,13 +144,13 @@ export async function createContact(_input: ContactInput): Promise<ContactRow> {
 }
 
 export async function updateContact(
-  _id: string,
+  _id: ContactId,
   _input: Partial<ContactInput>
 ): Promise<ContactRow> {
   throw new Error('updateContact: not implemented in mock provider')
 }
 
-export async function deleteContact(_id: string): Promise<void> {
+export async function deleteContact(_id: ContactId): Promise<void> {
   throw new Error('deleteContact: not implemented in mock provider')
 }
 
@@ -158,12 +159,12 @@ export async function createAddress(_input: AddressInput): Promise<AddressRow> {
 }
 
 export async function updateAddress(
-  _id: string,
+  _id: AddressId,
   _input: Partial<AddressInput>
 ): Promise<AddressRow> {
   throw new Error('updateAddress: not implemented in mock provider')
 }
 
-export async function deleteAddress(_id: string): Promise<void> {
+export async function deleteAddress(_id: AddressId): Promise<void> {
   throw new Error('deleteAddress: not implemented in mock provider')
 }

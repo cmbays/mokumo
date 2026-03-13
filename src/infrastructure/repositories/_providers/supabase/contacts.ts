@@ -5,17 +5,12 @@ import { contacts as contactsTable } from '@db/schema/customers'
 import { contactSchema } from '@domain/entities/contact'
 import { contactRowSchema } from '@domain/ports/customer-contact.port'
 import { logger } from '@shared/lib/logger'
-import { validateUUID } from '@infra/repositories/_shared/validation'
+import { assertValidUUID } from '@infra/repositories/_shared/validation'
 import type { ContactInput, ContactRow } from '@domain/ports/customer-contact.port'
 import type { Contact } from '@domain/entities/contact'
+import type { ContactId } from '@domain/lib/branded'
 
 const repoLogger = logger.child({ domain: 'supabase-contacts' })
-
-function assertValidUUID(id: string, context: string): void {
-  if (!validateUUID(id)) {
-    throw new Error(`${context}: invalid UUID "${id}"`)
-  }
-}
 
 // ─── Row mappers ────────────────────────────────────────────────────────────────
 
@@ -92,7 +87,7 @@ export async function createContact(input: ContactInput): Promise<ContactRow> {
   }
 }
 
-export async function updateContact(id: string, input: Partial<ContactInput>): Promise<ContactRow> {
+export async function updateContact(id: ContactId, input: Partial<ContactInput>): Promise<ContactRow> {
   assertValidUUID(id, 'updateContact')
 
   const updateFields: Partial<typeof contactsTable.$inferInsert> = {}
@@ -128,7 +123,7 @@ export async function updateContact(id: string, input: Partial<ContactInput>): P
   }
 }
 
-export async function deleteContact(id: string): Promise<void> {
+export async function deleteContact(id: ContactId): Promise<void> {
   assertValidUUID(id, 'deleteContact')
 
   try {

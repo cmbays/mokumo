@@ -7,6 +7,7 @@ import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
 import type { Address } from '@domain/entities/address'
 import type { ContactInput, ContactRow, AddressInput, AddressRow } from './customer-contact.port'
+import type { ContactId, AddressId } from '@domain/lib/branded'
 
 // ─── Filter / Sort / Pagination types ─────────────────────────────────────────
 
@@ -101,10 +102,10 @@ export type ICustomerRepository = {
   createContact(input: ContactInput): Promise<ContactRow>
 
   /** Update mutable fields on an existing contact */
-  updateContact(id: string, input: Partial<ContactInput>): Promise<ContactRow>
+  updateContact(id: ContactId, input: Partial<ContactInput>): Promise<ContactRow>
 
   /** Permanently delete a contact */
-  deleteContact(id: string): Promise<void>
+  deleteContact(id: ContactId): Promise<void>
 
   // ── Wave 1a — Address mutations ──
 
@@ -112,8 +113,8 @@ export type ICustomerRepository = {
   createAddress(input: AddressInput): Promise<AddressRow>
 
   /** Update mutable fields on an existing address */
-  updateAddress(id: string, input: Partial<AddressInput>): Promise<AddressRow>
+  updateAddress(id: AddressId, input: Partial<AddressInput>): Promise<AddressRow>
 
   /** Permanently delete an address */
-  deleteAddress(id: string): Promise<void>
+  deleteAddress(id: AddressId): Promise<void>
 }

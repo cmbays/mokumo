@@ -10,7 +10,7 @@ import {
 import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
 import type { HealthStatus } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
-import { validateUUID } from '@infra/repositories/_shared/validation'
+import { validateUUID, assertValidUUID } from '@infra/repositories/_shared/validation'
 import { money, toNumber } from '@domain/lib/money'
 import type {
   ICustomerRepository,
@@ -46,14 +46,6 @@ const repoLogger = logger.child({ domain: 'supabase-customers' })
 // DB lifecycle enum values — excludes 'contract' which is a legacy domain-only value.
 // Extracted to module scope to avoid repetition in createCustomer / updateCustomer / listCustomers.
 type DbLifecycle = 'prospect' | 'new' | 'repeat' | 'vip' | 'at-risk' | 'archived'
-
-// ─── ID validation ─────────────────────────────────────────────────────────────
-
-function assertValidUUID(id: string, context: string): void {
-  if (!validateUUID(id)) {
-    throw new Error(`${context}: invalid UUID "${id}"`)
-  }
-}
 
 // ─── Row mappers ───────────────────────────────────────────────────────────────
 

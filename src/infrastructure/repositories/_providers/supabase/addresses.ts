@@ -5,17 +5,12 @@ import { addresses as addressesTable } from '@db/schema/customers'
 import { addressSchema } from '@domain/entities/address'
 import { addressRowSchema } from '@domain/ports/customer-contact.port'
 import { logger } from '@shared/lib/logger'
-import { validateUUID } from '@infra/repositories/_shared/validation'
+import { assertValidUUID } from '@infra/repositories/_shared/validation'
 import type { AddressInput, AddressRow } from '@domain/ports/customer-contact.port'
 import type { Address } from '@domain/entities/address'
+import type { AddressId } from '@domain/lib/branded'
 
 const repoLogger = logger.child({ domain: 'supabase-addresses' })
-
-function assertValidUUID(id: string, context: string): void {
-  if (!validateUUID(id)) {
-    throw new Error(`${context}: invalid UUID "${id}"`)
-  }
-}
 
 // ─── Row mappers ────────────────────────────────────────────────────────────────
 
@@ -97,7 +92,7 @@ export async function createAddress(input: AddressInput): Promise<AddressRow> {
   }
 }
 
-export async function updateAddress(id: string, input: Partial<AddressInput>): Promise<AddressRow> {
+export async function updateAddress(id: AddressId, input: Partial<AddressInput>): Promise<AddressRow> {
   assertValidUUID(id, 'updateAddress')
 
   const updateFields: Partial<typeof addressesTable.$inferInsert> = {}
@@ -133,7 +128,7 @@ export async function updateAddress(id: string, input: Partial<AddressInput>): P
   }
 }
 
-export async function deleteAddress(id: string): Promise<void> {
+export async function deleteAddress(id: AddressId): Promise<void> {
   assertValidUUID(id, 'deleteAddress')
 
   try {
