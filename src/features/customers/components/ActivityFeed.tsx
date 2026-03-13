@@ -113,16 +113,24 @@ export function ActivityFeed({
   const [activeFilter, setActiveFilter] = React.useState<ActivitySource | 'all'>('all')
   const [loadingMore, setLoadingMore] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
-  const isFirstRender = React.useRef(true)
+  // Token-based guard: each effect run gets its own token. Stale tokens are ignored.
+  // This correctly handles React Strict Mode's double-invoke (setup → cleanup → setup),
+  // where isFirstRender.current would already be false on the second setup.
+  const effectTokenRef = React.useRef(0)
+  // Track whether the initial SSR-provided data has been consumed.
+  // We skip the first effect run (filter = 'all', initial mount) because SSR already
+  // populated the activity list. Any subsequent run (filter change or remount) should refetch.
+  const isInitialMountRef = React.useRef(true)
 
   // When filter changes, re-fetch from scratch (no cursor).
   // Skip initial mount — SSR already provides the first page of activities.
   React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
       return
     }
-    let cancelled = false
+
+    const token = ++effectTokenRef.current
 
     async function refetch() {
       setLoadingMore(true)
@@ -135,7 +143,7 @@ export function ActivityFeed({
         limit: 20,
       })
 
-      if (cancelled) return
+      if (token !== effectTokenRef.current) return
 
       setLoadingMore(false)
 
@@ -149,10 +157,6 @@ export function ActivityFeed({
     }
 
     refetch()
-
-    return () => {
-      cancelled = true
-    }
   }, [activeFilter, customerId, onLoadMore])
 
   async function handleLoadMore() {
