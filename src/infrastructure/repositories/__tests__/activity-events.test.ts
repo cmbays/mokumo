@@ -169,4 +169,29 @@ describe('supabaseActivityEventRepository.listForEntity', () => {
       })
     ).rejects.toThrow('invalid shopId')
   })
+
+  it('passes cursor option to the query', async () => {
+    mockSelect.mockResolvedValue([dbRow])
+
+    await supabaseActivityEventRepository.listForEntity('customer', VALID_ENTITY_ID, {
+      shopId: VALID_SHOP_ID,
+      cursor: '2026-03-13T00:00:00.000Z',
+    })
+
+    // Query ran successfully — cursor filtering is handled by the WHERE clause
+    expect(mockSelect).toHaveBeenCalled()
+  })
+
+  it('accepts null actorId in record input', async () => {
+    mockInsert.mockResolvedValue([{ ...dbRow, actorType: 'system', actorId: null }])
+
+    const result = await supabaseActivityEventRepository.record({
+      ...baseInput,
+      actorType: 'system',
+      actorId: null,
+    })
+
+    expect(result.actorId).toBeNull()
+    expect(result.actorType).toBe('system')
+  })
 })

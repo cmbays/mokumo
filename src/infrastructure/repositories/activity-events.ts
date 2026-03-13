@@ -8,6 +8,11 @@ import 'server-only'
 // The raw repository is not exported — use the service instead.
 
 import { ActivityEventService } from '@domain/services/activity-event.service'
+import type {
+  ActivityEventEntityType,
+  ActivityEventInput,
+  ListForEntityOpts,
+} from '@domain/ports/activity-event.port'
 
 // ─── Lazy Supabase module ─────────────────────────────────────────────────────
 // Mirrors the pattern in customer-activity.ts: dynamic import defers the
@@ -36,21 +41,17 @@ async function resolveService(): Promise<ActivityEventService> {
  *   await activityEventService.listForEntity('customer', id, { shopId })
  */
 export const activityEventService = {
-  record: (input: Parameters<ActivityEventService['record']>[0]) =>
-    resolveService().then((s) => s.record(input)),
-  listForEntity: (
-    entityType: Parameters<ActivityEventService['listForEntity']>[0],
-    entityId: string,
-    opts: Parameters<ActivityEventService['listForEntity']>[2]
-  ) => resolveService().then((s) => s.listForEntity(entityType, entityId, opts)),
+  record: (input: ActivityEventInput) => resolveService().then((s) => s.record(input)),
+  listForEntity: (entityType: ActivityEventEntityType, entityId: string, opts: ListForEntityOpts) =>
+    resolveService().then((s) => s.listForEntity(entityType, entityId, opts)),
 }
 
 // ─── Named re-exports for convenience ────────────────────────────────────────
 
 export async function listEntityActivity(
-  entityType: Parameters<ActivityEventService['listForEntity']>[0],
+  entityType: ActivityEventEntityType,
   entityId: string,
-  opts: Parameters<ActivityEventService['listForEntity']>[2]
+  opts: ListForEntityOpts
 ): ReturnType<ActivityEventService['listForEntity']> {
   return activityEventService.listForEntity(entityType, entityId, opts)
 }

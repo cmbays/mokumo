@@ -207,6 +207,19 @@ export async function archiveCustomer(id: string): Promise<Result<void, Customer
   try {
     await repoArchiveCustomer(id)
     log.info('Customer archived', { id })
+
+    // Record audit event — fire-and-forget (non-critical path)
+    activityEventService
+      .record({
+        shopId: session.shopId,
+        entityType: 'customer',
+        entityId: id,
+        eventType: 'archived',
+        actorType: 'staff',
+        actorId: session.userId,
+      })
+      .catch((e) => log.warn('Activity event record failed (non-fatal)', { err: e }))
+
     revalidatePath('/customers')
     revalidatePath(`/customers/${id}`)
     return ok(undefined)

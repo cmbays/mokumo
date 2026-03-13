@@ -2,45 +2,56 @@ import 'server-only'
 import { getQStashClient } from '@shared/lib/qstash'
 import { logger } from '@shared/lib/logger'
 import { jobTypeSchema, DEFAULT_RETRY_POLICY, type JobType, type JobPayload } from './job-types'
+import type { IJobDispatcher, DispatchResult } from '@domain/ports/job-dispatcher.port'
+
+export type { IJobDispatcher, DispatchResult }
 
 const dispatchLogger = logger.child({ domain: 'job-dispatcher' })
-
-// ─── Port interface ─────────────────────────────────────────────────────────
-
-export type DispatchResult = {
-  messageId: string
-}
-
-export type IJobDispatcher = {
-  /**
-   * Enqueue a background job via QStash.
-   *
-   * Returns the QStash messageId on success, or null when QStash is not
-   * configured (graceful degradation in dev/CI).
-   */
-  dispatch(
-    jobType: JobType,
-    data?: Record<string, unknown>
-  ): Promise<DispatchResult | null>
-}
 
 // ─── QStash implementation ──────────────────────────────────────────────────
 
 /**
- * Builds the job handler URL for a given job type.
- * Requires NEXT_PUBLIC_APP_URL to be set in production.
+ * Resolves the application base URL for webhook callbacks.
+ *
+ * Resolution order:
+ *  1. NEXT_PUBLIC_APP_URL  — explicit, canonical, preferred
+ *  2. VERCEL_URL           — injected automatically on Vercel (preview + prod deploys)
+ *  3. http://localhost:3000 — dev fallback only
+ *
+ * Logs a warning when falling back to VERCEL_URL or localhost in production,
+ * because VERCEL_URL may be a branch URL rather than the canonical hostname.
  */
-function buildJobUrl(jobType: JobType): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  return `${baseUrl}/api/jobs/${jobType}`
+function resolveBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  if (process.env.VERCEL_URL) {
+    const url = `https://${process.env.VERCEL_URL}`
+    if (process.env.NODE_ENV === 'production') {
+      dispatchLogger.warn(
+        'NEXT_PUBLIC_APP_URL not set — using VERCEL_URL for job callbacks. ' +
+          'Set NEXT_PUBLIC_APP_URL to the canonical hostname to avoid preview-URL mismatch.',
+        { vercelUrl: process.env.VERCEL_URL }
+      )
+    }
+    return url
+  }
+  if (process.env.NODE_ENV === 'production') {
+    dispatchLogger.error(
+      'Neither NEXT_PUBLIC_APP_URL nor VERCEL_URL is set in production. ' +
+        'Job webhook callbacks will point to localhost and will fail.',
+      {}
+    )
+  }
+  return 'http://localhost:3000'
 }
 
-/**
- * Builds the dead letter queue callback URL.
- */
+function buildJobUrl(jobType: string): string {
+  return `${resolveBaseUrl()}/api/jobs/${jobType}`
+}
+
 function buildDlqUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  return `${baseUrl}/api/jobs/dlq`
+  return `${resolveBaseUrl()}/api/jobs/dlq`
 }
 
 export const jobDispatcher: IJobDispatcher = {
@@ -52,7 +63,7 @@ export const jobDispatcher: IJobDispatcher = {
     }
 
     const payload: JobPayload = {
-      jobType,
+      jobType: jobType as JobType,
       dispatchedAt: new Date().toISOString(),
       data,
     }

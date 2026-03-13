@@ -65,6 +65,14 @@ export type ActivityEventActorType = z.infer<typeof activityEventActorTypeSchema
 export type ActivityEvent = z.infer<typeof activityEventSchema>
 export type ActivityEventPage = z.infer<typeof activityEventPageSchema>
 
+/** Options for paginating an entity's activity feed. */
+export type ListForEntityOpts = {
+  shopId: string
+  limit?: number
+  cursor?: string | null
+  eventTypes?: ActivityEventType[]
+}
+
 /**
  * Public input type for recording an activity event.
  *
@@ -103,11 +111,6 @@ export type IActivityEventRepository = {
   listForEntity(
     entityType: ActivityEventEntityType,
     entityId: string,
-    opts: {
-      shopId: string
-      limit?: number
-      cursor?: string | null
-      eventTypes?: ActivityEventType[]
-    }
+    opts: ListForEntityOpts
   ): Promise<ActivityEventPage>
 }

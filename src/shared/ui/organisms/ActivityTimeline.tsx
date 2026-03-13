@@ -16,14 +16,14 @@ const EVENT_TYPE_LABELS: Record<ActivityEventType, string> = {
 }
 
 const EVENT_TYPE_DOT_COLORS: Record<ActivityEventType, string> = {
-  created: 'bg-green-500',
-  updated: 'bg-blue-400',
+  created: 'bg-success',
+  updated: 'bg-action',
   archived: 'bg-muted-foreground',
-  status_changed: 'bg-amber-400',
-  note_added: 'bg-purple-400',
-  attachment_added: 'bg-sky-400',
-  payment_recorded: 'bg-emerald-500',
-  approved: 'bg-green-500',
+  status_changed: 'bg-warning',
+  note_added: 'bg-purple',
+  attachment_added: 'bg-teal',
+  payment_recorded: 'bg-success',
+  approved: 'bg-success',
   rejected: 'bg-destructive',
 }
 

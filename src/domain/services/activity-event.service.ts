@@ -14,7 +14,7 @@ import type {
   ActivityEvent,
   ActivityEventPage,
   ActivityEventEntityType,
-  ActivityEventType,
+  ListForEntityOpts,
 } from '@domain/ports/activity-event.port'
 import { activityEventInputSchema } from '@domain/ports/activity-event.port'
 
@@ -56,12 +56,7 @@ export class ActivityEventService {
   async listForEntity(
     entityType: ActivityEventEntityType,
     entityId: string,
-    opts: {
-      shopId: string
-      limit?: number
-      cursor?: string | null
-      eventTypes?: ActivityEventType[]
-    }
+    opts: ListForEntityOpts
   ): Promise<ActivityEventPage> {
     const limit = Math.min(opts.limit ?? 20, 50)
     return this.repo.listForEntity(entityType, entityId, {

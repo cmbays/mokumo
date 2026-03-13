@@ -3,28 +3,12 @@ import { getQStashReceiver } from '@shared/lib/qstash'
 import { logger } from '@shared/lib/logger'
 import { requestContext } from '@shared/lib/request-context'
 import { jobTypeSchema, jobPayloadSchema } from '@infra/jobs/job-types'
-import { handleInventoryRefresh } from '@infra/jobs/handlers/inventory-refresh.handler'
+import { handlerRegistry } from '@infra/jobs/handler-registry'
 
 // Prevent Next.js from statically optimising this route.
 export const dynamic = 'force-dynamic'
 
 const jobLogger = logger.child({ domain: 'job-handler' })
-
-// ─── Handler registry ──────────────────────────────────────────────────────
-
-type HandlerFn = (data: Record<string, unknown>) => Promise<void>
-
-const handlers: Record<string, HandlerFn> = {
-  'inventory-refresh': handleInventoryRefresh,
-  'cache-warm': async () => {
-    // TODO(M1): implement cache warming
-    jobLogger.info('cache-warm handler: no-op placeholder')
-  },
-  'garment-sync': async () => {
-    // TODO(M1): implement garment sync
-    jobLogger.info('garment-sync handler: no-op placeholder')
-  },
-}
 
 // ─── Signature verification ────────────────────────────────────────────────
 
@@ -109,7 +93,7 @@ export async function POST(
       return Response.json({ error: 'Invalid payload schema' }, { status: 400 })
     }
 
-    const handler = handlers[jobType]
+    const handler = handlerRegistry[jobType]
     if (!handler) {
       handlerLogger.error('No handler registered for job type', { jobType })
       return Response.json({ error: 'No handler for job type' }, { status: 500 })
