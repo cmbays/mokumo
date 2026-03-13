@@ -137,7 +137,14 @@ export async function checkSignInRateLimit(key: string): Promise<{ limited: bool
  */
 export async function checkCronInventorySyncRateLimit(): Promise<{ limited: boolean }> {
   const limiter = getCronSyncLimiter()
-  if (!limiter) return { limited: false } // fail open regardless of environment
+  if (!limiter) {
+    // Intentional fail-open: cron syncs must not be silently blocked by Redis
+    // outages. CRON_SECRET bearer auth is the primary security boundary.
+    rateLimitLogger.warn(
+      'rate_limit.cron_sync.redis_unavailable: Redis not configured — cron sync proceeding without rate limiting'
+    )
+    return { limited: false }
+  }
   try {
     const { success } = await limiter.limit('cron-sync-inventory')
     return { limited: !success }

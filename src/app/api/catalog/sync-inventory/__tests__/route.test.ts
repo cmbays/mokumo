@@ -207,5 +207,11 @@ describe('POST /api/catalog/sync-inventory', () => {
       const body = await response.json()
       expect(body.error).toBe('Internal server error')
     })
+
+    it('does not call revalidateTag when sync throws', async () => {
+      vi.mocked(syncInventoryFromSupplier).mockRejectedValueOnce(new Error('Service error'))
+      await POST(makePostRequest())
+      expect(revalidateTag).not.toHaveBeenCalled()
+    })
   })
 })

@@ -43,13 +43,9 @@ export const GET = withRequestContext(async (request: Request): Promise<Response
     )
   }
 
+  let result: Awaited<ReturnType<typeof syncInventoryFromSupplier>>
   try {
-    const result = await syncInventoryFromSupplier()
-    // Flush the in-stock style IDs cache so the UI reflects the new inventory
-    // within the next 60s (the getInStockStyleIds TTL).
-    const { revalidateTag } = await import('next/cache')
-    revalidateTag('inventory', {})
-    return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
+    result = await syncInventoryFromSupplier()
   } catch (error) {
     syncLogger.error('Inventory sync (cron) failed', {
       error: Error.isError(error) ? error.message : String(error),
@@ -57,6 +53,20 @@ export const GET = withRequestContext(async (request: Request): Promise<Response
     })
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
+
+  // Flush the in-stock style IDs cache so the UI reflects the new inventory
+  // within the next 60s (the getInStockStyleIds TTL). Isolated so a cache
+  // invalidation failure never misreports a successful sync as a 500.
+  try {
+    const { revalidateTag } = await import('next/cache')
+    revalidateTag('inventory', {})
+  } catch (revalidateError) {
+    syncLogger.warn('revalidateTag failed after successful inventory sync (cron)', {
+      error: String(revalidateError),
+    })
+  }
+
+  return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
 })
 
 /**
@@ -80,11 +90,9 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
     return Response.json({ error: auth.error }, { status: auth.status })
   }
 
+  let result: Awaited<ReturnType<typeof syncInventoryFromSupplier>>
   try {
-    const result = await syncInventoryFromSupplier()
-    const { revalidateTag } = await import('next/cache')
-    revalidateTag('inventory', {})
-    return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
+    result = await syncInventoryFromSupplier()
   } catch (error) {
     syncLogger.error('Inventory sync (manual) failed', {
       error: Error.isError(error) ? error.message : String(error),
@@ -92,4 +100,15 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
     })
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
+
+  try {
+    const { revalidateTag } = await import('next/cache')
+    revalidateTag('inventory', {})
+  } catch (revalidateError) {
+    syncLogger.warn('revalidateTag failed after successful inventory sync (manual)', {
+      error: String(revalidateError),
+    })
+  }
+
+  return Response.json({ ...result, timestamp: new Date().toISOString() }, { status: 200 })
 })

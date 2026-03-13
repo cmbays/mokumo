@@ -33,7 +33,7 @@ vi.mock('@upstash/ratelimit', () => {
 
 vi.mock('@shared/lib/redis', () => ({ getRedis: mockGetRedis }))
 
-import { checkAdminSyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
+import { checkAdminSyncRateLimit, checkCronInventorySyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
 
 describe('checkAdminSyncRateLimit', () => {
   beforeEach(() => {
@@ -103,6 +103,72 @@ describe('checkAdminSyncRateLimit', () => {
     it('fails open on Redis errors rather than crashing', async () => {
       mockLimit.mockRejectedValue(new Error('Connection timeout'))
       const result = await checkAdminSyncRateLimit('10.0.0.3')
+      expect(result.limited).toBe(false)
+    })
+  })
+})
+
+describe('checkCronInventorySyncRateLimit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  describe('when Redis is not configured', () => {
+    beforeEach(() => {
+      mockGetRedis.mockReturnValue(null)
+    })
+
+    it('fails open (limited: false) in all environments — no NODE_ENV check unlike admin/signin', async () => {
+      vi.stubEnv('NODE_ENV', 'production')
+      const result = await checkCronInventorySyncRateLimit()
+      expect(result.limited).toBe(false)
+    })
+
+    it('fails open in development too', async () => {
+      vi.stubEnv('NODE_ENV', 'development')
+      const result = await checkCronInventorySyncRateLimit()
+      expect(result.limited).toBe(false)
+    })
+  })
+
+  describe('when Redis is configured', () => {
+    beforeEach(() => {
+      mockGetRedis.mockReturnValue({})
+    })
+
+    it('uses rate_limit:cron_sync_inventory as the Redis key prefix', async () => {
+      mockLimit.mockResolvedValue({ success: true })
+      await checkCronInventorySyncRateLimit()
+      expect(mockRatelimitCtor).toHaveBeenCalledWith(
+        expect.objectContaining({ prefix: 'rate_limit:cron_sync_inventory' })
+      )
+    })
+
+    it('uses a fixed key ("cron-sync-inventory"), not an IP address', async () => {
+      mockLimit.mockResolvedValue({ success: true })
+      await checkCronInventorySyncRateLimit()
+      expect(mockLimit).toHaveBeenCalledWith('cron-sync-inventory')
+    })
+
+    it('returns limited: false when under the rate limit', async () => {
+      mockLimit.mockResolvedValue({ success: true })
+      const result = await checkCronInventorySyncRateLimit()
+      expect(result.limited).toBe(false)
+    })
+
+    it('returns limited: true when the rate limit is exceeded', async () => {
+      mockLimit.mockResolvedValue({ success: false })
+      const result = await checkCronInventorySyncRateLimit()
+      expect(result.limited).toBe(true)
+    })
+
+    it('fails open on Redis errors rather than crashing', async () => {
+      mockLimit.mockRejectedValue(new Error('Connection timeout'))
+      const result = await checkCronInventorySyncRateLimit()
       expect(result.limited).toBe(false)
     })
   })
