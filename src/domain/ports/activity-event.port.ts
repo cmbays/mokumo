@@ -20,6 +20,7 @@ export const activityEventTypeSchema = z.enum([
   'payment_recorded',
   'approved',
   'rejected',
+  'converted',
 ])
 
 export const activityEventActorTypeSchema = z.enum(['staff', 'system', 'customer'])

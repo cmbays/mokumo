@@ -13,6 +13,7 @@ const EVENT_TYPE_LABELS: Record<ActivityEventType, string> = {
   payment_recorded: 'Payment recorded',
   approved: 'Approved',
   rejected: 'Rejected',
+  converted: 'Converted',
 }
 
 const EVENT_TYPE_DOT_COLORS: Record<ActivityEventType, string> = {
@@ -25,6 +26,7 @@ const EVENT_TYPE_DOT_COLORS: Record<ActivityEventType, string> = {
   payment_recorded: 'bg-success',
   approved: 'bg-success',
   rejected: 'bg-destructive',
+  converted: 'bg-action',
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

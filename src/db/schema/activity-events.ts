@@ -29,6 +29,7 @@ export const activityEventTypeEnum = pgEnum('activity_event_type', [
   'payment_recorded',
   'approved',
   'rejected',
+  'converted',
 ])
 
 export const activityEventActorTypeEnum = pgEnum('activity_event_actor_type', [
