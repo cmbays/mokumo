@@ -3,18 +3,9 @@ import { cn } from '@shared/lib/cn'
 import { DollarSign, ShoppingBag, TrendingUp, Clock, Users } from 'lucide-react'
 import { MoneyAmount } from '@shared/ui/organisms/MoneyAmount'
 import { money, toNumber, formatCompactMoney } from '@domain/lib/money'
+import type { CustomerStats } from '@features/customers/lib/customer-stats'
 
-export type CustomerStats = {
-  lifetimeRevenue: number
-  totalOrders: number
-  avgOrderValue: number
-  lastOrderDate: string | null
-  referralCount?: number
-  /** Customer credit limit — undefined = no limit, bar not shown */
-  creditLimit?: number
-  /** Outstanding balance (sum of unpaid invoices) — 0 until Wave 2a */
-  outstandingBalance?: number
-}
+export type { CustomerStats }
 
 type CustomerQuickStatsProps = {
   stats: CustomerStats
