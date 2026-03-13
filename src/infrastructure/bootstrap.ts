@@ -96,7 +96,7 @@ export {
 
 export { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
 
-export { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
+export { getStyleInventory, getStylesInventory, getColorInventory, getInStockStyleIds } from './repositories/inventory'
 
 export { fileUploadService } from './storage'
 
@@ -175,7 +175,12 @@ import {
   getDtfSheetTiers,
 } from './repositories/settings'
 import { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
-import { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
+import {
+  getStyleInventory,
+  getStylesInventory,
+  getColorInventory,
+  getInStockStyleIds,
+} from './repositories/inventory'
 import { supabaseCustomerActivityRepository } from './repositories/_providers/supabase/customer-activity'
 
 const _portChecks = {
@@ -267,6 +272,7 @@ const _portChecks = {
     getForStyle: getStyleInventory,
     getForStyles: getStylesInventory,
     getForColor: getColorInventory,
+    getInStockStyleIds: getInStockStyleIds,
   } satisfies IInventoryRepository,
 
   customerActivity: {

@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
-import { eq, inArray } from 'drizzle-orm'
+import { eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import { catalogInventory, catalogColors } from '@db/schema/catalog-normalized'
 import { logger } from '@shared/lib/logger'
@@ -115,6 +115,26 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
       return result
     } catch (error) {
       log.error('getForStyles failed', { styleIds: validIds, error })
+      throw error
+    }
+  }
+
+  /**
+   * Returns UUIDs of all catalog styles that have at least one in-stock size (quantity > 0).
+   * Used for the catalog "show in-stock only" filter toggle.
+   * No input needed — queries from the inventory side, not the style side.
+   * This eliminates the N-style IN clause and allows parallel execution with getCatalogStylesSlim.
+   */
+  async getInStockStyleIds(): Promise<string[]> {
+    try {
+      const rows = await db
+        .selectDistinct({ styleId: catalogColors.styleId })
+        .from(catalogInventory)
+        .innerJoin(catalogColors, eq(catalogInventory.colorId, catalogColors.id))
+        .where(gt(catalogInventory.quantity, 0))
+      return rows.map((r) => r.styleId)
+    } catch (error) {
+      log.error('getInStockStyleIds failed', { error })
       throw error
     }
   }

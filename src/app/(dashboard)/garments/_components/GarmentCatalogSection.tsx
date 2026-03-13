@@ -11,11 +11,13 @@ import 'server-only'
  *
  * Payload split (issue #642):
  *   Tier 1 — getCatalogStylesSlim()      : ~1.2 MB, cached 60s per shopId
- *   Tier 1 supplement — getCatalogColorSupplement(): ~50-100 ms, not cached (no images)
+ *   Tier 1 supplement — getCatalogColorSupplement(): cached 1h (global, not shop-scoped)
+ *   Tier 1 inventory  — getInStockStyleIds(): style IDs with stock, cached 60s (tag: inventory)
  *   Tier 2 — fetchStyleDetail() Server Action: on drawer open, per-style, ~10-50 ms
  *
- * Both Tier 1 queries run in parallel via Promise.all so supplement latency is hidden
- * behind the cached Tier 1 fetch on warm loads.
+ * All Tier 1 queries run in a single Promise.all — no sequential waterfalls (fix for #812).
+ * getInStockStyleIds() queries from the inventory side (no input), so it needs no dependency
+ * on styleMetas and can run in parallel instead of after the first batch.
  *
  * Dynamic imports: actions and session transitively import db.ts which throws at
  * module-evaluation time if DATABASE_URL is absent (e.g. during Next.js build).
@@ -47,41 +49,56 @@ export async function GarmentCatalogSection({
   const { getColorFavorites } = await import('../actions')
   const { getColorGroupFavorites } = await import('../favorites/actions')
 
-  // Tier 1 (cached 60s) + supplement (fast, uncached) run in parallel with favorites
-  const [styleMetas, supplementRows, initialFavoriteColorIds, initialFavoriteColorGroupNames] =
-    await Promise.all([
-      getCatalogStylesSlim().catch((err: unknown) => {
-        sectionLogger.error('getCatalogStylesSlim failed — rendering without style metadata', {
-          err,
+  // All slow data runs in parallel — including inventory.
+  // getInStockStyleIds() queries from the inventory side (no input needed), so it
+  // no longer depends on styleMetas and can join this batch instead of being sequential.
+  const [
+    styleMetas,
+    supplementRows,
+    initialFavoriteColorIds,
+    initialFavoriteColorGroupNames,
+    inStockStyleIds,
+  ] = await Promise.all([
+    getCatalogStylesSlim().catch((err: unknown) => {
+      sectionLogger.error('getCatalogStylesSlim failed — rendering without style metadata', {
+        err,
+      })
+      return [] as Awaited<ReturnType<typeof getCatalogStylesSlim>>
+    }),
+    getCatalogColorSupplement().catch((err: unknown) => {
+      sectionLogger.error(
+        'getCatalogColorSupplement failed — color filter and swatches unavailable',
+        { err }
+      )
+      return [] as Awaited<ReturnType<typeof getCatalogColorSupplement>>
+    }),
+    session
+      ? getColorFavorites('shop', session.shopId).catch((err: unknown) => {
+          sectionLogger.error('getColorFavorites failed — rendering without favorites', {
+            err,
+            shopId: session.shopId,
+          })
+          return [] as string[]
         })
-        return [] as Awaited<ReturnType<typeof getCatalogStylesSlim>>
+      : Promise.resolve([] as string[]),
+    session
+      ? getColorGroupFavorites(session.shopId).catch((err: unknown) => {
+          sectionLogger.error(
+            'getColorGroupFavorites failed — rendering without group favorites',
+            { err, shopId: session.shopId }
+          )
+          return [] as string[]
+        })
+      : Promise.resolve([] as string[]),
+    // Dynamic import: @infra/repositories/inventory creates a SupabaseInventoryRepository
+    // at module evaluation time, which eagerly reads DATABASE_URL. Defer to request time.
+    import('@infra/repositories/inventory')
+      .then(({ getInStockStyleIds }) => getInStockStyleIds())
+      .catch((err: unknown) => {
+        sectionLogger.error('getInStockStyleIds failed — in-stock filter unavailable', { err })
+        return [] as string[]
       }),
-      getCatalogColorSupplement().catch((err: unknown) => {
-        sectionLogger.error(
-          'getCatalogColorSupplement failed — color filter and swatches unavailable',
-          { err }
-        )
-        return [] as Awaited<ReturnType<typeof getCatalogColorSupplement>>
-      }),
-      session
-        ? getColorFavorites('shop', session.shopId).catch((err: unknown) => {
-            sectionLogger.error('getColorFavorites failed — rendering without favorites', {
-              err,
-              shopId: session.shopId,
-            })
-            return [] as string[]
-          })
-        : Promise.resolve([] as string[]),
-      session
-        ? getColorGroupFavorites(session.shopId).catch((err: unknown) => {
-            sectionLogger.error(
-              'getColorGroupFavorites failed — rendering without group favorites',
-              { err, shopId: session.shopId }
-            )
-            return [] as string[]
-          })
-        : Promise.resolve([] as string[]),
-    ])
+  ])
 
   const {
     styleSwatches,
@@ -96,30 +113,6 @@ export async function GarmentCatalogSection({
     const bFav = favoriteSet.has(b.colorGroupName) ? 0 : 1
     return aFav - bFav
   })
-
-  // Inventory data for the "show in-stock only" filter toggle.
-  // Runs after styleMetas resolves (which is cached at 60s, so ~1ms on warm loads).
-  // Returns the set of catalog_styles UUIDs that have totalQuantity > 0.
-  //
-  // Dynamic import: @infra/repositories/inventory creates a SupabaseInventoryRepository
-  // at module evaluation time (const repo = new Repo()), which eagerly reads DATABASE_URL.
-  // Top-level import would throw during Next.js build-time config collection when DATABASE_URL
-  // is absent. Dynamic import defers module evaluation to request time (same pattern used for
-  // actions/session below).
-  const styleIds = styleMetas.map((m) => m.id)
-  const emptyMap = new Map<string, import('@domain/entities/inventory-level').StyleInventory>()
-  const inventoryMap =
-    styleIds.length > 0
-      ? await import('@infra/repositories/inventory')
-          .then(({ getStylesInventory }) => getStylesInventory(styleIds))
-          .catch((err: unknown) => {
-            sectionLogger.error('getStylesInventory failed — in-stock filter unavailable', { err })
-            return emptyMap
-          })
-      : emptyMap
-  const inStockStyleIds = [...inventoryMap.entries()]
-    .filter(([, inv]) => inv.totalQuantity > 0)
-    .map(([id]) => id)
 
   return (
     <GarmentCatalogClient
