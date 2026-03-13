@@ -64,7 +64,7 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
       <div className="flex items-start gap-3">
         {/* Name + badges — wrappable flex-1 group */}
         <div className="flex-1 min-w-0 flex items-center flex-wrap gap-3">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight shrink-0">
+          <h1 className="text-3xl font-black text-foreground tracking-tight shrink-0">
             {customer.company}
           </h1>
 
