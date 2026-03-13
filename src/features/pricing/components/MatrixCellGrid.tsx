@@ -9,7 +9,7 @@
  * All cell value arithmetic flows through big.js via money() — no native JS
  * floating-point operators on monetary values.
  *
- * The six module-level functions below are exported for unit testing.
+ * Pure computation functions are in the sibling MatrixCellGrid.utils.ts file.
  */
 
 import { useState, useRef, useEffect } from 'react'

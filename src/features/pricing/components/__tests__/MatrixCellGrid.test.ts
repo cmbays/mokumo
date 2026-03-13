@@ -389,7 +389,12 @@ describe('getUniqueQtyAnchors', () => {
   })
 
   it('deduplicates qty anchors that appear in multiple columns', () => {
-    const cells = [makeCell(24, 1, 5), makeCell(24, 2, 4.5), makeCell(48, 1, 4), makeCell(48, 2, 3.5)]
+    const cells = [
+      makeCell(24, 1, 5),
+      makeCell(24, 2, 4.5),
+      makeCell(48, 1, 4),
+      makeCell(48, 2, 3.5),
+    ]
     expect(getUniqueQtyAnchors(cells)).toEqual([24, 48])
   })
 

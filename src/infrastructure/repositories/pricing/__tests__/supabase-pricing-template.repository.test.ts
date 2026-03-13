@@ -274,12 +274,16 @@ describe('SupabasePricingTemplateRepository', () => {
 
   describe('upsertMatrixCells', () => {
     it('throws for an invalid templateId without calling DB', async () => {
-      await expect(repo.upsertMatrixCells('bad-id', SHOP_UUID, [])).rejects.toThrow('invalid templateId')
+      await expect(repo.upsertMatrixCells('bad-id', SHOP_UUID, [])).rejects.toThrow(
+        'invalid templateId'
+      )
       expect(mockTransaction).not.toHaveBeenCalled()
     })
 
     it('throws for an invalid shopId without calling DB', async () => {
-      await expect(repo.upsertMatrixCells(TEMPLATE_UUID, 'bad-shop', [])).rejects.toThrow('invalid shopId')
+      await expect(repo.upsertMatrixCells(TEMPLATE_UUID, 'bad-shop', [])).rejects.toThrow(
+        'invalid shopId'
+      )
       expect(mockTransaction).not.toHaveBeenCalled()
     })
 
@@ -296,7 +300,11 @@ describe('SupabasePricingTemplateRepository', () => {
     it('returns false when template belongs to a different shop', async () => {
       // The ownership SELECT with shopId filter returns empty — wrong shop = not found
       mockWhere.mockResolvedValueOnce([])
-      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, '00000000-0000-4000-8000-000000009999', [])
+      const result = await repo.upsertMatrixCells(
+        TEMPLATE_UUID,
+        '00000000-0000-4000-8000-000000009999',
+        []
+      )
       expect(result).toBe(false)
       expect(mockDelete).not.toHaveBeenCalled()
       // TOCTOU guard: and() must be called to include shopId in the ownership WHERE clause
