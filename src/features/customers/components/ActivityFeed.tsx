@@ -113,16 +113,18 @@ export function ActivityFeed({
   const [activeFilter, setActiveFilter] = React.useState<ActivitySource | 'all'>('all')
   const [loadingMore, setLoadingMore] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
-  const isFirstRender = React.useRef(true)
+  const effectTokenRef = React.useRef(0)
+  const isInitialMount = React.useRef(true)
 
   // When filter changes, re-fetch from scratch (no cursor).
   // Skip initial mount — SSR already provides the first page of activities.
+  // Uses effectTokenRef to handle React Strict Mode double-mount and rapid filter changes.
   React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
+    if (isInitialMount.current) {
+      isInitialMount.current = false
       return
     }
-    let cancelled = false
+    const token = ++effectTokenRef.current
 
     async function refetch() {
       setLoadingMore(true)
@@ -135,7 +137,7 @@ export function ActivityFeed({
         limit: 20,
       })
 
-      if (cancelled) return
+      if (token !== effectTokenRef.current) return
 
       setLoadingMore(false)
 
@@ -149,10 +151,6 @@ export function ActivityFeed({
     }
 
     refetch()
-
-    return () => {
-      cancelled = true
-    }
   }, [activeFilter, customerId, onLoadMore])
 
   async function handleLoadMore() {
