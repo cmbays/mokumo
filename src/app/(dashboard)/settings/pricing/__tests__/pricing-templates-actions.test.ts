@@ -248,6 +248,12 @@ describe('createPricingTemplate', () => {
     const result = await createPricingTemplate(CREATE_DATA)
     expect(result).toEqual({ data: TEMPLATE_ROW, error: null })
   })
+
+  it('returns error envelope when repo throws', async () => {
+    mockUpsertTemplate.mockRejectedValueOnce(new Error('DB error'))
+    const result = await createPricingTemplate(CREATE_DATA)
+    expect(result).toEqual({ data: null, error: 'Failed to create pricing template' })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -283,6 +289,12 @@ describe('updatePricingTemplate', () => {
     expect(mockUpsertTemplate).toHaveBeenCalledWith(
       expect.objectContaining({ id: TEMPLATE_ID, shopId: SHOP_ID, name: 'Updated Name' })
     )
+  })
+
+  it('returns error envelope when repo throws', async () => {
+    mockUpsertTemplate.mockRejectedValueOnce(new Error('DB error'))
+    const result = await updatePricingTemplate(TEMPLATE_ID, UPDATE_DATA)
+    expect(result).toEqual({ data: null, error: 'Failed to update pricing template' })
   })
 })
 
@@ -435,6 +447,12 @@ describe('getMarkupRules', () => {
     expect(mockGetMarkupRules).toHaveBeenCalledWith(SHOP_ID)
     expect(result).toEqual({ data: rules, error: null })
   })
+
+  it('returns error envelope when repo throws', async () => {
+    mockGetMarkupRules.mockRejectedValueOnce(new Error('DB error'))
+    const result = await getMarkupRules()
+    expect(result).toEqual({ data: null, error: 'Failed to load markup rules' })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -496,6 +514,12 @@ describe('getRushTiers', () => {
     const result = await getRushTiers()
     expect(mockGetRushTiers).toHaveBeenCalledWith(SHOP_ID)
     expect(result).toEqual({ data: tiers, error: null })
+  })
+
+  it('returns error envelope when repo throws', async () => {
+    mockGetRushTiers.mockRejectedValueOnce(new Error('DB error'))
+    const result = await getRushTiers()
+    expect(result).toEqual({ data: null, error: 'Failed to load rush tiers' })
   })
 })
 

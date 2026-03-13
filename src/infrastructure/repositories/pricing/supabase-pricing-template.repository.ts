@@ -147,9 +147,13 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
     shopId: string,
     cells: PrintCostMatrixCellInsert[]
   ): Promise<boolean> {
-    if (!isValidUuid(templateId) || !isValidUuid(shopId)) {
-      log.warn('upsertMatrixCells called with invalid templateId or shopId', { templateId, shopId })
-      return false
+    if (!isValidUuid(templateId)) {
+      log.warn('upsertMatrixCells called with invalid templateId', { templateId })
+      throw new Error('upsertMatrixCells: invalid templateId')
+    }
+    if (!isValidUuid(shopId)) {
+      log.warn('upsertMatrixCells called with invalid shopId', { shopId })
+      throw new Error('upsertMatrixCells: invalid shopId')
     }
     try {
       let ownershipVerified = false

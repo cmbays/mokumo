@@ -171,7 +171,10 @@ export async function savePricingMatrix(
 
   try {
     const found = await upsertMatrixCells(templateId, session.shopId, cells)
-    if (!found) return err('Template not found')
+    if (!found) {
+      log.warn('savePricingMatrix: template not found or wrong shop', { templateId })
+      return err('Template not found')
+    }
     return ok(null)
   } catch (error) {
     log.error('savePricingMatrix failed', { templateId, error })

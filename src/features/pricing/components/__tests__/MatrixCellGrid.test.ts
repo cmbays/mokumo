@@ -98,6 +98,13 @@ describe('addQtyRow', () => {
     expect(newCell.id.length).toBeGreaterThan(0)
     expect(newCell.templateId).toBe(TEMPLATE_ID)
   })
+
+  it('is idempotent — returns unchanged array when qtyAnchor already exists', () => {
+    const cells = [makeCell(24, 1, 5.0)]
+    const result = addQtyRow(cells, 24)
+    expect(result).toHaveLength(1)
+    expect(result).toEqual(cells)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -158,6 +165,13 @@ describe('addColorColumn', () => {
     const result = addColorColumn(cells, 2)
     const newCell = result.find((c) => c.colorCount === 2)!
     expect(newCell.templateId).toBe(TEMPLATE_ID)
+  })
+
+  it('is idempotent — returns unchanged array when colorCount already exists', () => {
+    const cells = [makeCell(24, 1, 5.0)]
+    const result = addColorColumn(cells, 1)
+    expect(result).toHaveLength(1)
+    expect(result).toEqual(cells)
   })
 })
 
@@ -306,6 +320,12 @@ describe('computeTintLevel', () => {
     expect(moneySpy).toHaveBeenCalled()
   })
 
+  it('returns 0.5 for a single filled cell (range is 0, same as all-same-price)', () => {
+    const cells = [makeCell(24, 1, 3.0)]
+    const tints = computeTintLevel(cells)
+    expect(tints.get(cellKey(24, 1))).toBe(0.5)
+  })
+
   it('handles floating-point edge values without precision errors', () => {
     // 0.1 + 0.2 = 0.30000000000000004 in native JS; big.js should handle gracefully
     const cells = [
@@ -445,5 +465,17 @@ describe('formatCost', () => {
 
   it('formats values that would need thousands separators correctly', () => {
     expect(formatCost(1500)).toBe('$1,500.00')
+  })
+
+  it('returns em dash for NaN', () => {
+    expect(formatCost(NaN)).toBe('—')
+  })
+
+  it('formats 0.001 as $0.00 — sub-cent value passes guard but rounds to zero', () => {
+    expect(formatCost(0.001)).toBe('$0.00')
+  })
+
+  it('formats 0.005 as $0.01 — rounds up to first cent via big.js half-up', () => {
+    expect(formatCost(0.005)).toBe('$0.01')
   })
 })

@@ -273,15 +273,13 @@ describe('SupabasePricingTemplateRepository', () => {
   // ─── upsertMatrixCells ────────────────────────────────────────────────────
 
   describe('upsertMatrixCells', () => {
-    it('returns false for an invalid templateId without calling DB', async () => {
-      const result = await repo.upsertMatrixCells('bad-id', SHOP_UUID, [])
-      expect(result).toBe(false)
+    it('throws for an invalid templateId without calling DB', async () => {
+      await expect(repo.upsertMatrixCells('bad-id', SHOP_UUID, [])).rejects.toThrow('invalid templateId')
       expect(mockTransaction).not.toHaveBeenCalled()
     })
 
-    it('returns false for an invalid shopId without calling DB', async () => {
-      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, 'bad-shop', [])
-      expect(result).toBe(false)
+    it('throws for an invalid shopId without calling DB', async () => {
+      await expect(repo.upsertMatrixCells(TEMPLATE_UUID, 'bad-shop', [])).rejects.toThrow('invalid shopId')
       expect(mockTransaction).not.toHaveBeenCalled()
     })
 
@@ -291,6 +289,8 @@ describe('SupabasePricingTemplateRepository', () => {
       expect(result).toBe(false)
       expect(mockDelete).not.toHaveBeenCalled()
       expect(mockInsert).not.toHaveBeenCalled()
+      // TOCTOU guard: and() must be called to include shopId in the ownership WHERE clause
+      expect(mockAnd).toHaveBeenCalledTimes(1)
     })
 
     it('returns false when template belongs to a different shop', async () => {
@@ -299,6 +299,8 @@ describe('SupabasePricingTemplateRepository', () => {
       const result = await repo.upsertMatrixCells(TEMPLATE_UUID, '00000000-0000-4000-8000-000000009999', [])
       expect(result).toBe(false)
       expect(mockDelete).not.toHaveBeenCalled()
+      // TOCTOU guard: and() must be called to include shopId in the ownership WHERE clause
+      expect(mockAnd).toHaveBeenCalledTimes(1)
     })
 
     it('returns true and deletes+inserts in a transaction when ownership check passes', async () => {
@@ -308,7 +310,11 @@ describe('SupabasePricingTemplateRepository', () => {
       expect(result).toBe(true)
       expect(mockTransaction).toHaveBeenCalled()
       expect(mockDelete).toHaveBeenCalled()
+      expect(mockDeleteWhere).toHaveBeenCalled()
       expect(mockInsert).toHaveBeenCalled()
+      expect(mockInsertValues).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ templateId: TEMPLATE_UUID })])
+      )
     })
 
     it('returns true and only deletes (no insert) when cells array is empty', async () => {
@@ -317,7 +323,13 @@ describe('SupabasePricingTemplateRepository', () => {
       expect(result).toBe(true)
       expect(mockTransaction).toHaveBeenCalled()
       expect(mockDelete).toHaveBeenCalled()
+      expect(mockDeleteWhere).toHaveBeenCalled()
       expect(mockInsert).not.toHaveBeenCalled()
+    })
+
+    it('throws when the transaction throws', async () => {
+      mockTransaction.mockRejectedValueOnce(new Error('TX error'))
+      await expect(repo.upsertMatrixCells(TEMPLATE_UUID, SHOP_UUID, [])).rejects.toThrow('TX error')
     })
   })
 
