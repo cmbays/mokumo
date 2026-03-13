@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import { playwright } from '@vitest/browser-playwright'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore -- quickpickle types may lag behind vitest 4
+// @ts-expect-error -- quickpickle types may lag behind vitest 4; remove when quickpickle ships vitest 4 types
 import { quickpickle } from 'quickpickle'
 
 const dirname =
