@@ -175,7 +175,12 @@ export function ContactHierarchy({ customer }: ContactHierarchyProps) {
         <p className="text-xs text-muted-foreground mb-4">
           Add your first contact for this customer.
         </p>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddContactOpen(true)}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setAddContactOpen(true)}
+        >
           <UserPlus className="h-4 w-4" />
           Add Contact
         </Button>
@@ -183,7 +188,6 @@ export function ContactHierarchy({ customer }: ContactHierarchyProps) {
           customerId={customer.id}
           open={addContactOpen}
           onOpenChange={setAddContactOpen}
-          groups={groups}
         />
       </div>
     )
@@ -247,7 +251,6 @@ export function ContactHierarchy({ customer }: ContactHierarchyProps) {
         customerId={customer.id}
         open={addContactOpen}
         onOpenChange={setAddContactOpen}
-        groups={groups}
       />
       <AddGroupSheet open={addGroupOpen} onOpenChange={setAddGroupOpen} />
     </div>

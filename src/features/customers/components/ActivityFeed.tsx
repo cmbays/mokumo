@@ -136,27 +136,37 @@ export function ActivityFeed({
       setLoadingMore(true)
       setLoadError(null)
 
-      const result = await onLoadMore({
-        customerId,
-        cursor: null,
-        source: activeFilter === 'all' ? null : activeFilter,
-        limit: 20,
-      })
+      try {
+        const result = await onLoadMore({
+          customerId,
+          cursor: null,
+          source: activeFilter === 'all' ? null : activeFilter,
+          limit: 20,
+        })
 
-      if (token !== effectTokenRef.current) return
+        if (token !== effectTokenRef.current) return
 
-      setLoadingMore(false)
-
-      if (result.ok) {
-        setActivities(result.value.items)
-        setHasMore(result.value.hasMore)
-        setNextCursor(result.value.nextCursor)
-      } else {
-        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
+        if (result.ok) {
+          setActivities(result.value.items)
+          setHasMore(result.value.hasMore)
+          setNextCursor(result.value.nextCursor)
+        } else {
+          setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
+        }
+      } catch {
+        if (token !== effectTokenRef.current) return
+        setLoadError(ACTIVITY_ERROR_MESSAGES.INTERNAL_ERROR)
+      } finally {
+        if (token === effectTokenRef.current) {
+          setLoadingMore(false)
+        }
       }
     }
 
     refetch()
+    return () => {
+      effectTokenRef.current += 1
+    }
   }, [activeFilter, customerId, onLoadMore])
 
   async function handleLoadMore() {

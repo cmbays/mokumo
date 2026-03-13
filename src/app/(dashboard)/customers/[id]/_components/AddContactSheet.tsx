@@ -24,13 +24,11 @@ import {
 import { CONTACT_ROLE_LABELS } from '@domain/constants'
 import { contactRoleEnum } from '@domain/entities/contact'
 import { createContact } from '../../actions/contact.actions'
-import type { Group } from '@domain/entities/group'
 
 type AddContactSheetProps = {
   customerId: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  groups: Group[]
 }
 
 // contactRoleEnum includes 'owner' and 'other' which are not accepted by contactInputSchema.
@@ -40,43 +38,47 @@ const SUBMITTABLE_ROLES = contactRoleEnum.options.filter(
     r === 'ordering' || r === 'billing' || r === 'art-approver' || r === 'primary'
 )
 
-export function AddContactSheet({ customerId, open, onOpenChange, groups }: AddContactSheetProps) {
+export function AddContactSheet({ customerId, open, onOpenChange }: AddContactSheetProps) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<string>('ordering')
-  const [groupId, setGroupId] = useState<string>('none')
   const [isPrimary, setIsPrimary] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleAdd() {
     setSubmitting(true)
-    const result = await createContact({
-      customerId,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
-      // Single-select role wrapped as array to match the port schema (contacts can hold multiple roles)
-      role: [role as 'ordering' | 'billing' | 'art-approver' | 'primary'],
-      isPrimary,
-      portalAccess: false,
-      canApproveProofs: isPrimary,
-      canPlaceOrders: false,
-    })
-    setSubmitting(false)
+    try {
+      const result = await createContact({
+        customerId,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        // Single-select role wrapped as array to match the port schema (contacts can hold multiple roles)
+        role: [role as 'ordering' | 'billing' | 'art-approver' | 'primary'],
+        isPrimary,
+        portalAccess: false,
+        canApproveProofs: isPrimary,
+        canPlaceOrders: false,
+      })
 
-    if (result.ok) {
-      toast.success('Contact added')
-      resetForm()
-      onOpenChange(false)
-    } else {
-      toast.error(
-        result.error === 'VALIDATION'
-          ? 'Please check the form fields.'
-          : 'Failed to add contact. Please try again.'
-      )
+      if (result.ok) {
+        toast.success('Contact added')
+        resetForm()
+        onOpenChange(false)
+      } else {
+        toast.error(
+          result.error === 'VALIDATION'
+            ? 'Please check the form fields.'
+            : 'Failed to add contact. Please try again.'
+        )
+      }
+    } catch {
+      toast.error('Failed to add contact. Please try again.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -86,7 +88,6 @@ export function AddContactSheet({ customerId, open, onOpenChange, groups }: AddC
     setEmail('')
     setPhone('')
     setRole('ordering')
-    setGroupId('none')
     setIsPrimary(false)
   }
 
@@ -172,25 +173,6 @@ export function AddContactSheet({ customerId, open, onOpenChange, groups }: AddC
               </SelectContent>
             </Select>
           </div>
-
-          {groups.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="contact-group">Group</Label>
-              <Select value={groupId} onValueChange={setGroupId}>
-                <SelectTrigger className="w-full" aria-label="Contact group">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No group</SelectItem>
-                  {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <Checkbox
