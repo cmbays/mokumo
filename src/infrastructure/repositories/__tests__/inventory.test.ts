@@ -30,7 +30,12 @@ vi.mock('../inventory/supabase-inventory.repository', () => ({
   }),
 }))
 
-import { getStyleInventory, getStylesInventory, getColorInventory, getInStockStyleIds } from '../inventory'
+import {
+  getStyleInventory,
+  getStylesInventory,
+  getColorInventory,
+  getInStockStyleIds,
+} from '../inventory'
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001'
 

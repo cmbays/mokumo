@@ -83,10 +83,10 @@ export async function GarmentCatalogSection({
       : Promise.resolve([] as string[]),
     session
       ? getColorGroupFavorites(session.shopId).catch((err: unknown) => {
-          sectionLogger.error(
-            'getColorGroupFavorites failed — rendering without group favorites',
-            { err, shopId: session.shopId }
-          )
+          sectionLogger.error('getColorGroupFavorites failed — rendering without group favorites', {
+            err,
+            shopId: session.shopId,
+          })
           return [] as string[]
         })
       : Promise.resolve([] as string[]),

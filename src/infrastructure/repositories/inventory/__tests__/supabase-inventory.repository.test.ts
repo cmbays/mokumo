@@ -18,7 +18,9 @@ vi.mock('@shared/lib/logger', () => ({
     child: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() }),
   },
 }))
-vi.mock('@shared/lib/supabase/db', () => ({ db: { select: mockSelect, selectDistinct: mockSelectDistinct } }))
+vi.mock('@shared/lib/supabase/db', () => ({
+  db: { select: mockSelect, selectDistinct: mockSelectDistinct },
+}))
 
 import { SupabaseInventoryRepository } from '../supabase-inventory.repository'
 

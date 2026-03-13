@@ -96,7 +96,12 @@ export {
 
 export { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
 
-export { getStyleInventory, getStylesInventory, getColorInventory, getInStockStyleIds } from './repositories/inventory'
+export {
+  getStyleInventory,
+  getStylesInventory,
+  getColorInventory,
+  getInStockStyleIds,
+} from './repositories/inventory'
 
 export { fileUploadService } from './storage'
 
@@ -272,7 +277,7 @@ const _portChecks = {
     getForStyle: getStyleInventory,
     getForStyles: getStylesInventory,
     getForColor: getColorInventory,
-    getInStockStyleIds: getInStockStyleIds,
+    getInStockStyleIds,
   } satisfies IInventoryRepository,
 
   customerActivity: {

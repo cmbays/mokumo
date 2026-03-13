@@ -2,7 +2,11 @@ import 'server-only'
 import { syncInventoryFromSupplier } from '@infra/services/inventory-sync.service'
 import { validateAdminSecret } from '@shared/lib/admin-auth'
 import { logger } from '@shared/lib/logger'
-import { checkAdminSyncRateLimit, checkCronInventorySyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
+import {
+  checkAdminSyncRateLimit,
+  checkCronInventorySyncRateLimit,
+  getClientIp,
+} from '@shared/lib/rate-limit'
 import { withRequestContext } from '@shared/lib/request-context'
 
 // Prevent Next.js from statically optimising this route — cron jobs need fresh data.

@@ -29,7 +29,7 @@ export async function getColorInventory(colorId: string): Promise<InventoryLevel
  * with getCatalogStylesSlim in GarmentCatalogSection.
  */
 const _fetchInStockStyleIds = unstable_cache(
-  async (): Promise<string[]> => repo.getInStockStyleIds(),
+  () => repo.getInStockStyleIds(),
   ['inventory-in-stock-ids'],
   { revalidate: 60, tags: ['inventory'] }
 )

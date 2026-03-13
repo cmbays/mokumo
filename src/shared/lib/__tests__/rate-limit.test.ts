@@ -33,7 +33,11 @@ vi.mock('@upstash/ratelimit', () => {
 
 vi.mock('@shared/lib/redis', () => ({ getRedis: mockGetRedis }))
 
-import { checkAdminSyncRateLimit, checkCronInventorySyncRateLimit, getClientIp } from '@shared/lib/rate-limit'
+import {
+  checkAdminSyncRateLimit,
+  checkCronInventorySyncRateLimit,
+  getClientIp,
+} from '@shared/lib/rate-limit'
 
 describe('checkAdminSyncRateLimit', () => {
   beforeEach(() => {
