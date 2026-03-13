@@ -116,6 +116,18 @@ const eslintConfig = defineConfig([
         },
       ],
     },
+  }, // Pre-existing boundary violations — baselined here (matches .dependency-cruiser-known-violations.json).
+  // Fix these files to remove this override; do not add new entries.
+  {
+    files: [
+      'src/domain/entities/garment.ts', // domain → db
+      'src/features/pricing/components/RushTierEditor.tsx', // features → app
+      'src/features/pricing/components/GarmentMarkupEditor.tsx', // features → app
+      'src/features/artwork/components/ArtworkLibraryClient.tsx', // features → app, features → db
+    ],
+    rules: {
+      'boundaries/element-types': 'off',
+    },
   }, // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

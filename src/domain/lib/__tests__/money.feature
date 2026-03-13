@@ -10,7 +10,7 @@ Feature: Money arithmetic
       When I convert to a fixed decimal
       Then the result is "100.00"
 
-    Scenario: Fractional cents preserve internal precision
+    Scenario: Fractional cents round correctly on output
       Given a monetary value of 1.005
       When I convert to a fixed decimal
       Then the result is "1.01"
