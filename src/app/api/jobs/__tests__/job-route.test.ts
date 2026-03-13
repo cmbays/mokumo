@@ -64,6 +64,10 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 // ─── Signature verification ───────────────────────────────────────────────
 
 describe('POST /api/jobs/[jobType] — signature verification', () => {
@@ -75,7 +79,6 @@ describe('POST /api/jobs/[jobType] — signature verification', () => {
     const res = await POST(req, { params: Promise.resolve({ jobType: 'inventory-refresh' }) })
 
     expect(res.status).toBe(401)
-    vi.unstubAllEnvs()
   })
 
   it('allows through when receiver is null in development', async () => {
@@ -87,7 +90,6 @@ describe('POST /api/jobs/[jobType] — signature verification', () => {
     const res = await POST(req, { params: Promise.resolve({ jobType: 'inventory-refresh' }) })
 
     expect(res.status).toBe(200)
-    vi.unstubAllEnvs()
   })
 
   it('returns 401 when signature verification fails', async () => {
