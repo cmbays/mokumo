@@ -13,6 +13,12 @@ type GarmentImageProps = {
   className?: string
   /** Real garment photo URL (from catalog_images). When provided, shown with fallback to Shirt icon on error. */
   imageUrl?: string
+  /** Fill the positioned parent container instead of using fixed dimensions. Pair with sizes. */
+  fill?: boolean
+  /** Responsive sizes hint for fill images — tells Next.js the rendered CSS width at each breakpoint. */
+  sizes?: string
+  /** Eagerly load without lazy deferral. Set true on the first visible cards to avoid a blurry LCP. */
+  priority?: boolean
 }
 
 const SIZE_CLASSES = {
@@ -31,6 +37,9 @@ export function GarmentImage({
   size = 'md',
   className,
   imageUrl,
+  fill = false,
+  sizes,
+  priority = false,
 }: GarmentImageProps) {
   const [imgError, setImgError] = useState(false)
   const showImage = imageUrl && !imgError
@@ -39,21 +48,35 @@ export function GarmentImage({
     <div
       className={cn(
         'flex flex-col items-center justify-center rounded-md bg-surface text-muted-foreground',
-        SIZE_CLASSES[size],
+        !fill && SIZE_CLASSES[size],
+        fill && 'relative w-full h-full',
         className
       )}
       role="img"
       aria-label={`${brand} ${sku} — ${name}`}
     >
       {showImage ? (
-        <Image
-          src={imageUrl}
-          alt={`${brand} ${name}`}
-          width={IMAGE_DIMS[size]}
-          height={IMAGE_DIMS[size]}
-          className="object-contain w-full h-full rounded-md"
-          onError={() => setImgError(true)}
-        />
+        fill ? (
+          <Image
+            src={imageUrl}
+            alt={`${brand} ${name}`}
+            fill
+            sizes={sizes}
+            className="object-contain rounded-md"
+            onError={() => setImgError(true)}
+            priority={priority}
+          />
+        ) : (
+          <Image
+            src={imageUrl}
+            alt={`${brand} ${name}`}
+            width={IMAGE_DIMS[size]}
+            height={IMAGE_DIMS[size]}
+            className="object-contain w-full h-full rounded-md"
+            onError={() => setImgError(true)}
+            priority={priority}
+          />
+        )
       ) : (
         <>
           <Shirt size={ICON_SIZES[size]} aria-hidden="true" />
