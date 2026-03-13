@@ -83,13 +83,13 @@ const eslintConfig = defineConfig([
     plugins: { boundaries },
     settings: {
       'boundaries/elements': [
-        { type: 'domain', pattern: ['src/domain/*'] },
-        { type: 'shared', pattern: ['src/shared/*'] },
-        { type: 'features', pattern: ['src/features/*'] },
-        { type: 'infrastructure', pattern: ['src/infrastructure/*'] },
-        { type: 'app', pattern: ['src/app/*'] },
-        { type: 'db', pattern: ['src/db/*'] },
-        { type: 'config', pattern: ['src/config/*'] },
+        { type: 'domain', pattern: ['src/domain/**'] },
+        { type: 'shared', pattern: ['src/shared/**'] },
+        { type: 'features', pattern: ['src/features/**'] },
+        { type: 'infrastructure', pattern: ['src/infrastructure/**'] },
+        { type: 'app', pattern: ['src/app/**'] },
+        { type: 'db', pattern: ['src/db/**'] },
+        { type: 'config', pattern: ['src/config/**'] },
       ],
     },
     rules: {

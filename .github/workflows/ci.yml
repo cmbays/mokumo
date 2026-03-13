@@ -77,7 +77,7 @@ jobs:
         run: npx drizzle-kit check
 
       - name: Coverage
-        run: npm run test:coverage
+        run: npx vitest run --coverage --project unit
 
       - name: Install Playwright browsers
         if: hashFiles('tests/e2e/**') != ''
