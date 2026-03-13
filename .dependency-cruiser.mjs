@@ -54,7 +54,10 @@ export default {
       name: 'features-layer-isolation',
       comment: 'Features layer must not import from infrastructure or app',
       severity: 'error',
-      from: { path: '^src/features', pathNot: '(__tests__|tests|\\.test\\.|\\.spec\\.|\\.steps\\.)' },
+      from: {
+        path: '^src/features',
+        pathNot: '(__tests__|tests|\\.test\\.|\\.spec\\.|\\.steps\\.)',
+      },
       to: { path: '^src/(infrastructure|app)' },
     },
   ],

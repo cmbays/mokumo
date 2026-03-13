@@ -56,7 +56,12 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+          include: [
+            'src/**/*.test.ts',
+            'src/**/*.test.tsx',
+            'lib/**/*.test.ts',
+            'tools/**/*.test.ts',
+          ],
           exclude: ['node_modules/**', '**/node_modules/**', 'tests/**'],
         },
       },

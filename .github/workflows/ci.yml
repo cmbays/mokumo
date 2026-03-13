@@ -56,8 +56,8 @@ jobs:
       - name: Architecture check
         run: npm run test:architecture
 
-      - name: Test
-        run: npm test
+      - name: Unit tests
+        run: npx vitest run --project unit
 
       - name: Acceptance tests
         run: npx vitest run --project acceptance

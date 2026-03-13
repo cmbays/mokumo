@@ -136,9 +136,7 @@ function makeProfitableSpTemplate(): PricingTemplate {
       { location: 'right-sleeve', upcharge: 0.75 },
       { location: 'pocket', upcharge: 0.5 },
     ],
-    garmentTypePricing: [
-      { garmentCategory: 't-shirts', baseMarkup: 0 },
-    ],
+    garmentTypePricing: [{ garmentCategory: 't-shirts', baseMarkup: 0 }],
     setupFeeConfig: {
       perScreenFee: 20.0,
       bulkWaiverThreshold: 0,
@@ -313,32 +311,23 @@ When(
   }
 )
 
-Then(
-  'the 72-piece per-unit price is less than the 24-piece price',
-  (world: PricingWorld) => {
-    expect(world.priceB).toBeDefined()
-    expect(world.priceA).toBeDefined()
-    expect(world.priceB!).toBeLessThan(world.priceA!)
-  }
-)
+Then('the 72-piece per-unit price is less than the 24-piece price', (world: PricingWorld) => {
+  expect(world.priceB).toBeDefined()
+  expect(world.priceA).toBeDefined()
+  expect(world.priceB!).toBeLessThan(world.priceA!)
+})
 
-Then(
-  'the 3-color price is higher than the 1-color price',
-  (world: PricingWorld) => {
-    expect(world.priceB).toBeDefined()
-    expect(world.priceA).toBeDefined()
-    expect(world.priceB!).toBeGreaterThan(world.priceA!)
-  }
-)
+Then('the 3-color price is higher than the 1-color price', (world: PricingWorld) => {
+  expect(world.priceB).toBeDefined()
+  expect(world.priceA).toBeDefined()
+  expect(world.priceB!).toBeGreaterThan(world.priceA!)
+})
 
-Then(
-  'the 2-location price is higher than the 1-location price',
-  (world: PricingWorld) => {
-    expect(world.priceB).toBeDefined()
-    expect(world.priceA).toBeDefined()
-    expect(world.priceB!).toBeGreaterThan(world.priceA!)
-  }
-)
+Then('the 2-location price is higher than the 1-location price', (world: PricingWorld) => {
+  expect(world.priceB).toBeDefined()
+  expect(world.priceA).toBeDefined()
+  expect(world.priceB!).toBeGreaterThan(world.priceA!)
+})
 
 // ---------------------------------------------------------------------------
 // Setup fee steps

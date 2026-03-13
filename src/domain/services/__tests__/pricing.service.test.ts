@@ -1018,7 +1018,13 @@ describe('calculateScreenPrintPrice — garmentCostSource catalog vs manual', ()
         laborRate: 25,
       },
     }
-    const { margin } = calculateScreenPrintPrice(24, 1, ['front'], 't-shirts', catalogSourceTemplate)
+    const { margin } = calculateScreenPrintPrice(
+      24,
+      1,
+      ['front'],
+      't-shirts',
+      catalogSourceTemplate
+    )
     // garmentCost=0 (catalog), inkCost=0.25, overheadCost=round2(8.80×0.12)=1.06, laborCost=0.21
     // totalCost = 0 + 0.25 + 1.06 + 0.21 = 1.52
     expect(margin.garmentCost).toBe(0)
@@ -1120,7 +1126,13 @@ describe('calculateDTFPrice — logger call on unknown sheet length', () => {
     // These mutants (StringLiteral "", ObjectLiteral {}) are equivalent — they change
     // only the logger message/context, not behavior. We document them as equivalent.
     // The test verifies the observable behavior (price/margin) is unchanged.
-    const { price, margin } = calculateDTFPrice(999, 'standard', 'standard', 'standard', dtfTemplate)
+    const { price, margin } = calculateDTFPrice(
+      999,
+      'standard',
+      'standard',
+      'standard',
+      dtfTemplate
+    )
     expect(price).toBe(0)
     expect(margin.revenue).toBe(0)
     expect(margin.percentage).toBe(0)
@@ -1153,7 +1165,13 @@ describe('calculateDTFPrice — contract tier with contractPrice branch', () => 
       ],
     }
     // Correct: contractPrice=$13.00 (not $20 × 0.80 = $16.00)
-    const { price } = calculateDTFPrice(10, 'contract', 'standard', 'standard', uniqueContractTemplate)
+    const { price } = calculateDTFPrice(
+      10,
+      'contract',
+      'standard',
+      'standard',
+      uniqueContractTemplate
+    )
     expect(price).toBe(13.0)
   })
 
@@ -1188,7 +1206,13 @@ describe('calculateDTFPrice — tierDiscount guard (line 433)', () => {
     }
     // With if(true): tierDiscount is undefined → tierDiscount.discountPercent crashes (TypeError).
     // With if(tierDiscount && ...): undefined is falsy → guard protects, no discount → $18.00.
-    const { price } = calculateDTFPrice(10, 'standard', 'standard', 'standard', noDiscountEntryTemplate)
+    const { price } = calculateDTFPrice(
+      10,
+      'standard',
+      'standard',
+      'standard',
+      noDiscountEntryTemplate
+    )
     expect(price).toBe(18.0)
   })
 
@@ -1216,7 +1240,13 @@ describe('calculateDTFPrice — tierDiscount guard (line 433)', () => {
       ],
     }
     // With || mutant: crashes. With && (correct): short-circuits → price=$18.00.
-    const { price } = calculateDTFPrice(10, 'standard', 'standard', 'standard', noStandardTierTemplate)
+    const { price } = calculateDTFPrice(
+      10,
+      'standard',
+      'standard',
+      'standard',
+      noStandardTierTemplate
+    )
     expect(price).toBe(18.0)
   })
 })
@@ -1236,7 +1266,13 @@ describe('calculateDTFPrice — rushFee guard (line 440)', () => {
     }
     // With if(true): undefined rushFee → rushFee.percentageUpcharge crashes.
     // With if(rushFee) (correct): undefined is falsy → no rush applied → $18.00.
-    const { price } = calculateDTFPrice(10, 'standard', 'standard', 'standard', noStandardRushTemplate)
+    const { price } = calculateDTFPrice(
+      10,
+      'standard',
+      'standard',
+      'standard',
+      noStandardRushTemplate
+    )
     expect(price).toBe(18.0)
   })
 })
@@ -1255,7 +1291,13 @@ describe('calculateDTFPrice — filmConfig guard (line 447)', () => {
     }
     // With if(true): undefined filmConfig → filmConfig.multiplier crashes.
     // With if(filmConfig) (correct): undefined → guard skips, no multiplier → $18.00.
-    const { price } = calculateDTFPrice(10, 'standard', 'standard', 'standard', noStandardFilmTemplate)
+    const { price } = calculateDTFPrice(
+      10,
+      'standard',
+      'standard',
+      'standard',
+      noStandardFilmTemplate
+    )
     expect(price).toBe(18.0)
   })
 })

@@ -1,10 +1,7 @@
 // @ts-check
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
-  mutate: [
-    'src/domain/lib/money.ts',
-    'src/domain/services/pricing.service.ts',
-  ],
+  mutate: ['src/domain/lib/money.ts', 'src/domain/services/pricing.service.ts'],
   testRunner: 'vitest',
   reporters: ['clear-text', 'html', 'progress'],
   incremental: true,
