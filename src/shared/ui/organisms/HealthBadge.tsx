@@ -3,6 +3,12 @@ import { HEALTH_STATUS_LABELS, HEALTH_STATUS_DOT_COLORS } from '@domain/constant
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui/primitives/tooltip'
 import type { HealthStatus } from '@domain/entities/customer'
 
+const HEALTH_STATUS_GLOW: Record<HealthStatus, string> = {
+  active: '0 0 8px 1px rgba(84, 202, 116, 0.55)',
+  'potentially-churning': '0 0 8px 1px rgba(255, 198, 99, 0.55)',
+  churned: '0 0 8px 1px rgba(210, 62, 8, 0.55)',
+}
+
 type HealthBadgeProps = {
   status: HealthStatus
   /** Compact mode: shows only the dot with a tooltip. Use in dense layouts like page headers. */
@@ -11,7 +17,12 @@ type HealthBadgeProps = {
 }
 
 export function HealthBadge({ status, compact, className }: HealthBadgeProps) {
-  const dot = <span className={cn('h-2 w-2 rounded-full shrink-0', HEALTH_STATUS_DOT_COLORS[status])} />
+  const dot = (
+    <span
+      className={cn('h-[7px] w-[7px] rounded-full shrink-0', HEALTH_STATUS_DOT_COLORS[status])}
+      style={{ boxShadow: HEALTH_STATUS_GLOW[status] }}
+    />
+  )
 
   if (compact) {
     return (
@@ -35,7 +46,7 @@ export function HealthBadge({ status, compact, className }: HealthBadgeProps) {
       aria-label={`Health status: ${HEALTH_STATUS_LABELS[status]}`}
     >
       {dot}
-      <span className="text-sm text-foreground">{HEALTH_STATUS_LABELS[status]}</span>
+      <span className="text-sm text-muted-foreground">{HEALTH_STATUS_LABELS[status]}</span>
     </span>
   )
 }

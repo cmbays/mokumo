@@ -59,6 +59,13 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
 
   return (
     <div className="space-y-4">
+      {/* ---- Inline breadcrumb ------------------------------------------------ */}
+      <div className="text-xs text-muted-foreground/50 mb-3 tracking-wide">
+        Customers
+        <span className="mx-1.5 opacity-40">/</span>
+        {customer.company}
+      </div>
+
       {/* ---- Section 1: Company row ----------------------------------------- */}
       {/* Left group (name + badges) can wrap freely; right group (buttons) never wraps */}
       <div className="flex items-start gap-3">
@@ -69,39 +76,34 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
             {customer.company}
           </h1>
 
-          {/* Lifecycle dot — compact in header; full label visible on hover */}
-          <LifecycleBadge stage={customer.lifecycleStage} compact />
+          {/* Lifecycle — full mode: dot + label text */}
+          <LifecycleBadge stage={customer.lifecycleStage} />
 
-          {/* Health dot — compact in header; full label visible on hover */}
-          <HealthBadge status={customer.healthStatus} compact />
+          {/* Health — full mode: glow dot + dimmed label */}
+          <HealthBadge status={customer.healthStatus} />
 
-          {/* Type tags — amber categorical identity badges */}
+          {/* Type tags — plain gray bold text, no border */}
           {customer.typeTags.length > 0 && <TypeTagBadges tags={customer.typeTags} />}
         </div>
 
         {/* Action buttons — always right-aligned, never wrap */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Archive — plain secondary outline, no destructive color in header */}
+          {/* Archive — pure outline, no color overrides */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setArchiveOpen(true)}
             aria-label="Archive customer"
-            className="text-muted-foreground shadow-[1.5px_1.5px_0_rgba(0,0,0,0.06)]"
           >
             <Archive className="size-4" aria-hidden="true" />
             <span className="hidden md:inline">Archive</span>
           </Button>
 
-          {/* Edit Customer — Niji CTA: light action bg + action text, offset shadow */}
+          {/* Edit Customer — solid filled action background */}
           <Button
             size="sm"
             onClick={() => setEditOpen(true)}
-            className={cn(
-              'bg-action/10 text-action font-semibold border border-action/30',
-              'shadow-[1.5px_1.5px_0_rgba(0,119,204,0.2)]',
-              'hover:bg-action/15 active:scale-95 transition-all duration-150'
-            )}
+            className="bg-action text-black font-semibold shadow-[1.5px_1.5px_0_rgba(0,0,0,0.3)] hover:bg-action-hover active:scale-95 transition-all duration-150"
           >
             <Pencil className="size-4" />
             Edit Customer
@@ -127,37 +129,37 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
 
             return (
               <div key={contact.id} className="flex items-center gap-3 text-sm">
-                {/* Star / spacer — 18px fixed width */}
+                {/* Star / spacer — w-4 fixed width */}
                 {contact.isPrimary ? (
                   <Star
                     className="size-3 shrink-0 fill-warning text-warning"
                     aria-label="Primary contact"
                   />
                 ) : (
-                  <span className="w-3 shrink-0" aria-hidden="true" />
+                  <span className="w-4 shrink-0" aria-hidden="true" />
                 )}
 
-                {/* Name — fixed minimum width */}
+                {/* Name — fixed width */}
                 <span
                   className={cn(
-                    'min-w-[130px] shrink-0 text-[13px]',
+                    'w-[130px] shrink-0 text-[13px]',
                     contact.isPrimary ? 'text-foreground font-semibold' : 'text-muted-foreground'
                   )}
                 >
                   {contact.name}
                 </span>
 
-                {/* Role badge — neutral silver, compact padding */}
+                {/* Role — plain text, no border */}
                 {roleLabel && (
-                  <span className="shrink-0 min-w-[160px] rounded border border-border px-1.5 py-px text-[11px] font-semibold text-muted-foreground">
+                  <span className="w-[160px] shrink-0 text-[13px] text-muted-foreground">
                     {roleLabel}
                   </span>
                 )}
-                {!roleLabel && <span className="min-w-[160px] shrink-0" aria-hidden="true" />}
+                {!roleLabel && <span className="w-[160px] shrink-0" aria-hidden="true" />}
 
-                {/* Email — copy-to-clipboard, flex:1 */}
+                {/* Email — fixed width so phone appears right after */}
                 {contact.email && (
-                  <span className="flex-1 min-w-0 min-w-[200px]">
+                  <span className="w-[200px] shrink-0 text-[13px] text-muted-foreground">
                     {/* Desktop: copy button */}
                     <span className="hidden md:inline">
                       <CopyButton value={contact.email} label="email" />
@@ -172,11 +174,11 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
                     </a>
                   </span>
                 )}
-                {!contact.email && <span className="flex-1" />}
+                {!contact.email && <span className="w-[200px] shrink-0" />}
 
-                {/* Phone — fixed minimum width */}
+                {/* Phone — appears right after email */}
                 {contact.phone && (
-                  <span className="min-w-30 shrink-0">
+                  <span className="text-[13px] text-muted-foreground">
                     {/* Desktop: copy button */}
                     <span className="hidden md:inline">
                       <CopyButton value={contact.phone} label="phone" />

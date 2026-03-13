@@ -11,7 +11,11 @@ type LifecycleBadgeProps = {
 }
 
 export function LifecycleBadge({ stage, compact, className }: LifecycleBadgeProps) {
-  const dot = <span className={cn('h-2 w-2 rounded-full shrink-0', LIFECYCLE_STAGE_DOT_COLORS[stage])} />
+  const dot = (
+    <span
+      className={cn('h-[7px] w-[7px] rounded-full shrink-0', LIFECYCLE_STAGE_DOT_COLORS[stage])}
+    />
+  )
 
   if (compact) {
     return (
@@ -35,7 +39,9 @@ export function LifecycleBadge({ stage, compact, className }: LifecycleBadgeProp
       aria-label={`Lifecycle stage: ${LIFECYCLE_STAGE_LABELS[stage]}`}
     >
       {dot}
-      <span className="text-sm text-foreground">{LIFECYCLE_STAGE_LABELS[stage]}</span>
+      <span className="text-sm font-semibold text-muted-foreground">
+        {LIFECYCLE_STAGE_LABELS[stage]}
+      </span>
     </span>
   )
 }

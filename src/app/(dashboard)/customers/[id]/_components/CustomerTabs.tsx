@@ -18,6 +18,7 @@ import { ContactHierarchy } from './ContactHierarchy'
 import { CustomerDetailsPanel } from './CustomerDetailsPanel'
 import { CustomerScreensTab } from './CustomerScreensTab'
 import { CustomerPreferencesTab } from './CustomerPreferencesTab'
+import { CustomerOverviewTab } from './CustomerOverviewTab'
 import { NotesPanel } from '@features/quotes/components/NotesPanel'
 import { addCustomerNote, loadMoreActivities } from '../../actions/activity.actions'
 import { deriveScreensFromJobs } from '@domain/rules/screen.rules'
@@ -47,29 +48,40 @@ type CustomerTabsProps = {
   initialNextCursor: string | null
 }
 
-// All tab values in desktop render order
-const DESKTOP_TABS = [
-  'activity',
+// Primary desktop tabs (4 shown directly on desktop)
+const DESKTOP_PRIMARY_TABS = ['overview', 'activity', 'preferences', 'artwork'] as const
+
+// Secondary tabs behind "More" dropdown on desktop
+const DESKTOP_SECONDARY_TABS = [
   'quotes',
   'jobs',
   'invoices',
-  'artwork',
   'screens',
-  'preferences',
   'contacts',
   'details',
   'notes',
 ] as const
 
+// All desktop tab values in render order
+const DESKTOP_TABS = [...DESKTOP_PRIMARY_TABS, ...DESKTOP_SECONDARY_TABS] as const
+
 type DesktopTab = (typeof DESKTOP_TABS)[number]
 
 // Primary tabs shown directly on mobile
-const PRIMARY_TABS = ['activity', 'quotes', 'jobs', 'invoices', 'notes'] as const
+const PRIMARY_TABS = ['overview', 'activity', 'quotes', 'jobs', 'notes'] as const
 
 // Secondary tabs behind "More" dropdown on mobile
-const SECONDARY_TABS = ['artwork', 'screens', 'preferences', 'contacts', 'details'] as const
+const SECONDARY_TABS = [
+  'artwork',
+  'screens',
+  'preferences',
+  'contacts',
+  'details',
+  'invoices',
+] as const
 
 const TAB_LABELS: Record<string, string> = {
+  overview: 'Overview',
   activity: 'Activity',
   quotes: 'Quotes',
   jobs: 'Jobs',
@@ -96,7 +108,7 @@ export function CustomerTabs({
   initialHasMore,
   initialNextCursor,
 }: CustomerTabsProps) {
-  const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'activity'
+  const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'overview'
   const [activeTab, setActiveTab] = useState(defaultTab)
   const screens = deriveScreensFromJobs(customer.id, jobs)
 
@@ -119,7 +131,8 @@ export function CustomerTabs({
     return () => clearTimeout(timer)
   }, [activeTab])
 
-  const isSecondaryActive = (SECONDARY_TABS as readonly string[]).includes(activeTab)
+  const isDesktopSecondaryActive = (DESKTOP_SECONDARY_TABS as readonly string[]).includes(activeTab)
+  const isMobileSecondaryActive = (SECONDARY_TABS as readonly string[]).includes(activeTab)
 
   /** Returns null for 0 counts to keep labels clean ("Quotes" not "Quotes (0)") */
   function getTabCount(tab: string): number | null {
@@ -158,7 +171,7 @@ export function CustomerTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      {/* ── Desktop: sliding badge indicator tab bar ── */}
+      {/* ── Desktop: 4 primary tabs + "More" dropdown ── */}
       <div className="hidden md:block overflow-x-auto scrollbar-none border-b border-border">
         {/* Relative container for the absolute indicator */}
         <div
@@ -182,8 +195,8 @@ export function CustomerTabs({
             />
           )}
 
-          {/* Tab buttons */}
-          {DESKTOP_TABS.map((tab) => {
+          {/* Primary tab buttons */}
+          {DESKTOP_PRIMARY_TABS.map((tab) => {
             const isActive = activeTab === tab
             return (
               <button
@@ -206,14 +219,50 @@ export function CustomerTabs({
                 style={{
                   transform: isActive ? 'scale(1.08)' : 'scale(1)',
                   transformOrigin: 'center center',
-                  transition:
-                    'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transition: 'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 }}
               >
                 {tabLabel(tab)}
               </button>
             )
           })}
+
+          {/* "More" dropdown for secondary desktop tabs */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              ref={(el) => {
+                // Register the trigger so the indicator can track it when a secondary tab is active
+                if (el && isDesktopSecondaryActive) {
+                  tabRefs.current.set(activeTab, el as unknown as HTMLButtonElement)
+                }
+              }}
+              className={cn(
+                'relative z-10 inline-flex items-center gap-0.5 whitespace-nowrap px-3 py-2 text-[13px]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+                isDesktopSecondaryActive
+                  ? 'text-foreground font-semibold'
+                  : 'text-muted-foreground font-normal hover:text-foreground'
+              )}
+              aria-label="More tabs"
+            >
+              {isDesktopSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+              <ChevronDown className="size-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {DESKTOP_SECONDARY_TABS.map((tab) => (
+                <DropdownMenuItem
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    'min-h-[var(--mobile-touch-target)]',
+                    activeTab === tab && 'text-action font-medium'
+                  )}
+                >
+                  {tabLabel(tab)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -253,13 +302,13 @@ export function CustomerTabs({
                 'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 px-2 text-xs transition-colors active:scale-95',
                 'min-h-[var(--mobile-touch-target)]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isSecondaryActive
+                isMobileSecondaryActive
                   ? 'border-action text-action font-medium'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
               aria-label="More tabs"
             >
-              {isSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+              {isMobileSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
               <ChevronDown className="size-3" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -281,6 +330,18 @@ export function CustomerTabs({
       </div>
 
       {/* ── Tab content panels ── */}
+      <TabsContent value="overview" className="mt-4">
+        <CustomerOverviewTab
+          customer={customer}
+          quotes={quotes}
+          jobs={jobs}
+          notes={notes}
+          artworks={artworks}
+          onSwitchTab={setActiveTab}
+          onAddNote={addCustomerNote}
+        />
+      </TabsContent>
+
       <TabsContent value="activity" className="mt-4">
         <ActivityFeed
           customerId={customer.id}
