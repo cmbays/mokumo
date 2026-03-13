@@ -13,6 +13,7 @@ import type {
   ActivityEventInput,
   ListForEntityOpts,
 } from '@domain/ports/activity-event.port'
+import type { ActivityEntityId } from '@domain/lib/branded'
 
 // ─── Lazy Supabase module ─────────────────────────────────────────────────────
 // Mirrors the pattern in customer-activity.ts: dynamic import defers the
@@ -42,7 +43,7 @@ async function resolveService(): Promise<ActivityEventService> {
  */
 export const activityEventService = {
   record: (input: ActivityEventInput) => resolveService().then((s) => s.record(input)),
-  listForEntity: (entityType: ActivityEventEntityType, entityId: string, opts: ListForEntityOpts) =>
+  listForEntity: (entityType: ActivityEventEntityType, entityId: ActivityEntityId, opts: ListForEntityOpts) =>
     resolveService().then((s) => s.listForEntity(entityType, entityId, opts)),
 }
 
@@ -50,7 +51,7 @@ export const activityEventService = {
 
 export async function listEntityActivity(
   entityType: ActivityEventEntityType,
-  entityId: string,
+  entityId: ActivityEntityId,
   opts: ListForEntityOpts
 ): ReturnType<ActivityEventService['listForEntity']> {
   return activityEventService.listForEntity(entityType, entityId, opts)

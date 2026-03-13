@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { ShopId, UserId, ActivityEntityId } from '@domain/lib/branded'
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export type ActivityEventPage = z.infer<typeof activityEventPageSchema>
 
 /** Options for paginating an entity's activity feed. */
 export type ListForEntityOpts = {
-  shopId: string
+  shopId: ShopId
   limit?: number
   cursor?: string | null
   eventTypes?: ActivityEventType[]
@@ -81,12 +82,12 @@ export type ListForEntityOpts = {
  * sensible defaults (system, null, null) before persisting.
  */
 export type ActivityEventInput = {
-  shopId: string
+  shopId: ShopId
   entityType: ActivityEventEntityType
-  entityId: string
+  entityId: ActivityEntityId
   eventType: ActivityEventType
   actorType?: ActivityEventActorType
-  actorId?: string | null
+  actorId?: UserId | null
   metadata?: Record<string, unknown> | null
 }
 
@@ -111,7 +112,7 @@ export type IActivityEventRepository = {
    */
   listForEntity(
     entityType: ActivityEventEntityType,
-    entityId: string,
+    entityId: ActivityEntityId,
     opts: ListForEntityOpts
   ): Promise<ActivityEventPage>
 }

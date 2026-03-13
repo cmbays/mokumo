@@ -39,10 +39,12 @@ vi.mock('@shared/lib/logger', () => ({
 
 import { supabaseActivityEventRepository } from '../_providers/supabase/activity-events'
 import type { ActivityEventInput } from '@domain/ports/activity-event.port'
+import { brandId } from '@domain/lib/branded'
+import type { ShopId, CustomerId, UserId, ActivityEntityId } from '@domain/lib/branded'
 
-const VALID_SHOP_ID = '10000000-0000-4000-8000-000000000001'
-const VALID_ENTITY_ID = '20000000-0000-4000-8000-000000000002'
-const VALID_ACTOR_ID = '30000000-0000-4000-8000-000000000003'
+const VALID_SHOP_ID = brandId<ShopId>('10000000-0000-4000-8000-000000000001')
+const VALID_ENTITY_ID = brandId<CustomerId>('20000000-0000-4000-8000-000000000002')
+const VALID_ACTOR_ID = brandId<UserId>('30000000-0000-4000-8000-000000000003')
 const VALID_EVENT_ID = '40000000-0000-4000-8000-000000000004'
 
 const baseInput: ActivityEventInput = {
@@ -86,13 +88,13 @@ describe('supabaseActivityEventRepository.record', () => {
 
   it('throws on invalid shopId', async () => {
     await expect(
-      supabaseActivityEventRepository.record({ ...baseInput, shopId: 'not-a-uuid' })
+      supabaseActivityEventRepository.record({ ...baseInput, shopId: 'not-a-uuid' as unknown as ShopId })
     ).rejects.toThrow('invalid shopId')
   })
 
   it('throws on invalid entityId', async () => {
     await expect(
-      supabaseActivityEventRepository.record({ ...baseInput, entityId: 'bad' })
+      supabaseActivityEventRepository.record({ ...baseInput, entityId: 'bad' as unknown as ActivityEntityId })
     ).rejects.toThrow('invalid entityId')
   })
 
@@ -156,7 +158,7 @@ describe('supabaseActivityEventRepository.listForEntity', () => {
 
   it('throws on invalid entityId', async () => {
     await expect(
-      supabaseActivityEventRepository.listForEntity('customer', 'bad-id', {
+      supabaseActivityEventRepository.listForEntity('customer', 'bad-id' as unknown as ActivityEntityId, {
         shopId: VALID_SHOP_ID,
       })
     ).rejects.toThrow('invalid entityId')
@@ -165,7 +167,7 @@ describe('supabaseActivityEventRepository.listForEntity', () => {
   it('throws on invalid shopId', async () => {
     await expect(
       supabaseActivityEventRepository.listForEntity('customer', VALID_ENTITY_ID, {
-        shopId: 'not-uuid',
+        shopId: 'not-uuid' as unknown as ShopId,
       })
     ).rejects.toThrow('invalid shopId')
   })

@@ -16,6 +16,7 @@ import type {
   ActivityEventEntityType,
   ListForEntityOpts,
 } from '@domain/ports/activity-event.port'
+import type { ActivityEntityId } from '@domain/lib/branded'
 import { activityEventInputSchema } from '@domain/ports/activity-event.port'
 
 export class ActivityEventService {
@@ -38,7 +39,8 @@ export class ActivityEventService {
       actorId: input.actorId ?? null,
       metadata: input.metadata ?? null,
     }
-    const validated = activityEventInputSchema.parse(withDefaults)
+    // Cast is safe: Zod has validated all UUIDs; branded types are compile-time only
+    const validated = activityEventInputSchema.parse(withDefaults) as unknown as ActivityEventInput
     return this.repo.record(validated)
   }
 
@@ -55,7 +57,7 @@ export class ActivityEventService {
    */
   async listForEntity(
     entityType: ActivityEventEntityType,
-    entityId: string,
+    entityId: ActivityEntityId,
     opts: ListForEntityOpts
   ): Promise<ActivityEventPage> {
     const limit = Math.min(opts.limit ?? 20, 50)

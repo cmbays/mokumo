@@ -62,8 +62,14 @@ export const jobDispatcher: IJobDispatcher = {
       return null
     }
 
+    const parsedType = jobTypeSchema.safeParse(jobType)
+    if (!parsedType.success) {
+      dispatchLogger.warn('dispatch: unknown job type — skipping', { jobType })
+      return null
+    }
+
     const payload: JobPayload = {
-      jobType: jobType as JobType,
+      jobType: parsedType.data,
       dispatchedAt: new Date().toISOString(),
       data,
     }

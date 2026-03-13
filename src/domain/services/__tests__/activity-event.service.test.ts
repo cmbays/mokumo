@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ActivityEventService } from '../activity-event.service'
 import type { IActivityEventRepository, ActivityEvent } from '@domain/ports/activity-event.port'
+import { brandId } from '@domain/lib/branded'
+import type { ShopId, CustomerId, UserId } from '@domain/lib/branded'
 
 // ─── Mock repository ────────────────────────────────────────────────────────
 
-const VALID_SHOP_ID = '10000000-0000-4000-8000-000000000001'
-const VALID_ENTITY_ID = '20000000-0000-4000-8000-000000000002'
-const VALID_ACTOR_ID = '30000000-0000-4000-8000-000000000003'
+const VALID_SHOP_ID = brandId<ShopId>('10000000-0000-4000-8000-000000000001')
+const VALID_ENTITY_ID = brandId<CustomerId>('20000000-0000-4000-8000-000000000002')
+const VALID_ACTOR_ID = brandId<UserId>('30000000-0000-4000-8000-000000000003')
 const VALID_EVENT_ID = '40000000-0000-4000-8000-000000000004'
 
 const mockRecord = vi.fn<IActivityEventRepository['record']>()
@@ -118,7 +120,7 @@ describe('ActivityEventService.record', () => {
   it('throws ZodError when shopId is not a UUID', async () => {
     await expect(
       service.record({
-        shopId: 'not-a-uuid',
+        shopId: 'not-a-uuid' as unknown as ShopId,
         entityType: 'customer',
         entityId: VALID_ENTITY_ID,
         eventType: 'created',
