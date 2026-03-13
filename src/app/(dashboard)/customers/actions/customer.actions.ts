@@ -12,6 +12,9 @@ import { logger } from '@shared/lib/logger'
 import { ok, err } from '@infra/repositories/_shared/result'
 import type { Result } from '@infra/repositories/_shared/result'
 import type { Customer } from '@domain/entities/customer'
+import { activityEventService } from '@infra/repositories/activity-events'
+import { brandId } from '@domain/lib/branded'
+import type { ShopId, CustomerId, UserId } from '@domain/lib/branded'
 
 const log = logger.child({ domain: 'customers' })
 
@@ -109,6 +112,19 @@ export async function createCustomer(
     })
 
     log.info('Customer created', { id: customer.id, shopId: session.shopId })
+
+    // Record audit event — fire-and-forget (non-critical path)
+    activityEventService
+      .record({
+        shopId: brandId<ShopId>(session.shopId),
+        entityType: 'customer',
+        entityId: brandId<CustomerId>(customer.id),
+        eventType: 'created',
+        actorType: 'staff',
+        actorId: brandId<UserId>(session.userId),
+      })
+      .catch((e) => log.warn('Activity event record failed (non-fatal)', { err: e }))
+
     revalidatePath('/customers')
     return ok(customer)
   } catch (e) {
@@ -148,6 +164,20 @@ export async function updateCustomer(
   try {
     const customer = await repoUpdateCustomer(id, parsed.data)
     log.info('Customer updated', { id })
+
+    // Record audit event — fire-and-forget (non-critical path)
+    activityEventService
+      .record({
+        shopId: brandId<ShopId>(session.shopId),
+        entityType: 'customer',
+        entityId: brandId<CustomerId>(id),
+        eventType: 'updated',
+        actorType: 'staff',
+        actorId: brandId<UserId>(session.userId),
+        metadata: { fields: Object.keys(parsed.data) },
+      })
+      .catch((e) => log.warn('Activity event record failed (non-fatal)', { err: e }))
+
     revalidatePath('/customers')
     revalidatePath(`/customers/${id}`)
     return ok(customer)
@@ -179,6 +209,19 @@ export async function archiveCustomer(id: string): Promise<Result<void, Customer
   try {
     await repoArchiveCustomer(id)
     log.info('Customer archived', { id })
+
+    // Record audit event — fire-and-forget (non-critical path)
+    activityEventService
+      .record({
+        shopId: brandId<ShopId>(session.shopId),
+        entityType: 'customer',
+        entityId: brandId<CustomerId>(id),
+        eventType: 'archived',
+        actorType: 'staff',
+        actorId: brandId<UserId>(session.userId),
+      })
+      .catch((e) => log.warn('Activity event record failed (non-fatal)', { err: e }))
+
     revalidatePath('/customers')
     revalidatePath(`/customers/${id}`)
     return ok(undefined)
