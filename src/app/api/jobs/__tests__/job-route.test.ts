@@ -3,7 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 vi.mock('server-only', () => ({}))
 vi.mock('@shared/lib/logger', () => {
   const logger: Record<string, unknown> = {
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }
   logger.child = () => logger
   return { logger }

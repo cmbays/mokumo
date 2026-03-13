@@ -55,10 +55,7 @@ function ActivityEventRow({ event, isLast }: ActivityEventRowProps) {
     <li className="relative flex gap-3">
       {/* Vertical connector line */}
       {!isLast && (
-        <span
-          className="absolute left-[7px] top-5 h-full w-px bg-border"
-          aria-hidden="true"
-        />
+        <span className="absolute left-[7px] top-5 h-full w-px bg-border" aria-hidden="true" />
       )}
 
       {/* Dot */}
@@ -67,10 +64,7 @@ function ActivityEventRow({ event, isLast }: ActivityEventRowProps) {
       {/* Content */}
       <div className="min-w-0 flex-1 pb-4">
         <p className="text-sm font-medium text-foreground">{label}</p>
-        <time
-          dateTime={event.createdAt}
-          className="text-xs text-muted-foreground"
-        >
+        <time dateTime={event.createdAt} className="text-xs text-muted-foreground">
           {formatTimestamp(event.createdAt)}
         </time>
         {event.metadata && Object.keys(event.metadata).length > 0 && (
@@ -108,9 +102,7 @@ export function ActivityTimeline({
   emptyMessage = 'No activity recorded yet.',
 }: ActivityTimelineProps) {
   if (events.length === 0) {
-    return (
-      <p className={cn('text-sm text-muted-foreground', className)}>{emptyMessage}</p>
-    )
+    return <p className={cn('text-sm text-muted-foreground', className)}>{emptyMessage}</p>
   }
 
   return (

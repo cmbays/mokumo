@@ -83,7 +83,9 @@ describe('POST /api/jobs/dlq — always-200 contract', () => {
   })
 
   it('returns 200 with dead-lettered status when verified', async () => {
-    const res = await POST(makeDlqRequest({ jobType: 'inventory-refresh' }, { 'upstash-signature': 'sig' }))
+    const res = await POST(
+      makeDlqRequest({ jobType: 'inventory-refresh' }, { 'upstash-signature': 'sig' })
+    )
     const json = await res.json()
 
     expect(res.status).toBe(200)

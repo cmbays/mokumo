@@ -28,7 +28,9 @@ export async function POST(request: Request): Promise<Response> {
         dlqLogger.error('QStash signing keys not configured in production — rejecting DLQ request')
         return Response.json({ error: 'Unauthorized' }, { status: 401 })
       }
-      dlqLogger.warn('QStash signing keys not configured — skipping DLQ signature check (dev/CI only)')
+      dlqLogger.warn(
+        'QStash signing keys not configured — skipping DLQ signature check (dev/CI only)'
+      )
     } else {
       const body = await request.clone().text()
       const signature = request.headers.get('upstash-signature') ?? ''

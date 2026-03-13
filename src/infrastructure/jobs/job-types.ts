@@ -8,11 +8,7 @@ import { z } from 'zod'
  * Adding a new job: add the string here, then add a handler in
  * src/infrastructure/jobs/handlers/ and register it in the dispatcher.
  */
-export const jobTypeSchema = z.enum([
-  'inventory-refresh',
-  'cache-warm',
-  'garment-sync',
-])
+export const jobTypeSchema = z.enum(['inventory-refresh', 'cache-warm', 'garment-sync'])
 
 export type JobType = z.infer<typeof jobTypeSchema>
 

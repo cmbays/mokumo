@@ -81,8 +81,7 @@ export const supabaseActivityEventRepository: IActivityEventRepository = {
       eventTypes?: ActivityEventType[]
     }
   ): Promise<ActivityEventPage> {
-    if (!validateUUID(entityId))
-      throw new Error(`listForEntity: invalid entityId "${entityId}"`)
+    if (!validateUUID(entityId)) throw new Error(`listForEntity: invalid entityId "${entityId}"`)
     if (!validateUUID(opts.shopId))
       throw new Error(`listForEntity: invalid shopId "${opts.shopId}"`)
 
@@ -126,9 +125,7 @@ export const supabaseActivityEventRepository: IActivityEventRepository = {
     const items = pageRows.map(mapRow)
 
     const nextCursor =
-      hasMore && pageRows.length > 0
-        ? pageRows[pageRows.length - 1]!.createdAt.toISOString()
-        : null
+      hasMore && pageRows.length > 0 ? pageRows[pageRows.length - 1]!.createdAt.toISOString() : null
 
     return { items, nextCursor, hasMore }
   },

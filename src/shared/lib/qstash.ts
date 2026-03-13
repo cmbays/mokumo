@@ -28,10 +28,7 @@ export function getQStashClient(): Client | null {
  * Used in job webhook handlers to verify incoming requests are from QStash.
  */
 export function getQStashReceiver(): Receiver | null {
-  if (
-    !process.env.QSTASH_CURRENT_SIGNING_KEY ||
-    !process.env.QSTASH_NEXT_SIGNING_KEY
-  ) {
+  if (!process.env.QSTASH_CURRENT_SIGNING_KEY || !process.env.QSTASH_NEXT_SIGNING_KEY) {
     return null
   }
   if (!_receiver) {

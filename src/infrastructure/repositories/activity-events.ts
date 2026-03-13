@@ -24,9 +24,8 @@ let _service: ActivityEventService | null = null
 
 async function resolveService(): Promise<ActivityEventService> {
   if (!_service) {
-    const { supabaseActivityEventRepository } = await import(
-      './_providers/supabase/activity-events'
-    )
+    const { supabaseActivityEventRepository } =
+      await import('./_providers/supabase/activity-events')
     _service = new ActivityEventService(supabaseActivityEventRepository)
   }
   return _service
@@ -43,8 +42,11 @@ async function resolveService(): Promise<ActivityEventService> {
  */
 export const activityEventService = {
   record: (input: ActivityEventInput) => resolveService().then((s) => s.record(input)),
-  listForEntity: (entityType: ActivityEventEntityType, entityId: ActivityEntityId, opts: ListForEntityOpts) =>
-    resolveService().then((s) => s.listForEntity(entityType, entityId, opts)),
+  listForEntity: (
+    entityType: ActivityEventEntityType,
+    entityId: ActivityEntityId,
+    opts: ListForEntityOpts
+  ) => resolveService().then((s) => s.listForEntity(entityType, entityId, opts)),
 }
 
 // ─── Named re-exports for convenience ────────────────────────────────────────

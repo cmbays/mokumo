@@ -88,13 +88,19 @@ describe('supabaseActivityEventRepository.record', () => {
 
   it('throws on invalid shopId', async () => {
     await expect(
-      supabaseActivityEventRepository.record({ ...baseInput, shopId: 'not-a-uuid' as unknown as ShopId })
+      supabaseActivityEventRepository.record({
+        ...baseInput,
+        shopId: 'not-a-uuid' as unknown as ShopId,
+      })
     ).rejects.toThrow('invalid shopId')
   })
 
   it('throws on invalid entityId', async () => {
     await expect(
-      supabaseActivityEventRepository.record({ ...baseInput, entityId: 'bad' as unknown as ActivityEntityId })
+      supabaseActivityEventRepository.record({
+        ...baseInput,
+        entityId: 'bad' as unknown as ActivityEntityId,
+      })
     ).rejects.toThrow('invalid entityId')
   })
 
@@ -158,9 +164,13 @@ describe('supabaseActivityEventRepository.listForEntity', () => {
 
   it('throws on invalid entityId', async () => {
     await expect(
-      supabaseActivityEventRepository.listForEntity('customer', 'bad-id' as unknown as ActivityEntityId, {
-        shopId: VALID_SHOP_ID,
-      })
+      supabaseActivityEventRepository.listForEntity(
+        'customer',
+        'bad-id' as unknown as ActivityEntityId,
+        {
+          shopId: VALID_SHOP_ID,
+        }
+      )
     ).rejects.toThrow('invalid entityId')
   })
 

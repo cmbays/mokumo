@@ -13,8 +13,5 @@ export type DispatchResult = {
  * enabling graceful degradation in dev / CI environments without Upstash.
  */
 export type IJobDispatcher = {
-  dispatch(
-    jobType: string,
-    data?: Record<string, unknown>
-  ): Promise<DispatchResult | null>
+  dispatch(jobType: string, data?: Record<string, unknown>): Promise<DispatchResult | null>
 }
