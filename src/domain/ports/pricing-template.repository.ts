@@ -28,9 +28,15 @@ export type IPricingTemplateRepository = {
 
   /**
    * Replaces all matrix cells for a template in a single transaction.
+   * Verifies ownership (templateId belongs to shopId) atomically inside the transaction.
+   * Returns false if the template is not found or does not belong to the given shop.
    * Deletes existing cells then inserts the new set — call with the complete desired state.
    */
-  upsertMatrixCells(templateId: string, cells: PrintCostMatrixCellInsert[]): Promise<void>
+  upsertMatrixCells(
+    templateId: string,
+    shopId: string,
+    cells: PrintCostMatrixCellInsert[]
+  ): Promise<boolean>
 
   /** Returns all garment markup rules for a shop. */
   getMarkupRules(shopId: string): Promise<GarmentMarkupRule[]>

@@ -38,9 +38,10 @@ export async function upsertTemplate(data: PricingTemplateInsert): Promise<Prici
 
 export async function upsertMatrixCells(
   templateId: string,
+  shopId: string,
   cells: PrintCostMatrixCellInsert[]
-): Promise<void> {
-  return repo.upsertMatrixCells(templateId, cells)
+): Promise<boolean> {
+  return repo.upsertMatrixCells(templateId, shopId, cells)
 }
 
 export async function getMarkupRules(shopId: string): Promise<GarmentMarkupRule[]> {
