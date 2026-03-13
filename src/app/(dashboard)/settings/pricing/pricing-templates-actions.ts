@@ -157,6 +157,7 @@ export async function deletePricingTemplate(id: string): Promise<ActionResult<nu
 
 /**
  * Replaces all matrix cells for a template.
+ * Ownership is verified atomically inside the repository transaction (no TOCTOU).
  * Passes the complete desired state — existing cells are deleted and replaced.
  */
 export async function savePricingMatrix(
@@ -169,9 +170,11 @@ export async function savePricingMatrix(
   if (!session) return err('Unauthorized')
 
   try {
-    const template = await getTemplateById(templateId)
-    if (!template || template.shopId !== session.shopId) return err('Template not found')
-    await upsertMatrixCells(templateId, cells)
+    const found = await upsertMatrixCells(templateId, session.shopId, cells)
+    if (!found) {
+      log.warn('savePricingMatrix: template not found or wrong shop', { templateId })
+      return err('Template not found')
+    }
     return ok(null)
   } catch (error) {
     log.error('savePricingMatrix failed', { templateId, error })
