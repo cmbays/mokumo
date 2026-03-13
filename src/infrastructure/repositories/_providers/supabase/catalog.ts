@@ -385,17 +385,17 @@ export type CatalogColorSupplementRow = {
 }
 
 /**
- * Inner fetch for color supplement. Not shop-scoped — cached globally.
+ * Inner fetch for color supplement. Not shop-scoped — memoized per request.
  *
- * Cache invalidation: revalidateTag('catalog') or revalidateTag('catalog-colors') after
- * catalog sync. Color data changes only when sync-pipeline runs (weekly), so 1-hour TTL
- * keeps the cache fresh without adding DB load.
+ * Uses React cache() for request-scoped deduplication only — multiple callers
+ * within the same render share one DB round-trip, but there is no TTL, no
+ * cross-request persistence, and no revalidateTag support.
+ *
+ * NOTE: unstable_cache is intentionally NOT used — the serialized payload is
+ * ~7 MB (38K color rows) which exceeds Next.js's 2MB cache limit and causes
+ * an unhandled rejection on every request. Cross-request caching for this
+ * dataset requires Upstash Redis and is tracked for a future milestone.
  */
-// NOTE: unstable_cache is intentionally NOT used here — the serialized payload
-// is ~7 MB (38K color rows) which exceeds Next.js's 2MB cache limit and causes
-// an unhandled rejection on every request. React cache() deduplicates within a
-// single render cycle. Cross-request caching for this dataset requires Upstash
-// Redis and is tracked for a future milestone.
 const _fetchCatalogColorSupplementCached = cache(async (): Promise<CatalogColorSupplementRow[]> => {
   const { db } = await import('@shared/lib/supabase/db')
 

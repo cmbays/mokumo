@@ -2,6 +2,7 @@ import 'server-only'
 
 import { unstable_cache } from 'next/cache'
 import type { InventoryLevel, StyleInventory } from '@domain/entities/inventory-level'
+import type { CatalogStyleId } from '@domain/lib/branded'
 import { SupabaseInventoryRepository } from './inventory/supabase-inventory.repository'
 
 const repo = new SupabaseInventoryRepository()
@@ -34,6 +35,6 @@ const _fetchInStockStyleIds = unstable_cache(
   { revalidate: 60, tags: ['inventory'] }
 )
 
-export async function getInStockStyleIds(): Promise<string[]> {
+export async function getInStockStyleIds(): Promise<CatalogStyleId[]> {
   return _fetchInStockStyleIds()
 }

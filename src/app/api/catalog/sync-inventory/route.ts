@@ -63,7 +63,7 @@ export const GET = withRequestContext(async (request: Request): Promise<Response
   // invalidation failure never misreports a successful sync as a 500.
   try {
     const { revalidateTag } = await import('next/cache')
-    revalidateTag('inventory', {})
+    revalidateTag('inventory', { expire: 0 })
   } catch (revalidateError) {
     syncLogger.warn('revalidateTag failed after successful inventory sync (cron)', {
       error: String(revalidateError),
@@ -78,8 +78,17 @@ export const GET = withRequestContext(async (request: Request): Promise<Response
  *
  * Manual admin trigger — use x-admin-secret header for authentication.
  * Same sync logic as the cron GET; useful for on-demand refreshes in dev/staging.
+ *
+ * Auth check happens before the rate-limit check so unauthenticated callers
+ * cannot consume limiter tokens for legitimate IPs.
  */
 export const POST = withRequestContext(async (request: Request): Promise<Response> => {
+  // Auth first — unauthenticated requests never reach the rate limiter.
+  const auth = validateAdminSecret(request)
+  if (!auth.valid) {
+    return Response.json({ error: auth.error }, { status: auth.status })
+  }
+
   const ip = getClientIp(request)
   const { limited } = await checkAdminSyncRateLimit(ip)
   if (limited) {
@@ -87,11 +96,6 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': '60' } }
     )
-  }
-
-  const auth = validateAdminSecret(request)
-  if (!auth.valid) {
-    return Response.json({ error: auth.error }, { status: auth.status })
   }
 
   let result: Awaited<ReturnType<typeof syncInventoryFromSupplier>>
@@ -107,7 +111,7 @@ export const POST = withRequestContext(async (request: Request): Promise<Respons
 
   try {
     const { revalidateTag } = await import('next/cache')
-    revalidateTag('inventory', {})
+    revalidateTag('inventory', { expire: 0 })
   } catch (revalidateError) {
     syncLogger.warn('revalidateTag failed after successful inventory sync (manual)', {
       error: String(revalidateError),

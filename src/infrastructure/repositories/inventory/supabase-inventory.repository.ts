@@ -8,6 +8,7 @@ import { logger } from '@shared/lib/logger'
 import { styleInventorySchema, LOW_STOCK_THRESHOLD } from '@domain/entities/inventory-level'
 import type { IInventoryRepository } from '@domain/ports/inventory.repository'
 import type { InventoryLevel, StyleInventory } from '@domain/entities/inventory-level'
+import { brandId, type CatalogStyleId } from '@domain/lib/branded'
 
 const log = logger.child({ domain: 'inventory' })
 
@@ -125,14 +126,14 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
    * No input needed — queries from the inventory side, not the style side.
    * This eliminates the N-style IN clause and allows parallel execution with getCatalogStylesSlim.
    */
-  async getInStockStyleIds(): Promise<string[]> {
+  async getInStockStyleIds(): Promise<CatalogStyleId[]> {
     try {
       const rows = await db
         .selectDistinct({ styleId: catalogColors.styleId })
         .from(catalogInventory)
         .innerJoin(catalogColors, eq(catalogInventory.colorId, catalogColors.id))
         .where(gt(catalogInventory.quantity, 0))
-      return rows.map((r) => r.styleId)
+      return rows.map((r) => brandId<CatalogStyleId>(r.styleId))
     } catch (error) {
       log.error('getInStockStyleIds failed', { error })
       throw error

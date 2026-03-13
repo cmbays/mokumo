@@ -40,6 +40,7 @@ export type CreditMemoId = Brand<string, 'CreditMemoId'>
 export type PricingTemplateId = Brand<string, 'PricingTemplateId'>
 export type ScratchNoteId = Brand<string, 'ScratchNoteId'>
 export type MockupTemplateId = Brand<string, 'MockupTemplateId'>
+export type CatalogStyleId = Brand<string, 'CatalogStyleId'>
 
 /**
  * Cast a raw value to a branded type at a validation boundary.

@@ -30,6 +30,7 @@ import { GarmentCatalogClient } from './GarmentCatalogClient'
 import type { GarmentCatalog } from '@domain/entities/garment'
 import type { Job } from '@domain/entities/job'
 import type { Customer } from '@domain/entities/customer'
+import type { CatalogStyleId } from '@domain/lib/branded'
 
 const sectionLogger = logger.child({ domain: 'garments-section' })
 
@@ -96,7 +97,7 @@ export async function GarmentCatalogSection({
       .then(({ getInStockStyleIds }) => getInStockStyleIds())
       .catch((err: unknown) => {
         sectionLogger.error('getInStockStyleIds failed — in-stock filter unavailable', { err })
-        return [] as string[]
+        return [] as CatalogStyleId[]
       }),
   ])
 

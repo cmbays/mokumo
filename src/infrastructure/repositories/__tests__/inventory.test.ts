@@ -94,13 +94,16 @@ describe('inventory facade', () => {
     it('delegates to repo.getInStockStyleIds and returns style IDs', async () => {
       mockGetInStockStyleIds.mockResolvedValue([VALID_UUID])
       const result = await getInStockStyleIds()
-      expect(mockGetInStockStyleIds).toHaveBeenCalled()
+      expect(mockGetInStockStyleIds).toHaveBeenCalledTimes(1)
+      expect(mockGetInStockStyleIds).toHaveBeenCalledWith()
       expect(result).toEqual([VALID_UUID])
     })
 
     it('returns empty array when no in-stock styles exist', async () => {
       mockGetInStockStyleIds.mockResolvedValue([])
       const result = await getInStockStyleIds()
+      expect(mockGetInStockStyleIds).toHaveBeenCalledTimes(1)
+      expect(mockGetInStockStyleIds).toHaveBeenCalledWith()
       expect(result).toEqual([])
     })
   })

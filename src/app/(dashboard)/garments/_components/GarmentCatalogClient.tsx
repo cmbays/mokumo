@@ -36,6 +36,7 @@ import type { Customer } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
 import type { FilterColorGroup } from '@features/garments/types'
 import { sortColorGroupsByFavorites } from '@features/garments/utils/favorites-sort'
+import type { CatalogStyleId } from '@domain/lib/branded'
 
 const clientLogger = logger.child({ domain: 'garments' })
 
@@ -66,7 +67,7 @@ type GarmentCatalogClientProps = {
   /** Shop-scoped favorite colorGroupNames from catalog_color_group_preferences, fetched server-side. */
   initialFavoriteColorGroupNames: string[]
   /** catalog_styles UUIDs with totalQuantity > 0 — used for the "Show in-stock only" filter. */
-  inStockStyleIds: string[]
+  inStockStyleIds: CatalogStyleId[]
 }
 
 // ---------------------------------------------------------------------------
@@ -317,7 +318,7 @@ export function GarmentCatalogClient({
       // In-stock filter — only show styles with totalQuantity > 0 in catalog_inventory
       if (inStock) {
         const styleId = skuToStyleId.get(g.sku)
-        if (!styleId || !inStockStyleIdSet.has(styleId)) continue
+        if (!styleId || !inStockStyleIdSet.has(styleId as CatalogStyleId)) continue
       }
 
       // Passes all non-category filters → count toward categoryHits

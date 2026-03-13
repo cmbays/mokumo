@@ -107,7 +107,7 @@ describe('GET /api/catalog/sync-inventory', () => {
 
   it('calls revalidateTag("inventory") after a successful sync', async () => {
     await GET(makeGetRequest())
-    expect(revalidateTag).toHaveBeenCalledWith('inventory', {})
+    expect(revalidateTag).toHaveBeenCalledWith('inventory', { expire: 0 })
   })
 
   it('does not call revalidateTag when sync throws', async () => {
@@ -157,6 +157,16 @@ describe('GET /api/catalog/sync-inventory', () => {
 // ─── POST /api/catalog/sync-inventory (admin manual trigger) ──────────────────
 
 describe('POST /api/catalog/sync-inventory', () => {
+  it('does not call checkAdminSyncRateLimit when admin secret is invalid', async () => {
+    vi.mocked(validateAdminSecret).mockReturnValue({
+      valid: false,
+      error: 'Unauthorized',
+      status: 401,
+    })
+    await POST(makePostRequest())
+    expect(checkAdminSyncRateLimit).not.toHaveBeenCalled()
+  })
+
   describe('rate limiting', () => {
     it('returns 429 with Retry-After header when rate limited', async () => {
       vi.mocked(checkAdminSyncRateLimit).mockResolvedValue({ limited: true })
@@ -197,7 +207,7 @@ describe('POST /api/catalog/sync-inventory', () => {
 
     it('calls revalidateTag("inventory") after a successful sync', async () => {
       await POST(makePostRequest())
-      expect(revalidateTag).toHaveBeenCalledWith('inventory', {})
+      expect(revalidateTag).toHaveBeenCalledWith('inventory', { expire: 0 })
     })
 
     it('returns 500 when syncInventoryFromSupplier throws', async () => {
