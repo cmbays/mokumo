@@ -627,13 +627,13 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                       }}
                       className="ml-0.5 rounded-sm hover:text-foreground"
                     >
-                      <X className="size-3" />
+                      <X className="size-4" />
                     </span>
                   </>
                 ) : (
                   <>
                     Lifecycle
-                    <ChevronDown className="size-3.5" />
+                    <ChevronDown className="size-4" />
                   </>
                 )}
               </button>
@@ -681,13 +681,13 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                       }}
                       className="ml-0.5 rounded-sm hover:text-foreground"
                     >
-                      <X className="size-3" />
+                      <X className="size-4" />
                     </span>
                   </>
                 ) : (
                   <>
                     Health
-                    <ChevronDown className="size-3.5" />
+                    <ChevronDown className="size-4" />
                   </>
                 )}
               </button>
@@ -735,13 +735,13 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
                       }}
                       className="ml-0.5 rounded-sm hover:text-foreground"
                     >
-                      <X className="size-3" />
+                      <X className="size-4" />
                     </span>
                   </>
                 ) : (
                   <>
                     Type
-                    <ChevronDown className="size-3.5" />
+                    <ChevronDown className="size-4" />
                   </>
                 )}
               </button>
