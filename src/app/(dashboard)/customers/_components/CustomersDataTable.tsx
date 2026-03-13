@@ -563,7 +563,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
 
           <Button
             onClick={() => setModalOpen(true)}
-            className="bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            className="bg-action text-black font-semibold shadow-[1.5px_1.5px_0_rgba(0,0,0,0.3)] hover:bg-action-hover active:scale-95 transition-all duration-150"
           >
             <Plus className="size-4" />
           </Button>
@@ -784,7 +784,7 @@ export function CustomersDataTable({ customers, quotes }: CustomersDataTableProp
 
           <Button
             onClick={() => setModalOpen(true)}
-            className="bg-action text-primary-foreground font-medium shadow-brutal shadow-action/30 hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            className="bg-action text-black font-semibold shadow-[1.5px_1.5px_0_rgba(0,0,0,0.3)] hover:bg-action-hover active:scale-95 transition-all duration-150"
           >
             <Plus className="size-4" />
             Add Customer

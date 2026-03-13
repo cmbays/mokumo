@@ -48,10 +48,14 @@ export function CustomerListStatsBar({ customers, quotes }: CustomerListStatsBar
       {stats.map(({ key, label, icon: Icon }) => (
         <div key={key} className="rounded-lg border border-border bg-elevated p-4">
           <div className="flex items-center gap-2">
-            <Icon className={key === 'total' ? 'h-4 w-4 text-amber' : 'h-4 w-4 text-muted-foreground'} />
-            <span className="text-xs text-muted-foreground">{label}</span>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-muted-foreground">
+              {label}
+            </span>
           </div>
-          <p className="mt-1 text-2xl font-bold text-foreground">{values[key]}</p>
+          <p className="mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+            {values[key]}
+          </p>
         </div>
       ))}
     </div>
