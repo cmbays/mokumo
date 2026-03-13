@@ -64,9 +64,9 @@ Feature: Money arithmetic
     Scenario Outline: Compact currency format for large amounts
       Given a monetary value of <amount>
       When I format as compact currency
-      Then the formatted value starts with "$"
+      Then the formatted value is "<formatted>"
 
       Examples:
-        | amount   |
-        | 1000     |
-        | 1000000  |
+        | amount   | formatted      |
+        | 1000     | $1,000         |
+        | 1000000  | $1,000,000     |

@@ -65,6 +65,13 @@ Feature: Pricing calculations
       And I price the same sheet for a contract customer
       Then the contract price is lower than the standard price
 
+  Rule: DTF pricing handles missing sheet tiers gracefully
+
+    Scenario: Unknown sheet length returns zero price
+      Given a DTF pricing template with multiple sheet tiers
+      When I price a sheet with an unknown length for a standard customer
+      Then the DTF price is 0.00
+
   Rule: Template health reflects overall margin quality
 
     Scenario: A well-configured template with healthy margins

@@ -35,7 +35,8 @@
     "test:acceptance": "vitest run --project acceptance",
     "test:mutate": "stryker run",
     "test:mutate:incremental": "stryker run --incremental",
-    "test:architecture": "depcruise src --config --ignore-known --output-type err"
+    "test:architecture": "depcruise src --config --ignore-known --output-type err",
+    "test:architecture:graph": "depcruise src --config --output-type dot | dot -T svg > architecture-graph.svg"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -108,7 +109,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "eslint-plugin-boundaries": "^5.4.0",
-    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-storybook": "^10.2.16",
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",

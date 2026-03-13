@@ -5,7 +5,7 @@
     "to": "src/db/schema/catalog.ts",
     "rule": {
       "severity": "error",
-      "name": "domain-layer-isolation"
+      "name": "not-in-allowed"
     }
   },
   {
@@ -14,7 +14,16 @@
     "to": "src/app/(dashboard)/artwork/artwork-upload.actions.ts",
     "rule": {
       "severity": "error",
-      "name": "features-layer-isolation"
+      "name": "not-in-allowed"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/artwork/components/ArtworkLibraryClient.tsx",
+    "to": "src/db/schema/artworks.ts",
+    "rule": {
+      "severity": "error",
+      "name": "not-in-allowed"
     }
   },
   {
@@ -23,7 +32,7 @@
     "to": "src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts",
     "rule": {
       "severity": "error",
-      "name": "features-layer-isolation"
+      "name": "not-in-allowed"
     }
   },
   {
@@ -32,7 +41,7 @@
     "to": "src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts",
     "rule": {
       "severity": "error",
-      "name": "features-layer-isolation"
+      "name": "not-in-allowed"
     }
   },
   {

@@ -1,5 +1,6 @@
 // src/domain/services/__tests__/pricing.steps.ts
 import { Given, When, Then } from 'quickpickle'
+import { need } from '../../__tests__/support/world'
 import type { MokumoWorld } from '../../__tests__/support/world'
 import {
   calculateMargin,
@@ -8,41 +9,57 @@ import {
   calculateDTFPrice,
   calculateTemplateHealth,
 } from '../pricing.service'
-import type { PricingTemplate, ScreenPrintMatrix } from '@domain/entities/price-matrix'
+import { screenPrintMatrixSchema, pricingTemplateSchema } from '@domain/entities/price-matrix'
+import { dtfPricingTemplateSchema } from '@domain/entities/dtf-pricing'
+import type {
+  PricingTemplate,
+  ScreenPrintMatrix,
+  MarginIndicator,
+} from '@domain/entities/price-matrix'
 import type { DTFPricingTemplate } from '@domain/entities/dtf-pricing'
 
 // ---------------------------------------------------------------------------
-// World extension
+// World extension — per-cluster interfaces composed via intersection
 // ---------------------------------------------------------------------------
 
-interface PricingWorld extends MokumoWorld {
-  // Margin scenario
+type MarginWorld = {
   revenue?: number
   garmentCost?: number
   inkCost?: number
   overheadCost?: number
   marginResult?: ReturnType<typeof calculateMargin>
+}
 
-  // Screen print scenarios
+type ScreenPrintWorld = {
   spTemplate?: PricingTemplate
   priceA?: number
   priceB?: number
+}
 
-  // Setup fee scenarios
+type SetupFeeWorld = {
   spMatrix?: ScreenPrintMatrix
   setupFeeResult?: number
+}
 
-  // DTF scenarios
+type DTFScenarioWorld = {
   dtfTemplate?: DTFPricingTemplate
   dtfPriceA?: number
   dtfPriceB?: number
-
-  // Template health
-  healthResult?: string
 }
 
+type TemplateHealthWorld = {
+  healthResult?: MarginIndicator
+}
+
+type PricingWorld = MokumoWorld &
+  MarginWorld &
+  ScreenPrintWorld &
+  SetupFeeWorld &
+  DTFScenarioWorld &
+  TemplateHealthWorld
+
 // ---------------------------------------------------------------------------
-// Helpers — build minimal valid objects matching Zod schemas
+// Helpers — build valid objects via Zod .parse() (catches fixture drift)
 // ---------------------------------------------------------------------------
 
 const NOW = '2024-01-01T00:00:00.000Z'
@@ -51,6 +68,17 @@ function makeSpTemplate(opts?: {
   perScreenFee?: number
   bulkWaiverThreshold?: number
   tiers?: { min: number; max: number | null; label: string; basePrice: number }[]
+  colorRate?: number
+  locationUpcharges?: { location: string; upcharge: number }[]
+  garmentTypes?: { garmentCategory: string; baseMarkup: number }[]
+  costConfig?: Partial<{
+    manualGarmentCost: number
+    inkCostPerHit: number
+    shopOverheadRate: number
+  }>
+  maxColors?: number
+  id?: string
+  name?: string
 }): PricingTemplate {
   const tiers = opts?.tiers ?? [
     { min: 12, max: 23, label: '12-23', basePrice: 8.0 },
@@ -60,23 +88,25 @@ function makeSpTemplate(opts?: {
     { min: 144, max: null, label: '144+', basePrice: 4.0 },
   ]
 
-  const matrix = {
+  const rate = opts?.colorRate ?? 0.5
+
+  const matrix = screenPrintMatrixSchema.parse({
     quantityTiers: tiers.map((t) => ({ minQty: t.min, maxQty: t.max, label: t.label })),
     basePriceByTier: tiers.map((t) => t.basePrice),
     colorPricing: [
-      { colors: 1, ratePerHit: 0.5 },
-      { colors: 2, ratePerHit: 0.5 },
-      { colors: 3, ratePerHit: 0.5 },
-      { colors: 4, ratePerHit: 0.5 },
+      { colors: 1, ratePerHit: rate },
+      { colors: 2, ratePerHit: rate },
+      { colors: 3, ratePerHit: rate },
+      { colors: 4, ratePerHit: rate },
     ],
-    locationUpcharges: [
+    locationUpcharges: opts?.locationUpcharges ?? [
       { location: 'front', upcharge: 0 },
       { location: 'back', upcharge: 1.5 },
       { location: 'left-sleeve', upcharge: 1.0 },
       { location: 'right-sleeve', upcharge: 1.0 },
       { location: 'pocket', upcharge: 0.75 },
     ],
-    garmentTypePricing: [
+    garmentTypePricing: opts?.garmentTypes ?? [
       { garmentCategory: 't-shirts', baseMarkup: 0 },
       { garmentCategory: 'polos', baseMarkup: 15 },
       { garmentCategory: 'fleece', baseMarkup: 20 },
@@ -88,87 +118,31 @@ function makeSpTemplate(opts?: {
       reorderDiscountPercent: 25,
     },
     priceOverrides: {},
-    maxColors: 8,
-  } as ScreenPrintMatrix
+    maxColors: opts?.maxColors ?? 8,
+  })
 
-  return {
-    id: '00000000-0000-0000-0000-000000000001',
-    name: 'Standard Screen Print',
+  return pricingTemplateSchema.parse({
+    id: opts?.id ?? '10000000-0000-4000-8000-000000000001',
+    name: opts?.name ?? 'Standard Screen Print',
     serviceType: 'screen-print',
     pricingTier: 'standard',
     matrix,
     costConfig: {
       garmentCostSource: 'manual',
-      manualGarmentCost: 3.5,
-      inkCostPerHit: 0.1,
-      shopOverheadRate: 15,
+      manualGarmentCost: opts?.costConfig?.manualGarmentCost ?? 3.5,
+      inkCostPerHit: opts?.costConfig?.inkCostPerHit ?? 0.1,
+      shopOverheadRate: opts?.costConfig?.shopOverheadRate ?? 15,
     },
     isDefault: false,
     isIndustryDefault: false,
     createdAt: NOW,
     updatedAt: NOW,
-  } as PricingTemplate
-}
-
-function makeProfitableSpTemplate(): PricingTemplate {
-  // High revenue tiers so average margin is above the 30% healthy threshold
-  const tiers = [
-    { min: 12, max: 23, label: '12-23', basePrice: 12.0 },
-    { min: 24, max: 47, label: '24-47', basePrice: 11.0 },
-    { min: 48, max: 71, label: '48-71', basePrice: 10.0 },
-    { min: 72, max: 143, label: '72-143', basePrice: 9.0 },
-    { min: 144, max: null, label: '144+', basePrice: 8.0 },
-  ]
-
-  const matrix = {
-    quantityTiers: tiers.map((t) => ({ minQty: t.min, maxQty: t.max, label: t.label })),
-    basePriceByTier: tiers.map((t) => t.basePrice),
-    colorPricing: [
-      { colors: 1, ratePerHit: 0.3 },
-      { colors: 2, ratePerHit: 0.3 },
-      { colors: 3, ratePerHit: 0.3 },
-      { colors: 4, ratePerHit: 0.3 },
-    ],
-    locationUpcharges: [
-      { location: 'front', upcharge: 0 },
-      { location: 'back', upcharge: 1.0 },
-      { location: 'left-sleeve', upcharge: 0.75 },
-      { location: 'right-sleeve', upcharge: 0.75 },
-      { location: 'pocket', upcharge: 0.5 },
-    ],
-    garmentTypePricing: [{ garmentCategory: 't-shirts', baseMarkup: 0 }],
-    setupFeeConfig: {
-      perScreenFee: 20.0,
-      bulkWaiverThreshold: 0,
-      reorderDiscountWindow: 12,
-      reorderDiscountPercent: 25,
-    },
-    priceOverrides: {},
-    maxColors: 4,
-  } as ScreenPrintMatrix
-
-  return {
-    id: '00000000-0000-0000-0000-000000000002',
-    name: 'Profitable Screen Print',
-    serviceType: 'screen-print',
-    pricingTier: 'standard',
-    matrix,
-    costConfig: {
-      garmentCostSource: 'manual',
-      manualGarmentCost: 2.0,
-      inkCostPerHit: 0.05,
-      shopOverheadRate: 10,
-    },
-    isDefault: false,
-    isIndustryDefault: false,
-    createdAt: NOW,
-    updatedAt: NOW,
-  } as PricingTemplate
+  })
 }
 
 function makeDtfTemplate(withContractPricing = false): DTFPricingTemplate {
-  return {
-    id: '00000000-0000-0000-0000-000000000003',
+  return dtfPricingTemplateSchema.parse({
+    id: '10000000-0000-4000-8000-000000000003',
     name: 'Standard DTF',
     serviceType: 'dtf',
     sheetTiers: [
@@ -214,7 +188,24 @@ function makeDtfTemplate(withContractPricing = false): DTFPricingTemplate {
     isIndustryDefault: false,
     createdAt: NOW,
     updatedAt: NOW,
-  } as DTFPricingTemplate
+  })
+}
+
+/** Store a price in the A/B slot (first call → A, second → B). */
+function recordPrice(world: PricingWorld, price: number): void {
+  if (world.priceA === undefined) {
+    world.priceA = price
+  } else {
+    world.priceB = price
+  }
+}
+
+function recordDtfPrice(world: PricingWorld, price: number): void {
+  if (world.dtfPriceA === undefined) {
+    world.dtfPriceA = price
+  } else {
+    world.dtfPriceB = price
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -232,19 +223,19 @@ Given(
 )
 
 When('I calculate the margin', (world: PricingWorld) => {
-  world.marginResult = calculateMargin(world.revenue!, {
-    garmentCost: world.garmentCost!,
-    inkCost: world.inkCost!,
-    overheadCost: world.overheadCost!,
+  world.marginResult = calculateMargin(need(world.revenue, 'revenue'), {
+    garmentCost: need(world.garmentCost, 'garmentCost'),
+    inkCost: need(world.inkCost, 'inkCost'),
+    overheadCost: need(world.overheadCost, 'overheadCost'),
   })
 })
 
 Then('the margin percentage is {float}', (world: PricingWorld, expected: number) => {
-  expect(world.marginResult?.percentage).toBe(expected)
+  expect(need(world.marginResult, 'marginResult').percentage).toBe(expected)
 })
 
 Then('the margin indicator is {string}', (world: PricingWorld, expected: string) => {
-  expect(world.marginResult?.indicator).toBe(expected)
+  expect(need(world.marginResult, 'marginResult').indicator).toBe(expected)
 })
 
 // ---------------------------------------------------------------------------
@@ -258,75 +249,51 @@ Given('a screen print pricing template', (world: PricingWorld) => {
 })
 
 When(
-  'I price {int} pieces with {int} color at {string}',
+  'I price {int} pieces with {int} color(s) at {string}',
   (world: PricingWorld, qty: number, colors: number, location: string) => {
+    const template = need(world.spTemplate, 'spTemplate')
     const { pricePerPiece } = calculateScreenPrintPrice(
       qty,
       colors,
       [location],
       't-shirts',
-      world.spTemplate!
+      template
     )
-    if (world.priceA === undefined) {
-      world.priceA = pricePerPiece
-    } else {
-      world.priceB = pricePerPiece
-    }
-  }
-)
-
-When(
-  'I price {int} pieces with {int} colors at {string}',
-  (world: PricingWorld, qty: number, colors: number, location: string) => {
-    const { pricePerPiece } = calculateScreenPrintPrice(
-      qty,
-      colors,
-      [location],
-      't-shirts',
-      world.spTemplate!
-    )
-    if (world.priceA === undefined) {
-      world.priceA = pricePerPiece
-    } else {
-      world.priceB = pricePerPiece
-    }
+    recordPrice(world, pricePerPiece)
   }
 )
 
 When(
   'I price {int} pieces with {int} color at {string} and {string}',
   (world: PricingWorld, qty: number, colors: number, loc1: string, loc2: string) => {
+    const template = need(world.spTemplate, 'spTemplate')
     const { pricePerPiece } = calculateScreenPrintPrice(
       qty,
       colors,
       [loc1, loc2],
       't-shirts',
-      world.spTemplate!
+      template
     )
-    if (world.priceA === undefined) {
-      world.priceA = pricePerPiece
-    } else {
-      world.priceB = pricePerPiece
-    }
+    recordPrice(world, pricePerPiece)
   }
 )
 
 Then('the 72-piece per-unit price is less than the 24-piece price', (world: PricingWorld) => {
-  expect(world.priceB).toBeDefined()
-  expect(world.priceA).toBeDefined()
-  expect(world.priceB!).toBeLessThan(world.priceA!)
+  const a = need(world.priceA, 'priceA')
+  const b = need(world.priceB, 'priceB')
+  expect(b).toBeLessThan(a)
 })
 
 Then('the 3-color price is higher than the 1-color price', (world: PricingWorld) => {
-  expect(world.priceB).toBeDefined()
-  expect(world.priceA).toBeDefined()
-  expect(world.priceB!).toBeGreaterThan(world.priceA!)
+  const a = need(world.priceA, 'priceA')
+  const b = need(world.priceB, 'priceB')
+  expect(b).toBeGreaterThan(a)
 })
 
 Then('the 2-location price is higher than the 1-location price', (world: PricingWorld) => {
-  expect(world.priceB).toBeDefined()
-  expect(world.priceA).toBeDefined()
-  expect(world.priceB!).toBeGreaterThan(world.priceA!)
+  const a = need(world.priceA, 'priceA')
+  const b = need(world.priceB, 'priceB')
+  expect(b).toBeGreaterThan(a)
 })
 
 // ---------------------------------------------------------------------------
@@ -350,7 +317,7 @@ Given(
 When(
   'I calculate setup fees for {int} screens on a {int}-piece order',
   (world: PricingWorld, screens: number, qty: number) => {
-    world.setupFeeResult = calculateSetupFees(world.spMatrix!, screens, qty, false)
+    world.setupFeeResult = calculateSetupFees(need(world.spMatrix, 'spMatrix'), screens, qty, false)
   }
 )
 
@@ -375,35 +342,73 @@ Given('a DTF pricing template with contract pricing', (world: PricingWorld) => {
 })
 
 When('I price a short sheet for a standard customer', (world: PricingWorld) => {
-  const { price } = calculateDTFPrice(6, 'standard', 'standard', 'standard', world.dtfTemplate!)
+  const template = need(world.dtfTemplate, 'dtfTemplate')
+  const { price } = calculateDTFPrice(
+    template.sheetTiers[0].length,
+    'standard',
+    'standard',
+    'standard',
+    template
+  )
   world.dtfPriceA = price
 })
 
 When('I price a long sheet for a standard customer', (world: PricingWorld) => {
-  const { price } = calculateDTFPrice(12, 'standard', 'standard', 'standard', world.dtfTemplate!)
+  const template = need(world.dtfTemplate, 'dtfTemplate')
+  const { price } = calculateDTFPrice(
+    template.sheetTiers[1].length,
+    'standard',
+    'standard',
+    'standard',
+    template
+  )
   world.dtfPriceB = price
 })
 
 When('I price a sheet for a standard customer', (world: PricingWorld) => {
-  const { price } = calculateDTFPrice(6, 'standard', 'standard', 'standard', world.dtfTemplate!)
+  const template = need(world.dtfTemplate, 'dtfTemplate')
+  const { price } = calculateDTFPrice(
+    template.sheetTiers[0].length,
+    'standard',
+    'standard',
+    'standard',
+    template
+  )
   world.dtfPriceA = price
 })
 
 When('I price the same sheet for a contract customer', (world: PricingWorld) => {
-  const { price } = calculateDTFPrice(6, 'contract', 'standard', 'standard', world.dtfTemplate!)
+  const template = need(world.dtfTemplate, 'dtfTemplate')
+  const { price } = calculateDTFPrice(
+    template.sheetTiers[0].length,
+    'contract',
+    'standard',
+    'standard',
+    template
+  )
   world.dtfPriceB = price
 })
 
+When('I price a sheet with an unknown length for a standard customer', (world: PricingWorld) => {
+  const template = need(world.dtfTemplate, 'dtfTemplate')
+  const { price } = calculateDTFPrice(999, 'standard', 'standard', 'standard', template)
+  world.dtfPriceA = price
+})
+
 Then('the long sheet price is higher than the short sheet price', (world: PricingWorld) => {
-  expect(world.dtfPriceA).toBeDefined()
-  expect(world.dtfPriceB).toBeDefined()
-  expect(world.dtfPriceB!).toBeGreaterThan(world.dtfPriceA!)
+  const a = need(world.dtfPriceA, 'dtfPriceA')
+  const b = need(world.dtfPriceB, 'dtfPriceB')
+  expect(b).toBeGreaterThan(a)
 })
 
 Then('the contract price is lower than the standard price', (world: PricingWorld) => {
-  expect(world.dtfPriceA).toBeDefined()
-  expect(world.dtfPriceB).toBeDefined()
-  expect(world.dtfPriceB!).toBeLessThan(world.dtfPriceA!)
+  const a = need(world.dtfPriceA, 'dtfPriceA')
+  const b = need(world.dtfPriceB, 'dtfPriceB')
+  expect(b).toBeLessThan(a)
+})
+
+Then('the DTF price is {float}', (world: PricingWorld, expected: number) => {
+  expect(need(world.dtfPriceA, 'dtfPriceA')).toBe(expected)
 })
 
 // ---------------------------------------------------------------------------
@@ -411,13 +416,34 @@ Then('the contract price is lower than the standard price', (world: PricingWorld
 // ---------------------------------------------------------------------------
 
 Given('a screen print pricing template with profitable tiers', (world: PricingWorld) => {
-  world.spTemplate = makeProfitableSpTemplate()
+  world.spTemplate = makeSpTemplate({
+    id: '10000000-0000-4000-8000-000000000002',
+    name: 'Profitable Screen Print',
+    tiers: [
+      { min: 12, max: 23, label: '12-23', basePrice: 12.0 },
+      { min: 24, max: 47, label: '24-47', basePrice: 11.0 },
+      { min: 48, max: 71, label: '48-71', basePrice: 10.0 },
+      { min: 72, max: 143, label: '72-143', basePrice: 9.0 },
+      { min: 144, max: null, label: '144+', basePrice: 8.0 },
+    ],
+    colorRate: 0.3,
+    locationUpcharges: [
+      { location: 'front', upcharge: 0 },
+      { location: 'back', upcharge: 1.0 },
+      { location: 'left-sleeve', upcharge: 0.75 },
+      { location: 'right-sleeve', upcharge: 0.75 },
+      { location: 'pocket', upcharge: 0.5 },
+    ],
+    garmentTypes: [{ garmentCategory: 't-shirts', baseMarkup: 0 }],
+    costConfig: { manualGarmentCost: 2.0, inkCostPerHit: 0.05, shopOverheadRate: 10 },
+    maxColors: 4,
+  })
 })
 
 When('I evaluate template health', (world: PricingWorld) => {
-  world.healthResult = calculateTemplateHealth(world.spTemplate!, 2.0)
+  world.healthResult = calculateTemplateHealth(need(world.spTemplate, 'spTemplate'), 2.0)
 })
 
 Then('the template health indicator is {string}', (world: PricingWorld, expected: string) => {
-  expect(world.healthResult).toBe(expected)
+  expect(need(world.healthResult, 'healthResult')).toBe(expected)
 })

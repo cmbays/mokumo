@@ -111,6 +111,9 @@ quality-gate/
 # Generated progress report (compiled artifact, not source of truth)
 PROGRESS.md
 
+# Dependency-cruiser generated architecture graph
+architecture-graph.svg
+
 # Stryker mutation testing reports and incremental cache
 reports/
 

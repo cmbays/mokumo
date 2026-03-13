@@ -3,7 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'node:url'
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import { playwright } from '@vitest/browser-playwright'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
 // @ts-expect-error -- quickpickle types may lag behind vitest 4; remove when quickpickle ships vitest 4 types
 import { quickpickle } from 'quickpickle'
 
@@ -74,7 +74,6 @@ export default defineConfig({
           include: ['src/**/*.feature'],
           setupFiles: [
             'src/domain/__tests__/support/world.ts',
-            'src/domain/__tests__/support/shared-money.steps.ts',
             'src/domain/lib/__tests__/money.steps.ts',
             'src/domain/services/__tests__/pricing.steps.ts',
           ],

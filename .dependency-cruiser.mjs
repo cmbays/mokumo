@@ -1,5 +1,74 @@
+// Layer dependency rules are enforced in two places:
+//   1. HERE — dependency-cruiser (allowed whitelist, runs in CI via `test:architecture`)
+//   2. eslint.config.mjs — eslint-plugin-boundaries (element-types rules, runs on every lint)
+// Keep both in sync when modifying allowed dependency directions.
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 export default {
+  allowed: [
+    // --- Layer dependency whitelist (DDD layered architecture) ---
+    // domain → domain only (innermost ring)
+    {
+      from: { path: '^src/domain', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/domain' },
+    },
+    // shared → domain, shared
+    {
+      from: { path: '^src/shared', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/(domain|shared)' },
+    },
+    // features → domain, shared, features
+    {
+      from: { path: '^src/features', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/(domain|shared|features)' },
+    },
+    // infrastructure → domain, shared, infrastructure, db
+    {
+      from: { path: '^src/infrastructure', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/(domain|shared|infrastructure|db)' },
+    },
+    // app → anything under src/ (outermost ring)
+    {
+      from: { path: '^src/app', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/' },
+    },
+    // db → db only
+    {
+      from: { path: '^src/db', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/db' },
+    },
+    // config → config only
+    {
+      from: { path: '^src/config', pathNot: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: { path: '^src/config' },
+    },
+    // --- npm dependencies: any module may import from node_modules ---
+    {
+      from: {},
+      to: { dependencyTypes: ['npm', 'npm-dev', 'npm-optional', 'npm-peer', 'npm-bundled'] },
+    },
+    // --- Node.js core modules (crypto, async_hooks, etc.) ---
+    {
+      from: {},
+      to: { dependencyTypes: ['core'] },
+    },
+    // --- lib/ (supplier adapters, outside src/) — app & infrastructure may use ---
+    {
+      from: { path: '^src/(app|infrastructure)' },
+      to: { path: '^lib/' },
+    },
+    // --- Test files may import from anywhere ---
+    {
+      from: { path: '\\.(test|spec)\\.(ts|tsx)$|__tests__' },
+      to: {},
+    },
+    // --- Non-src files (config files, scripts, etc.) may import from anywhere ---
+    {
+      from: { pathNot: '^src/' },
+      to: {},
+    },
+  ],
+  allowedSeverity: 'error',
   forbidden: [
     {
       name: 'no-circular',
@@ -32,33 +101,6 @@ export default {
         ],
       },
       to: {},
-    },
-    // Domain layer must not import from features, infrastructure, shared, app, or db
-    {
-      name: 'domain-layer-isolation',
-      comment: 'Domain layer must not import from features, infrastructure, shared, app, or db',
-      severity: 'error',
-      from: { path: '^src/domain', pathNot: '(__tests__|tests|\\.test\\.|\\.spec\\.|\\.steps\\.)' },
-      to: { path: '^src/(features|infrastructure|shared|app|db)' },
-    },
-    // Shared layer must not import from features, infrastructure, or app
-    {
-      name: 'shared-layer-isolation',
-      comment: 'Shared layer must not import from features, infrastructure, or app',
-      severity: 'error',
-      from: { path: '^src/shared', pathNot: '(__tests__|tests|\\.test\\.|\\.spec\\.|\\.steps\\.)' },
-      to: { path: '^src/(features|infrastructure|app)' },
-    },
-    // Features layer must not import from infrastructure or app
-    {
-      name: 'features-layer-isolation',
-      comment: 'Features layer must not import from infrastructure or app',
-      severity: 'error',
-      from: {
-        path: '^src/features',
-        pathNot: '(__tests__|tests|\\.test\\.|\\.spec\\.|\\.steps\\.)',
-      },
-      to: { path: '^src/(infrastructure|app)' },
     },
   ],
   options: {

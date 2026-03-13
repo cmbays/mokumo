@@ -77,6 +77,10 @@ const eslintConfig = defineConfig([
   }, // Clean Architecture layer boundaries (boundaries/element-types)
   // Dependency rule: domain ← shared ← features ← app (outer layers may import inner, never reverse)
   // Scoped to non-test source files only (test files may cross layer boundaries for fixtures).
+  // Layer dependency rules are enforced in two places:
+  //   1. .dependency-cruiser.mjs — allowed whitelist (graph-level, runs in CI via `test:architecture`)
+  //   2. HERE — eslint-plugin-boundaries (element-types rules, runs on every lint)
+  // Keep both in sync when modifying allowed dependency directions.
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['**/*.test.ts', '**/*.test.tsx', '**/__tests__/**'],
