@@ -1,6 +1,11 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    // Worktrees share node_modules with the repo root — tell Turbopack where
+    // the canonical package root is so it doesn't warn about multiple lockfiles.
+    root: '../../../',
+  },
   experimental: {
     // Cache dynamic route RSC payloads in the client-side router cache for 30s.
     // Without this, force-dynamic routes (including /garments) re-fetch on every

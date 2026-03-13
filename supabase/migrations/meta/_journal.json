@@ -127,6 +127,20 @@
       "when": 1772482313416,
       "tag": "0028_damp_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1773366235116,
+      "tag": "0029_shocking_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1773370172523,
+      "tag": "0030_new_the_fallen",
+      "breakpoints": true
     }
   ]
 }

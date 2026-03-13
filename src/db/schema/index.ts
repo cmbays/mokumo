@@ -1,3 +1,4 @@
+export * from './activity-events'
 export * from './artworks'
 export * from './catalog'
 export * from './catalog-normalized'

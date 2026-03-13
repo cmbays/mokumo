@@ -1,3 +1,5 @@
+export type { IActivityEventRepository } from './activity-event.port'
+export type { IJobDispatcher, DispatchResult } from './job-dispatcher.port'
 export type { IStorageProvider, IFileUploadService } from './storage'
 export type { ICustomerRepository } from './customer.repository'
 export type { IPricingTemplateRepository } from './pricing-template.repository'
