@@ -34,7 +34,8 @@
     "test:storybook": "STORYBOOK_TEST=1 vitest run --project=storybook",
     "test:acceptance": "vitest run --project acceptance",
     "test:mutate": "stryker run",
-    "test:mutate:incremental": "stryker run --incremental"
+    "test:mutate:incremental": "stryker run --incremental",
+    "test:architecture": "depcruise src --config --ignore-known --output-type err"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

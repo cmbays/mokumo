@@ -1,0 +1,47 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/domain/entities/garment.ts",
+    "to": "src/db/schema/catalog.ts",
+    "rule": {
+      "severity": "error",
+      "name": "domain-layer-isolation"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/artwork/components/ArtworkLibraryClient.tsx",
+    "to": "src/app/(dashboard)/artwork/artwork-upload.actions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "features-layer-isolation"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/pricing/components/GarmentMarkupEditor.tsx",
+    "to": "src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "features-layer-isolation"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/pricing/components/RushTierEditor.tsx",
+    "to": "src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "features-layer-isolation"
+    }
+  },
+  {
+    "type": "module",
+    "from": "src/features/artwork/actions/artwork-upload.actions.ts",
+    "to": "src/features/artwork/actions/artwork-upload.actions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-orphans"
+    }
+  }
+]
