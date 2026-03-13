@@ -3,7 +3,7 @@ import { cn } from '@shared/lib/cn'
 import { DollarSign, ShoppingBag, TrendingUp, Clock, Users } from 'lucide-react'
 import { MoneyAmount } from '@shared/ui/organisms/MoneyAmount'
 import { money, toNumber, formatCompactMoney } from '@domain/lib/money'
-import type { CustomerStats } from '@features/customers/lib/customer-stats'
+import type { CustomerStats } from '@domain/entities/customer-stats'
 
 export type { CustomerStats }
 
