@@ -9,8 +9,6 @@ import {
 } from '@db/schema/customers'
 import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
 import type { HealthStatus } from '@domain/entities/customer'
-import { contactSchema } from '@domain/entities/contact'
-import { addressSchema } from '@domain/entities/address'
 import { logger } from '@shared/lib/logger'
 import { validateUUID } from '@infra/repositories/_shared/validation'
 import { money, toNumber } from '@domain/lib/money'
@@ -23,20 +21,25 @@ import type {
   SortDirection,
   CustomerSortField,
 } from '@domain/ports/customer.repository'
-import type {
-  ContactInput,
-  ContactRow,
-  AddressInput,
-  AddressRow,
-} from '@domain/ports/customer-contact.port'
 import type { Customer } from '@domain/entities/customer'
 import type { Contact } from '@domain/entities/contact'
-import type { Address } from '@domain/entities/address'
 import type { Quote } from '@domain/entities/quote'
 import type { Job } from '@domain/entities/job'
 import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
 import type { Note } from '@domain/entities/note'
+import {
+  mapContactRow,
+  createContact,
+  updateContact,
+  deleteContact,
+} from './contacts'
+import {
+  mapAddressRow,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+} from './addresses'
 
 const repoLogger = logger.child({ domain: 'supabase-customers' })
 
@@ -104,48 +107,12 @@ function mapCustomerRow(
   })
 }
 
-/**
- * Map a raw contacts table row to the Contact domain entity.
- * The DB stores firstName + lastName separately; the domain entity uses a single `name`.
- */
-function mapContactRow(row: typeof contactsTable.$inferSelect): Contact {
-  return contactSchema.parse({
-    id: row.id,
-    name: [row.firstName, row.lastName].filter(Boolean).join(' '),
-    email: row.email ?? undefined,
-    phone: row.phone ?? undefined,
-    role: row.role,
-    isPrimary: row.isPrimary,
-    notes: undefined,
-    groupId: undefined,
-  })
-}
-
-/**
- * Map a raw addresses table row to the Address domain entity.
- */
-function mapAddressRow(row: typeof addressesTable.$inferSelect): Address {
-  return addressSchema.parse({
-    id: row.id,
-    label: row.label,
-    type: row.type,
-    street1: row.street1,
-    street2: row.street2 ?? undefined,
-    city: row.city,
-    state: row.state,
-    zip: row.zip,
-    country: row.country,
-    attentionTo: row.attentionTo ?? undefined,
-    isPrimaryBilling: row.isPrimaryBilling,
-    isPrimaryShipping: row.isPrimaryShipping,
-  })
-}
-
 // ─── SupabaseCustomerRepository ────────────────────────────────────────────────
 
 /**
  * Full Supabase implementation of ICustomerRepository.
  * All methods validate UUIDs via Zod before issuing queries (DAL ID validation rule).
+ * Contact and address mutations are implemented in ./contacts and ./addresses respectively.
  */
 export const supabaseCustomerRepository: ICustomerRepository = {
   // ── Legacy methods ──────────────────────────────────────────────────────────
@@ -571,226 +538,12 @@ export const supabaseCustomerRepository: ICustomerRepository = {
     return {}
   },
 
-  // ── Wave 1a — Contact mutations ─────────────────────────────────────────────
+  // ── Contact & address mutations — implemented in sibling modules ─────────────
 
-  async createContact(input: ContactInput): Promise<ContactRow> {
-    assertValidUUID(input.customerId, 'createContact')
-
-    try {
-      const inserted = await db
-        .insert(contactsTable)
-        .values({
-          customerId: input.customerId,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          email: input.email && input.email.length > 0 ? input.email : null,
-          phone: input.phone ?? null,
-          title: input.title ?? null,
-          role: input.role,
-          isPrimary: input.isPrimary,
-          portalAccess: input.portalAccess,
-          canApproveProofs: input.canApproveProofs,
-          canPlaceOrders: input.canPlaceOrders,
-        })
-        .returning()
-
-      const row = inserted[0]
-      if (!row) throw new Error('createContact: insert returned no rows')
-
-      repoLogger.info('Contact created', { id: row.id, customerId: input.customerId })
-      return {
-        id: row.id,
-        customerId: row.customerId,
-        firstName: row.firstName,
-        lastName: row.lastName,
-        email: row.email ?? null,
-        phone: row.phone ?? null,
-        title: row.title ?? null,
-        role: row.role,
-        isPrimary: row.isPrimary,
-        portalAccess: row.portalAccess,
-        canApproveProofs: row.canApproveProofs,
-        canPlaceOrders: row.canPlaceOrders,
-        createdAt: row.createdAt.toISOString(),
-      }
-    } catch (err) {
-      repoLogger.error('createContact failed', { customerId: input.customerId, err })
-      throw err
-    }
-  },
-
-  async updateContact(id: string, input: Partial<ContactInput>): Promise<ContactRow> {
-    assertValidUUID(id, 'updateContact')
-
-    const updateFields: Partial<typeof contactsTable.$inferInsert> = {}
-
-    if (input.firstName !== undefined) updateFields.firstName = input.firstName
-    if (input.lastName !== undefined) updateFields.lastName = input.lastName
-    if (input.email !== undefined)
-      updateFields.email = input.email && input.email.length > 0 ? input.email : null
-    if (input.phone !== undefined) updateFields.phone = input.phone ?? null
-    if (input.title !== undefined) updateFields.title = input.title ?? null
-    if (input.role !== undefined) updateFields.role = input.role
-    if (input.isPrimary !== undefined) updateFields.isPrimary = input.isPrimary
-    if (input.portalAccess !== undefined) updateFields.portalAccess = input.portalAccess
-    if (input.canApproveProofs !== undefined) updateFields.canApproveProofs = input.canApproveProofs
-    if (input.canPlaceOrders !== undefined) updateFields.canPlaceOrders = input.canPlaceOrders
-    updateFields.updatedAt = new Date()
-
-    try {
-      const updated = await db
-        .update(contactsTable)
-        .set(updateFields)
-        .where(eq(contactsTable.id, id))
-        .returning()
-
-      const row = updated[0]
-      if (!row) throw new Error(`updateContact: no contact found for id ${id}`)
-
-      repoLogger.info('Contact updated', { id })
-      return {
-        id: row.id,
-        customerId: row.customerId,
-        firstName: row.firstName,
-        lastName: row.lastName,
-        email: row.email ?? null,
-        phone: row.phone ?? null,
-        title: row.title ?? null,
-        role: row.role,
-        isPrimary: row.isPrimary,
-        portalAccess: row.portalAccess,
-        canApproveProofs: row.canApproveProofs,
-        canPlaceOrders: row.canPlaceOrders,
-        createdAt: row.createdAt.toISOString(),
-      }
-    } catch (err) {
-      repoLogger.error('updateContact failed', { id, err })
-      throw err
-    }
-  },
-
-  async deleteContact(id: string): Promise<void> {
-    assertValidUUID(id, 'deleteContact')
-
-    try {
-      await db.delete(contactsTable).where(eq(contactsTable.id, id))
-      repoLogger.info('Contact deleted', { id })
-    } catch (err) {
-      repoLogger.error('deleteContact failed', { id, err })
-      throw err
-    }
-  },
-
-  // ── Wave 1a — Address mutations ─────────────────────────────────────────────
-
-  async createAddress(input: AddressInput): Promise<AddressRow> {
-    assertValidUUID(input.customerId, 'createAddress')
-
-    try {
-      const inserted = await db
-        .insert(addressesTable)
-        .values({
-          customerId: input.customerId,
-          label: input.label,
-          type: input.type,
-          street1: input.street1,
-          street2: input.street2 ?? null,
-          city: input.city,
-          state: input.state,
-          zip: input.zip,
-          country: input.country,
-          attentionTo: input.attentionTo ?? null,
-          isPrimaryBilling: input.isPrimaryBilling,
-          isPrimaryShipping: input.isPrimaryShipping,
-        })
-        .returning()
-
-      const row = inserted[0]
-      if (!row) throw new Error('createAddress: insert returned no rows')
-
-      repoLogger.info('Address created', { id: row.id, customerId: input.customerId })
-      return {
-        id: row.id,
-        customerId: row.customerId,
-        label: row.label,
-        type: row.type,
-        street1: row.street1,
-        street2: row.street2 ?? null,
-        city: row.city,
-        state: row.state,
-        zip: row.zip,
-        country: row.country,
-        attentionTo: row.attentionTo ?? null,
-        isPrimaryBilling: row.isPrimaryBilling,
-        isPrimaryShipping: row.isPrimaryShipping,
-        createdAt: row.createdAt.toISOString(),
-      }
-    } catch (err) {
-      repoLogger.error('createAddress failed', { customerId: input.customerId, err })
-      throw err
-    }
-  },
-
-  async updateAddress(id: string, input: Partial<AddressInput>): Promise<AddressRow> {
-    assertValidUUID(id, 'updateAddress')
-
-    const updateFields: Partial<typeof addressesTable.$inferInsert> = {}
-
-    if (input.label !== undefined) updateFields.label = input.label
-    if (input.type !== undefined) updateFields.type = input.type
-    if (input.street1 !== undefined) updateFields.street1 = input.street1
-    if (input.street2 !== undefined) updateFields.street2 = input.street2 ?? null
-    if (input.city !== undefined) updateFields.city = input.city
-    if (input.state !== undefined) updateFields.state = input.state
-    if (input.zip !== undefined) updateFields.zip = input.zip
-    if (input.country !== undefined) updateFields.country = input.country
-    if (input.attentionTo !== undefined) updateFields.attentionTo = input.attentionTo ?? null
-    if (input.isPrimaryBilling !== undefined) updateFields.isPrimaryBilling = input.isPrimaryBilling
-    if (input.isPrimaryShipping !== undefined)
-      updateFields.isPrimaryShipping = input.isPrimaryShipping
-
-    try {
-      const updated = await db
-        .update(addressesTable)
-        .set(updateFields)
-        .where(eq(addressesTable.id, id))
-        .returning()
-
-      const row = updated[0]
-      if (!row) throw new Error(`updateAddress: no address found for id ${id}`)
-
-      repoLogger.info('Address updated', { id })
-      return {
-        id: row.id,
-        customerId: row.customerId,
-        label: row.label,
-        type: row.type,
-        street1: row.street1,
-        street2: row.street2 ?? null,
-        city: row.city,
-        state: row.state,
-        zip: row.zip,
-        country: row.country,
-        attentionTo: row.attentionTo ?? null,
-        isPrimaryBilling: row.isPrimaryBilling,
-        isPrimaryShipping: row.isPrimaryShipping,
-        createdAt: row.createdAt.toISOString(),
-      }
-    } catch (err) {
-      repoLogger.error('updateAddress failed', { id, err })
-      throw err
-    }
-  },
-
-  async deleteAddress(id: string): Promise<void> {
-    assertValidUUID(id, 'deleteAddress')
-
-    try {
-      await db.delete(addressesTable).where(eq(addressesTable.id, id))
-      repoLogger.info('Address deleted', { id })
-    } catch (err) {
-      repoLogger.error('deleteAddress failed', { id, err })
-      throw err
-    }
-  },
+  createContact,
+  updateContact,
+  deleteContact,
+  createAddress,
+  updateAddress,
+  deleteAddress,
 }
