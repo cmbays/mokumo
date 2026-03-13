@@ -42,12 +42,19 @@ const {
   const mockAnd = vi.fn((a: unknown, b: unknown, c: unknown) => ({ a, b, c }))
 
   // Transaction mock: immediately calls the callback with a tx object that has the same methods
-  type MockTx = { delete: typeof mockDelete; insert: typeof mockInsert; update: typeof mockUpdate }
+  // select is included so upsertMatrixCells can verify ownership inside the transaction
+  type MockTx = {
+    delete: typeof mockDelete
+    insert: typeof mockInsert
+    update: typeof mockUpdate
+    select: typeof mockSelect
+  }
   const mockTransaction = vi.fn(async (callback: (tx: MockTx) => Promise<void>) => {
     const tx: MockTx = {
       delete: mockDelete,
       insert: mockInsert,
       update: mockUpdate,
+      select: mockSelect,
     }
     await callback(tx)
   })
@@ -266,21 +273,48 @@ describe('SupabasePricingTemplateRepository', () => {
   // ─── upsertMatrixCells ────────────────────────────────────────────────────
 
   describe('upsertMatrixCells', () => {
-    it('returns early for an invalid templateId without calling DB', async () => {
-      await repo.upsertMatrixCells('bad-id', [])
+    it('returns false for an invalid templateId without calling DB', async () => {
+      const result = await repo.upsertMatrixCells('bad-id', SHOP_UUID, [])
+      expect(result).toBe(false)
       expect(mockTransaction).not.toHaveBeenCalled()
     })
 
-    it('deletes existing cells and inserts new ones in a transaction', async () => {
+    it('returns false for an invalid shopId without calling DB', async () => {
+      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, 'bad-shop', [])
+      expect(result).toBe(false)
+      expect(mockTransaction).not.toHaveBeenCalled()
+    })
+
+    it('returns false when ownership check fails (template not found)', async () => {
+      mockWhere.mockResolvedValueOnce([]) // ownership SELECT returns empty
+      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, SHOP_UUID, [])
+      expect(result).toBe(false)
+      expect(mockDelete).not.toHaveBeenCalled()
+      expect(mockInsert).not.toHaveBeenCalled()
+    })
+
+    it('returns false when template belongs to a different shop', async () => {
+      // The ownership SELECT with shopId filter returns empty — wrong shop = not found
+      mockWhere.mockResolvedValueOnce([])
+      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, '00000000-0000-4000-8000-000000009999', [])
+      expect(result).toBe(false)
+      expect(mockDelete).not.toHaveBeenCalled()
+    })
+
+    it('returns true and deletes+inserts in a transaction when ownership check passes', async () => {
+      mockWhere.mockResolvedValueOnce([{ id: TEMPLATE_UUID }]) // ownership SELECT succeeds
       const cells = [{ templateId: TEMPLATE_UUID, qtyAnchor: 24, colorCount: 2, costPerPiece: 5.5 }]
-      await repo.upsertMatrixCells(TEMPLATE_UUID, cells)
+      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, SHOP_UUID, cells)
+      expect(result).toBe(true)
       expect(mockTransaction).toHaveBeenCalled()
       expect(mockDelete).toHaveBeenCalled()
       expect(mockInsert).toHaveBeenCalled()
     })
 
-    it('only deletes (no insert) when cells array is empty', async () => {
-      await repo.upsertMatrixCells(TEMPLATE_UUID, [])
+    it('returns true and only deletes (no insert) when cells array is empty', async () => {
+      mockWhere.mockResolvedValueOnce([{ id: TEMPLATE_UUID }]) // ownership SELECT succeeds
+      const result = await repo.upsertMatrixCells(TEMPLATE_UUID, SHOP_UUID, [])
+      expect(result).toBe(true)
       expect(mockTransaction).toHaveBeenCalled()
       expect(mockDelete).toHaveBeenCalled()
       expect(mockInsert).not.toHaveBeenCalled()

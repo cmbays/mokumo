@@ -142,20 +142,33 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
     }
   }
 
-  async upsertMatrixCells(templateId: string, cells: PrintCostMatrixCellInsert[]): Promise<void> {
-    if (!isValidUuid(templateId)) {
-      log.warn('upsertMatrixCells called with invalid templateId', { templateId })
-      return
+  async upsertMatrixCells(
+    templateId: string,
+    shopId: string,
+    cells: PrintCostMatrixCellInsert[]
+  ): Promise<boolean> {
+    if (!isValidUuid(templateId) || !isValidUuid(shopId)) {
+      log.warn('upsertMatrixCells called with invalid templateId or shopId', { templateId, shopId })
+      return false
     }
     try {
+      let ownershipVerified = false
       await db.transaction(async (tx) => {
+        // Verify ownership atomically — prevents TOCTOU between the caller's pre-check and the write
+        const [template] = await tx
+          .select({ id: pricingTemplates.id })
+          .from(pricingTemplates)
+          .where(and(eq(pricingTemplates.id, templateId), eq(pricingTemplates.shopId, shopId)))
+        if (!template) return
+        ownershipVerified = true
         await tx.delete(printCostMatrix).where(eq(printCostMatrix.templateId, templateId))
         if (cells.length > 0) {
           await tx.insert(printCostMatrix).values(cells.map((c) => ({ ...c, templateId })))
         }
       })
+      return ownershipVerified
     } catch (error) {
-      log.error('upsertMatrixCells failed', { templateId, cellCount: cells.length, error })
+      log.error('upsertMatrixCells failed', { templateId, shopId, cellCount: cells.length, error })
       throw error
     }
   }
