@@ -9,7 +9,12 @@ import {
   commitCellValue,
   computeTintLevel,
   cellKey,
-} from '../MatrixCellGrid'
+  getUniqueColorCounts,
+  getUniqueQtyAnchors,
+  inheritTemplateId,
+  tintClass,
+  formatCost,
+} from '../MatrixCellGrid.utils'
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -325,5 +330,120 @@ describe('cellKey', () => {
     expect(cellKey(24, 1)).toBe('24-1')
     expect(cellKey(48, null)).toBe('48-null')
     expect(cellKey(72, 3)).toBe('72-3')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getUniqueColorCounts (extracted helper)
+// ---------------------------------------------------------------------------
+
+describe('getUniqueColorCounts', () => {
+  it('returns sorted numeric colorCounts, no duplicates', () => {
+    const cells = [makeCell(24, 3, 5), makeCell(24, 1, 4), makeCell(48, 3, 3), makeCell(48, 2, 2)]
+    expect(getUniqueColorCounts(cells)).toEqual([1, 2, 3])
+  })
+
+  it('places null last when present (DTF mixed mode)', () => {
+    const cells = [makeCell(24, 2, 5), makeCell(24, null, 4), makeCell(48, 1, 3)]
+    expect(getUniqueColorCounts(cells)).toEqual([1, 2, null])
+  })
+
+  it('returns [null] for all-null colorCounts (pure DTF)', () => {
+    const cells = [makeCell(24, null, 0.08), makeCell(48, null, 0.07)]
+    expect(getUniqueColorCounts(cells)).toEqual([null])
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(getUniqueColorCounts([])).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getUniqueQtyAnchors (extracted helper)
+// ---------------------------------------------------------------------------
+
+describe('getUniqueQtyAnchors', () => {
+  it('returns sorted unique qty anchors ascending', () => {
+    const cells = [makeCell(72, 1, 3), makeCell(24, 1, 5), makeCell(48, 1, 4), makeCell(24, 2, 4.5)]
+    expect(getUniqueQtyAnchors(cells)).toEqual([24, 48, 72])
+  })
+
+  it('deduplicates qty anchors that appear in multiple columns', () => {
+    const cells = [makeCell(24, 1, 5), makeCell(24, 2, 4.5), makeCell(48, 1, 4), makeCell(48, 2, 3.5)]
+    expect(getUniqueQtyAnchors(cells)).toEqual([24, 48])
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(getUniqueQtyAnchors([])).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// inheritTemplateId (extracted helper)
+// ---------------------------------------------------------------------------
+
+describe('inheritTemplateId', () => {
+  it('returns the templateId of the first cell', () => {
+    const cells = [makeCell(24, 1, 5), makeCell(48, 1, 4)]
+    expect(inheritTemplateId(cells)).toBe(TEMPLATE_ID)
+  })
+
+  it('returns empty string when no cells exist', () => {
+    expect(inheritTemplateId([])).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// tintClass (extracted helper)
+// ---------------------------------------------------------------------------
+
+describe('tintClass', () => {
+  it('returns success tint for ratios ≤ 0.4', () => {
+    expect(tintClass(0)).toBe('bg-success/10')
+    expect(tintClass(0.4)).toBe('bg-success/10')
+  })
+
+  it('returns warning tint for ratios ≥ 0.7', () => {
+    expect(tintClass(0.7)).toBe('bg-warning/10')
+    expect(tintClass(1)).toBe('bg-warning/10')
+  })
+
+  it('returns empty string for mid-range ratios (0.4 < ratio < 0.7)', () => {
+    expect(tintClass(0.41)).toBe('')
+    expect(tintClass(0.55)).toBe('')
+    expect(tintClass(0.69)).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// formatCost (extracted helper)
+// ---------------------------------------------------------------------------
+
+describe('formatCost', () => {
+  it('returns em dash for zero', () => {
+    expect(formatCost(0)).toBe('—')
+  })
+
+  it('returns em dash for undefined', () => {
+    expect(formatCost(undefined)).toBe('—')
+  })
+
+  it('returns em dash for negative values', () => {
+    expect(formatCost(-1)).toBe('—')
+  })
+
+  it('formats a positive cost via formatCurrency (Intl.NumberFormat USD)', () => {
+    // formatCurrency uses Intl.NumberFormat — output is locale-specific USD format
+    expect(formatCost(5.5)).toBe('$5.50')
+    expect(formatCost(10)).toBe('$10.00')
+  })
+
+  it('rounds to 2 decimal places via big.js before formatting', () => {
+    // 5.005 should round to 5.01 with half-up rounding
+    expect(formatCost(5.005)).toBe('$5.01')
+  })
+
+  it('formats values that would need thousands separators correctly', () => {
+    expect(formatCost(1500)).toBe('$1,500.00')
   })
 })
