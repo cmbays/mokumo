@@ -100,6 +100,14 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
   }
 
   async upsertTemplate(data: PricingTemplateInsert): Promise<PricingTemplate> {
+    if (!isValidUuid(data.shopId)) {
+      log.warn('upsertTemplate called with invalid shopId', { shopId: data.shopId })
+      throw new Error('upsertTemplate: invalid shopId')
+    }
+    if (data.id && !isValidUuid(data.id)) {
+      log.warn('upsertTemplate called with invalid id', { id: data.id })
+      throw new Error('upsertTemplate: invalid id')
+    }
     const now = new Date()
     try {
       if (data.id) {

@@ -217,6 +217,25 @@ describe('SupabasePricingTemplateRepository', () => {
   // ─── upsertTemplate ───────────────────────────────────────────────────────
 
   describe('upsertTemplate', () => {
+    it('throws for invalid shopId (update path)', async () => {
+      const data = { ...TEMPLATE_ROW, shopId: 'bad-shop' }
+      await expect(repo.upsertTemplate(data)).rejects.toThrow('invalid shopId')
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it('throws for invalid shopId (insert path)', async () => {
+      const { id: _id, createdAt: _c, updatedAt: _u, ...insertData } = TEMPLATE_ROW
+      const data = { ...insertData, shopId: 'bad-shop' }
+      await expect(repo.upsertTemplate(data)).rejects.toThrow('invalid shopId')
+      expect(mockInsert).not.toHaveBeenCalled()
+    })
+
+    it('throws for invalid id (update path)', async () => {
+      const data = { ...TEMPLATE_ROW, id: 'bad-id' }
+      await expect(repo.upsertTemplate(data)).rejects.toThrow('invalid id')
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
     it('inserts a new template when no id is provided', async () => {
       mockInsertReturning.mockResolvedValueOnce([TEMPLATE_ROW])
       const { id: _id, createdAt: _c, updatedAt: _u, ...insertData } = TEMPLATE_ROW
