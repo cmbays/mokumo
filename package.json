@@ -31,7 +31,10 @@
     "dbt:build": "cd dbt && uv run dbt build --profiles-dir profiles",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test:storybook": "STORYBOOK_TEST=1 vitest run --project=storybook"
+    "test:storybook": "STORYBOOK_TEST=1 vitest run --project=storybook",
+    "test:acceptance": "vitest run --project acceptance",
+    "test:mutate": "stryker run",
+    "test:mutate:incremental": "stryker run --incremental"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

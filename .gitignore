@@ -111,6 +111,9 @@ quality-gate/
 # Generated progress report (compiled artifact, not source of truth)
 PROGRESS.md
 
+# Stryker mutation testing reports and incremental cache
+reports/
+
 # Supabase CLI local dev artifacts
 .supabase/
 supabase/.temp/
