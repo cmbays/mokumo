@@ -3,45 +3,17 @@ import path from 'path'
 import { fileURLToPath } from 'node:url'
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import { playwright } from '@vitest/browser-playwright'
+
+import { quickpickle } from 'quickpickle'
+
 const dirname =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
 const enableStorybookProject = process.env.STORYBOOK_TEST === '1'
-const storybookProjects = enableStorybookProject
-  ? [
-      {
-        extends: true as const,
-        plugins: [
-          // The plugin will run tests for the stories defined in your Storybook config
-          // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
-          storybookTest({
-            configDir: path.join(dirname, '.storybook'),
-          }),
-        ],
-        test: {
-          name: 'storybook',
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright({}),
-            instances: [
-              {
-                browser: 'chromium' as const,
-              },
-            ],
-          },
-          setupFiles: ['.storybook/vitest.setup.ts'],
-        },
-      },
-    ]
-  : undefined
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   test: {
     globals: true,
     exclude: ['node_modules/**', '**/node_modules/**', 'tests/**'],
-    // keep Playwright E2E out of Vitest
-    // Per-file environment overrides are handled via // @vitest-environment docblock comments in test files
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
@@ -77,7 +49,63 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
     },
-    ...(storybookProjects ? { projects: storybookProjects } : {}),
+    projects: [
+      // Unit tests — existing configuration
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: [
+            'src/**/*.test.ts',
+            'src/**/*.test.tsx',
+            'lib/**/*.test.ts',
+            'tools/**/*.test.ts',
+          ],
+          exclude: ['node_modules/**', '**/node_modules/**', 'tests/**'],
+        },
+      },
+      // Acceptance tests — QuickPickle Gherkin scenarios
+      {
+        extends: true,
+        plugins: [quickpickle()],
+        test: {
+          name: 'acceptance',
+          include: ['src/**/*.feature'],
+          setupFiles: [
+            'src/domain/__tests__/support/world.ts',
+            'src/domain/lib/__tests__/money.steps.ts',
+            'src/domain/services/__tests__/pricing.steps.ts',
+          ],
+        },
+      },
+      // Storybook visual tests (opt-in via STORYBOOK_TEST=1)
+      ...(enableStorybookProject
+        ? [
+            {
+              extends: true as const,
+              plugins: [
+                storybookTest({
+                  configDir: path.join(dirname, '.storybook'),
+                }),
+              ],
+              test: {
+                name: 'storybook',
+                browser: {
+                  enabled: true,
+                  headless: true,
+                  provider: playwright({}),
+                  instances: [
+                    {
+                      browser: 'chromium' as const,
+                    },
+                  ],
+                },
+                setupFiles: ['.storybook/vitest.setup.ts'],
+              },
+            },
+          ]
+        : []),
+    ],
   },
   resolve: {
     alias: {

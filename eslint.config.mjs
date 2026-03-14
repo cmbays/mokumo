@@ -4,7 +4,7 @@ import storybook from 'eslint-plugin-storybook'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import nextVitals from 'eslint-config-next/core-web-vitals'
 import nextTs from 'eslint-config-next/typescript'
-import importPlugin from 'eslint-plugin-import'
+import boundaries from 'eslint-plugin-boundaries'
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -66,7 +66,7 @@ const eslintConfig = defineConfig([
     files: ['**/*.test.ts', '**/*.test.tsx', '**/__tests__/**'],
     rules: {
       'no-restricted-imports': 'off',
-      'import/no-restricted-paths': 'off',
+      'boundaries/element-types': 'off',
     },
   }, // MockAdapter is the supplier-layer equivalent of _providers/mock — allowed to import from _providers
   {
@@ -74,59 +74,59 @@ const eslintConfig = defineConfig([
     rules: {
       'no-restricted-imports': 'off',
     },
-  }, // Clean Architecture layer boundaries (import/no-restricted-paths)
+  }, // Clean Architecture layer boundaries (boundaries/element-types)
   // Dependency rule: domain ← shared ← features ← app (outer layers may import inner, never reverse)
   // Scoped to non-test source files only (test files may cross layer boundaries for fixtures).
+  // Layer dependency rules are enforced in two places:
+  //   1. .dependency-cruiser.mjs — allowed whitelist (graph-level, runs in CI via `test:architecture`)
+  //   2. HERE — eslint-plugin-boundaries (element-types rules, runs on every lint)
+  // Keep both in sync when modifying allowed dependency directions.
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['**/*.test.ts', '**/*.test.tsx', '**/__tests__/**'],
-    plugins: { import: importPlugin },
+    plugins: { boundaries },
+    settings: {
+      'boundaries/elements': [
+        { type: 'domain', pattern: ['src/domain/**'] },
+        { type: 'shared', pattern: ['src/shared/**'] },
+        { type: 'features', pattern: ['src/features/**'] },
+        { type: 'infrastructure', pattern: ['src/infrastructure/**'] },
+        { type: 'app', pattern: ['src/app/**'] },
+        { type: 'db', pattern: ['src/db/**'] },
+        { type: 'config', pattern: ['src/config/**'] },
+      ],
+    },
     rules: {
-      'import/no-restricted-paths': [
+      'boundaries/element-types': [
         'error',
         {
-          zones: [
-            // shared/ is reusable infrastructure — must not depend on features/ or infra/
+          default: 'disallow',
+          rules: [
+            { from: 'domain', allow: ['domain'] },
+            { from: 'shared', allow: ['domain', 'shared'] },
+            { from: 'features', allow: ['domain', 'shared', 'features'] },
+            { from: 'infrastructure', allow: ['domain', 'shared', 'infrastructure', 'db'] },
             {
-              target: './src/shared',
-              from: './src/features',
-              message:
-                'src/shared/ cannot import from src/features/ — shared must be reusable across all feature domains.',
+              from: 'app',
+              allow: ['domain', 'shared', 'features', 'infrastructure', 'app', 'db', 'config'],
             },
-            {
-              target: './src/shared',
-              from: './src/infrastructure',
-              message:
-                'src/shared/ cannot import from src/infrastructure/ — shared must not depend on implementation details.',
-            },
-            // features/ must not reach into infrastructure/ — use repository imports via app/ wiring
-            {
-              target: './src/features',
-              from: './src/infrastructure',
-              message:
-                'src/features/ cannot import from src/infrastructure/ — features must receive data via props or hooks, not call repositories directly.',
-            },
-            // domain/ is the innermost ring — pure business logic, no outer-layer dependencies
-            {
-              target: './src/domain',
-              from: './src/features',
-              message:
-                'src/domain/ cannot import from src/features/ — domain is the innermost ring.',
-            },
-            {
-              target: './src/domain',
-              from: './src/infrastructure',
-              message:
-                'src/domain/ cannot import from src/infrastructure/ — domain is the innermost ring.',
-            },
-            {
-              target: './src/domain',
-              from: './src/shared',
-              message: 'src/domain/ cannot import from src/shared/ — domain is the innermost ring.',
-            },
+            { from: 'db', allow: ['db'] },
+            { from: 'config', allow: ['config'] },
           ],
         },
       ],
+    },
+  }, // Pre-existing boundary violations — baselined here (matches .dependency-cruiser-known-violations.json).
+  // Fix these files to remove this override; do not add new entries.
+  {
+    files: [
+      'src/domain/entities/garment.ts', // domain → db
+      'src/features/pricing/components/RushTierEditor.tsx', // features → app
+      'src/features/pricing/components/GarmentMarkupEditor.tsx', // features → app
+      'src/features/artwork/components/ArtworkLibraryClient.tsx', // features → app, features → db
+    ],
+    rules: {
+      'boundaries/element-types': 'off',
     },
   }, // Override default ignores of eslint-config-next.
   globalIgnores([
