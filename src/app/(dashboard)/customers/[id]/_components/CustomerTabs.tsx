@@ -118,8 +118,9 @@ export function CustomerTabs({
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
 
   useEffect(() => {
-    // Small delay ensures layout is settled after tab change
-    const timer = setTimeout(() => {
+    // requestAnimationFrame fires after the next browser paint — faster and more
+    // reliable than setTimeout(20) which can fire before or after layout settles.
+    const rafId = requestAnimationFrame(() => {
       const container = desktopContainerRef.current
       const activeBtn = tabRefs.current.get(activeTab)
       if (container && activeBtn) {
@@ -127,8 +128,8 @@ export function CustomerTabs({
         const bRect = activeBtn.getBoundingClientRect()
         setIndicatorStyle({ left: bRect.left - cRect.left, width: bRect.width })
       }
-    }, 20)
-    return () => clearTimeout(timer)
+    })
+    return () => cancelAnimationFrame(rafId)
   }, [activeTab])
 
   const isDesktopSecondaryActive = (DESKTOP_SECONDARY_TABS as readonly string[]).includes(activeTab)
@@ -187,7 +188,7 @@ export function CustomerTabs({
               style={{
                 left: `${indicatorStyle.left}px`,
                 width: `${indicatorStyle.width}px`,
-                boxShadow: '1.5px 1.5px 0 rgba(0,119,204,0.2)',
+                boxShadow: '1.5px 1.5px 0 var(--entity-shadow-action)',
                 transition:
                   'left 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
               }}
@@ -329,20 +330,18 @@ export function CustomerTabs({
         </div>
       </div>
 
-      {/* ── Tab content panels ── */}
-      <TabsContent value="overview" className="mt-4">
+      {/* ── Tab content panels — min-h prevents layout shift when switching between tall/short tabs ── */}
+      <TabsContent value="overview" className="mt-4 min-h-[480px]">
         <CustomerOverviewTab
           customer={customer}
-          quotes={quotes}
-          jobs={jobs}
-          notes={notes}
+          recentActivities={initialActivities.slice(0, 5)}
           artworks={artworks}
           onSwitchTab={setActiveTab}
           onAddNote={addCustomerNote}
         />
       </TabsContent>
 
-      <TabsContent value="activity" className="mt-4">
+      <TabsContent value="activity" className="mt-4 min-h-[480px]">
         <ActivityFeed
           customerId={customer.id}
           initialActivities={initialActivities}

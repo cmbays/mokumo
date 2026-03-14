@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { ThemeProvider } from '@shared/ui/primitives/theme-provider'
 import { TooltipProvider } from '@shared/ui/primitives/tooltip'
-import { Sidebar, mainNavItems, settingsNavItems, isNavItemActive } from './sidebar'
+import {
+  Sidebar,
+  mainNavItems,
+  settingsNavItems,
+  isNavItemActive,
+  resolveEntityColor,
+} from './sidebar'
 import { NijiActiveIndicator, type NijiIndicatorPos } from './NijiActiveIndicator'
 import { SidebarNavLink } from './SidebarNavLink'
 import { ThemeToggle } from './ThemeToggle'
@@ -123,7 +129,8 @@ function SidebarPlayground() {
   const allItems: NavItem[] = [...mainNavItems, ...settingsNavItems]
   const activeItem = allItems.find((item) => isNavItemActive(item, pathname)) ?? null
 
-  // Update indicator position after each pathname or collapsed change
+  // Update indicator position after each pathname or collapsed change.
+  // Uses resolveEntityColor (var(--purple) etc.) for reliable CSS var resolution.
   useEffect(() => {
     if (!navRef.current || !activeItem) {
       requestAnimationFrame(() => setIndicatorPos(null))
@@ -134,10 +141,11 @@ function SidebarPlayground() {
       if (!activeEl || !navRef.current) return
       const navRect = navRef.current.getBoundingClientRect()
       const itemRect = activeEl.getBoundingClientRect()
-      const color = activeItem.iconColor
-        ? `var(--color-${activeItem.iconColor.replace('text-', '')})`
-        : 'var(--color-action)'
-      setIndicatorPos({ top: itemRect.top - navRect.top, height: itemRect.height, color })
+      setIndicatorPos({
+        top: itemRect.top - navRect.top,
+        height: itemRect.height,
+        color: resolveEntityColor(activeItem.iconColor),
+      })
     })
   }, [pathname, collapsed]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -158,49 +166,48 @@ function SidebarPlayground() {
 
   return (
     <aside
-      className="flex h-screen flex-col border-r border-sidebar-border bg-sidebar"
+      className="relative flex h-screen flex-col border-r border-sidebar-border bg-sidebar"
       style={{
         width: collapsed ? 64 : 240,
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden',
       }}
     >
+      {/* Collapse toggle — floats at sidebar right edge, protrudes when collapsed */}
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className="absolute z-30 flex h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-muted-foreground shadow-sm transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+        style={{
+          top: 20,
+          right: collapsed ? -12 : 8,
+          transition: 'right 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+      </button>
+
       {/* Brand header */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
+      <div
+        className="flex h-14 shrink-0 items-center border-b border-sidebar-border"
+        style={{ paddingLeft: 12, paddingRight: collapsed ? 8 : 40 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mokumo-cloud.png"
+          alt="Mokumo"
+          className="h-9 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+        />
         {!collapsed && (
-          <div className="flex min-w-0 items-center gap-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/mokumo-cloud.png"
-              alt="Mokumo"
-              className="h-9 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/mokumo-name.png"
-              alt="Mokumo Print"
-              className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
-            />
-          </div>
-        )}
-        {collapsed && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/mokumo-cloud.png"
-            alt="Mokumo"
-            className="mx-auto h-9 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+            src="/mokumo-name.png"
+            alt="Mokumo Print"
+            className="ml-1 h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
           />
         )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
       </div>
 
-      <nav ref={navRef} className="relative flex flex-1 flex-col px-2 py-3">
+      <nav ref={navRef} className="relative flex flex-1 flex-col overflow-hidden px-2 py-3">
         {/* Sliding entity-colored pill */}
         {indicatorPos && <NijiActiveIndicator {...indicatorPos} collapsed={collapsed} />}
 
@@ -222,50 +229,32 @@ function SidebarPlayground() {
           })}
         </div>
 
-        {!collapsed && <ThemeToggle />}
+        <ThemeToggle collapsed={collapsed} />
 
         <div className="mx-3 mb-3 border-t border-sidebar-border" />
 
         {!collapsed && (
-          <div className="space-y-1">
-            <span className="px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Settings
-            </span>
-            {settingsNavItems.map((item) => {
-              const isActive = isNavItemActive(item, pathname)
-              return (
-                <div key={item.href} onClick={(e) => handleNavClick(e, item.href)}>
-                  <SidebarNavLink
-                    {...item}
-                    ref={makeRef(item.href)}
-                    isActive={isActive}
-                    bounceKey={isActive ? bounceKey : 0}
-                    collapsed={false}
-                  />
-                </div>
-              )
-            })}
-          </div>
+          <span className="px-3 pb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Settings
+          </span>
         )}
 
-        {collapsed && (
-          <div className="space-y-0.5">
-            {settingsNavItems.map((item) => {
-              const isActive = isNavItemActive(item, pathname)
-              return (
-                <div key={item.href} onClick={(e) => handleNavClick(e, item.href)}>
-                  <SidebarNavLink
-                    {...item}
-                    ref={makeRef(item.href)}
-                    isActive={isActive}
-                    bounceKey={isActive ? bounceKey : 0}
-                    collapsed={true}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <div className={collapsed ? 'space-y-0.5' : 'space-y-1'}>
+          {settingsNavItems.map((item) => {
+            const isActive = isNavItemActive(item, pathname)
+            return (
+              <div key={item.href} onClick={(e) => handleNavClick(e, item.href)}>
+                <SidebarNavLink
+                  {...item}
+                  ref={makeRef(item.href)}
+                  isActive={isActive}
+                  bounceKey={isActive ? bounceKey : 0}
+                  collapsed={collapsed}
+                />
+              </div>
+            )
+          })}
+        </div>
       </nav>
     </aside>
   )

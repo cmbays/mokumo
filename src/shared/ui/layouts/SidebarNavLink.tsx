@@ -30,10 +30,10 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
     { label, href, icon: Icon, iconColor, indent, isActive, bounceKey, collapsed },
     ref
   ) {
-    // Derive CSS variable from Tailwind color class: 'text-purple' → var(--color-purple)
-    const cssVar = iconColor
-      ? `var(--color-${iconColor.replace('text-', '')})`
-      : `var(--color-action)`
+    // Derive CSS variable from iconColor token: 'text-purple' → var(--purple)
+    // Uses direct :root custom properties rather than Tailwind @theme aliases
+    // so the color resolves correctly in all rendering contexts (incl. Storybook).
+    const cssVar = iconColor ? `var(--${iconColor.replace('text-', '')})` : `var(--action)`
 
     if (collapsed) {
       return (

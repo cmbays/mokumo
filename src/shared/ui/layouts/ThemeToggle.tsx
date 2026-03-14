@@ -5,12 +5,20 @@ import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { cn } from '@shared/lib/cn'
 
+type Props = {
+  /** Icon-only mode used when sidebar is collapsed */
+  collapsed?: boolean
+}
+
 /**
  * Horizontal light switch — two halves in a pill container.
  * The active side appears physically depressed (inset shadow, darker bg).
  * Springs between states with cubic-bezier(0.34, 1.56, 0.64, 1).
+ *
+ * When `collapsed`, renders as a single icon-only toggle button showing the
+ * current theme. Clicking it switches to the opposite theme.
  */
-export function ThemeToggle() {
+export function ThemeToggle({ collapsed = false }: Props) {
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -20,10 +28,43 @@ export function ThemeToggle() {
   }, [])
 
   if (!mounted) {
-    return <div className="mx-3 h-9" aria-hidden="true" />
+    return <div className={cn(collapsed ? 'h-9 w-full' : 'mx-3 h-9')} aria-hidden="true" />
   }
 
   const isDark = resolvedTheme === 'dark'
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        className={cn(
+          'relative z-10 flex w-full items-center justify-center py-2',
+          'rounded-md text-muted-foreground transition-colors hover:text-foreground',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar'
+        )}
+      >
+        {isDark ? (
+          <Moon
+            className="h-4 w-4 shrink-0"
+            style={{
+              transform: 'rotate(-15deg)',
+              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}
+          />
+        ) : (
+          <Sun
+            className="h-4 w-4 shrink-0"
+            style={{
+              transform: 'rotate(15deg)',
+              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}
+          />
+        )}
+      </button>
+    )
+  }
 
   return (
     <div
