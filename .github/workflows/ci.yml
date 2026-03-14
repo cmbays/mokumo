@@ -152,7 +152,7 @@ jobs:
       # ── dbt parse (lightweight, no DB) ────────────────────────────────
       - name: Install uv
         if: steps.changes.outputs.dbt == 'true'
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: 'dbt/uv.lock'
@@ -271,7 +271,7 @@ jobs:
 
       - name: Install uv
         if: steps.changes.outputs.dbt_models == 'true'
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: 'dbt/uv.lock'
