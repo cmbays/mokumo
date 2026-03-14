@@ -168,7 +168,7 @@ function SidebarPlayground() {
     <aside
       className="relative flex h-screen flex-col border-r border-sidebar-border bg-sidebar"
       style={{
-        width: collapsed ? 72 : 240,
+        width: collapsed ? 72 : 216,
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
@@ -210,7 +210,7 @@ function SidebarPlayground() {
           <img
             src="/mokumo-name.png"
             alt="Mokumo Print"
-            className="h-6 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+            className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
           />
         </div>
       </div>

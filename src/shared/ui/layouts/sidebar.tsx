@@ -134,7 +134,7 @@ export function Sidebar() {
       style={{
         // 72px collapsed: cloud logo (h-7 ≈ 28px from x=12) leaves ≥20px gap
         // before the protruding chevron button (right: -12 → left edge at x=60).
-        width: collapsed ? 72 : 240,
+        width: collapsed ? 72 : 216,
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
@@ -180,7 +180,7 @@ export function Sidebar() {
           <img
             src="/mokumo-name.png"
             alt="Mokumo Print"
-            className="h-6 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+            className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
           />
         </div>
       </div>

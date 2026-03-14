@@ -22,13 +22,14 @@ type SidebarNavLinkProps = {
  * Single sidebar nav item. Parent (Sidebar) owns active state and registers refs
  * for the sliding NijiActiveIndicator.
  *
- * Single render path in both collapsed and expanded states so the icon never
- * moves: it is always 20px from the sidebar left edge (8px nav padding + 12px
- * link px-3). The label span collapses via max-width + marginLeft so no gap
- * ghost remains behind the icon when collapsed.
+ * Centering: in collapsed mode, padding is removed and justify-content: center
+ * is used so the icon sits at the sidebar's midpoint. In expanded mode, px-3
+ * (12px) restores left-aligned layout with label. Both padding and the label
+ * width transition simultaneously so the icon slides smoothly from centered to
+ * left-aligned as the sidebar opens.
  *
- * Parent hides indented items entirely when collapsed — this component does not
- * need to handle `collapsed && indent`.
+ * Scale: active items magnify in both collapsed and expanded states (no !collapsed
+ * guard) so toggling the sidebar doesn't change the icon's scale.
  */
 export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>(
   function SidebarNavLink(
@@ -46,24 +47,33 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
         href={href}
         title={collapsed ? label : undefined}
         className={cn(
-          // Base layout — sits above the indicator (z-10). No gap-3: spacing comes
-          // from the label's marginLeft so it collapses cleanly with the text.
+          // Base layout — sits above the indicator (z-10)
           'relative z-10 flex items-center rounded-md text-sm',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar',
-          indent ? 'min-h-[32px] py-1.5 pl-9 pr-3' : 'px-3 py-2',
+          // Indented items always show in expanded mode; their padding comes from Tailwind.
+          // Non-indent padding is handled via inline style so it can animate.
+          indent ? 'min-h-[32px] py-1.5 pl-9 pr-3' : 'py-2',
           !isActive && 'text-muted-foreground hover:text-sidebar-accent-foreground'
         )}
         style={{
+          // Non-indent: collapse padding to zero when collapsed and center the icon.
+          // Indented items are hidden by parent in collapsed mode, no override needed.
+          ...(!indent && {
+            paddingLeft: collapsed ? 0 : 12,
+            paddingRight: collapsed ? 0 : 12,
+            justifyContent: collapsed ? 'center' : undefined,
+          }),
           fontWeight: isActive ? 600 : undefined,
           color: isActive ? cssVar : undefined,
-          // Expand left-anchored so the icon edge stays pinned
-          transformOrigin: 'left center',
-          // Scale only in expanded mode; collapsed relies on color highlight alone
-          transform: !collapsed && isActive ? 'scale(1.12)' : 'scale(1)',
-          transition: 'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          // niji-pop fires only on activation in expanded mode
+          // Scale from icon center when collapsed, from left edge when expanded
+          // (so label expands rightward without clipping the left border).
+          transformOrigin: collapsed ? 'center' : 'left center',
+          // Active items magnify in BOTH states — toggling collapsed must not shrink the icon.
+          transform: isActive ? 'scale(1.12)' : 'scale(1)',
+          transition:
+            'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding-right 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           animation:
-            !collapsed && isActive && bounceKey && bounceKey > 0
+            isActive && bounceKey && bounceKey > 0
               ? 'niji-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
               : undefined,
         }}
@@ -75,7 +85,7 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
             transition: 'color 0.2s ease',
           }}
         />
-        {/* marginLeft collapses with the span so no 12px ghost gap is left behind */}
+        {/* marginLeft collapses with max-width so no ghost gap remains behind the icon */}
         <span
           style={{
             marginLeft: collapsed ? 0 : 12,
