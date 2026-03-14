@@ -168,7 +168,7 @@ function SidebarPlayground() {
     <aside
       className="relative flex h-screen flex-col border-r border-sidebar-border bg-sidebar"
       style={{
-        width: collapsed ? 64 : 240,
+        width: collapsed ? 72 : 240,
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
@@ -186,25 +186,33 @@ function SidebarPlayground() {
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      {/* Brand header */}
+      {/* Brand header — cloud logo stays fixed; name fades+collapses */}
       <div
-        className="flex h-14 shrink-0 items-center border-b border-sidebar-border"
-        style={{ paddingLeft: 12, paddingRight: collapsed ? 8 : 40 }}
+        className="flex h-14 shrink-0 items-center overflow-hidden border-b border-sidebar-border"
+        style={{ paddingLeft: 12, paddingRight: 8 }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/mokumo-cloud.png"
           alt="Mokumo"
-          className="h-9 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+          className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
         />
-        {!collapsed && (
-          // eslint-disable-next-line @next/next/no-img-element
+        <div
+          style={{
+            marginLeft: 4,
+            overflow: 'hidden',
+            maxWidth: collapsed ? 0 : 160,
+            opacity: collapsed ? 0 : 1,
+            transition: 'max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.12s ease',
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/mokumo-name.png"
             alt="Mokumo Print"
-            className="ml-1 h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+            className="h-6 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
           />
-        )}
+        </div>
       </div>
 
       <nav ref={navRef} className="relative flex flex-1 flex-col overflow-hidden px-2 py-3">

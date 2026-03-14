@@ -40,7 +40,8 @@ export function ThemeToggle({ collapsed = false }: Props) {
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
         aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         className={cn(
-          'relative z-10 flex w-full items-center justify-center py-2',
+          // px-3 matches SidebarNavLink so the icon aligns to the same left column
+          'relative z-10 flex w-full items-center px-3 py-2',
           'rounded-md text-muted-foreground transition-colors hover:text-foreground',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar'
         )}

@@ -132,7 +132,9 @@ export function Sidebar() {
     <aside
       className="relative flex h-full flex-col border-r border-sidebar-border bg-sidebar"
       style={{
-        width: collapsed ? 64 : 240,
+        // 72px collapsed: cloud logo (h-7 ≈ 28px from x=12) leaves ≥20px gap
+        // before the protruding chevron button (right: -12 → left edge at x=60).
+        width: collapsed ? 72 : 240,
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
@@ -152,25 +154,35 @@ export function Sidebar() {
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      {/* Brand header */}
+      {/* Brand header — cloud logo stays fixed; name fades+collapses so the
+          logo never moves between collapsed and expanded states. */}
       <div
-        className="flex h-14 shrink-0 items-center border-b border-sidebar-border"
-        style={{ paddingLeft: 12, paddingRight: collapsed ? 8 : 40 }}
+        className="flex h-14 shrink-0 items-center overflow-hidden border-b border-sidebar-border"
+        style={{ paddingLeft: 12, paddingRight: 8 }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/mokumo-cloud.png"
           alt="Mokumo"
-          className="h-9 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+          className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
         />
-        {!collapsed && (
-          // eslint-disable-next-line @next/next/no-img-element
+        {/* Name slides out via max-width + opacity — never mounts/unmounts */}
+        <div
+          style={{
+            marginLeft: 4,
+            overflow: 'hidden',
+            maxWidth: collapsed ? 0 : 160,
+            opacity: collapsed ? 0 : 1,
+            transition: 'max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.12s ease',
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/mokumo-name.png"
             alt="Mokumo Print"
-            className="ml-1 h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+            className="h-6 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
           />
-        )}
+        </div>
       </div>
 
       {/* Nav — overflow: hidden clips text content during the width animation */}
