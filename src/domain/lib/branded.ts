@@ -46,6 +46,7 @@ export type CreditMemoId = Brand<string, 'CreditMemoId'>
 export type PricingTemplateId = Brand<string, 'PricingTemplateId'>
 export type ScratchNoteId = Brand<string, 'ScratchNoteId'>
 export type MockupTemplateId = Brand<string, 'MockupTemplateId'>
+export type CatalogStyleId = Brand<string, 'CatalogStyleId'>
 
 /** Union of all entity IDs that can have activity events. */
 export type ActivityEntityId = CustomerId | QuoteId | JobId | InvoiceId | ArtworkId

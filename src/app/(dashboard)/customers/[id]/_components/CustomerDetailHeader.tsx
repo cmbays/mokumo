@@ -38,9 +38,9 @@ function CopyButton({ value, label }: { value: string; label: string }) {
     >
       {value}
       {copied ? (
-        <Check className="size-3 text-success" />
+        <Check className="size-4 text-success" />
       ) : (
-        <Copy className="size-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
+        <Copy className="size-4 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
       )}
     </button>
   )

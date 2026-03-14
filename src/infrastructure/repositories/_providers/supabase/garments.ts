@@ -58,17 +58,26 @@ export async function getGarmentById(id: string): Promise<GarmentCatalog | null>
   }
 }
 
-/**
- * Fetch distinct brands from Supabase PostgreSQL catalog.
- * Returns sorted list of unique brand names from enabled garments only.
- */
-export async function getAvailableBrands(): Promise<string[]> {
-  try {
+const _fetchAvailableBrandsCached = unstable_cache(
+  async (): Promise<string[]> => {
     const rows = await db
       .selectDistinct({ brand: catalog.brand })
       .from(catalog)
       .where(eq(catalog.isEnabled, true))
     return rows.map((r) => r.brand).sort()
+  },
+  ['catalog-brands'],
+  { revalidate: 3600, tags: ['catalog', 'catalog-brands'] }
+)
+
+/**
+ * Fetch distinct brands from Supabase PostgreSQL catalog.
+ * Returns sorted list of unique brand names from enabled garments only.
+ * Cached globally for 1 hour — revalidated by revalidateTag('catalog') or 'catalog-brands'.
+ */
+export async function getAvailableBrands(): Promise<string[]> {
+  try {
+    return await _fetchAvailableBrandsCached()
   } catch (error) {
     supabaseLogger.error('Failed to fetch available brands from Supabase', { error })
     throw error
