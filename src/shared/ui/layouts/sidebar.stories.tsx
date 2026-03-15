@@ -245,21 +245,20 @@ function SidebarPlayground() {
 
         <div className="mx-3 mb-3 border-t border-sidebar-border" />
 
-        {/* Always rendered — animates height/opacity so settings items don't jump */}
+        {/* Fixed height — ThemeToggle and divider never shift when Settings fades */}
         <span
-          className="block overflow-hidden px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          className="block px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground"
           style={{
-            maxHeight: collapsed ? 0 : 20,
-            paddingBottom: collapsed ? 0 : 2,
+            height: 20,
+            paddingBottom: 2,
             opacity: collapsed ? 0 : 1,
-            transition:
-              'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.22s ease, opacity 0.12s ease',
+            transition: 'opacity 0.12s ease',
           }}
         >
           Settings
         </span>
 
-        <div className={collapsed ? 'space-y-0.5' : 'space-y-1'}>
+        <div className="space-y-0.5">
           {settingsNavItems.map((item) => {
             const isActive = isNavItemActive(item, pathname)
             return (
