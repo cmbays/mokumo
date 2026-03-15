@@ -522,6 +522,7 @@ export const LightModePreview: Story = {
               }}
             />
             <button
+              aria-label="Toggle theme"
               style={{
                 width: BUTTON_W,
                 height: BUTTON_H,
@@ -569,7 +570,7 @@ export const RingDetail: Story = {
         >
           <p
             style={{
-              color: 'rgba(255,255,255,0.4)',
+              color: 'rgba(255,255,255,0.65)',
               fontSize: 12,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -628,7 +629,7 @@ export const RingDetail: Story = {
           </div>
           <p
             style={{
-              color: 'rgba(255,255,255,0.25)',
+              color: 'rgba(255,255,255,0.7)',
               fontSize: 11,
               margin: 0,
               maxWidth: 280,

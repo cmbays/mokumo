@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { Clock } from 'lucide-react'
-import { ENTITY_STYLES } from '@domain/constants/entities'
 import { ENTITY_ICONS } from '@shared/constants/entity-icons'
 import { Badge } from '@shared/ui/primitives/badge'
 import { cn } from '@shared/lib/cn'
@@ -24,10 +23,48 @@ type ActivityTimelineProps = {
   onSwitchTab?: (tab: string) => void
 }
 
+type TimelineType = 'quote' | 'job' | 'note'
+
 type TimelineItem =
   | { type: 'quote'; date: string; data: Quote }
   | { type: 'job'; date: string; data: Job }
   | { type: 'note'; date: string; data: Note }
+
+// ─── Entity appearance config ──────────────────────────────────────────────
+// Niji Light: entity categorical colors used for timeline dot border + icon.
+// Note uses `warning` not `magenta` — matches Storybook design spec (burnt orange = notes).
+
+const TIMELINE_CONFIG: Record<
+  TimelineType,
+  {
+    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+    borderClass: string
+    textClass: string
+    /** CSS variable for the 20%-opacity entity shadow — adapts per theme */
+    shadowVar: string
+  }
+> = {
+  quote: {
+    icon: ENTITY_ICONS.quote,
+    borderClass: 'border-magenta',
+    textClass: 'text-magenta',
+    shadowVar: 'var(--entity-shadow-quote)',
+  },
+  job: {
+    icon: ENTITY_ICONS.job,
+    borderClass: 'border-purple',
+    textClass: 'text-purple',
+    shadowVar: 'var(--entity-shadow-job)',
+  },
+  note: {
+    icon: ENTITY_ICONS.scratch_note,
+    borderClass: 'border-warning',
+    textClass: 'text-warning',
+    shadowVar: 'var(--entity-shadow-note)',
+  },
+}
+
+// ─── Date helpers ──────────────────────────────────────────────────────────
 
 function relativeDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -36,7 +73,6 @@ function relativeDate(dateStr: string): string {
   const absDays = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60 * 24))
 
   if (diffMs < 0) {
-    // Future date
     if (absDays === 0) return 'Today'
     if (absDays === 1) return 'In 1 day'
     if (absDays < 7) return `In ${absDays} days`
@@ -61,11 +97,7 @@ function relativeDate(dateStr: string): string {
   return date.toLocaleDateString()
 }
 
-const ICON_CONFIG = {
-  quote: { icon: ENTITY_ICONS.quote, color: ENTITY_STYLES.quote.color },
-  job: { icon: ENTITY_ICONS.job, color: ENTITY_STYLES.job.color },
-  note: { icon: ENTITY_ICONS.scratch_note, color: ENTITY_STYLES.scratch_note.color },
-} as const
+// ─── ActivityTimeline ──────────────────────────────────────────────────────
 
 export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityTimelineProps) {
   const items: TimelineItem[] = [
@@ -84,68 +116,87 @@ export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityT
   }
 
   return (
-    <div className="relative space-y-0" role="list" aria-label="Activity timeline">
-      {/* Vertical connector line */}
-      <div className="absolute left-4 top-4 bottom-4 w-px bg-border" aria-hidden="true" />
-
-      {items.map((item, _index) => {
-        const config = ICON_CONFIG[item.type]
+    <div role="list" aria-label="Activity timeline">
+      {items.map((item, index) => {
+        const config = TIMELINE_CONFIG[item.type]
         const Icon = config.icon
+        const isLast = index === items.length - 1
+
+        // Clickable dot: quotes link to quote page, notes switch to notes tab
+        const dot = (
+          <div
+            className={cn(
+              'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px]',
+              config.borderClass
+            )}
+            style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` }}
+          >
+            <Icon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
+          </div>
+        )
+
+        const interactiveDot =
+          item.type === 'quote' ? (
+            <Link
+              href={`/quotes/${item.data.id}`}
+              className={cn(
+                'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                config.borderClass
+              )}
+              style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` }}
+              aria-label={`View quote ${(item.data as Quote).quoteNumber}`}
+            >
+              <Icon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
+            </Link>
+          ) : item.type === 'note' ? (
+            <button
+              type="button"
+              onClick={() => onSwitchTab?.('notes')}
+              className={cn(
+                'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                config.borderClass
+              )}
+              style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` }}
+              aria-label="Go to notes tab"
+            >
+              <Icon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
+            </button>
+          ) : (
+            dot
+          )
 
         return (
-          <div
-            key={`${item.type}-${item.data.id}`}
-            className="relative flex gap-4 py-3 first:pt-0 last:pb-0"
-            role="listitem"
-          >
-            {/* Icon node */}
-            {item.type === 'quote' ? (
-              <Link
-                href={`/quotes/${item.data.id}`}
-                className={cn(
-                  'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-elevated border border-border transition-all',
-                  'hover:ring-2 hover:ring-action/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  config.color
-                )}
-                aria-label={`View quote ${item.data.quoteNumber}`}
-              >
-                <Icon className="size-4" aria-hidden="true" />
-              </Link>
-            ) : item.type === 'note' ? (
-              <button
-                type="button"
-                onClick={() => onSwitchTab?.('notes')}
-                className={cn(
-                  'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-elevated border border-border transition-all',
-                  'hover:ring-2 hover:ring-action/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  config.color
-                )}
-                aria-label="Go to notes tab"
-              >
-                <Icon className="size-4" aria-hidden="true" />
-              </button>
-            ) : (
-              <div
-                className={cn(
-                  'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-elevated border border-border',
-                  config.color
-                )}
-              >
-                <Icon className="size-4" aria-hidden="true" />
-              </div>
-            )}
+          <div key={`${item.type}-${item.data.id}`}>
+            {/* Timeline row */}
+            <div
+              className={cn('flex items-center gap-3.5 py-0.5', isLast && 'opacity-50')}
+              role="listitem"
+            >
+              {interactiveDot}
 
-            {/* Content */}
-            <div className="flex-1 min-w-0 pt-0.5">
-              <TimelineContent item={item} onSwitchTab={onSwitchTab} />
-              <p className="text-xs text-muted-foreground mt-1">{relativeDate(item.date)}</p>
+              {/* Content */}
+              <div className="flex-1 min-w-0 text-[13px]">
+                <TimelineContent item={item} onSwitchTab={onSwitchTab} />
+              </div>
+
+              {/* Timestamp — right-aligned, 11px, dimmed */}
+              <span className="text-[11px] text-muted-foreground/50 shrink-0 tabular-nums">
+                {relativeDate(item.date)}
+              </span>
             </div>
+
+            {/* Connector line between items — 1.5px × 13px, centered under dot */}
+            {!isLast && (
+              <div className="ml-[16px] w-px h-[13px] bg-border rounded-sm" aria-hidden="true" />
+            )}
           </div>
         )
       })}
     </div>
   )
 }
+
+// ─── Timeline content ──────────────────────────────────────────────────────
 
 function TimelineContent({
   item,
@@ -161,7 +212,7 @@ function TimelineContent({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/quotes/${quote.id}`}
-            className="text-sm font-medium text-foreground hover:text-action transition-colors"
+            className="font-medium text-foreground hover:text-action transition-colors"
           >
             Quote {quote.quoteNumber} created
           </Link>
@@ -175,7 +226,7 @@ function TimelineContent({
       const job = item.data
       return (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-foreground">
+          <span className="font-medium text-foreground">
             Job {job.jobNumber} — {job.title}
           </span>
           <Badge variant="ghost" className={LANE_COLORS[job.lane]}>
@@ -192,9 +243,9 @@ function TimelineContent({
           <button
             type="button"
             onClick={() => onSwitchTab?.('notes')}
-            className="text-sm text-foreground hover:text-action transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            className="text-foreground hover:text-action transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm italic text-muted-foreground"
           >
-            {truncated}
+            &ldquo;{truncated}&rdquo;
           </button>
           {note.channel && (
             <Badge variant="ghost" className="text-muted-foreground">

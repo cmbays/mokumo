@@ -7,10 +7,7 @@ import type { ActivityPage, CustomerActivity } from '@domain/ports/customer-acti
 import { activitySourceSchema } from '@domain/ports/customer-activity.port'
 import { verifySession } from '@infra/auth/session'
 
-import type { ActivityError, ActivityResult } from '@features/customers/lib/activity-types'
-
-// Re-export so app/-layer callers can import types from here directly.
-export type { ActivityError, ActivityResult }
+import type { ActivityResult } from '@features/customers/lib/activity-types'
 
 const log = logger.child({ domain: 'customers', action: 'activity' })
 

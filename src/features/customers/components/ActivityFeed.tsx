@@ -14,40 +14,6 @@ import type {
 import type { ActivityError, ActivityResult } from '@features/customers/lib/activity-types'
 import { ACTIVITY_ERROR_MESSAGES } from '@features/customers/lib/activity-error-messages'
 
-// ─── Color resolution helpers ─────────────────────────────────────────────────
-
-/**
- * Derives the left-border Tailwind class and status metadata for a given activity.
- *
- * Border color encoding rules (must stay in sync with design-system.ts two-pool rule):
- *   - Entity-linked entries (Wave 3): categorical color for the entity type
- *     (quote → border-magenta, job → border-purple, invoice → border-emerald)
- *   - Communication channels (email/sms/portal/voicemail): border-yellow
- *   - Manual notes (unlinked staff notes): border-border (neutral — no entity identity)
- *   - System events: border-border (neutral — automated, no identity)
- *
- * border-action is NOT used here — it belongs to the status pool (CTAs, in-progress),
- * not the identity channel.
- */
-function resolveEntryAppearance(activity: CustomerActivity): {
-  borderColorClass: string
-  statusLabel?: string
-  statusColorClass?: string
-} {
-  // Communication channels — yellow border (categorical: "a message was sent/received")
-  if (
-    activity.source === 'email' ||
-    activity.source === 'sms' ||
-    activity.source === 'portal' ||
-    activity.source === 'voicemail'
-  ) {
-    return { borderColorClass: 'border-yellow' }
-  }
-
-  // Manual notes and system events — neutral border (no entity identity to signal)
-  return { borderColorClass: 'border-border' }
-}
-
 // ─── Filter chip data ──────────────────────────────────────────────────────────
 
 type FilterOption = {
@@ -124,6 +90,7 @@ export function ActivityFeed({
 
   // When filter changes, re-fetch from scratch (no cursor).
   // Skip initial mount — SSR already provides the first page of activities.
+  // Uses effectTokenRef to handle React Strict Mode double-mount and rapid filter changes.
   React.useEffect(() => {
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
@@ -222,27 +189,20 @@ export function ActivityFeed({
         {activities.length === 0 && !loadingMore && (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <MessageSquare className="size-6 text-muted-foreground/50" aria-hidden="true" />
-            <p className="text-sm font-medium text-foreground">No activity yet</p>
+            <p className="text-sm font-medium text-foreground">Nothing here yet</p>
             <p className="text-sm text-muted-foreground">
-              Add a note above to start the activity timeline.
+              Add a note to get the conversation started.
             </p>
           </div>
         )}
 
-        {activities.map((activity) => {
-          const { borderColorClass, statusLabel, statusColorClass } =
-            resolveEntryAppearance(activity)
-
-          return (
-            <ActivityEntry
-              key={activity.id}
-              activity={activity}
-              borderColorClass={borderColorClass}
-              statusLabel={statusLabel}
-              statusColorClass={statusColorClass}
-            />
-          )
-        })}
+        {activities.map((activity, index) => (
+          <ActivityEntry
+            key={activity.id}
+            activity={activity}
+            isLast={index === activities.length - 1}
+          />
+        ))}
 
         {/* Load more */}
         {hasMore && (
@@ -273,8 +233,10 @@ export function ActivityFeed({
         )}
       </div>
 
-      {/* Quick Note right rail */}
-      <QuickNoteRail customerId={customerId} onNoteSaved={handleNoteSaved} onSave={onAddNote} />
+      {/* Quick Note right rail — fixed width on desktop, full-width on mobile */}
+      <div className="w-full shrink-0 md:w-[280px] md:border-l md:border-border md:pl-6">
+        <QuickNoteRail customerId={customerId} onNoteSaved={handleNoteSaved} onSave={onAddNote} />
+      </div>
     </div>
   )
 }

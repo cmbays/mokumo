@@ -8,7 +8,7 @@
 // update SidebarNavLink to accept `label` instead of `name`.
 
 import {
-  LayoutDashboard,
+  Home,
   Hammer,
   FileSignature,
   Users,
@@ -33,7 +33,8 @@ export type NavItem = {
 
 /** Primary navigation — shown in Sidebar + BottomTabBar */
 export const PRIMARY_NAV: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+  // Entity palette: Home → cyan
+  { label: 'Home', href: '/', icon: Home, iconColor: 'text-cyan' },
   {
     label: 'Jobs',
     href: '/jobs/board',
@@ -42,15 +43,19 @@ export const PRIMARY_NAV: NavItem[] = [
     iconColor: 'text-purple',
   },
   { label: 'Quotes', href: '/quotes', icon: FileSignature, iconColor: 'text-magenta' },
-  { label: 'Customers', href: '/customers', icon: Users },
+  // Entity palette: Customers → amber
+  { label: 'Customers', href: '/customers', icon: Users, iconColor: 'text-amber' },
 ]
 
 /** Secondary navigation — shown in Sidebar + MobileDrawer */
 export const SECONDARY_NAV: NavItem[] = [
   { label: 'Invoices', href: '/invoices', icon: Receipt, iconColor: 'text-emerald' },
-  { label: 'Screens', href: '/screens', icon: Printer, iconColor: 'text-action' },
-  { label: 'Artwork', href: '/artwork', icon: Image, iconColor: 'text-teal' },
-  { label: 'Garments', href: '/garments', icon: Shirt },
+  // Screen Print service → teal
+  { label: 'Screens', href: '/screens', icon: Printer, iconColor: 'text-teal' },
+  // Entity palette: Artwork → yellow
+  { label: 'Artwork', href: '/artwork', icon: Image, iconColor: 'text-yellow' },
+  // Entity palette: Garments → graphite
+  { label: 'Garments', href: '/garments', icon: Shirt, iconColor: 'text-graphite' },
   {
     label: 'Favorites',
     href: '/garments/favorites',
@@ -58,5 +63,10 @@ export const SECONDARY_NAV: NavItem[] = [
     iconColor: 'text-warning',
     indent: true,
   },
-  { label: 'Pricing Settings', href: '/settings/pricing', icon: Settings },
+  {
+    label: 'Pricing Settings',
+    href: '/settings/pricing',
+    icon: Settings,
+    iconColor: 'text-graphite',
+  },
 ]

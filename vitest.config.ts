@@ -8,7 +8,6 @@ import { quickpickle } from 'quickpickle'
 
 const dirname =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
-const enableStorybookProject = process.env.STORYBOOK_TEST === '1'
 
 export default defineConfig({
   test: {
@@ -49,24 +48,20 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
     },
+    // Three workspace projects:
+    //   "unit"       — regular unit/integration tests. Selected by `npm test`.
+    //   "acceptance" — QuickPickle Gherkin scenarios.
+    //   "storybook"  — browser tests. Always defined so the Storybook Test UI
+    //                  panel can connect. Run via `npm run test:storybook` or
+    //                  from within the Storybook UI.
     projects: [
-      // Unit tests — existing configuration
       {
-        extends: true,
-        test: {
-          name: 'unit',
-          include: [
-            'src/**/*.test.ts',
-            'src/**/*.test.tsx',
-            'lib/**/*.test.ts',
-            'tools/**/*.test.ts',
-          ],
-          exclude: ['node_modules/**', '**/node_modules/**', 'tests/**'],
-        },
+        extends: true as const,
+        test: { name: 'unit' },
       },
       // Acceptance tests — QuickPickle Gherkin scenarios
       {
-        extends: true,
+        extends: true as const,
         plugins: [quickpickle()],
         test: {
           name: 'acceptance',
@@ -78,33 +73,28 @@ export default defineConfig({
           ],
         },
       },
-      // Storybook visual tests (opt-in via STORYBOOK_TEST=1)
-      ...(enableStorybookProject
-        ? [
-            {
-              extends: true as const,
-              plugins: [
-                storybookTest({
-                  configDir: path.join(dirname, '.storybook'),
-                }),
-              ],
-              test: {
-                name: 'storybook',
-                browser: {
-                  enabled: true,
-                  headless: true,
-                  provider: playwright({}),
-                  instances: [
-                    {
-                      browser: 'chromium' as const,
-                    },
-                  ],
-                },
-                setupFiles: ['.storybook/vitest.setup.ts'],
+      {
+        extends: true as const,
+        plugins: [
+          storybookTest({
+            configDir: path.join(dirname, '.storybook'),
+          }),
+        ],
+        test: {
+          name: 'storybook',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({}),
+            instances: [
+              {
+                browser: 'chromium' as const,
               },
-            },
-          ]
-        : []),
+            ],
+          },
+          setupFiles: ['.storybook/vitest.setup.ts'],
+        },
+      },
     ],
   },
   resolve: {

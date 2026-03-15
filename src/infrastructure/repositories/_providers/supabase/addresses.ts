@@ -2,24 +2,20 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db } from '@shared/lib/supabase/db'
 import { addresses as addressesTable } from '@db/schema/customers'
-import { addressRowSchema } from '@domain/ports/customer-contact.port'
-import type { AddressInput, AddressRow } from '@domain/ports/customer-contact.port'
 import { addressSchema } from '@domain/entities/address'
-import type { Address } from '@domain/entities/address'
+import { addressRowSchema } from '@domain/ports/customer-contact.port'
 import { logger } from '@shared/lib/logger'
-import { validateUUID } from '@infra/repositories/_shared/validation'
+import { assertValidUUID } from '@infra/repositories/_shared/validation'
+import type { AddressInput, AddressRow } from '@domain/ports/customer-contact.port'
+import type { Address } from '@domain/entities/address'
+import type { AddressId } from '@domain/lib/branded'
 
 const repoLogger = logger.child({ domain: 'supabase-addresses' })
 
-function assertValidUUID(id: string, context: string): void {
-  if (!validateUUID(id)) {
-    throw new Error(`${context}: invalid UUID "${id}"`)
-  }
-}
+// ─── Row mappers ────────────────────────────────────────────────────────────────
 
 /**
  * Map a raw addresses table row to the Address domain entity.
- * Exported so customers.ts can use it in getCustomerDefaults.
  */
 export function mapAddressRow(row: typeof addressesTable.$inferSelect): Address {
   return addressSchema.parse({
@@ -39,10 +35,10 @@ export function mapAddressRow(row: typeof addressesTable.$inferSelect): Address 
 }
 
 /**
- * Map a DB addresses row to the AddressRow port type.
- * Uses addressRowSchema.parse() for runtime validation.
+ * Map a raw addresses row to AddressRow (the mutation return type).
+ * Runs addressRowSchema.parse() to catch any DB schema drift at runtime.
  */
-function mapAddressDbRow(row: typeof addressesTable.$inferSelect): AddressRow {
+function mapToAddressRow(row: typeof addressesTable.$inferSelect): AddressRow {
   return addressRowSchema.parse({
     id: row.id,
     customerId: row.customerId,
@@ -61,87 +57,88 @@ function mapAddressDbRow(row: typeof addressesTable.$inferSelect): AddressRow {
   })
 }
 
-// ── Address mutations ─────────────────────────────────────────────────────────
+// ─── Address mutations ──────────────────────────────────────────────────────────
 
-export const supabaseAddressMethods = {
-  async createAddress(input: AddressInput): Promise<AddressRow> {
-    assertValidUUID(input.customerId, 'createAddress')
+export async function createAddress(input: AddressInput): Promise<AddressRow> {
+  assertValidUUID(input.customerId, 'createAddress')
 
-    try {
-      const inserted = await db
-        .insert(addressesTable)
-        .values({
-          customerId: input.customerId,
-          label: input.label,
-          type: input.type,
-          street1: input.street1,
-          street2: input.street2 ?? null,
-          city: input.city,
-          state: input.state,
-          zip: input.zip,
-          country: input.country,
-          attentionTo: input.attentionTo ?? null,
-          isPrimaryBilling: input.isPrimaryBilling,
-          isPrimaryShipping: input.isPrimaryShipping,
-        })
-        .returning()
+  try {
+    const inserted = await db
+      .insert(addressesTable)
+      .values({
+        customerId: input.customerId,
+        label: input.label,
+        type: input.type,
+        street1: input.street1,
+        street2: input.street2 ?? null,
+        city: input.city,
+        state: input.state,
+        zip: input.zip,
+        country: input.country,
+        attentionTo: input.attentionTo ?? null,
+        isPrimaryBilling: input.isPrimaryBilling,
+        isPrimaryShipping: input.isPrimaryShipping,
+      })
+      .returning()
 
-      const row = inserted[0]
-      if (!row) throw new Error('createAddress: insert returned no rows')
+    const row = inserted[0]
+    if (!row) throw new Error('createAddress: insert returned no rows')
 
-      repoLogger.info('Address created', { id: row.id, customerId: input.customerId })
-      return mapAddressDbRow(row)
-    } catch (err) {
-      repoLogger.error('createAddress failed', { customerId: input.customerId, err })
-      throw err
-    }
-  },
+    repoLogger.info('Address created', { id: row.id, customerId: input.customerId })
+    return mapToAddressRow(row)
+  } catch (err) {
+    repoLogger.error('createAddress failed', { customerId: input.customerId, err })
+    throw err
+  }
+}
 
-  async updateAddress(id: string, input: Partial<AddressInput>): Promise<AddressRow> {
-    assertValidUUID(id, 'updateAddress')
+export async function updateAddress(
+  id: AddressId,
+  input: Partial<AddressInput>
+): Promise<AddressRow> {
+  assertValidUUID(id, 'updateAddress')
 
-    const updateFields: Partial<typeof addressesTable.$inferInsert> = {}
+  const updateFields: Partial<typeof addressesTable.$inferInsert> = {}
 
-    if (input.label !== undefined) updateFields.label = input.label
-    if (input.type !== undefined) updateFields.type = input.type
-    if (input.street1 !== undefined) updateFields.street1 = input.street1
-    if (input.street2 !== undefined) updateFields.street2 = input.street2 ?? null
-    if (input.city !== undefined) updateFields.city = input.city
-    if (input.state !== undefined) updateFields.state = input.state
-    if (input.zip !== undefined) updateFields.zip = input.zip
-    if (input.country !== undefined) updateFields.country = input.country
-    if (input.attentionTo !== undefined) updateFields.attentionTo = input.attentionTo ?? null
-    if (input.isPrimaryBilling !== undefined) updateFields.isPrimaryBilling = input.isPrimaryBilling
-    if (input.isPrimaryShipping !== undefined)
-      updateFields.isPrimaryShipping = input.isPrimaryShipping
+  if (input.label !== undefined) updateFields.label = input.label
+  if (input.type !== undefined) updateFields.type = input.type
+  if (input.street1 !== undefined) updateFields.street1 = input.street1
+  if (input.street2 !== undefined) updateFields.street2 = input.street2 ?? null
+  if (input.city !== undefined) updateFields.city = input.city
+  if (input.state !== undefined) updateFields.state = input.state
+  if (input.zip !== undefined) updateFields.zip = input.zip
+  if (input.country !== undefined) updateFields.country = input.country
+  if (input.attentionTo !== undefined) updateFields.attentionTo = input.attentionTo ?? null
+  if (input.isPrimaryBilling !== undefined) updateFields.isPrimaryBilling = input.isPrimaryBilling
+  if (input.isPrimaryShipping !== undefined)
+    updateFields.isPrimaryShipping = input.isPrimaryShipping
 
-    try {
-      const updated = await db
-        .update(addressesTable)
-        .set(updateFields)
-        .where(eq(addressesTable.id, id))
-        .returning()
+  try {
+    const updated = await db
+      .update(addressesTable)
+      .set(updateFields)
+      .where(eq(addressesTable.id, id))
+      .returning()
 
-      const row = updated[0]
-      if (!row) throw new Error(`updateAddress: no address found for id ${id}`)
+    const row = updated[0]
+    if (!row) throw new Error(`updateAddress: no address found for id ${id}`)
 
-      repoLogger.info('Address updated', { id })
-      return mapAddressDbRow(row)
-    } catch (err) {
-      repoLogger.error('updateAddress failed', { id, err })
-      throw err
-    }
-  },
+    repoLogger.info('Address updated', { id })
+    return mapToAddressRow(row)
+  } catch (err) {
+    repoLogger.error('updateAddress failed', { id, err })
+    throw err
+  }
+}
 
-  async deleteAddress(id: string): Promise<void> {
-    assertValidUUID(id, 'deleteAddress')
+export async function deleteAddress(id: AddressId): Promise<void> {
+  assertValidUUID(id, 'deleteAddress')
 
-    try {
-      await db.delete(addressesTable).where(eq(addressesTable.id, id))
-      repoLogger.info('Address deleted', { id })
-    } catch (err) {
-      repoLogger.error('deleteAddress failed', { id, err })
-      throw err
-    }
-  },
+  try {
+    await db.delete(addressesTable).where(eq(addressesTable.id, id))
+    repoLogger.info('Address deleted', { id })
+  } catch (err) {
+    repoLogger.error('deleteAddress failed', { id, err })
+    throw err
+  }
 }

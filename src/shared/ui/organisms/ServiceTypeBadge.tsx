@@ -32,7 +32,11 @@ export function ServiceTypeBadge({
   if (variant === 'icon-only') {
     const textColor = SERVICE_TYPE_COLORS[serviceType]
     return (
-      <span className={cn('inline-flex items-center', textColor, className)} aria-label={label}>
+      <span
+        className={cn('inline-flex items-center', textColor, className)}
+        role="img"
+        aria-label={label}
+      >
         <Icon className="size-4" />
       </span>
     )
@@ -46,6 +50,7 @@ export function ServiceTypeBadge({
           borderColor,
           className
         )}
+        role="img"
         aria-label={label}
       >
         <Icon className="size-3.5" />
@@ -64,6 +69,7 @@ export function ServiceTypeBadge({
         'bg-elevated text-secondary-foreground',
         className
       )}
+      role="img"
       aria-label={label}
     >
       <Icon className="size-3.5" />

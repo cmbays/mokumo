@@ -110,14 +110,11 @@ export function SmartViewTabs() {
               'text-sm font-medium',
               'transition-colors duration-150',
               'outline-none focus-visible:ring-2 focus-visible:ring-action/50',
-              // Active state
-              isActive && ['bg-action/10 text-action', 'border border-action/20'],
+              // Active state — single bg signal, no border to avoid double-outline noise
+              isActive && 'bg-action/10 text-action',
               // Inactive state
-              !isActive && [
-                'bg-transparent text-muted-foreground',
-                'border border-transparent',
-                'hover:text-foreground hover:bg-muted',
-              ]
+              !isActive &&
+                'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
           >
             {tab.label}
