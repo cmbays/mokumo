@@ -18,9 +18,10 @@ type Props = {
  * position jump when the sidebar collapses. `pointerEvents` and `tabIndex` ensure
  * only the visible state is interactive.
  *
- * Icon alignment: the collapsed button uses `justify-center` inside the mx-3 wrapper,
- * which centers the icon at sidebar-center (36px from left edge at 72px width) —
- * matching the centering used by SidebarNavLink in collapsed mode.
+ * Icon alignment: the collapsed button uses `paddingLeft: 12` (matching SidebarNavLink's
+ * fixed left anchor) so the icon sits at the same horizontal position as all other nav
+ * icons in both collapsed and expanded states. The wrapper has no mx-3 so the pill can
+ * use `left: 12, right: 12` (equivalent to mx-3) as absolute insets.
  */
 export function ThemeToggle({ collapsed = false }: Props) {
   const { resolvedTheme, setTheme } = useTheme()
@@ -32,22 +33,23 @@ export function ThemeToggle({ collapsed = false }: Props) {
   }, [])
 
   if (!mounted) {
-    return <div className="mx-3 my-1 h-8" aria-hidden="true" />
+    return <div className="my-1 h-8" aria-hidden="true" />
   }
 
   const isDark = resolvedTheme === 'dark'
 
   return (
-    <div className="relative mx-3 my-1 h-8">
-      {/* Collapsed: single icon toggle — fades in as sidebar narrows */}
+    <div className="relative my-1 h-8">
+      {/* Collapsed: single icon toggle — paddingLeft:12 aligns with nav link icons */}
       <button
         type="button"
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
         aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         aria-hidden={!collapsed}
         tabIndex={collapsed ? 0 : -1}
-        className="absolute inset-0 flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+        className="absolute inset-0 flex items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
         style={{
+          paddingLeft: 12,
           opacity: collapsed ? 1 : 0,
           pointerEvents: collapsed ? 'auto' : 'none',
           transition: 'opacity 0.18s ease',
@@ -72,13 +74,17 @@ export function ThemeToggle({ collapsed = false }: Props) {
         )}
       </button>
 
-      {/* Expanded: icon-only two-button pill — fades in as sidebar widens */}
+      {/* Expanded: icon-only pill — left/right:12 mirrors nav link padding (no mx-3 on wrapper) */}
       <div
         role="group"
         aria-label="Color scheme"
         aria-hidden={collapsed}
-        className="absolute inset-0 grid grid-cols-2 overflow-hidden rounded-full border border-sidebar-border bg-sidebar-accent"
+        className="absolute grid grid-cols-2 overflow-hidden rounded-full border border-sidebar-border bg-sidebar-accent"
         style={{
+          top: 0,
+          bottom: 0,
+          left: 12,
+          right: 12,
           opacity: collapsed ? 0 : 1,
           pointerEvents: collapsed ? 'none' : 'auto',
           transition: 'opacity 0.18s ease',

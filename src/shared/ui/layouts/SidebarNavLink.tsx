@@ -22,11 +22,10 @@ type SidebarNavLinkProps = {
  * Single sidebar nav item. Parent (Sidebar) owns active state and registers refs
  * for the sliding NijiActiveIndicator.
  *
- * Centering: in collapsed mode, padding is removed and justify-content: center
- * is used so the icon sits at the sidebar's midpoint. In expanded mode, px-3
- * (12px) restores left-aligned layout with label. Both padding and the label
- * width transition simultaneously so the icon slides smoothly from centered to
- * left-aligned as the sidebar opens.
+ * Positioning: the icon is anchored at a fixed paddingLeft=12 in BOTH collapsed
+ * and expanded states — it never moves horizontally. Only the label (via max-width
+ * + marginLeft) and the right padding animate. This matches the behavior of VS Code,
+ * Linear, and Notion: the icon is the stable anchor, the text slides out to its right.
  *
  * Scale: active items magnify in both collapsed and expanded states (no !collapsed
  * guard) so toggling the sidebar doesn't change the icon's scale.
@@ -56,22 +55,20 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
           !isActive && 'text-muted-foreground hover:text-sidebar-accent-foreground'
         )}
         style={{
-          // Non-indent: collapse padding to zero when collapsed and center the icon.
+          // Non-indent: paddingLeft is FIXED at 12 in both states so the icon
+          // never shifts horizontally on collapse. Only right padding collapses.
           // Indented items are hidden by parent in collapsed mode, no override needed.
           ...(!indent && {
-            paddingLeft: collapsed ? 0 : 12,
+            paddingLeft: 12,
             paddingRight: collapsed ? 0 : 12,
-            justifyContent: collapsed ? 'center' : undefined,
           }),
           fontWeight: isActive ? 600 : undefined,
           color: isActive ? cssVar : undefined,
-          // Scale from icon center when collapsed, from left edge when expanded
-          // (so label expands rightward without clipping the left border).
-          transformOrigin: collapsed ? 'center' : 'left center',
+          // Fixed origin: icon is the stable left anchor in both states.
+          transformOrigin: 'left center',
           // Active items magnify in BOTH states — toggling collapsed must not shrink the icon.
           transform: isActive ? 'scale(1.12)' : 'scale(1)',
-          transition:
-            'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding-right 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
           animation:
             isActive && bounceKey && bounceKey > 0
               ? 'niji-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'

@@ -164,7 +164,9 @@ export function Sidebar() {
         <img
           src="/mokumo-cloud.png"
           alt="Mokumo"
-          className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+          draggable={false}
+          className="h-7 w-auto shrink-0 select-none object-contain dark:invert dark:contrast-150"
+          style={{ pointerEvents: 'none' }}
         />
         {/* Name slides out via max-width + opacity — never mounts/unmounts */}
         <div
@@ -180,7 +182,9 @@ export function Sidebar() {
           <img
             src="/mokumo-name.png"
             alt="Mokumo Print"
-            className="h-7 w-auto shrink-0 object-contain dark:invert dark:contrast-150"
+            draggable={false}
+            className="h-7 w-auto shrink-0 select-none object-contain dark:invert dark:contrast-150"
+            style={{ pointerEvents: 'none' }}
           />
         </div>
       </div>
@@ -212,11 +216,19 @@ export function Sidebar() {
 
         <div className="mx-3 mb-3 border-t border-sidebar-border" />
 
-        {!collapsed && (
-          <span className="px-3 pb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Settings
-          </span>
-        )}
+        {/* Always rendered — animates height/opacity so settings items don't jump */}
+        <span
+          className="block overflow-hidden px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          style={{
+            maxHeight: collapsed ? 0 : 20,
+            paddingBottom: collapsed ? 0 : 2,
+            opacity: collapsed ? 0 : 1,
+            transition:
+              'max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.22s ease, opacity 0.12s ease',
+          }}
+        >
+          Settings
+        </span>
 
         <div className={collapsed ? 'space-y-0.5' : 'space-y-1'}>
           {settingsNavItems.map((item) => {
