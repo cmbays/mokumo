@@ -7,7 +7,7 @@ import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
 import type { Address } from '@domain/entities/address'
 import type { ContactInput, ContactRow, AddressInput, AddressRow } from './customer-contact.port'
-import type { ContactId, AddressId } from '@domain/lib/branded'
+import type { ContactId, AddressId, ShopId, CustomerId } from '@domain/lib/branded'
 
 // ─── Filter / Sort / Pagination types ─────────────────────────────────────────
 
@@ -83,13 +83,13 @@ export type ICustomerRepository = {
 
   /** Update mutable fields on a customer (scoped to shopId for tenant isolation) */
   updateCustomer(
-    shopId: string,
-    id: string,
+    shopId: ShopId,
+    id: CustomerId,
     input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
   ): Promise<Customer>
 
   /** Soft-delete — sets isArchived = true (scoped to shopId for tenant isolation) */
-  archiveCustomer(shopId: string, id: string): Promise<void>
+  archiveCustomer(shopId: ShopId, id: CustomerId): Promise<void>
 
   /** Current outstanding balance (sum of unpaid invoice balanceDue) */
   getAccountBalance(customerId: string): Promise<number>

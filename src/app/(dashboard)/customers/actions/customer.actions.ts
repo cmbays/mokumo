@@ -163,7 +163,11 @@ export async function updateCustomer(
   }
 
   try {
-    const customer = await repoUpdateCustomer(session.shopId, id, parsed.data)
+    const customer = await repoUpdateCustomer(
+      brandId<ShopId>(session.shopId),
+      brandId<CustomerId>(id),
+      parsed.data
+    )
     log.info('Customer updated', { id, shopId: session.shopId })
 
     // Record audit event — fire-and-forget (non-critical path)
@@ -215,7 +219,7 @@ export async function archiveCustomer(id: string): Promise<Result<void, Customer
   }
 
   try {
-    await repoArchiveCustomer(session.shopId, id)
+    await repoArchiveCustomer(brandId<ShopId>(session.shopId), brandId<CustomerId>(id))
     log.info('Customer archived', { id, shopId: session.shopId })
 
     // Record audit event — fire-and-forget (non-critical path)

@@ -12,6 +12,7 @@ import type { HealthStatus } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
 import { validateUUID, assertValidUUID } from '@infra/repositories/_shared/validation'
 import { DalError } from '@infra/repositories/_shared/errors'
+import type { ShopId, CustomerId } from '@domain/lib/branded'
 import { money, toNumber } from '@domain/lib/money'
 import type {
   ICustomerRepository,
@@ -442,8 +443,8 @@ export const supabaseCustomerRepository: ICustomerRepository = {
   },
 
   async updateCustomer(
-    shopId: string,
-    id: string,
+    shopId: ShopId,
+    id: CustomerId,
     input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
   ): Promise<Customer> {
     assertValidUUID(shopId, 'updateCustomer:shopId')
@@ -499,7 +500,7 @@ export const supabaseCustomerRepository: ICustomerRepository = {
     }
   },
 
-  async archiveCustomer(shopId: string, id: string): Promise<void> {
+  async archiveCustomer(shopId: ShopId, id: CustomerId): Promise<void> {
     assertValidUUID(shopId, 'archiveCustomer:shopId')
     assertValidUUID(id, 'archiveCustomer')
 

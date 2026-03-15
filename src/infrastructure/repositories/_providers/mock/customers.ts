@@ -1,5 +1,6 @@
 import { customers, contacts, customerNotes, quotes, jobs, invoices, artworks } from './data'
 import { validateUUID } from '@infra/repositories/_shared/validation'
+import type { ShopId, CustomerId } from '@domain/lib/branded'
 import type { Customer } from '@domain/entities/customer'
 import type { Contact } from '@domain/entities/contact'
 import type { Note } from '@domain/entities/note'
@@ -119,14 +120,14 @@ export async function createCustomer(
 }
 
 export async function updateCustomer(
-  _shopId: string,
-  _id: string,
+  _shopId: ShopId,
+  _id: CustomerId,
   _input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
 ): Promise<Customer> {
   throw new Error('updateCustomer: not implemented in mock provider')
 }
 
-export async function archiveCustomer(_shopId: string, _id: string): Promise<void> {
+export async function archiveCustomer(_shopId: ShopId, _id: CustomerId): Promise<void> {
   throw new Error('archiveCustomer: not implemented in mock provider')
 }
 
