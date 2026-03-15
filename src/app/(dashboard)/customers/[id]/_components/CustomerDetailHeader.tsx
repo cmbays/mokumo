@@ -102,7 +102,7 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
           <Button
             size="sm"
             onClick={() => setEditOpen(true)}
-            className="bg-action text-black font-semibold shadow-[1.5px_1.5px_0_rgba(0,0,0,0.3)] hover:bg-action-hover active:scale-95 transition-all duration-150"
+            className="bg-action text-white dark:text-black font-semibold shadow-[1.5px_1.5px_0_rgba(0,0,0,0.3)] hover:bg-action-hover active:scale-95 transition-all duration-150"
           >
             Edit Customer
           </Button>

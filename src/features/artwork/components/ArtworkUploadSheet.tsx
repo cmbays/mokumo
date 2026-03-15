@@ -146,7 +146,7 @@ function MetadataForm({ onSubmit, isSubmitting }: MetadataFormProps) {
         disabled={!canSubmit}
         className={cn(
           'mt-1 inline-flex min-h-(--mobile-touch-target) items-center justify-center gap-2 md:min-h-0',
-          'rounded-lg bg-action px-4 py-2.5 text-sm font-medium text-black',
+          'rounded-lg bg-action px-4 py-2.5 text-sm font-medium text-white dark:text-black',
           'shadow-[4px_4px_0px_rgba(0,0,0,0.4)]',
           'transition-all hover:bg-action/90',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-background',
