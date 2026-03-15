@@ -72,7 +72,7 @@ export function QuickNoteRail({ customerId, onNoteSaved, onSave }: QuickNoteRail
           disabled={!content.trim() || saving}
           onClick={handleSave}
           className={cn(
-            'border-warning text-warning shadow-[1.5px_1.5px_0_rgba(217,119,6,0.2)]',
+            'border-warning text-warning shadow-[1.5px_1.5px_0_var(--entity-shadow-note)]',
             'hover:bg-warning/10 active:scale-95 transition-all duration-150'
           )}
         >

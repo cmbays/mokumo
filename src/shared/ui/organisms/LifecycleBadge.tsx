@@ -22,6 +22,7 @@ export function LifecycleBadge({ stage, compact, className }: LifecycleBadgeProp
       <Tooltip>
         <TooltipTrigger asChild>
           <span
+            role="img"
             className={cn('inline-flex items-center cursor-default', className)}
             aria-label={`Lifecycle stage: ${LIFECYCLE_STAGE_LABELS[stage]}`}
           >
@@ -35,6 +36,7 @@ export function LifecycleBadge({ stage, compact, className }: LifecycleBadgeProp
 
   return (
     <span
+      role="img"
       className={cn('inline-flex items-center gap-1.5', className)}
       aria-label={`Lifecycle stage: ${LIFECYCLE_STAGE_LABELS[stage]}`}
     >

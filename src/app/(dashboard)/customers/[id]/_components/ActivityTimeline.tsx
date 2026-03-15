@@ -40,27 +40,27 @@ const TIMELINE_CONFIG: Record<
     icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
     borderClass: string
     textClass: string
-    /** rgba shadow at 20% opacity of the entity's Niji Light hex color */
-    shadowColor: string
+    /** CSS variable for the 20%-opacity entity shadow — adapts per theme */
+    shadowVar: string
   }
 > = {
   quote: {
     icon: ENTITY_ICONS.quote,
     borderClass: 'border-magenta',
     textClass: 'text-magenta',
-    shadowColor: 'rgba(217,70,199,0.2)',
+    shadowVar: 'var(--entity-shadow-quote)',
   },
   job: {
     icon: ENTITY_ICONS.job,
     borderClass: 'border-purple',
     textClass: 'text-purple',
-    shadowColor: 'rgba(124,58,237,0.2)',
+    shadowVar: 'var(--entity-shadow-job)',
   },
   note: {
     icon: ENTITY_ICONS.scratch_note,
     borderClass: 'border-warning',
     textClass: 'text-warning',
-    shadowColor: 'rgba(217,119,6,0.2)',
+    shadowVar: 'var(--entity-shadow-note)',
   },
 }
 
@@ -129,7 +129,7 @@ export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityT
               'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px]',
               config.borderClass
             )}
-            style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowColor}` }}
+            style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` }}
           >
             <Icon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
           </div>
@@ -143,7 +143,7 @@ export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityT
                 'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 config.borderClass
               )}
-              style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowColor}` }}
+              style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` }}
               aria-label={`View quote ${(item.data as Quote).quoteNumber}`}
             >
               <Icon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
@@ -156,7 +156,7 @@ export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityT
                 'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 config.borderClass
               )}
-              style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowColor}` }}
+              style={{ boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` }}
               aria-label="Go to notes tab"
             >
               <Icon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
@@ -169,10 +169,7 @@ export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityT
           <div key={`${item.type}-${item.data.id}`}>
             {/* Timeline row */}
             <div
-              className={cn(
-                'flex items-center gap-3.5 py-0.5',
-                isLast && 'opacity-50'
-              )}
+              className={cn('flex items-center gap-3.5 py-0.5', isLast && 'opacity-50')}
               role="listitem"
             >
               {interactiveDot}
@@ -190,10 +187,7 @@ export function ActivityTimeline({ quotes, jobs, notes, onSwitchTab }: ActivityT
 
             {/* Connector line between items — 1.5px × 13px, centered under dot */}
             {!isLast && (
-              <div
-                className="ml-[16px] w-px h-[13px] bg-border rounded-sm"
-                aria-hidden="true"
-              />
+              <div className="ml-[16px] w-px h-[13px] bg-border rounded-sm" aria-hidden="true" />
             )}
           </div>
         )

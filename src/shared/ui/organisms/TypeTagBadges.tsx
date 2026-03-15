@@ -14,6 +14,7 @@ export function TypeTagBadges({ tags, className }: TypeTagBadgesProps) {
       {tags.map((tag) => (
         <span
           key={tag}
+          role="img"
           className="text-sm font-semibold text-muted-foreground"
           aria-label={`Type: ${CUSTOMER_TYPE_TAG_LABELS[tag]}`}
         >

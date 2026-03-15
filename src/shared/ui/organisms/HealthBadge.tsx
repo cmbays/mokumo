@@ -29,6 +29,7 @@ export function HealthBadge({ status, compact, className }: HealthBadgeProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <span
+            role="img"
             className={cn('inline-flex items-center cursor-default', className)}
             aria-label={`Health status: ${HEALTH_STATUS_LABELS[status]}`}
           >
@@ -42,6 +43,7 @@ export function HealthBadge({ status, compact, className }: HealthBadgeProps) {
 
   return (
     <span
+      role="img"
       className={cn('inline-flex items-center gap-1.5', className)}
       aria-label={`Health status: ${HEALTH_STATUS_LABELS[status]}`}
     >
