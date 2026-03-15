@@ -111,3 +111,32 @@ feature/session branches ──PR──→ main ──merge──→ production
 | Worktree workflow      | `memory/worktree-workflow.md`                      |
 | V1 vision + milestones | Resolve "V1 roadmap" from MEMORY.md registry       |
 | Product manifest       | Resolve "Product manifest" from MEMORY.md registry |
+
+## Rule Maintenance
+
+Scoped rules live in `.claude/rules/` and load on-demand when matching files are touched.
+
+When you identify a new pattern, risk, convention, or hard-won lesson during work:
+
+- Add it to the matching rule file (domain-model, api-and-infrastructure, frontend, or testing)
+- If it changes an org-wide standard, note that ops/standards/ needs updating too
+- If a rule references an ops standard and you notice the standard has changed, update the rule
+
+## Compact Instructions
+
+Preserve:
+
+- Current task objective, acceptance criteria, and the milestone being worked on
+- File paths of all files currently being modified
+- Most recent test output (pass/fail, error messages)
+- Active branch name and worktree context
+- Which domain (garments, customers, pricing, etc.) is being worked on
+- Any numbered step sequence being followed
+
+Discard:
+
+- File contents from reads older than 5 tool calls
+- Search results not acted on
+- Reasoning traces from abandoned approaches
+- Duplicate error messages from retry loops
+- Old design system token listings already captured in rules

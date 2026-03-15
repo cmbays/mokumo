@@ -1,3 +1,6 @@
+# pipeline state
+.workflow/
+
 # test coverage output
 coverage/
 
@@ -43,6 +46,8 @@ next-env.d.ts
 !.claude/agents/**
 !.claude/hooks/
 !.claude/hooks/**
+!.claude/rules/
+!.claude/rules/**
 !.claude/settings.json
 .claudeignore
 
