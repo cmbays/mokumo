@@ -88,7 +88,7 @@ Gate outcomes: `fail` → fix and re-run | `pass_with_warnings` → file issues,
 | `build-session-protocol`  | Build sessions                                  | — (standalone)                                                    |
 | `review-orchestration`    | Auto-invoked by build-session-protocol          | — (auto-invoked)                                                  |
 | `one-on-one`              | 1:1 check-ins                                   | Ada (global agent)                                                |
-| `cool-down`               | Between build cycles                            | Ada (global agent)                                                |
+| `cool-down`               | Between build cycles                            | — (standalone)                                                    |
 | `tdd`                     | Writing tests                                   | — (standalone)                                                    |
 | `gary-tracker`            | Questions for user                              | — (standalone)                                                    |
 | `learnings-synthesis`     | After sessions                                  | — (standalone)                                                    |
