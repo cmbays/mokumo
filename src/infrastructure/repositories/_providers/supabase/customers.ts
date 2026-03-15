@@ -11,6 +11,7 @@ import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
 import type { HealthStatus } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
 import { validateUUID, assertValidUUID } from '@infra/repositories/_shared/validation'
+import { DalError } from '@infra/repositories/_shared/errors'
 import { money, toNumber } from '@domain/lib/money'
 import type {
   ICustomerRepository,
@@ -482,11 +483,17 @@ export const supabaseCustomerRepository: ICustomerRepository = {
         .returning()
 
       const row = updated[0]
-      if (!row) throw new Error(`updateCustomer: no customer found for id ${id}`)
+      if (!row) {
+        throw new DalError(
+          'NOT_FOUND',
+          `updateCustomer: no customer found for id ${id} in shop ${shopId}`
+        )
+      }
 
       repoLogger.info('Customer updated', { id, shopId })
       return mapCustomerRow(row)
     } catch (err) {
+      if (err instanceof DalError) throw err
       repoLogger.error('updateCustomer failed', { id, shopId, err })
       throw err
     }
@@ -504,11 +511,15 @@ export const supabaseCustomerRepository: ICustomerRepository = {
         .returning({ id: customersTable.id })
 
       if (result.length === 0) {
-        throw new Error(`archiveCustomer: no customer found for id ${id}`)
+        throw new DalError(
+          'NOT_FOUND',
+          `archiveCustomer: no customer found for id ${id} in shop ${shopId}`
+        )
       }
 
       repoLogger.info('Customer archived', { id, shopId })
     } catch (err) {
+      if (err instanceof DalError) throw err
       repoLogger.error('archiveCustomer failed', { id, shopId, err })
       throw err
     }

@@ -10,6 +10,7 @@ import {
 import { verifySession } from '@infra/auth/session'
 import { logger } from '@shared/lib/logger'
 import { ok, err } from '@infra/repositories/_shared/result'
+import { DalError } from '@infra/repositories/_shared/errors'
 import type { Result } from '@infra/repositories/_shared/result'
 import type { Customer } from '@domain/entities/customer'
 import { activityEventService } from '@infra/repositories/activity-events'
@@ -182,8 +183,7 @@ export async function updateCustomer(
     revalidatePath(`/customers/${id}`)
     return ok(customer)
   } catch (e) {
-    const message = e instanceof Error ? e.message : ''
-    if (message.includes('no customer found')) {
+    if (e instanceof DalError && e.code === 'NOT_FOUND') {
       log.warn('updateCustomer: not found (possible cross-tenant attempt)', {
         id,
         shopId: session.shopId,
@@ -234,8 +234,7 @@ export async function archiveCustomer(id: string): Promise<Result<void, Customer
     revalidatePath(`/customers/${id}`)
     return ok(undefined)
   } catch (e) {
-    const message = e instanceof Error ? e.message : ''
-    if (message.includes('no customer found')) {
+    if (e instanceof DalError && e.code === 'NOT_FOUND') {
       log.warn('archiveCustomer: not found (possible cross-tenant attempt)', {
         id,
         shopId: session.shopId,
