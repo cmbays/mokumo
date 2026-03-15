@@ -1,9 +1,9 @@
 ---
 name: one-on-one
-description: Structured 1:1 check-in between Ada (secretary agent) and the user
-trigger: When the user starts a session with the secretary agent, or says "let's do a 1:1", "check in", "what's the state of things"
+description: Structured 1:1 check-in between Ada (global agent) and the user
+trigger: When the user starts a session with Ada, or says "let's do a 1:1", "check in", "what's the state of things"
 prerequisites:
-  - Secretary agent loaded (reads memory files on startup)
+  - Ada agent loaded (reads memory files on startup)
   - Session registry exists at ~/Github/mokumo-worktrees/.session-registry.json
   - ROADMAP.md and PROGRESS.md are current
 ---
@@ -140,9 +140,9 @@ A brief narrative moment that creates continuity between sessions. This is what 
    git diff --cached --stat  # verify only expected files
 
    # Commit, push, create PR, merge, cleanup
-   git commit -m "docs(secretary): 1:1 check-in artifacts YYYY-MM-DD"
+   git commit -m "docs(ada): 1:1 check-in artifacts YYYY-MM-DD"
    git push -u origin docs/MMDD-1on1
-   gh pr create --title "docs(secretary): 1:1 check-in artifacts YYYY-MM-DD" --body "Auto-committed Ada 1:1 memory updates."
+   gh pr create --title "docs(ada): 1:1 check-in artifacts YYYY-MM-DD" --body "Auto-committed Ada 1:1 memory updates."
    gh pr merge --merge
    cd ~/Github/mokumo
    git pull origin main

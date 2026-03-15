@@ -248,6 +248,12 @@ describe('createPricingTemplate', () => {
     const result = await createPricingTemplate(CREATE_DATA)
     expect(result).toEqual({ data: TEMPLATE_ROW, error: null })
   })
+
+  it('returns error envelope when repo throws', async () => {
+    mockUpsertTemplate.mockRejectedValueOnce(new Error('DB error'))
+    const result = await createPricingTemplate(CREATE_DATA)
+    expect(result).toEqual({ data: null, error: 'Failed to create pricing template' })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -283,6 +289,12 @@ describe('updatePricingTemplate', () => {
     expect(mockUpsertTemplate).toHaveBeenCalledWith(
       expect.objectContaining({ id: TEMPLATE_ID, shopId: SHOP_ID, name: 'Updated Name' })
     )
+  })
+
+  it('returns error envelope when repo throws', async () => {
+    mockUpsertTemplate.mockRejectedValueOnce(new Error('DB error'))
+    const result = await updatePricingTemplate(TEMPLATE_ID, UPDATE_DATA)
+    expect(result).toEqual({ data: null, error: 'Failed to update pricing template' })
   })
 })
 
@@ -328,44 +340,49 @@ describe('deletePricingTemplate', () => {
 // ---------------------------------------------------------------------------
 
 describe('savePricingMatrix', () => {
-  it('returns error for invalid template ID', async () => {
+  it('returns error for invalid template ID without calling session or repo', async () => {
     const result = await savePricingMatrix('bad', [])
     expect(result).toEqual({ data: null, error: 'Invalid template ID' })
+    expect(mockVerifySession).not.toHaveBeenCalled()
+    expect(mockUpsertMatrixCells).not.toHaveBeenCalled()
   })
 
   it('returns Unauthorized when session is null', async () => {
     mockVerifySession.mockResolvedValueOnce(null)
     const result = await savePricingMatrix(TEMPLATE_ID, [])
     expect(result).toEqual({ data: null, error: 'Unauthorized' })
-  })
-
-  it('returns not found when template does not exist', async () => {
-    mockGetTemplateById.mockResolvedValueOnce(null)
-    const result = await savePricingMatrix(TEMPLATE_ID, [])
-    expect(result).toEqual({ data: null, error: 'Template not found' })
     expect(mockUpsertMatrixCells).not.toHaveBeenCalled()
   })
 
-  it('returns not found when template belongs to a different shop', async () => {
-    mockGetTemplateById.mockResolvedValueOnce({ ...TEMPLATE_WITH_MATRIX, shopId: OTHER_SHOP_ID })
+  it('returns not found when repo returns false (template not found or wrong shop)', async () => {
+    mockUpsertMatrixCells.mockResolvedValueOnce(false)
     const result = await savePricingMatrix(TEMPLATE_ID, [])
     expect(result).toEqual({ data: null, error: 'Template not found' })
-    expect(mockUpsertMatrixCells).not.toHaveBeenCalled()
   })
 
-  it('calls upsertMatrixCells with templateId and cells', async () => {
-    mockGetTemplateById.mockResolvedValueOnce(TEMPLATE_WITH_MATRIX)
-    mockUpsertMatrixCells.mockResolvedValueOnce(undefined)
+  it('calls upsertMatrixCells with templateId, session shopId, and cells', async () => {
+    mockUpsertMatrixCells.mockResolvedValueOnce(true)
     const cells = [{ templateId: TEMPLATE_ID, qtyAnchor: 24, colorCount: 2, costPerPiece: 5.5 }]
     await savePricingMatrix(TEMPLATE_ID, cells)
-    expect(mockUpsertMatrixCells).toHaveBeenCalledWith(TEMPLATE_ID, cells)
+    expect(mockUpsertMatrixCells).toHaveBeenCalledWith(TEMPLATE_ID, SHOP_ID, cells)
+  })
+
+  it('never calls getTemplateById — ownership lives in the repo transaction', async () => {
+    mockUpsertMatrixCells.mockResolvedValueOnce(true)
+    await savePricingMatrix(TEMPLATE_ID, [])
+    expect(mockGetTemplateById).not.toHaveBeenCalled()
   })
 
   it('returns ok null on success', async () => {
-    mockGetTemplateById.mockResolvedValueOnce(TEMPLATE_WITH_MATRIX)
-    mockUpsertMatrixCells.mockResolvedValueOnce(undefined)
+    mockUpsertMatrixCells.mockResolvedValueOnce(true)
     const result = await savePricingMatrix(TEMPLATE_ID, [])
     expect(result).toEqual({ data: null, error: null })
+  })
+
+  it('returns error envelope when repo throws', async () => {
+    mockUpsertMatrixCells.mockRejectedValueOnce(new Error('TX error'))
+    const result = await savePricingMatrix(TEMPLATE_ID, [])
+    expect(result).toEqual({ data: null, error: 'Failed to save pricing matrix' })
   })
 })
 
@@ -430,6 +447,12 @@ describe('getMarkupRules', () => {
     expect(mockGetMarkupRules).toHaveBeenCalledWith(SHOP_ID)
     expect(result).toEqual({ data: rules, error: null })
   })
+
+  it('returns error envelope when repo throws', async () => {
+    mockGetMarkupRules.mockRejectedValueOnce(new Error('DB error'))
+    const result = await getMarkupRules()
+    expect(result).toEqual({ data: null, error: 'Failed to load markup rules' })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -491,6 +514,12 @@ describe('getRushTiers', () => {
     const result = await getRushTiers()
     expect(mockGetRushTiers).toHaveBeenCalledWith(SHOP_ID)
     expect(result).toEqual({ data: tiers, error: null })
+  })
+
+  it('returns error envelope when repo throws', async () => {
+    mockGetRushTiers.mockRejectedValueOnce(new Error('DB error'))
+    const result = await getRushTiers()
+    expect(result).toEqual({ data: null, error: 'Failed to load rush tiers' })
   })
 })
 

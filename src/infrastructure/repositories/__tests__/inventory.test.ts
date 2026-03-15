@@ -2,26 +2,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // vi.hoisted ensures these are available inside the vi.mock factory below,
 // which Vitest hoists to the top of the file before const declarations resolve.
-const { mockGetForStyle, mockGetForStyles, mockGetForColor } = vi.hoisted(() => ({
-  mockGetForStyle: vi.fn(),
-  mockGetForStyles: vi.fn(),
-  mockGetForColor: vi.fn(),
-}))
+const { mockGetForStyle, mockGetForStyles, mockGetForColor, mockGetInStockStyleIds } = vi.hoisted(
+  () => ({
+    mockGetForStyle: vi.fn(),
+    mockGetForStyles: vi.fn(),
+    mockGetForColor: vi.fn(),
+    mockGetInStockStyleIds: vi.fn(),
+  })
+)
 
 vi.mock('server-only', () => ({}))
 vi.mock('@shared/lib/logger', () => ({
   logger: { child: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() }) },
 }))
+vi.mock('next/cache', () => ({
+  // Passthrough — tests exercise delegation logic, not caching behaviour.
+  unstable_cache: (fn: () => unknown) => fn,
+}))
+
 // Must use a regular function (not arrow) so `new` can call it as a constructor.
 vi.mock('../inventory/supabase-inventory.repository', () => ({
   SupabaseInventoryRepository: vi.fn(function (this: Record<string, unknown>) {
     this.getForStyle = mockGetForStyle
     this.getForStyles = mockGetForStyles
     this.getForColor = mockGetForColor
+    this.getInStockStyleIds = mockGetInStockStyleIds
   }),
 }))
 
-import { getStyleInventory, getStylesInventory, getColorInventory } from '../inventory'
+import {
+  getStyleInventory,
+  getStylesInventory,
+  getColorInventory,
+  getInStockStyleIds,
+} from '../inventory'
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001'
 
@@ -73,6 +87,24 @@ describe('inventory facade', () => {
       mockGetForColor.mockResolvedValue([])
       await getColorInventory('some-id')
       expect(mockGetForColor).toHaveBeenCalledWith('some-id')
+    })
+  })
+
+  describe('getInStockStyleIds', () => {
+    it('delegates to repo.getInStockStyleIds and returns style IDs', async () => {
+      mockGetInStockStyleIds.mockResolvedValue([VALID_UUID])
+      const result = await getInStockStyleIds()
+      expect(mockGetInStockStyleIds).toHaveBeenCalledTimes(1)
+      expect(mockGetInStockStyleIds).toHaveBeenCalledWith()
+      expect(result).toEqual([VALID_UUID])
+    })
+
+    it('returns empty array when no in-stock styles exist', async () => {
+      mockGetInStockStyleIds.mockResolvedValue([])
+      const result = await getInStockStyleIds()
+      expect(mockGetInStockStyleIds).toHaveBeenCalledTimes(1)
+      expect(mockGetInStockStyleIds).toHaveBeenCalledWith()
+      expect(result).toEqual([])
     })
   })
 })

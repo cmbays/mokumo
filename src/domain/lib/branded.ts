@@ -25,6 +25,12 @@ declare const __brand: unique symbol
  */
 export type Brand<T, S extends string> = T & { readonly [__brand]: S }
 
+// ── Infrastructure / auth IDs ──────────────────────────────────────
+/** Supabase Auth user UUID — identifies the logged-in staff or customer actor. */
+export type UserId = Brand<string, 'UserId'>
+/** Shop UUID — top-level multi-tenant boundary. */
+export type ShopId = Brand<string, 'ShopId'>
+
 // ── Entity ID types ────────────────────────────────────────────────
 export type CustomerId = Brand<string, 'CustomerId'>
 export type QuoteId = Brand<string, 'QuoteId'>
@@ -40,6 +46,10 @@ export type CreditMemoId = Brand<string, 'CreditMemoId'>
 export type PricingTemplateId = Brand<string, 'PricingTemplateId'>
 export type ScratchNoteId = Brand<string, 'ScratchNoteId'>
 export type MockupTemplateId = Brand<string, 'MockupTemplateId'>
+export type CatalogStyleId = Brand<string, 'CatalogStyleId'>
+
+/** Union of all entity IDs that can have activity events. */
+export type ActivityEntityId = CustomerId | QuoteId | JobId | InvoiceId | ArtworkId
 
 /**
  * Cast a raw value to a branded type at a validation boundary.

@@ -3,16 +3,16 @@ import path from 'path'
 import { fileURLToPath } from 'node:url'
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import { playwright } from '@vitest/browser-playwright'
+
+import { quickpickle } from 'quickpickle'
+
 const dirname =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   test: {
     globals: true,
     exclude: ['node_modules/**', '**/node_modules/**', 'tests/**'],
-    // keep Playwright E2E out of Vitest
-    // Per-file environment overrides are handled via // @vitest-environment docblock comments in test files
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
@@ -48,15 +48,30 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
     },
-    // Two workspace projects:
-    //   "unit"      — regular unit/integration tests. Selected by `npm test`.
-    //   "storybook" — browser tests. Always defined so the Storybook Test UI
-    //                 panel can connect. Run via `npm run test:storybook` or
-    //                 from within the Storybook UI.
+    // Three workspace projects:
+    //   "unit"       — regular unit/integration tests. Selected by `npm test`.
+    //   "acceptance" — QuickPickle Gherkin scenarios.
+    //   "storybook"  — browser tests. Always defined so the Storybook Test UI
+    //                  panel can connect. Run via `npm run test:storybook` or
+    //                  from within the Storybook UI.
     projects: [
       {
         extends: true as const,
         test: { name: 'unit' },
+      },
+      // Acceptance tests — QuickPickle Gherkin scenarios
+      {
+        extends: true as const,
+        plugins: [quickpickle()],
+        test: {
+          name: 'acceptance',
+          include: ['src/**/*.feature'],
+          setupFiles: [
+            'src/domain/__tests__/support/world.ts',
+            'src/domain/lib/__tests__/money.steps.ts',
+            'src/domain/services/__tests__/pricing.steps.ts',
+          ],
+        },
       },
       {
         extends: true as const,

@@ -15,6 +15,7 @@
 import type {
   ICustomerRepository,
   ICustomerActivityRepository,
+  IActivityEventRepository,
   IQuoteRepository,
   IJobRepository,
   IInvoiceRepository,
@@ -96,7 +97,12 @@ export {
 
 export { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
 
-export { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
+export {
+  getStyleInventory,
+  getStylesInventory,
+  getColorInventory,
+  getInStockStyleIds,
+} from './repositories/inventory'
 
 export { fileUploadService } from './storage'
 
@@ -113,6 +119,8 @@ export {
 } from './repositories/pricing-templates'
 
 export { customerActivityService, listCustomerActivities } from './repositories/customer-activity'
+
+export { activityEventService, listEntityActivity } from './repositories/activity-events'
 
 // -- Compile-time assertions --------------------------------------------------
 // Verify that concrete implementations satisfy their port contracts.
@@ -175,8 +183,14 @@ import {
   getDtfSheetTiers,
 } from './repositories/settings'
 import { getStylePricing, getStylesPricing } from './repositories/supplier-pricing'
-import { getStyleInventory, getStylesInventory, getColorInventory } from './repositories/inventory'
+import {
+  getStyleInventory,
+  getStylesInventory,
+  getColorInventory,
+  getInStockStyleIds,
+} from './repositories/inventory'
 import { supabaseCustomerActivityRepository } from './repositories/_providers/supabase/customer-activity'
+import { supabaseActivityEventRepository } from './repositories/_providers/supabase/activity-events'
 
 const _portChecks = {
   customer: {
@@ -267,6 +281,7 @@ const _portChecks = {
     getForStyle: getStyleInventory,
     getForStyles: getStylesInventory,
     getForColor: getColorInventory,
+    getInStockStyleIds,
   } satisfies IInventoryRepository,
 
   customerActivity: {
@@ -275,6 +290,13 @@ const _portChecks = {
       supabaseCustomerActivityRepository
     ),
   } satisfies ICustomerActivityRepository,
+
+  activityEvent: {
+    record: supabaseActivityEventRepository.record.bind(supabaseActivityEventRepository),
+    listForEntity: supabaseActivityEventRepository.listForEntity.bind(
+      supabaseActivityEventRepository
+    ),
+  } satisfies IActivityEventRepository,
 }
 
 void _portChecks

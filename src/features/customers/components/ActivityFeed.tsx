@@ -79,44 +79,61 @@ export function ActivityFeed({
   const [activeFilter, setActiveFilter] = React.useState<ActivitySource | 'all'>('all')
   const [loadingMore, setLoadingMore] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
+  // Token-based guard: each effect run gets its own token. Stale tokens are ignored.
+  // This correctly handles React Strict Mode's double-invoke (setup → cleanup → setup),
+  // where isFirstRender.current would already be false on the second setup.
   const effectTokenRef = React.useRef(0)
-  const isInitialMount = React.useRef(true)
+  // Track whether the initial SSR-provided data has been consumed.
+  // We skip the first effect run (filter = 'all', initial mount) because SSR already
+  // populated the activity list. Any subsequent run (filter change or remount) should refetch.
+  const isInitialMountRef = React.useRef(true)
 
   // When filter changes, re-fetch from scratch (no cursor).
   // Skip initial mount — SSR already provides the first page of activities.
   // Uses effectTokenRef to handle React Strict Mode double-mount and rapid filter changes.
   React.useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
       return
     }
+
     const token = ++effectTokenRef.current
 
     async function refetch() {
       setLoadingMore(true)
       setLoadError(null)
 
-      const result = await onLoadMore({
-        customerId,
-        cursor: null,
-        source: activeFilter === 'all' ? null : activeFilter,
-        limit: 20,
-      })
+      try {
+        const result = await onLoadMore({
+          customerId,
+          cursor: null,
+          source: activeFilter === 'all' ? null : activeFilter,
+          limit: 20,
+        })
 
-      if (token !== effectTokenRef.current) return
+        if (token !== effectTokenRef.current) return
 
-      setLoadingMore(false)
-
-      if (result.ok) {
-        setActivities(result.value.items)
-        setHasMore(result.value.hasMore)
-        setNextCursor(result.value.nextCursor)
-      } else {
-        setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
+        if (result.ok) {
+          setActivities(result.value.items)
+          setHasMore(result.value.hasMore)
+          setNextCursor(result.value.nextCursor)
+        } else {
+          setLoadError(ACTIVITY_ERROR_MESSAGES[result.error as ActivityError])
+        }
+      } catch {
+        if (token !== effectTokenRef.current) return
+        setLoadError(ACTIVITY_ERROR_MESSAGES.INTERNAL_ERROR)
+      } finally {
+        if (token === effectTokenRef.current) {
+          setLoadingMore(false)
+        }
       }
     }
 
     refetch()
+    return () => {
+      effectTokenRef.current += 1
+    }
   }, [activeFilter, customerId, onLoadMore])
 
   async function handleLoadMore() {

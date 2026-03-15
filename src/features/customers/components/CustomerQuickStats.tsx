@@ -3,7 +3,7 @@ import { cn } from '@shared/lib/cn'
 import { DollarSign, ShoppingBag, TrendingUp, Clock, Users } from 'lucide-react'
 import { MoneyAmount } from '@shared/ui/organisms/MoneyAmount'
 import { money, toNumber, formatCompactMoney } from '@domain/lib/money'
-import type { CustomerStats } from '@domain/entities/customer-stats'
+import type { CustomerStats } from '@features/customers/lib/customer-stats.schema'
 
 export type { CustomerStats }
 
@@ -179,9 +179,7 @@ export function CustomerQuickStats({ stats, variant = 'bar', className }: Custom
             key={cell.key}
             className={cn(
               'flex flex-col',
-              index < cells.length - 1 || showCreditBar
-                ? 'pr-6 border-r border-border mr-6'
-                : ''
+              index < cells.length - 1 || showCreditBar ? 'pr-6 border-r border-border mr-6' : ''
             )}
           >
             <div className="leading-6">{cell.value}</div>
@@ -193,10 +191,7 @@ export function CustomerQuickStats({ stats, variant = 'bar', className }: Custom
 
         {showCreditBar && (
           <div className="flex flex-col justify-end">
-            <CreditBar
-              outstanding={stats.outstandingBalance ?? 0}
-              limit={stats.creditLimit ?? 0}
-            />
+            <CreditBar outstanding={stats.outstandingBalance ?? 0} limit={stats.creditLimit ?? 0} />
           </div>
         )}
       </div>

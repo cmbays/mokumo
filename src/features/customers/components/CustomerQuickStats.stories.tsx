@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { CustomerQuickStats } from './CustomerQuickStats'
-import type { CustomerStats } from '@domain/entities/customer-stats'
+import type { CustomerStats } from '@features/customers/lib/customer-stats.schema'
 
 const meta = {
   title: 'Features/Customers/CustomerQuickStats',

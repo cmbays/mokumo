@@ -100,6 +100,14 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
   }
 
   async upsertTemplate(data: PricingTemplateInsert): Promise<PricingTemplate> {
+    if (!isValidUuid(data.shopId)) {
+      log.warn('upsertTemplate called with invalid shopId', { shopId: data.shopId })
+      throw new Error('upsertTemplate: invalid shopId')
+    }
+    if (data.id && !isValidUuid(data.id)) {
+      log.warn('upsertTemplate called with invalid id', { id: data.id })
+      throw new Error('upsertTemplate: invalid id')
+    }
     const now = new Date()
     try {
       if (data.id) {
@@ -134,20 +142,37 @@ export class SupabasePricingTemplateRepository implements IPricingTemplateReposi
     }
   }
 
-  async upsertMatrixCells(templateId: string, cells: PrintCostMatrixCellInsert[]): Promise<void> {
+  async upsertMatrixCells(
+    templateId: string,
+    shopId: string,
+    cells: PrintCostMatrixCellInsert[]
+  ): Promise<boolean> {
     if (!isValidUuid(templateId)) {
       log.warn('upsertMatrixCells called with invalid templateId', { templateId })
-      return
+      throw new Error('upsertMatrixCells: invalid templateId')
+    }
+    if (!isValidUuid(shopId)) {
+      log.warn('upsertMatrixCells called with invalid shopId', { shopId })
+      throw new Error('upsertMatrixCells: invalid shopId')
     }
     try {
+      let ownershipVerified = false
       await db.transaction(async (tx) => {
+        // Verify ownership atomically — prevents TOCTOU between the caller's pre-check and the write
+        const [template] = await tx
+          .select({ id: pricingTemplates.id })
+          .from(pricingTemplates)
+          .where(and(eq(pricingTemplates.id, templateId), eq(pricingTemplates.shopId, shopId)))
+        if (!template) return
+        ownershipVerified = true
         await tx.delete(printCostMatrix).where(eq(printCostMatrix.templateId, templateId))
         if (cells.length > 0) {
           await tx.insert(printCostMatrix).values(cells.map((c) => ({ ...c, templateId })))
         }
       })
+      return ownershipVerified
     } catch (error) {
-      log.error('upsertMatrixCells failed', { templateId, cellCount: cells.length, error })
+      log.error('upsertMatrixCells failed', { templateId, shopId, cellCount: cells.length, error })
       throw error
     }
   }

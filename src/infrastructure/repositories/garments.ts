@@ -123,7 +123,7 @@ export async function getCatalogStylesSlim(): Promise<
 
 /**
  * Fetch slim color supplement (Tier 1 supplement) — name/hex1/colorGroupName per color, no images.
- * Not cached. Only available in supabase-catalog mode. Returns [] otherwise.
+ * Cached 1h globally (tags: catalog, catalog-colors). Only available in supabase-catalog mode. Returns [] otherwise.
  */
 export async function getCatalogColorSupplement(): Promise<
   import('@infra/repositories/_providers/supabase/catalog').CatalogColorSupplementRow[]
