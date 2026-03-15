@@ -1,0 +1,56 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/domain/entities/garment.ts",
+    "to": "src/db/schema/catalog.ts",
+    "rule": {
+      "severity": "error",
+      "name": "not-in-allowed"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/artwork/components/ArtworkLibraryClient.tsx",
+    "to": "src/app/(dashboard)/artwork/artwork-upload.actions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "not-in-allowed"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/artwork/components/ArtworkLibraryClient.tsx",
+    "to": "src/db/schema/artworks.ts",
+    "rule": {
+      "severity": "error",
+      "name": "not-in-allowed"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/pricing/components/GarmentMarkupEditor.tsx",
+    "to": "src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "not-in-allowed"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/features/pricing/components/RushTierEditor.tsx",
+    "to": "src/app/(dashboard)/settings/pricing/pricing-templates-actions.ts",
+    "rule": {
+      "severity": "error",
+      "name": "not-in-allowed"
+    }
+  },
+  {
+    "type": "module",
+    "from": "src/features/artwork/actions/artwork-upload.actions.ts",
+    "to": "src/features/artwork/actions/artwork-upload.actions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-orphans"
+    }
+  }
+]

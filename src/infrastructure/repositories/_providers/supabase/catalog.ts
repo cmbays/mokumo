@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { z } from 'zod'
 import { unstable_cache } from 'next/cache'
 import { sql, eq, and, min, inArray } from 'drizzle-orm'
@@ -384,38 +385,34 @@ export type CatalogColorSupplementRow = {
 }
 
 /**
- * Fetch slim color data for all styles — used to build color filter UI + swatch strips.
+ * Inner fetch for color supplement. Not shop-scoped — memoized per request.
  *
- * Returns per-color rows with (styleNumber, id, name, hex1, colorFamilyName, colorGroupName).
- * No images — avoids the 17 MB image payload. Not cached (query is fast: ~50-100 ms,
- * single-pass on catalog_colors with index on style_id).
+ * Uses React cache() for request-scoped deduplication only — multiple callers
+ * within the same render share one DB round-trip, but there is no TTL, no
+ * cross-request persistence, and no revalidateTag support.
  *
- * Security: requires an authenticated session. Returns [] if unauthenticated.
- * Color data is not shop-scoped (no preferences); auth is required to prevent anonymous reads.
+ * NOTE: unstable_cache is intentionally NOT used — the serialized payload is
+ * ~7 MB (38K color rows) which exceeds Next.js's 2MB cache limit and causes
+ * an unhandled rejection on every request. Cross-request caching for this
+ * dataset requires Upstash Redis and is tracked for a future milestone.
  */
-export async function getCatalogColorSupplement(): Promise<CatalogColorSupplementRow[]> {
-  const session = await verifySession()
-  if (!session) {
-    repoLogger.warn('getCatalogColorSupplement called without authenticated session')
-    return []
-  }
-
+const _fetchCatalogColorSupplementCached = cache(async (): Promise<CatalogColorSupplementRow[]> => {
   const { db } = await import('@shared/lib/supabase/db')
 
   let rows: unknown[]
   try {
     const result = await db.execute(sql`
-      SELECT
-        cs.style_number,
-        cc.id          AS color_id,
-        cc.name        AS color_name,
-        cc.hex1,
-        cc.color_family_name,
-        cc.color_group_name
-      FROM catalog_colors cc
-      JOIN catalog_styles cs ON cs.id = cc.style_id
-      ORDER BY cs.style_number, cc.name
-    `)
+        SELECT
+          cs.style_number,
+          cc.id          AS color_id,
+          cc.name        AS color_name,
+          cc.hex1,
+          cc.color_family_name,
+          cc.color_group_name
+        FROM catalog_colors cc
+        JOIN catalog_styles cs ON cs.id = cc.style_id
+        ORDER BY cs.style_number, cc.name
+      `)
     rows = result as unknown[]
   } catch (err) {
     repoLogger.error('getCatalogColorSupplement db.execute failed', { err })
@@ -441,6 +438,27 @@ export async function getCatalogColorSupplement(): Promise<CatalogColorSupplemen
     colorFamilyName: r.color_family_name,
     colorGroupName: r.color_group_name,
   }))
+})
+
+/**
+ * Fetch slim color data for all styles — used to build color filter UI + swatch strips.
+ *
+ * Returns per-color rows with (styleNumber, id, name, hex1, colorFamilyName, colorGroupName).
+ * No images — avoids the 17 MB image payload.
+ *
+ * Cached globally for 1 hour (tags: catalog, catalog-colors). Color data is not shop-scoped,
+ * so a single global cache entry serves all shops. The auth check below prevents unauthenticated
+ * reads but is kept outside the cache closure so session state is never cached.
+ *
+ * Security: requires an authenticated session. Returns [] if unauthenticated.
+ */
+export async function getCatalogColorSupplement(): Promise<CatalogColorSupplementRow[]> {
+  const session = await verifySession()
+  if (!session) {
+    repoLogger.warn('getCatalogColorSupplement called without authenticated session')
+    return []
+  }
+  return _fetchCatalogColorSupplementCached()
 }
 
 // ---------------------------------------------------------------------------

@@ -53,8 +53,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm test
+      - name: Architecture check
+        run: npm run test:architecture
+
+      - name: Unit tests
+        run: npx vitest run --project unit
+
+      - name: Acceptance tests
+        run: npx vitest run --project acceptance
 
       - name: Build
         run: npm run build
@@ -71,7 +77,7 @@ jobs:
         run: npx drizzle-kit check
 
       - name: Coverage
-        run: npm run test:coverage
+        run: npx vitest run --coverage --project unit
 
       - name: Install Playwright browsers
         if: hashFiles('tests/e2e/**') != ''
@@ -84,6 +90,28 @@ jobs:
           npx next start &
           npx wait-on http://localhost:3000 --timeout 30000
           npm run test:e2e
+
+  mutation:
+    needs: check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Mutation testing (incremental)
+        run: npm run test:mutate:incremental
+        continue-on-error: true
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          retention-days: 14
 
   dbt-check:
     name: dbt CI (parse + modified build)

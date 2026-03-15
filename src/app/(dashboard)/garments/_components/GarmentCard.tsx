@@ -26,6 +26,8 @@ type GarmentCardProps = {
   normalizedColors?: Array<{ name: string; hex1: string | null }>
   /** Real base price from slim metadata (raw.ss_activewear_products) — overrides catalog_archived.base_price (always 0). */
   overrideBasePrice?: number | null
+  /** Index in the visible grid. Cards 0-7 get priority loading to avoid a blurry LCP on first paint. */
+  index?: number
 }
 
 function isNormalized(g: GarmentCatalog | NormalizedGarmentCatalog): g is NormalizedGarmentCatalog {
@@ -40,6 +42,7 @@ export function GarmentCard({
   frontImageUrl,
   normalizedColors,
   overrideBasePrice,
+  index = Infinity,
 }: GarmentCardProps) {
   const garmentColors = useMemo(() => {
     if (isNormalized(garment)) return []
@@ -100,7 +103,9 @@ export function GarmentCard({
           sku={sku}
           name={garment.name}
           imageUrl={displayImageUrl}
-          className="w-full h-full"
+          fill
+          sizes="(max-width: 768px) 50vw, 25vw"
+          priority={index < 8}
         />
         <div className="absolute top-1.5 right-1.5 z-10">
           <FavoriteStar

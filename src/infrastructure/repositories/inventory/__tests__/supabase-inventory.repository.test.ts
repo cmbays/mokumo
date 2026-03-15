@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // vi.hoisted ensures mock functions are available inside vi.mock() factories,
 // which Vitest hoists to the top of the file before const declarations resolve.
-const { mockWhere, mockInnerJoin, mockFrom, mockSelect } = vi.hoisted(() => {
+const { mockWhere, mockInnerJoin, mockFrom, mockSelect, mockSelectDistinct } = vi.hoisted(() => {
   const mockWhere = vi.fn()
   const mockInnerJoin = vi.fn(() => ({ where: mockWhere }))
   // mockFrom must return both innerJoin (for join queries) and where (for direct queries)
   const mockFrom = vi.fn(() => ({ innerJoin: mockInnerJoin, where: mockWhere }))
   const mockSelect = vi.fn(() => ({ from: mockFrom }))
-  return { mockWhere, mockInnerJoin, mockFrom, mockSelect }
+  const mockSelectDistinct = vi.fn(() => ({ from: mockFrom }))
+  return { mockWhere, mockInnerJoin, mockFrom, mockSelect, mockSelectDistinct }
 })
 
 vi.mock('server-only', () => ({}))
@@ -17,7 +18,9 @@ vi.mock('@shared/lib/logger', () => ({
     child: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() }),
   },
 }))
-vi.mock('@shared/lib/supabase/db', () => ({ db: { select: mockSelect } }))
+vi.mock('@shared/lib/supabase/db', () => ({
+  db: { select: mockSelect, selectDistinct: mockSelectDistinct },
+}))
 
 import { SupabaseInventoryRepository } from '../supabase-inventory.repository'
 
@@ -185,6 +188,34 @@ describe('SupabaseInventoryRepository', () => {
     it('rethrows db errors', async () => {
       mockWhere.mockRejectedValue(new Error('query timeout'))
       await expect(repo.getForStyles([STYLE_UUID])).rejects.toThrow('query timeout')
+    })
+  })
+
+  // ─── getInStockStyleIds ──────────────────────────────────────────────────────
+
+  describe('getInStockStyleIds', () => {
+    it('returns empty array when no in-stock rows exist', async () => {
+      mockWhere.mockResolvedValue([])
+      const result = await repo.getInStockStyleIds()
+      expect(result).toEqual([])
+    })
+
+    it('returns style IDs from rows with in-stock inventory', async () => {
+      mockWhere.mockResolvedValue([{ styleId: STYLE_UUID }, { styleId: STYLE_UUID_2 }])
+      const result = await repo.getInStockStyleIds()
+      expect(result).toEqual([STYLE_UUID, STYLE_UUID_2])
+    })
+
+    it('calls db.selectDistinct (not db.select)', async () => {
+      mockWhere.mockResolvedValue([])
+      await repo.getInStockStyleIds()
+      expect(mockSelectDistinct).toHaveBeenCalled()
+      expect(mockSelect).not.toHaveBeenCalled()
+    })
+
+    it('rethrows db errors', async () => {
+      mockWhere.mockRejectedValue(new Error('query timeout'))
+      await expect(repo.getInStockStyleIds()).rejects.toThrow('query timeout')
     })
   })
 

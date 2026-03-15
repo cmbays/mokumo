@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import {
   Sheet,
   SheetContent,
@@ -22,45 +23,71 @@ import {
 } from '@shared/ui/primitives/select'
 import { CONTACT_ROLE_LABELS } from '@domain/constants'
 import { contactRoleEnum } from '@domain/entities/contact'
-import type { Group } from '@domain/entities/group'
+import { createContact } from '../../actions/contact.actions'
 
 type AddContactSheetProps = {
+  customerId: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  groups: Group[]
 }
 
-export function AddContactSheet({ open, onOpenChange, groups }: AddContactSheetProps) {
-  const [name, setName] = useState('')
+// contactRoleEnum includes 'owner' and 'other' which are not accepted by contactInputSchema.
+// Only expose values accepted by the server action.
+const SUBMITTABLE_ROLES = contactRoleEnum.options.filter(
+  (r): r is 'ordering' | 'billing' | 'art-approver' | 'primary' =>
+    r === 'ordering' || r === 'billing' || r === 'art-approver' || r === 'primary'
+)
+
+export function AddContactSheet({ customerId, open, onOpenChange }: AddContactSheetProps) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<string>('ordering')
-  const [roleDescription, setRoleDescription] = useState('')
-  const [groupId, setGroupId] = useState<string>('none')
   const [isPrimary, setIsPrimary] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleAdd() {
-    // Phase 1: No actual save
-    console.log('Contact added', {
-      name,
-      email: email || undefined,
-      phone: phone || undefined,
-      role,
-      roleDescription: role === 'other' ? roleDescription || undefined : undefined,
-      groupId: groupId === 'none' ? undefined : groupId,
-      isPrimary,
-    })
-    resetForm()
-    onOpenChange(false)
+  async function handleAdd() {
+    setSubmitting(true)
+    try {
+      const result = await createContact({
+        customerId,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        // Single-select role wrapped as array to match the port schema (contacts can hold multiple roles)
+        role: [role as 'ordering' | 'billing' | 'art-approver' | 'primary'],
+        isPrimary,
+        portalAccess: false,
+        canApproveProofs: isPrimary,
+        canPlaceOrders: false,
+      })
+
+      if (result.ok) {
+        toast.success('Contact added')
+        resetForm()
+        onOpenChange(false)
+      } else {
+        toast.error(
+          result.error === 'VALIDATION'
+            ? 'Please check the form fields.'
+            : 'Failed to add contact. Please try again.'
+        )
+      }
+    } catch {
+      toast.error('Failed to add contact. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function resetForm() {
-    setName('')
+    setFirstName('')
+    setLastName('')
     setEmail('')
     setPhone('')
     setRole('ordering')
-    setRoleDescription('')
-    setGroupId('none')
     setIsPrimary(false)
   }
 
@@ -68,6 +95,8 @@ export function AddContactSheet({ open, onOpenChange, groups }: AddContactSheetP
     if (!nextOpen) resetForm()
     onOpenChange(nextOpen)
   }
+
+  const canSubmit = firstName.trim().length > 0 && lastName.trim().length > 0 && !submitting
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -78,16 +107,31 @@ export function AddContactSheet({ open, onOpenChange, groups }: AddContactSheetP
         </SheetHeader>
 
         <div className="px-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="contact-name">
-              Name <span className="text-error">*</span>
-            </Label>
-            <Input
-              id="contact-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="contact-first-name">
+                First name <span className="text-error">*</span>
+              </Label>
+              <Input
+                id="contact-first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Jane"
+                autoComplete="given-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact-last-name">
+                Last name <span className="text-error">*</span>
+              </Label>
+              <Input
+                id="contact-last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Smith"
+                autoComplete="family-name"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -98,6 +142,7 @@ export function AddContactSheet({ open, onOpenChange, groups }: AddContactSheetP
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@example.com"
+              autoComplete="email"
             />
           </div>
 
@@ -109,58 +154,25 @@ export function AddContactSheet({ open, onOpenChange, groups }: AddContactSheetP
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="(555) 555-5555"
+              autoComplete="tel"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="contact-role">Role</Label>
-            <Select
-              value={role}
-              onValueChange={(value) => {
-                setRole(value)
-                if (value !== 'other') setRoleDescription('')
-              }}
-            >
+            <Select value={role} onValueChange={setRole}>
               <SelectTrigger className="w-full" aria-label="Contact role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {contactRoleEnum.options.map((r) => (
+                {SUBMITTABLE_ROLES.map((r) => (
                   <SelectItem key={r} value={r}>
                     {CONTACT_ROLE_LABELS[r]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {role === 'other' && (
-              <Input
-                id="contact-role-description"
-                value={roleDescription}
-                onChange={(e) => setRoleDescription(e.target.value)}
-                placeholder="e.g. Team Manager, Event Coordinator"
-                aria-label="Role description"
-              />
-            )}
           </div>
-
-          {groups.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="contact-group">Group</Label>
-              <Select value={groupId} onValueChange={setGroupId}>
-                <SelectTrigger className="w-full" aria-label="Contact group">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No group</SelectItem>
-                  {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <Checkbox
@@ -173,11 +185,11 @@ export function AddContactSheet({ open, onOpenChange, groups }: AddContactSheetP
         </div>
 
         <SheetFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={handleAdd} disabled={!name.trim()}>
-            Add Contact
+          <Button onClick={handleAdd} disabled={!canSubmit}>
+            {submitting ? 'Adding…' : 'Add Contact'}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -65,6 +65,14 @@ Server actions and repository functions tested against real data structures.
 - Repository CRUD operations
 - Data transformations between layers
 
+### Acceptance Tests (BDD)
+
+Gherkin `.feature` files with Given/When/Then scenarios that verify business behaviors in domain language. Run via QuickPickle (Vitest-native Gherkin runner). Acceptance tests define WHAT the system does; unit tests define HOW.
+
+### Mutation Tests
+
+Inject faults into source code and verify tests catch them. Run via Stryker Mutator. Mutation score measures test effectiveness — code coverage alone is insufficient.
+
 ### E2E Tests (Playwright)
 
 Critical user journeys tested in the browser.
