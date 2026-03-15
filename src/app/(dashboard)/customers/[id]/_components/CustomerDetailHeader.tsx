@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, Pencil, Archive, Star } from 'lucide-react'
+import { Copy, Check, Star } from 'lucide-react'
 import { Button } from '@shared/ui/primitives/button'
 import { LifecycleBadge } from '@shared/ui/organisms/LifecycleBadge'
 import { HealthBadge } from '@shared/ui/organisms/HealthBadge'
@@ -72,7 +72,7 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
         {/* Name + badges — wrappable flex-1 group */}
         <div className="flex-1 min-w-0 flex items-center flex-wrap gap-2.5">
           {/* Company name — Niji spec: 26px, weight 700, tight tracking */}
-          <h1 className="text-[26px] font-bold tracking-[-0.02em] leading-8 text-foreground shrink-0">
+          <h1 className="text-[22px] md:text-[26px] font-bold tracking-[-0.02em] leading-8 text-foreground w-full">
             {customer.company}
           </h1>
 
@@ -88,24 +88,22 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
 
         {/* Action buttons — always right-aligned, never wrap */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Archive — pure outline, no color overrides */}
+          {/* Archive — pure outline, text only */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setArchiveOpen(true)}
             aria-label="Archive customer"
           >
-            <Archive className="size-4" aria-hidden="true" />
-            <span className="hidden md:inline">Archive</span>
+            Archive
           </Button>
 
-          {/* Edit Customer — solid filled action background */}
+          {/* Edit Customer — solid filled action background, text only */}
           <Button
             size="sm"
             onClick={() => setEditOpen(true)}
             className="bg-action text-black font-semibold shadow-[1.5px_1.5px_0_rgba(0,0,0,0.3)] hover:bg-action-hover active:scale-95 transition-all duration-150"
           >
-            <Pencil className="size-4" />
             Edit Customer
           </Button>
         </div>
@@ -115,12 +113,14 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
       {/* Niji spec: divider-separated cells with 19px numbers + 10px uppercase labels */}
       <CustomerQuickStats stats={stats} variant="cells" />
 
-      {/* ---- Section 3: Contacts row ---------------------------------------- */}
-      {/* Fixed-width column slots — all contacts aligned vertically */}
+      {/* ---- Section 3: Contacts -------------------------------------------- */}
+      {/* Desktop: fixed-width column slots aligned horizontally.
+          Mobile: name+role on line 1, email+phone links on line 2 (indented).
+          md:contents dissolves the inner rows so their children participate
+          directly in the parent flex row on desktop, preserving column alignment. */}
       {sortedContacts.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {sortedContacts.map((contact) => {
-            // Filter 'primary' — already communicated by the star icon
             const functionalRoles = contact.role.filter((r) => r !== 'primary')
             const roleLabel =
               functionalRoles.length > 0
@@ -128,70 +128,82 @@ export function CustomerDetailHeader({ customer, stats }: CustomerDetailHeaderPr
                 : null
 
             return (
-              <div key={contact.id} className="flex items-center gap-3 text-sm">
-                {/* Star / spacer — w-4 fixed width */}
-                {contact.isPrimary ? (
-                  <Star
-                    className="size-3 shrink-0 fill-warning text-warning"
-                    aria-label="Primary contact"
-                  />
-                ) : (
-                  <span className="w-4 shrink-0" aria-hidden="true" />
-                )}
-
-                {/* Name — fixed width */}
-                <span
-                  className={cn(
-                    'w-[130px] shrink-0 text-[13px]',
-                    contact.isPrimary ? 'text-foreground font-semibold' : 'text-muted-foreground'
+              <div
+                key={contact.id}
+                className="flex flex-col gap-0.5 md:flex-row md:items-center md:gap-4 text-sm"
+              >
+                {/* Line 1 (mobile): star + name + role.
+                    Desktop: md:contents dissolves this into the parent flex row. */}
+                <div className="flex items-center gap-2 md:contents">
+                  {contact.isPrimary ? (
+                    <Star
+                      className="size-3 shrink-0 fill-warning text-warning"
+                      aria-label="Primary contact"
+                    />
+                  ) : (
+                    <span className="w-3 shrink-0" aria-hidden="true" />
                   )}
-                >
-                  {contact.name}
-                </span>
 
-                {/* Role — plain text, no border */}
-                {roleLabel && (
-                  <span className="w-[160px] shrink-0 text-[13px] text-muted-foreground">
-                    {roleLabel}
+                  <span
+                    className={cn(
+                      'w-[110px] shrink-0 text-[13px]',
+                      contact.isPrimary ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                    )}
+                  >
+                    {contact.name}
                   </span>
-                )}
-                {!roleLabel && <span className="w-[160px] shrink-0" aria-hidden="true" />}
 
-                {/* Email — fixed width so phone appears right after */}
-                {contact.email && (
-                  <span className="w-[200px] shrink-0 text-[13px] text-muted-foreground">
-                    {/* Desktop: copy button */}
-                    <span className="hidden md:inline">
-                      <CopyButton value={contact.email} label="email" />
+                  {roleLabel ? (
+                    <span className="md:w-[148px] md:shrink-0 text-[13px] text-muted-foreground">
+                      {roleLabel}
                     </span>
-                    {/* Mobile: mailto link */}
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="md:hidden text-sm text-action active:text-action/80 transition-colors truncate"
-                      aria-label={`Email ${contact.email}`}
-                    >
-                      {contact.email}
-                    </a>
-                  </span>
-                )}
-                {!contact.email && <span className="w-[200px] shrink-0" />}
+                  ) : (
+                    <span
+                      className="hidden md:inline-block w-[148px] shrink-0"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
 
-                {/* Phone — appears right after email */}
-                {contact.phone && (
-                  <span className="text-[13px] text-muted-foreground">
-                    {/* Desktop: copy button */}
-                    <span className="hidden md:inline">
-                      <CopyButton value={contact.phone} label="phone" />
-                    </span>
-                    {/* Mobile: tel link */}
-                    <a
-                      href={`tel:${contact.phone}`}
-                      className="md:hidden text-sm text-action active:text-action/80 transition-colors"
-                      aria-label={`Call ${contact.phone}`}
-                    >
-                      {contact.phone}
-                    </a>
-                  </span>
+                {/* Line 2 (mobile): email + phone links, indented under name.
+                    Desktop: md:contents dissolves this into the parent flex row. */}
+                {(contact.email || contact.phone) && (
+                  <div className="flex items-center gap-3 pl-5 md:pl-0 md:contents">
+                    {contact.email ? (
+                      <span className="min-w-0 text-[13px] text-muted-foreground md:w-[190px] md:shrink-0">
+                        <span className="hidden md:inline">
+                          <CopyButton value={contact.email} label="email" />
+                        </span>
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="md:hidden text-sm text-action active:text-action/80 transition-colors truncate block"
+                          aria-label={`Email ${contact.email}`}
+                        >
+                          {contact.email}
+                        </a>
+                      </span>
+                    ) : (
+                      <span
+                        className="hidden md:inline-block w-[190px] shrink-0"
+                        aria-hidden="true"
+                      />
+                    )}
+
+                    {contact.phone && (
+                      <span className="shrink-0 text-[13px] text-muted-foreground">
+                        <span className="hidden md:inline">
+                          <CopyButton value={contact.phone} label="phone" />
+                        </span>
+                        <a
+                          href={`tel:${contact.phone}`}
+                          className="md:hidden text-sm text-action active:text-action/80 transition-colors"
+                          aria-label={`Call ${contact.phone}`}
+                        >
+                          {contact.phone}
+                        </a>
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             )
