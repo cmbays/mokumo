@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Tabs, TabsContent } from '@shared/ui/primitives/tabs'
 import {
@@ -111,6 +111,17 @@ export function CustomerTabs({
   const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'overview'
   const [activeTab, setActiveTab] = useState(defaultTab)
   const screens = deriveScreensFromJobs(customer.id, jobs)
+
+  // Defer Radix DropdownMenu to after hydration to avoid useId mismatch.
+  // In App Router, RSC boundary fibers above this component shift the useId
+  // counter between SSR and client. useSyncExternalStore returns false on the
+  // server (via getServerSnapshot) and true on the client (via getSnapshot)
+  // without any state updates or cascading renders.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   // ── Sliding tab indicator (desktop only) ──────────────────────────────────
   const desktopContainerRef = useRef<HTMLDivElement>(null)
@@ -228,42 +239,57 @@ export function CustomerTabs({
             )
           })}
 
-          {/* "More" dropdown for secondary desktop tabs */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              ref={(el) => {
-                // Register the trigger so the indicator can track it when a secondary tab is active
-                if (el && isDesktopSecondaryActive) {
-                  tabRefs.current.set(activeTab, el as unknown as HTMLButtonElement)
-                }
-              }}
+          {/* "More" dropdown for secondary desktop tabs — mounted-gated to avoid
+              Radix useId/hydration mismatch with App Router RSC boundaries */}
+          {mounted ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                ref={(el) => {
+                  // Register trigger so indicator can track it when a secondary tab is active
+                  if (el && isDesktopSecondaryActive) {
+                    tabRefs.current.set(activeTab, el as unknown as HTMLButtonElement)
+                  }
+                }}
+                className={cn(
+                  'relative z-10 inline-flex items-center gap-0.5 whitespace-nowrap px-3 py-2 text-[13px]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+                  isDesktopSecondaryActive
+                    ? 'text-foreground font-semibold'
+                    : 'text-muted-foreground font-normal hover:text-foreground'
+                )}
+                aria-label="More tabs"
+              >
+                {isDesktopSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {DESKTOP_SECONDARY_TABS.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      'min-h-[var(--mobile-touch-target)]',
+                      activeTab === tab && 'text-action font-medium'
+                    )}
+                  >
+                    {tabLabel(tab)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              type="button"
               className={cn(
                 'relative z-10 inline-flex items-center gap-0.5 whitespace-nowrap px-3 py-2 text-[13px]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
-                isDesktopSecondaryActive
-                  ? 'text-foreground font-semibold'
-                  : 'text-muted-foreground font-normal hover:text-foreground'
+                'rounded-sm text-muted-foreground'
               )}
               aria-label="More tabs"
             >
-              {isDesktopSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+              More
               <ChevronDown className="size-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {DESKTOP_SECONDARY_TABS.map((tab) => (
-                <DropdownMenuItem
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'min-h-[var(--mobile-touch-target)]',
-                    activeTab === tab && 'text-action font-medium'
-                  )}
-                >
-                  {tabLabel(tab)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </button>
+          )}
         </div>
       </div>
 
@@ -296,37 +322,51 @@ export function CustomerTabs({
             )
           })}
 
-          {/* "More" dropdown for secondary tabs */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
+          {/* "More" dropdown for secondary tabs — mounted-gated (same reason as desktop) */}
+          {mounted ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 px-2 text-xs transition-colors active:scale-95',
+                  'min-h-[var(--mobile-touch-target)]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  isMobileSecondaryActive
+                    ? 'border-action text-action font-medium'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+                aria-label="More tabs"
+              >
+                {isMobileSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {SECONDARY_TABS.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      'min-h-[var(--mobile-touch-target)]',
+                      activeTab === tab && 'text-action font-medium'
+                    )}
+                  >
+                    {tabLabel(tab)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              type="button"
               className={cn(
-                'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 px-2 text-xs transition-colors active:scale-95',
-                'min-h-[var(--mobile-touch-target)]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isMobileSecondaryActive
-                  ? 'border-action text-action font-medium'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 border-transparent px-2 text-xs',
+                'min-h-[var(--mobile-touch-target)] text-muted-foreground'
               )}
               aria-label="More tabs"
             >
-              {isMobileSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+              More
               <ChevronDown className="size-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {SECONDARY_TABS.map((tab) => (
-                <DropdownMenuItem
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'min-h-[var(--mobile-touch-target)]',
-                    activeTab === tab && 'text-action font-medium'
-                  )}
-                >
-                  {tabLabel(tab)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </button>
+          )}
         </div>
       </div>
 
