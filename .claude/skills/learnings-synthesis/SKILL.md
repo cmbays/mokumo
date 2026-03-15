@@ -132,7 +132,7 @@ If you discovered patterns that should prevent future mistakes:
 
 ### Step 5: Update Memory
 
-If running as part of the secretary agent's context:
+If running as part of Ada's context:
 
 - Update `project-pulse.md` with new understanding of this vertical
 - Note any personality/narrative developments for `personality.md`
