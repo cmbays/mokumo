@@ -4,6 +4,8 @@ import { forwardRef } from 'react'
 import Link from 'next/link'
 import { cn } from '@shared/lib/cn'
 import type { LucideIcon } from 'lucide-react'
+import { EASE_BOUNCE, EASE_STANDARD } from './anim'
+import { resolveEntityColor } from './sidebar-utils'
 
 type SidebarNavLinkProps = {
   label: string
@@ -35,10 +37,7 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
     { label, href, icon: Icon, iconColor, indent, isActive, bounceKey, collapsed },
     ref
   ) {
-    // Derive CSS variable from iconColor token: 'text-purple' → var(--purple)
-    // Uses direct :root custom properties rather than Tailwind @theme aliases
-    // so the color resolves correctly in all rendering contexts (incl. Storybook).
-    const cssVar = iconColor ? `var(--${iconColor.replace('text-', '')})` : `var(--action)`
+    const cssVar = resolveEntityColor(iconColor)
 
     return (
       <Link
@@ -68,11 +67,9 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
           transformOrigin: 'left center',
           // Active items magnify in BOTH states — toggling collapsed must not shrink the icon.
           transform: isActive ? 'scale(1.12)' : 'scale(1)',
-          transition: 'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          transition: `color 0.2s ease, transform 0.22s ${EASE_BOUNCE}`,
           animation:
-            isActive && bounceKey && bounceKey > 0
-              ? 'niji-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              : undefined,
+            isActive && bounceKey && bounceKey > 0 ? `niji-pop 0.25s ${EASE_BOUNCE}` : undefined,
         }}
       >
         <Icon
@@ -90,8 +87,7 @@ export const SidebarNavLink = forwardRef<HTMLAnchorElement, SidebarNavLinkProps>
             whiteSpace: 'nowrap',
             maxWidth: collapsed ? 0 : 200,
             opacity: collapsed ? 0 : 1,
-            transition:
-              'max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.12s ease',
+            transition: `max-width 0.2s ${EASE_STANDARD}, margin-left 0.2s ${EASE_STANDARD}, opacity 0.12s ease`,
           }}
         >
           {label}

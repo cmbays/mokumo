@@ -16,6 +16,7 @@ import { SidebarNavLink } from './SidebarNavLink'
 import { ThemeToggle } from './ThemeToggle'
 import type { NavItem } from '@shared/constants/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { EASE_STANDARD } from './anim'
 
 // The Sidebar depends on:
 //   - usePathname()   → mocked via parameters.nextjs.navigation.pathname
@@ -169,7 +170,7 @@ function SidebarPlayground() {
       className="relative flex h-screen flex-col border-r border-sidebar-border bg-sidebar"
       style={{
         width: collapsed ? 72 : 216,
-        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: `width 0.22s ${EASE_STANDARD}`,
       }}
     >
       {/* Collapse toggle — floats at sidebar right edge, protrudes when collapsed */}
@@ -179,7 +180,7 @@ function SidebarPlayground() {
         style={{
           top: 20,
           right: collapsed ? -12 : 8,
-          transition: 'right 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `right 0.22s ${EASE_STANDARD}`,
         }}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
@@ -205,7 +206,7 @@ function SidebarPlayground() {
             overflow: 'hidden',
             maxWidth: collapsed ? 0 : 160,
             opacity: collapsed ? 0 : 1,
-            transition: 'max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.12s ease',
+            transition: `max-width 0.22s ${EASE_STANDARD}, opacity 0.12s ease`,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

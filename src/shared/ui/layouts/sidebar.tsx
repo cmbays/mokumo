@@ -7,6 +7,10 @@ import { PRIMARY_NAV, SECONDARY_NAV, type NavItem } from '@shared/constants/navi
 import { NijiActiveIndicator, type NijiIndicatorPos } from './NijiActiveIndicator'
 import { SidebarNavLink } from './SidebarNavLink'
 import { ThemeToggle } from './ThemeToggle'
+import { EASE_STANDARD } from './anim'
+import { resolveEntityColor } from './sidebar-utils'
+
+export { resolveEntityColor }
 
 // Desktop sidebar uses a different display order than mobile bottom nav.
 // Build a lookup from all nav items, then arrange in sidebar-specific order.
@@ -54,17 +58,6 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
   if (item.activePrefix) return pathname.startsWith(item.activePrefix)
   if (item.href === '/') return pathname === '/'
   return pathname === item.href || pathname.startsWith(item.href + '/')
-}
-
-/**
- * Derives the indicator/icon color from an iconColor token like 'text-purple'.
- * Uses the direct CSS custom properties (--purple, --action, etc.) from :root
- * rather than Tailwind's @theme inline aliases (--color-purple) — the direct
- * tokens are always present as real CSS properties, unlike the aliased ones.
- */
-export function resolveEntityColor(iconColor: string | undefined): string {
-  if (!iconColor) return 'var(--action)'
-  return `var(--${iconColor.replace('text-', '')})`
 }
 
 export function Sidebar() {
@@ -135,7 +128,7 @@ export function Sidebar() {
         // 72px collapsed: cloud logo (h-7 ≈ 28px from x=12) leaves ≥20px gap
         // before the protruding chevron button (right: -12 → left edge at x=60).
         width: collapsed ? 72 : 216,
-        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: `width 0.22s ${EASE_STANDARD}`,
       }}
     >
       {/* Collapse toggle — absolutely positioned at the sidebar's right edge.
@@ -147,7 +140,7 @@ export function Sidebar() {
         style={{
           top: 20,
           right: collapsed ? -12 : 8,
-          transition: 'right 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: `right 0.22s ${EASE_STANDARD}`,
         }}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
@@ -175,7 +168,7 @@ export function Sidebar() {
             overflow: 'hidden',
             maxWidth: collapsed ? 0 : 160,
             opacity: collapsed ? 0 : 1,
-            transition: 'max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.12s ease',
+            transition: `max-width 0.22s ${EASE_STANDARD}, opacity 0.12s ease`,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,3 +1,5 @@
+import { EASE_BOUNCE } from './anim'
+
 /**
  * NijiActiveIndicator — absolutely-positioned sliding pill that tracks the
  * active nav item. Parent is responsible for measuring DOM positions and
@@ -34,8 +36,7 @@ export function NijiActiveIndicator({ top, height, color, collapsed }: Props) {
         borderLeftWidth: 3,
         background: `color-mix(in srgb, ${color} 15%, transparent)`,
         boxShadow: `3px 3px 0 ${color}33`,
-        transition:
-          'top 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.2s ease, right 0.2s ease, border-color 0.25s ease, background 0.25s ease',
+        transition: `top 0.22s ${EASE_BOUNCE}, height 0.22s ${EASE_BOUNCE}, left 0.2s ease, right 0.2s ease, border-color 0.25s ease, background 0.25s ease`,
         pointerEvents: 'none',
         zIndex: 0,
       }}

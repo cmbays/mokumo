@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
+import { EASE_BOUNCE } from './anim'
 
 type Props = {
   /** Icon-only mode used when sidebar is collapsed */
@@ -60,7 +61,7 @@ export function ThemeToggle({ collapsed = false }: Props) {
             className="h-4 w-4 shrink-0"
             style={{
               transform: 'rotate(-15deg)',
-              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transition: `transform 0.28s ${EASE_BOUNCE}`,
             }}
           />
         ) : (
@@ -68,7 +69,7 @@ export function ThemeToggle({ collapsed = false }: Props) {
             className="h-4 w-4 shrink-0"
             style={{
               transform: 'rotate(15deg)',
-              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transition: `transform 0.28s ${EASE_BOUNCE}`,
             }}
           />
         )}
@@ -104,7 +105,7 @@ export function ThemeToggle({ collapsed = false }: Props) {
               ? 'inset 0 2px 5px rgba(0,0,0,0.45), inset 0 1px 2px rgba(0,0,0,0.3)'
               : 'none',
             transform: isDark ? 'scale(0.97)' : 'scale(1)',
-            transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transition: `all 0.22s ${EASE_BOUNCE}`,
             borderRadius: '9999px 0 0 9999px',
           }}
         >
@@ -112,7 +113,7 @@ export function ThemeToggle({ collapsed = false }: Props) {
             className="h-3.5 w-3.5 shrink-0"
             style={{
               transform: isDark ? 'rotate(-15deg) scale(1.1)' : 'rotate(0deg) scale(1)',
-              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transition: `transform 0.28s ${EASE_BOUNCE}`,
             }}
           />
         </button>
@@ -131,7 +132,7 @@ export function ThemeToggle({ collapsed = false }: Props) {
               ? 'inset 0 2px 5px rgba(0,0,0,0.45), inset 0 1px 2px rgba(0,0,0,0.3)'
               : 'none',
             transform: !isDark ? 'scale(0.97)' : 'scale(1)',
-            transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transition: `all 0.22s ${EASE_BOUNCE}`,
             borderRadius: '0 9999px 9999px 0',
           }}
         >
@@ -139,7 +140,7 @@ export function ThemeToggle({ collapsed = false }: Props) {
             className="h-3.5 w-3.5 shrink-0"
             style={{
               transform: !isDark ? 'rotate(15deg) scale(1.1)' : 'rotate(0deg) scale(1)',
-              transition: 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transition: `transform 0.28s ${EASE_BOUNCE}`,
             }}
           />
         </button>
