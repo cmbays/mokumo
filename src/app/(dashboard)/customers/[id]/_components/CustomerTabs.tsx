@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@shared/ui/primitives/tabs'
+import { Tabs, TabsContent } from '@shared/ui/primitives/tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import { ContactHierarchy } from './ContactHierarchy'
 import { CustomerDetailsPanel } from './CustomerDetailsPanel'
 import { CustomerScreensTab } from './CustomerScreensTab'
 import { CustomerPreferencesTab } from './CustomerPreferencesTab'
+import { CustomerOverviewTab } from './CustomerOverviewTab'
 import { NotesPanel } from '@features/quotes/components/NotesPanel'
 import { addCustomerNote, loadMoreActivities } from '../../actions/activity.actions'
 import { deriveScreensFromJobs } from '@domain/rules/screen.rules'
@@ -47,13 +48,40 @@ type CustomerTabsProps = {
   initialNextCursor: string | null
 }
 
+// Primary desktop tabs (4 shown directly on desktop)
+const DESKTOP_PRIMARY_TABS = ['overview', 'activity', 'preferences', 'artwork'] as const
+
+// Secondary tabs behind "More" dropdown on desktop
+const DESKTOP_SECONDARY_TABS = [
+  'quotes',
+  'jobs',
+  'invoices',
+  'screens',
+  'contacts',
+  'details',
+  'notes',
+] as const
+
+// All desktop tab values in render order
+const DESKTOP_TABS = [...DESKTOP_PRIMARY_TABS, ...DESKTOP_SECONDARY_TABS] as const
+
+type DesktopTab = (typeof DESKTOP_TABS)[number]
+
 // Primary tabs shown directly on mobile
-const PRIMARY_TABS = ['activity', 'quotes', 'jobs', 'invoices', 'notes'] as const
+const PRIMARY_TABS = ['overview', 'activity', 'quotes', 'jobs', 'notes'] as const
 
 // Secondary tabs behind "More" dropdown on mobile
-const SECONDARY_TABS = ['artwork', 'screens', 'preferences', 'contacts', 'details'] as const
+const SECONDARY_TABS = [
+  'artwork',
+  'screens',
+  'preferences',
+  'contacts',
+  'details',
+  'invoices',
+] as const
 
 const TAB_LABELS: Record<string, string> = {
+  overview: 'Overview',
   activity: 'Activity',
   quotes: 'Quotes',
   jobs: 'Jobs',
@@ -80,11 +108,43 @@ export function CustomerTabs({
   initialHasMore,
   initialNextCursor,
 }: CustomerTabsProps) {
-  const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'activity'
+  const defaultTab = customer.lifecycleStage === 'prospect' ? 'notes' : 'overview'
   const [activeTab, setActiveTab] = useState(defaultTab)
   const screens = deriveScreensFromJobs(customer.id, jobs)
 
-  const isSecondaryActive = (SECONDARY_TABS as readonly string[]).includes(activeTab)
+  // Defer Radix DropdownMenu to after hydration to avoid useId mismatch.
+  // In App Router, RSC boundary fibers above this component shift the useId
+  // counter between SSR and client. useSyncExternalStore returns false on the
+  // server (via getServerSnapshot) and true on the client (via getSnapshot)
+  // without any state updates or cascading renders.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
+
+  // ── Sliding tab indicator (desktop only) ──────────────────────────────────
+  const desktopContainerRef = useRef<HTMLDivElement>(null)
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
+
+  useEffect(() => {
+    // requestAnimationFrame fires after the next browser paint — faster and more
+    // reliable than setTimeout(20) which can fire before or after layout settles.
+    const rafId = requestAnimationFrame(() => {
+      const container = desktopContainerRef.current
+      const activeBtn = tabRefs.current.get(activeTab)
+      if (container && activeBtn) {
+        const cRect = container.getBoundingClientRect()
+        const bRect = activeBtn.getBoundingClientRect()
+        setIndicatorStyle({ left: bRect.left - cRect.left, width: bRect.width })
+      }
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [activeTab])
+
+  const isDesktopSecondaryActive = (DESKTOP_SECONDARY_TABS as readonly string[]).includes(activeTab)
+  const isMobileSecondaryActive = (SECONDARY_TABS as readonly string[]).includes(activeTab)
 
   /** Returns null for 0 counts to keep labels clean ("Quotes" not "Quotes (0)") */
   function getTabCount(tab: string): number | null {
@@ -108,99 +168,220 @@ export function CustomerTabs({
     }
   }
 
-  function tabLabel(tab: string): string {
+  function tabLabel(tab: string): ReactNode {
     const count = getTabCount(tab)
-    return count ? `${TAB_LABELS[tab]} (${count})` : TAB_LABELS[tab]
+    if (!count) return TAB_LABELS[tab]
+    return (
+      <>
+        {TAB_LABELS[tab]}
+        <span className="ml-1.5 rounded bg-muted px-1.5 py-0 text-[10px] font-medium leading-5 text-muted-foreground tabular-nums">
+          {count}
+        </span>
+      </>
+    )
   }
-
-  const triggerClass =
-    'shrink-0 min-h-(--mobile-touch-target) md:min-h-0 px-2 text-xs md:text-sm md:px-3'
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      {/* Desktop: all 10 tabs visible */}
+      {/* ── Desktop: 4 primary tabs + "More" dropdown ── */}
       <div className="hidden md:block overflow-x-auto scrollbar-none border-b border-border">
-        <TabsList variant="line" className="w-max min-w-full justify-start gap-0 pb-0">
-          <TabsTrigger value="activity" className={triggerClass}>
-            Activity
-          </TabsTrigger>
-          <TabsTrigger value="quotes" className={triggerClass}>
-            {tabLabel('quotes')}
-          </TabsTrigger>
-          <TabsTrigger value="jobs" className={triggerClass}>
-            {tabLabel('jobs')}
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className={triggerClass}>
-            {tabLabel('invoices')}
-          </TabsTrigger>
-          <TabsTrigger value="artwork" className={triggerClass}>
-            {tabLabel('artwork')}
-          </TabsTrigger>
-          <TabsTrigger value="screens" className={triggerClass}>
-            {tabLabel('screens')}
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className={triggerClass}>
-            Preferences
-          </TabsTrigger>
-          <TabsTrigger value="contacts" className={triggerClass}>
-            {tabLabel('contacts')}
-          </TabsTrigger>
-          <TabsTrigger value="details" className={triggerClass}>
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="notes" className={triggerClass}>
-            {tabLabel('notes')}
-          </TabsTrigger>
-        </TabsList>
-      </div>
-
-      {/* Mobile: 5 primary tabs + "More" dropdown — horizontally scrollable */}
-      <div className="md:hidden overflow-x-auto scrollbar-none -mx-4 px-4">
-        <TabsList
-          variant="line"
-          className="w-max min-w-full justify-start gap-0 border-b border-border pb-0"
+        {/* Relative container for the absolute indicator */}
+        <div
+          ref={desktopContainerRef}
+          className="relative flex w-max min-w-full items-center pb-1 pt-1"
+          role="tablist"
+          aria-label="Customer tabs"
         >
-          {PRIMARY_TABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab} className={triggerClass}>
-              {tabLabel(tab)}
-            </TabsTrigger>
-          ))}
+          {/* Niji sliding badge indicator — animates with spring curve */}
+          {indicatorStyle.width > 0 && (
+            <div
+              className="absolute top-1 bottom-1 rounded-md bg-action/[0.08] border-[1.5px] border-action pointer-events-none"
+              style={{
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                boxShadow: '1.5px 1.5px 0 var(--entity-shadow-action)',
+                transition:
+                  'left 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+              aria-hidden="true"
+            />
+          )}
 
-          {/* "More" dropdown for secondary tabs */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
+          {/* Primary tab buttons */}
+          {DESKTOP_PRIMARY_TABS.map((tab) => {
+            const isActive = activeTab === tab
+            return (
+              <button
+                key={tab}
+                ref={(el) => {
+                  if (el) tabRefs.current.set(tab, el)
+                  else tabRefs.current.delete(tab)
+                }}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'relative z-10 shrink-0 px-3 py-2 text-[13px]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+                  isActive
+                    ? 'text-foreground font-semibold'
+                    : 'text-muted-foreground font-normal hover:text-foreground'
+                )}
+                style={{
+                  transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                  transformOrigin: 'center center',
+                  transition: 'color 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                }}
+              >
+                {tabLabel(tab)}
+              </button>
+            )
+          })}
+
+          {/* "More" dropdown for secondary desktop tabs — mounted-gated to avoid
+              Radix useId/hydration mismatch with App Router RSC boundaries */}
+          {mounted ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                ref={(el) => {
+                  // Register trigger so indicator can track it when a secondary tab is active
+                  if (el && isDesktopSecondaryActive) {
+                    tabRefs.current.set(activeTab, el as unknown as HTMLButtonElement)
+                  }
+                }}
+                className={cn(
+                  'relative z-10 inline-flex items-center gap-0.5 whitespace-nowrap px-3 py-2 text-[13px]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+                  isDesktopSecondaryActive
+                    ? 'text-foreground font-semibold'
+                    : 'text-muted-foreground font-normal hover:text-foreground'
+                )}
+                aria-label="More tabs"
+              >
+                {isDesktopSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {DESKTOP_SECONDARY_TABS.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      'min-h-[var(--mobile-touch-target)]',
+                      activeTab === tab && 'text-action font-medium'
+                    )}
+                  >
+                    {tabLabel(tab)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              type="button"
               className={cn(
-                'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 px-2 text-xs transition-colors active:scale-95',
-                'min-h-(--mobile-touch-target)',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isSecondaryActive
-                  ? 'border-action text-action font-medium'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                'relative z-10 inline-flex items-center gap-0.5 whitespace-nowrap px-3 py-2 text-[13px]',
+                'rounded-sm text-muted-foreground'
               )}
               aria-label="More tabs"
             >
-              {isSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+              More
               <ChevronDown className="size-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {SECONDARY_TABS.map((tab) => (
-                <DropdownMenuItem
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'min-h-(--mobile-touch-target)',
-                    activeTab === tab && 'text-action font-medium'
-                  )}
-                >
-                  {tabLabel(tab)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TabsList>
+            </button>
+          )}
+        </div>
       </div>
 
-      <TabsContent value="activity" className="mt-4">
+      {/* ── Mobile: 5 primary tabs + "More" dropdown ── */}
+      <div className="md:hidden overflow-x-auto scrollbar-none -mx-4 px-4">
+        <div
+          className="flex w-max min-w-full items-center border-b border-border"
+          role="tablist"
+          aria-label="Customer tabs"
+        >
+          {PRIMARY_TABS.map((tab) => {
+            const isActive = activeTab === tab
+            return (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'shrink-0 min-h-[var(--mobile-touch-target)] px-2 text-xs border-b-2 transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive
+                    ? 'border-action text-action font-medium'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tabLabel(tab)}
+              </button>
+            )
+          })}
+
+          {/* "More" dropdown for secondary tabs — mounted-gated (same reason as desktop) */}
+          {mounted ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 px-2 text-xs transition-colors active:scale-95',
+                  'min-h-[var(--mobile-touch-target)]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  isMobileSecondaryActive
+                    ? 'border-action text-action font-medium'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+                aria-label="More tabs"
+              >
+                {isMobileSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {SECONDARY_TABS.map((tab) => (
+                  <DropdownMenuItem
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      'min-h-[var(--mobile-touch-target)]',
+                      activeTab === tab && 'text-action font-medium'
+                    )}
+                  >
+                    {tabLabel(tab)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                'inline-flex items-center gap-0.5 whitespace-nowrap border-b-2 border-transparent px-2 text-xs',
+                'min-h-[var(--mobile-touch-target)] text-muted-foreground'
+              )}
+              aria-label="More tabs"
+            >
+              More
+              <ChevronDown className="size-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Tab content panels — min-h prevents layout shift when switching between tall/short tabs ── */}
+      <TabsContent value="overview" className="mt-4 min-h-[480px]">
+        <CustomerOverviewTab
+          customer={customer}
+          recentActivities={initialActivities.slice(0, 5)}
+          artworks={artworks}
+          onSwitchTab={setActiveTab}
+          onAddNote={addCustomerNote}
+        />
+      </TabsContent>
+
+      <TabsContent value="activity" className="mt-4 min-h-[480px]">
         <ActivityFeed
           customerId={customer.id}
           initialActivities={initialActivities}

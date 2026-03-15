@@ -161,7 +161,7 @@ export function ArtworkLibraryClient({ initialPieces }: ArtworkLibraryClientProp
             // Mobile: full-width touch target; desktop: auto-width
             'flex w-full items-center justify-center gap-2 md:w-auto',
             'min-h-(--mobile-touch-target) md:min-h-0',
-            'rounded-lg bg-action px-4 py-2 text-sm font-medium text-black',
+            'rounded-lg bg-action px-4 py-2 text-sm font-medium text-white dark:text-black',
             'shadow-[4px_4px_0px_rgba(0,0,0,0.5)]',
             'transition-all hover:bg-action/90',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-background',

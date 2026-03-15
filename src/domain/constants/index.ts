@@ -177,15 +177,15 @@ export const CUSTOMER_TYPE_TAG_LABELS: Record<CustomerTypeTag, string> = {
 }
 
 export const CUSTOMER_TYPE_TAG_COLORS: Record<CustomerTypeTag, string> = {
-  retail: 'bg-muted text-muted-foreground',
-  'sports-school': 'bg-muted text-muted-foreground',
-  corporate: 'bg-muted text-muted-foreground',
-  'storefront-merch': 'bg-muted text-muted-foreground',
-  wholesale: 'bg-muted text-muted-foreground',
-  hospitality: 'bg-muted text-muted-foreground',
-  nonprofit: 'bg-muted text-muted-foreground',
-  sports: 'bg-muted text-muted-foreground',
-  religious: 'bg-muted text-muted-foreground',
+  retail: 'text-amber border-amber/20',
+  'sports-school': 'text-amber border-amber/20',
+  corporate: 'text-amber border-amber/20',
+  'storefront-merch': 'text-amber border-amber/20',
+  wholesale: 'text-amber border-amber/20',
+  hospitality: 'text-amber border-amber/20',
+  nonprofit: 'text-amber border-amber/20',
+  sports: 'text-amber border-amber/20',
+  religious: 'text-amber border-amber/20',
 }
 
 export const CONTACT_ROLE_LABELS: Record<ContactRole, string> = {

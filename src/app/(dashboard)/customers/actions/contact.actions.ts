@@ -13,6 +13,8 @@ import {
 } from '@infra/repositories/customers'
 import { contactInputSchema } from '@domain/ports/customer-contact.port'
 import type { ContactRow } from '@domain/ports/customer-contact.port'
+import { brandId } from '@domain/lib/branded'
+import type { ContactId } from '@domain/lib/branded'
 
 const log = logger.child({ domain: 'customers' })
 
@@ -95,7 +97,7 @@ export async function updateContact(
   }
 
   try {
-    const row = await repoUpdateContact(id, parsed.data)
+    const row = await repoUpdateContact(brandId<ContactId>(idParsed.data), parsed.data)
     log.info('Contact updated', { id, customerId })
     revalidatePath(`/customers/${customerId}`)
     return ok(row)
@@ -129,7 +131,7 @@ export async function deleteContact(
   }
 
   try {
-    await repoDeleteContact(id)
+    await repoDeleteContact(brandId<ContactId>(idParsed.data))
     log.info('Contact deleted', { id, customerId })
     revalidatePath(`/customers/${customerId}`)
     return ok(undefined)

@@ -273,7 +273,7 @@ export function CatalogPricingOverrides() {
         <Button
           size="sm"
           onClick={openAddSheet}
-          className="bg-action text-black font-semibold border-2 border-current shadow-brutal shadow-action hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-lg active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm transition-all"
+          className="bg-action text-white dark:text-black font-semibold border-2 border-current shadow-brutal shadow-action hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-lg active:translate-x-0 active:translate-y-0 active:shadow-brutal-sm transition-all"
         >
           <Plus className="size-4" />
           Add Override

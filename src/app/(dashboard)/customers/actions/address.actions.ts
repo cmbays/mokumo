@@ -13,6 +13,8 @@ import {
 } from '@infra/repositories/customers'
 import { addressInputSchema } from '@domain/ports/customer-contact.port'
 import type { AddressRow } from '@domain/ports/customer-contact.port'
+import { brandId } from '@domain/lib/branded'
+import type { AddressId } from '@domain/lib/branded'
 
 const log = logger.child({ domain: 'customers' })
 
@@ -95,7 +97,7 @@ export async function updateAddress(
   }
 
   try {
-    const row = await repoUpdateAddress(id, parsed.data)
+    const row = await repoUpdateAddress(brandId<AddressId>(idParsed.data), parsed.data)
     log.info('Address updated', { id, customerId })
     revalidatePath(`/customers/${customerId}`)
     return ok(row)
@@ -128,7 +130,7 @@ export async function deleteAddress(
   }
 
   try {
-    await repoDeleteAddress(id)
+    await repoDeleteAddress(brandId<AddressId>(idParsed.data))
     log.info('Address deleted', { id, customerId })
     revalidatePath(`/customers/${customerId}`)
     return ok(undefined)

@@ -231,9 +231,10 @@
   --teal-hover: #14b8a6;
   --teal-bold: #5eead4;
 
-  --emerald: #10b981;
-  --emerald-hover: #059669;
-  --emerald-bold: #34d399;
+  /* Invoices: pure grass green — distinct from teal's aqua/turquoise */
+  --emerald: #22c55e;
+  --emerald-hover: #16a34a;
+  --emerald-bold: #86efac;
 
   --yellow: #f5e642;
   --yellow-hover: #dccc28;
@@ -297,8 +298,8 @@
   --ds-text-dim: rgba(255, 255, 255, 0.32);
   --ds-text-micro: rgba(255, 255, 255, 0.2);
 
-  /* Accent system — Niji uses action blue as accent */
-  --ds-accent-emphasis: var(--action, #2ab9ff);
+  /* Accent system — Niji: accent-emphasis uses action-bold (lighter cyan) to distinguish from cta-text (action blue) */
+  --ds-accent-emphasis: var(--action-bold, #8efff3);
   --ds-accent-glow: none;
   --ds-neutral-emphasis: var(--muted-foreground, rgba(255, 255, 255, 0.6));
   --ds-neutral-glow: none;
@@ -310,6 +311,12 @@
   /* Dividers */
   --ds-divider: rgba(255, 255, 255, 0.08);
   --ds-border-subtle: rgba(255, 255, 255, 0.1);
+
+  /* Entity timeline dot shadow colors — 20% opacity glow per categorical color */
+  --entity-shadow-quote: rgba(255, 80, 218, 0.2);
+  --entity-shadow-job: rgba(168, 85, 247, 0.2);
+  --entity-shadow-note: rgba(255, 198, 99, 0.2);
+  --entity-shadow-action: rgba(42, 185, 255, 0.2);
 
   /* Personality behavior — Niji: neobrutalist shadows, no gradient rings */
   --ds-shadow-offset: 1.5px;
@@ -411,25 +418,28 @@
   --teal-hover: #0f766e;
   --teal-bold: #2dd4bf;
 
-  --emerald: #059669;
-  --emerald-hover: #047857;
-  --emerald-bold: #34d399;
+  /* Invoices: deep forest green — nothing like teal's blue-green */
+  --emerald: #15803d;
+  --emerald-hover: #166534;
+  --emerald-bold: #4ade80;
 
   --yellow: #ca8a04;
   --yellow-hover: #a16207;
   --yellow-bold: #facc15;
 
-  --amber: #d97706;
-  --amber-hover: #b45309;
-  --amber-bold: #f59e0b;
+  /* Customers: burnt orange — clearly distinct from yellow's golden mustard */
+  --amber: #c2410c;
+  --amber-hover: #9a3412;
+  --amber-bold: #fb923c;
 
   --graphite: #64748b;
   --graphite-hover: #475569;
   --graphite-bold: #94a3b8;
 
-  --cyan: #0891b2;
-  --cyan-hover: #0e7490;
-  --cyan-bold: #06b6d4;
+  /* Home: sky blue — clearly lighter and bluer than teal's dark blue-green */
+  --cyan: #0ea5e9;
+  --cyan-hover: #0284c7;
+  --cyan-bold: #38bdf8;
 
   /* Charts */
   --chart-1: #0077cc;
@@ -472,10 +482,17 @@
   --ds-text-dim: rgba(0, 0, 0, 0.32);
   --ds-text-micro: rgba(0, 0, 0, 0.16);
 
-  --ds-accent-emphasis: var(--action, #0077cc);
+  /* action-bold in light = sky blue #38bdf8, clearly distinct from cta-text action blue #0077cc */
+  --ds-accent-emphasis: var(--action-bold, #38bdf8);
   --ds-accent-glow: none;
   --ds-neutral-emphasis: rgba(0, 0, 0, 0.55);
   --ds-neutral-glow: none;
+
+  /* Entity timeline dot shadow colors — light mode */
+  --entity-shadow-quote: rgba(217, 70, 199, 0.2);
+  --entity-shadow-job: rgba(124, 58, 237, 0.2);
+  --entity-shadow-note: rgba(217, 119, 6, 0.2);
+  --entity-shadow-action: rgba(0, 119, 204, 0.2);
 
   --ds-cta-bg: rgba(0, 119, 204, 0.1);
   --ds-cta-text: var(--action, #0077cc);
@@ -846,6 +863,21 @@
     opacity: 0;
   }
   to {
+    opacity: 1;
+  }
+}
+
+/* Sidebar nav item activation bounce */
+@keyframes niji-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1.12);
     opacity: 1;
   }
 }

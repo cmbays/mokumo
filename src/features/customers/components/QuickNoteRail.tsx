@@ -42,10 +42,9 @@ export function QuickNoteRail({ customerId, onNoteSaved, onSave }: QuickNoteRail
     }
   }
 
-  // 360px fixed per design spec (stacks below timeline on mobile)
   return (
-    <div className="flex flex-col gap-3 border-l border-border pl-5 w-full md:w-90 shrink-0">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+    <div className="flex flex-col gap-3 w-full">
+      <h3 className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2">
         Quick Note
       </h3>
 
@@ -54,7 +53,7 @@ export function QuickNoteRail({ customerId, onNoteSaved, onSave }: QuickNoteRail
         onChange={(e) => setContent(e.target.value)}
         placeholder="Add a note about this customer…"
         rows={4}
-        className="resize-none text-sm bg-elevated border border-border rounded-md min-h-22"
+        className="resize-none text-sm bg-elevated border-border rounded-md min-h-22"
         disabled={saving}
         aria-label="Quick note content"
       />
@@ -65,13 +64,17 @@ export function QuickNoteRail({ customerId, onNoteSaved, onSave }: QuickNoteRail
         </p>
       )}
 
-      {/* Footer: save button */}
+      {/* Footer: save button — outlined warning style */}
       <div className="flex justify-end">
         <Button
+          variant="outline"
           size="sm"
           disabled={!content.trim() || saving}
           onClick={handleSave}
-          className={cn('relative', content.trim() && !saving && 'shadow-brutal shadow-black/50')}
+          className={cn(
+            'border-warning text-warning shadow-[1.5px_1.5px_0_var(--entity-shadow-note)]',
+            'hover:bg-warning/10 active:scale-95 transition-all duration-150'
+          )}
         >
           {saving ? (
             <>

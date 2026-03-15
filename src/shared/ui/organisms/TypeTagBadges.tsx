@@ -1,6 +1,5 @@
-import { Badge } from '@shared/ui/primitives/badge'
 import { cn } from '@shared/lib/cn'
-import { CUSTOMER_TYPE_TAG_LABELS, CUSTOMER_TYPE_TAG_COLORS } from '@domain/constants'
+import { CUSTOMER_TYPE_TAG_LABELS } from '@domain/constants'
 import type { CustomerTypeTag } from '@domain/entities/customer'
 
 type TypeTagBadgesProps = {
@@ -10,18 +9,17 @@ type TypeTagBadgesProps = {
 
 export function TypeTagBadges({ tags, className }: TypeTagBadgesProps) {
   if (tags.length === 0) return null
-
   return (
-    <div className={cn('flex flex-wrap gap-1', className)}>
+    <div className={cn('flex flex-wrap gap-2', className)}>
       {tags.map((tag) => (
-        <Badge
+        <span
           key={tag}
-          variant="ghost"
-          className={cn(CUSTOMER_TYPE_TAG_COLORS[tag], 'transition-colors text-xs')}
+          role="img"
+          className="text-sm font-semibold text-muted-foreground"
           aria-label={`Type: ${CUSTOMER_TYPE_TAG_LABELS[tag]}`}
         >
           {CUSTOMER_TYPE_TAG_LABELS[tag]}
-        </Badge>
+        </span>
       ))}
     </div>
   )

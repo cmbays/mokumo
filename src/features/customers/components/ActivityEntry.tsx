@@ -6,7 +6,47 @@ import { Pencil, Bot, Mail, Phone, Globe, ArrowUpRight, ArrowDownLeft } from 'lu
 import { cn } from '@shared/lib/cn'
 import type { CustomerActivity, ActivitySource } from '@domain/ports/customer-activity.port'
 
-// ─── Source icon map ──────────────────────────────────────────────────────────
+// ─── Node appearance config ───────────────────────────────────────────────────
+// Border + icon color per activity source. Shadow vars adapt per theme via CSS
+// variables defined in globals.css. System events use no glow (neutral border).
+
+const NODE_CONFIG: Record<
+  ActivitySource,
+  { borderClass: string; textClass: string; shadowVar: string | null }
+> = {
+  manual: {
+    borderClass: 'border-warning',
+    textClass: 'text-warning',
+    shadowVar: 'var(--entity-shadow-note)',
+  },
+  system: {
+    borderClass: 'border-border',
+    textClass: 'text-muted-foreground',
+    shadowVar: null,
+  },
+  email: {
+    borderClass: 'border-yellow',
+    textClass: 'text-yellow',
+    shadowVar: 'var(--entity-shadow-note)',
+  },
+  sms: {
+    borderClass: 'border-yellow',
+    textClass: 'text-yellow',
+    shadowVar: 'var(--entity-shadow-note)',
+  },
+  voicemail: {
+    borderClass: 'border-yellow',
+    textClass: 'text-yellow',
+    shadowVar: 'var(--entity-shadow-note)',
+  },
+  portal: {
+    borderClass: 'border-yellow',
+    textClass: 'text-yellow',
+    shadowVar: 'var(--entity-shadow-note)',
+  },
+}
+
+// ─── Source maps ──────────────────────────────────────────────────────────────
 
 const SOURCE_ICON_MAP: Record<ActivitySource, React.ElementType> = {
   manual: Pencil,
@@ -18,7 +58,7 @@ const SOURCE_ICON_MAP: Record<ActivitySource, React.ElementType> = {
 }
 
 const SOURCE_LABEL_MAP: Record<ActivitySource, string> = {
-  manual: 'Manual',
+  manual: 'Note',
   system: 'System',
   email: 'Email',
   sms: 'SMS',
@@ -30,9 +70,7 @@ const SOURCE_LABEL_MAP: Record<ActivitySource, string> = {
 
 function DirectionBadge({ direction }: { direction: CustomerActivity['direction'] }) {
   if (direction === 'internal') return null
-
   const isOutbound = direction === 'outbound'
-
   return (
     <span
       className={cn(
@@ -64,7 +102,6 @@ function RelatedEntityBadge({
 }) {
   const href = `/${type}s/${id}`
   const displayLabel = label ?? `${type.charAt(0).toUpperCase() + type.slice(1)} #…`
-
   return (
     <Link
       href={href}
@@ -103,112 +140,112 @@ function formatTimestamp(iso: string): string {
   })
 }
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 export type ActivityEntryProps = {
   activity: CustomerActivity
   /**
-   * Tailwind border color class for the left border (3px solid).
-   *
-   * Callers resolve this from status context:
-   *   - Invoice: sent=border-warning / overdue=border-error / paid=border-success
-   *   - Quote: draft=border-warning / sent=border-action / accepted=border-success / declined=border-error / expired=border-border
-   *   - Manual note: border-action
-   *   - System: border-border
-   */
-  borderColorClass: string
-  /**
-   * Optional status badge text (e.g. "Sent", "Paid", "Overdue").
-   * Shown in the right-side metadata area, line 1.
+   * Optional status badge text (e.g. "Sent", "Paid", "Overdue") — Wave 3.
+   * Shown in the right-side metadata area.
    */
   statusLabel?: string
   /** Status badge color class (e.g. "text-warning", "text-success", "text-error") */
   statusColorClass?: string
   /**
-   * Optional monetary amount to display in the right metadata block (line 1).
-   * Pass a pre-formatted string like "$1,234.00".
+   * Optional monetary amount — pass pre-formatted string like "$1,234.00".
    */
   formattedAmount?: string
-  /** Label text for the linked entity badge. If omitted, badge shows entity type + id. */
+  /** Label text for the linked entity badge. */
   entityLabel?: string
+  /** Omit the connector line below this entry (pass true for the last item). */
+  isLast?: boolean
   className?: string
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-/**
- * ActivityEntry — a single timeline event for the customer Activity tab.
- *
- * Design spec:
- *   - No card background — entry sits directly on bg-background (#141515)
- *   - 3px solid left border = the ONLY grouping signal
- *   - max-width: ~672px (max-w-2xl)
- *   - padding: pt-3 pb-4 pl-4
- *   - mb-6 between entries
- */
 export function ActivityEntry({
   activity,
-  borderColorClass,
   statusLabel,
   statusColorClass,
   formattedAmount,
   entityLabel,
+  isLast,
   className,
 }: ActivityEntryProps) {
+  const config = NODE_CONFIG[activity.source]
   const SourceIcon = SOURCE_ICON_MAP[activity.source]
   const sourceLabel = SOURCE_LABEL_MAP[activity.source]
 
   return (
-    <div className={cn('flex max-w-2xl gap-4 mb-6', className)}>
-      {/* Left border + content */}
-      <div className={cn('flex-1 border-l-[3px] pl-4 pt-3 pb-4', borderColorClass)}>
-        {/* Header row: source icon + source label + direction badge */}
-        <div className="flex items-center gap-2 mb-1">
-          <SourceIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="text-xs text-muted-foreground">{sourceLabel}</span>
-          <DirectionBadge direction={activity.direction} />
-        </div>
-
-        {/* Main content */}
-        <p className="text-sm text-foreground leading-relaxed">{activity.content}</p>
-
-        {/* Footer row: entity link badge */}
-        {activity.relatedEntityType && activity.relatedEntityId && (
-          <div className="mt-2">
-            <RelatedEntityBadge
-              type={activity.relatedEntityType}
-              id={activity.relatedEntityId}
-              label={entityLabel}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Right-side metadata: 2-line stack */}
-      <div className="flex shrink-0 flex-col items-end gap-1 pt-3">
-        {/* Line 1: status badge + amount */}
-        <div className="flex items-center gap-2">
-          {statusLabel && (
-            <span
-              className={cn('text-xs font-medium', statusColorClass ?? 'text-muted-foreground')}
-            >
-              {statusLabel}
-            </span>
+    <div className={cn('', className)}>
+      {/* Timeline row */}
+      <div className="flex items-start gap-3.5 py-0.5">
+        {/* Circular node — entity-colored border + matching icon */}
+        <div
+          className={cn(
+            'flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px] mt-0.5',
+            config.borderClass
           )}
-          {formattedAmount && (
-            <span className="text-xs font-medium text-foreground">{formattedAmount}</span>
-          )}
-        </div>
-
-        {/* Line 2: timestamp */}
-        <time
-          dateTime={activity.createdAt}
-          className="text-xs text-muted-foreground"
-          title={new Date(activity.createdAt).toLocaleString()}
+          style={config.shadowVar ? { boxShadow: `1.5px 1.5px 0 ${config.shadowVar}` } : undefined}
+          aria-hidden="true"
         >
-          {formatTimestamp(activity.createdAt)}
-        </time>
+          <SourceIcon className={cn('size-3.5', config.textClass)} strokeWidth={2} />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pt-1.5">
+          {/* Source label + direction */}
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-xs text-muted-foreground">{sourceLabel}</span>
+            <DirectionBadge direction={activity.direction} />
+          </div>
+
+          {/* Main content text */}
+          <p className="text-[13px] text-foreground leading-relaxed">{activity.content}</p>
+
+          {/* Entity link badge */}
+          {activity.relatedEntityType && activity.relatedEntityId && (
+            <div className="mt-2">
+              <RelatedEntityBadge
+                type={activity.relatedEntityType}
+                id={activity.relatedEntityId}
+                label={entityLabel}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Right metadata: status + timestamp */}
+        <div className="flex shrink-0 flex-col items-end gap-1 pt-1">
+          {(statusLabel || formattedAmount) && (
+            <div className="flex items-center gap-1.5">
+              {statusLabel && (
+                <span
+                  className={cn('text-xs font-medium', statusColorClass ?? 'text-muted-foreground')}
+                >
+                  {statusLabel}
+                </span>
+              )}
+              {formattedAmount && (
+                <span className="text-xs font-medium text-foreground">{formattedAmount}</span>
+              )}
+            </div>
+          )}
+          <time
+            dateTime={activity.createdAt}
+            className="text-[11px] text-muted-foreground/50 tabular-nums"
+            title={new Date(activity.createdAt).toLocaleString()}
+          >
+            {formatTimestamp(activity.createdAt)}
+          </time>
+        </div>
       </div>
+
+      {/* Connector line between entries */}
+      {!isLast && (
+        <div className="ml-[16px] w-px h-[13px] bg-border rounded-sm" aria-hidden="true" />
+      )}
     </div>
   )
 }

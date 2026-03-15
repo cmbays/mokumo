@@ -10,7 +10,7 @@ import {
 import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
 import type { HealthStatus } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
-import { validateUUID } from '@infra/repositories/_shared/validation'
+import { validateUUID, assertValidUUID } from '@infra/repositories/_shared/validation'
 import { money, toNumber } from '@domain/lib/money'
 import type {
   ICustomerRepository,
@@ -28,23 +28,16 @@ import type { Job } from '@domain/entities/job'
 import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
 import type { Note } from '@domain/entities/note'
-import { mapContactRow, supabaseContactMethods } from './contacts'
-import { mapAddressRow, supabaseAddressMethods } from './addresses'
+import { mapContactRow, createContact, updateContact, deleteContact } from './contacts'
+import { mapAddressRow, createAddress, updateAddress, deleteAddress } from './addresses'
 
 const repoLogger = logger.child({ domain: 'supabase-customers' })
 
 // DB lifecycle enum values — excludes 'contract' which is a legacy domain-only value.
+// Extracted to module scope to avoid repetition in createCustomer / updateCustomer / listCustomers.
 type DbLifecycle = 'prospect' | 'new' | 'repeat' | 'vip' | 'at-risk' | 'archived'
 
-// ─── ID validation ─────────────────────────────────────────────────────────────
-
-function assertValidUUID(id: string, context: string): void {
-  if (!validateUUID(id)) {
-    throw new Error(`${context}: invalid UUID "${id}"`)
-  }
-}
-
-// ─── Row mapper ────────────────────────────────────────────────────────────────
+// ─── Row mappers ───────────────────────────────────────────────────────────────
 
 /**
  * Map a raw customers table row to the Customer domain entity.
@@ -100,8 +93,8 @@ function mapCustomerRow(
 
 /**
  * Full Supabase implementation of ICustomerRepository.
- * Contact mutations live in ./contacts.ts, address mutations in ./addresses.ts.
  * All methods validate UUIDs via Zod before issuing queries (DAL ID validation rule).
+ * Contact and address mutations are implemented in ./contacts and ./addresses respectively.
  */
 export const supabaseCustomerRepository: ICustomerRepository = {
   // ── Legacy methods ──────────────────────────────────────────────────────────
@@ -410,6 +403,7 @@ export const supabaseCustomerRepository: ICustomerRepository = {
 
     try {
       // Map 'contract' (legacy domain value) to 'repeat' in the DB — 'contract' is not a valid DB enum value.
+      // This is a temporary shim until Wave 3 removes the legacy 'contract' from the domain enum.
       const dbLifecycle: DbLifecycle =
         input.lifecycleStage === 'contract' ? 'repeat' : (input.lifecycleStage as DbLifecycle)
 
@@ -516,6 +510,7 @@ export const supabaseCustomerRepository: ICustomerRepository = {
     assertValidUUID(customerId, 'getAccountBalance')
 
     // Returns sum of unpaid invoice balance_due. Cross-vertical join deferred to Wave 2a
+    // (invoices table not yet wired to customers). Return 0 until then.
     repoLogger.info('getAccountBalance: invoices cross-join deferred to Wave 2a', { customerId })
     return 0
   },
@@ -525,7 +520,12 @@ export const supabaseCustomerRepository: ICustomerRepository = {
     return {}
   },
 
-  // ── Contact + Address mutations (delegated to sub-modules) ─────────────────
-  ...supabaseContactMethods,
-  ...supabaseAddressMethods,
+  // ── Contact & address mutations — implemented in sibling modules ─────────────
+
+  createContact,
+  updateContact,
+  deleteContact,
+  createAddress,
+  updateAddress,
+  deleteAddress,
 }

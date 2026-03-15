@@ -5,13 +5,36 @@ import 'server-only'
 //
 // Router: DATA_PROVIDER env var selects the data source.
 //   - 'supabase' → Supabase PostgreSQL (production / preview)
-//   - unset      → Supabase (activity is always real; no mock fallback needed for this entity)
+//   - 'mock'     → in-process mock (empty feed; for local dev without DB credentials)
+//   - unset      → Supabase
 //
 // Design: CustomerActivityService is the ONLY write path.
 // Consumers (server actions) import `customerActivityService` from here.
 // The raw repository is not exported — use the service instead.
 
 import { CustomerActivityService } from '@domain/services/customer-activity.service'
+import type { ICustomerActivityRepository } from '@domain/ports/customer-activity.port'
+
+// ─── Mock repository ──────────────────────────────────────────────────────────
+// Returns empty data when DATA_PROVIDER=mock — no Supabase credentials needed.
+
+const mockActivityRepository: ICustomerActivityRepository = {
+  insert: async (input) => ({
+    id: '00000000-0000-0000-0000-000000000001',
+    customerId: input.customerId,
+    shopId: input.shopId,
+    source: input.source,
+    direction: input.direction,
+    actorType: input.actorType,
+    actorId: input.actorId,
+    content: input.content,
+    externalRef: input.externalRef,
+    relatedEntityType: input.relatedEntityType,
+    relatedEntityId: input.relatedEntityId,
+    createdAt: new Date().toISOString(),
+  }),
+  listForCustomer: async () => ({ items: [], hasMore: false, nextCursor: null }),
+}
 
 // ─── Lazy Supabase module ─────────────────────────────────────────────────────
 // Mirrors the pattern in customers.ts: dynamic import defers Drizzle/Postgres
@@ -21,11 +44,14 @@ import { CustomerActivityService } from '@domain/services/customer-activity.serv
 let _service: CustomerActivityService | null = null
 
 async function resolveService(): Promise<CustomerActivityService> {
-  if (!_service) {
-    const { supabaseCustomerActivityRepository } =
-      await import('./_providers/supabase/customer-activity')
-    _service = new CustomerActivityService(supabaseCustomerActivityRepository)
+  if (_service) return _service
+  if (process.env.DATA_PROVIDER === 'mock') {
+    _service = new CustomerActivityService(mockActivityRepository)
+    return _service
   }
+  const { supabaseCustomerActivityRepository } =
+    await import('./_providers/supabase/customer-activity')
+  _service = new CustomerActivityService(supabaseCustomerActivityRepository)
   return _service
 }
 

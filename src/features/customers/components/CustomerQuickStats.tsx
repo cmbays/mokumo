@@ -9,7 +9,7 @@ export type { CustomerStats }
 
 type CustomerQuickStatsProps = {
   stats: CustomerStats
-  variant?: 'bar' | 'header'
+  variant?: 'bar' | 'header' | 'cells'
   className?: string
 }
 
@@ -104,6 +104,94 @@ export function CustomerQuickStats({ stats, variant = 'bar', className }: Custom
             <Users className="size-4 text-muted-foreground" aria-hidden="true" />
             <span className="text-muted-foreground">Referrals:</span>
             <span className="font-medium text-foreground">{stats.referralCount}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // variant === "cells" — divider-separated stat cells (Niji spec)
+  // Format: [large number / small uppercase label] | [divider] | repeat
+  if (variant === 'cells') {
+    const cells: Array<{ key: string; value: ReactNode; label: string }> = [
+      {
+        key: 'revenue',
+        value: (
+          <MoneyAmount
+            value={stats.lifetimeRevenue}
+            format="compact"
+            className="text-[19px] font-semibold tracking-[-0.02em] text-foreground tabular-nums"
+          />
+        ),
+        label: 'lifetime',
+      },
+      {
+        key: 'aov',
+        value: (
+          <MoneyAmount
+            value={stats.avgOrderValue}
+            format="compact"
+            className="text-[19px] font-semibold tracking-[-0.02em] text-foreground tabular-nums"
+          />
+        ),
+        label: 'avg order',
+      },
+      {
+        key: 'orders',
+        value: (
+          <span className="text-[19px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+            {stats.totalOrders}
+          </span>
+        ),
+        label: 'orders',
+      },
+      {
+        key: 'lastOrder',
+        value: (
+          <span className="text-[19px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+            {formatDaysShort(stats.lastOrderDate)}
+          </span>
+        ),
+        label: 'last order',
+      },
+      ...(showReferrals
+        ? [
+            {
+              key: 'referrals',
+              value: (
+                <span className="text-[19px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                  {stats.referralCount}
+                </span>
+              ),
+              label: 'referrals',
+            },
+          ]
+        : []),
+    ]
+
+    return (
+      <div
+        className={cn('flex flex-wrap items-end gap-0', className)}
+        aria-label="Customer statistics"
+      >
+        {cells.map((cell, index) => (
+          <div
+            key={cell.key}
+            className={cn(
+              'flex flex-col',
+              index < cells.length - 1 || showCreditBar ? 'pr-6 border-r border-border mr-6' : ''
+            )}
+          >
+            <div className="leading-6">{cell.value}</div>
+            <div className="text-[10px] font-semibold tracking-[0.08em] uppercase mt-0.5 text-muted-foreground">
+              {cell.label}
+            </div>
+          </div>
+        ))}
+
+        {showCreditBar && (
+          <div className="flex flex-col justify-end">
+            <CreditBar outstanding={stats.outstandingBalance ?? 0} limit={stats.creditLimit ?? 0} />
           </div>
         )}
       </div>

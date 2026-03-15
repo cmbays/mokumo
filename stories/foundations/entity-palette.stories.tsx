@@ -5,12 +5,14 @@ import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import {
   FileSignature,
+  Film,
   Hammer,
+  Home,
   Image,
-  LayoutDashboard,
   Moon,
   Printer,
   Receipt,
+  Scissors,
   Shirt,
   Sun,
   Users,
@@ -53,7 +55,7 @@ const ENTITIES: EntityDef[] = [
   {
     name: 'Home',
     token: 'cyan',
-    icon: LayoutDashboard,
+    icon: Home,
     pool: 'entity',
     description: 'Dashboard / overview',
   },
@@ -107,14 +109,14 @@ const SERVICES: EntityDef[] = [
   {
     name: 'Embroidery',
     token: 'lime',
-    icon: Printer,
+    icon: Scissors,
     pool: 'service',
     description: 'Thread-based decoration',
   },
   {
     name: 'DTF',
     token: 'brown',
-    icon: Printer,
+    icon: Film,
     pool: 'service',
     description: 'Direct-to-film transfers',
   },
