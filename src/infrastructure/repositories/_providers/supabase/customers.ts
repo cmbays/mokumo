@@ -11,6 +11,8 @@ import { customerSchema, healthStatusEnum } from '@domain/entities/customer'
 import type { HealthStatus } from '@domain/entities/customer'
 import { logger } from '@shared/lib/logger'
 import { validateUUID, assertValidUUID } from '@infra/repositories/_shared/validation'
+import { DalError } from '@infra/repositories/_shared/errors'
+import type { ShopId, CustomerId } from '@domain/lib/branded'
 import { money, toNumber } from '@domain/lib/money'
 import type {
   ICustomerRepository,
@@ -441,9 +443,11 @@ export const supabaseCustomerRepository: ICustomerRepository = {
   },
 
   async updateCustomer(
-    id: string,
+    shopId: ShopId,
+    id: CustomerId,
     input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
   ): Promise<Customer> {
+    assertValidUUID(shopId, 'updateCustomer:shopId')
     assertValidUUID(id, 'updateCustomer')
 
     const updateFields: Partial<typeof customersTable.$inferInsert> = {}
@@ -476,32 +480,49 @@ export const supabaseCustomerRepository: ICustomerRepository = {
       const updated = await db
         .update(customersTable)
         .set(updateFields)
-        .where(eq(customersTable.id, id))
+        .where(and(eq(customersTable.id, id), eq(customersTable.shopId, shopId)))
         .returning()
 
       const row = updated[0]
-      if (!row) throw new Error(`updateCustomer: no customer found for id ${id}`)
+      if (!row) {
+        throw new DalError(
+          'NOT_FOUND',
+          `updateCustomer: no customer found for id ${id} in shop ${shopId}`
+        )
+      }
 
-      repoLogger.info('Customer updated', { id })
-      return mapCustomerRow(row)
+      const customer = mapCustomerRow(row)
+      repoLogger.info('Customer updated', { id, shopId })
+      return customer
     } catch (err) {
-      repoLogger.error('updateCustomer failed', { id, err })
+      if (err instanceof DalError) throw err
+      repoLogger.error('updateCustomer failed', { id, shopId, err })
       throw err
     }
   },
 
-  async archiveCustomer(id: string): Promise<void> {
+  async archiveCustomer(shopId: ShopId, id: CustomerId): Promise<void> {
+    assertValidUUID(shopId, 'archiveCustomer:shopId')
     assertValidUUID(id, 'archiveCustomer')
 
     try {
-      await db
+      const result = await db
         .update(customersTable)
         .set({ isArchived: true, updatedAt: new Date() })
-        .where(eq(customersTable.id, id))
+        .where(and(eq(customersTable.id, id), eq(customersTable.shopId, shopId)))
+        .returning({ id: customersTable.id })
 
-      repoLogger.info('Customer archived', { id })
+      if (result.length === 0) {
+        throw new DalError(
+          'NOT_FOUND',
+          `archiveCustomer: no customer found for id ${id} in shop ${shopId}`
+        )
+      }
+
+      repoLogger.info('Customer archived', { id, shopId })
     } catch (err) {
-      repoLogger.error('archiveCustomer failed', { id, err })
+      if (err instanceof DalError) throw err
+      repoLogger.error('archiveCustomer failed', { id, shopId, err })
       throw err
     }
   },

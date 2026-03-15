@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { brandId } from '@domain/lib/branded'
-import type { ContactId, AddressId } from '@domain/lib/branded'
+import type { ContactId, AddressId, ShopId, CustomerId } from '@domain/lib/branded'
+import { DalError } from '@infra/repositories/_shared/errors'
 
 // Mock server-only module so tests can run in Vitest environment
 vi.mock('server-only', () => ({}))
@@ -318,13 +319,17 @@ describe('createCustomer()', () => {
 
 describe('updateCustomer()', () => {
   it('throws in mock provider', async () => {
-    await expect(updateCustomer(RIVER_CITY_ID, {})).rejects.toThrow('not implemented')
+    await expect(
+      updateCustomer(brandId<ShopId>('shop_4ink'), brandId<CustomerId>(RIVER_CITY_ID), {})
+    ).rejects.toThrow('not implemented')
   })
 })
 
 describe('archiveCustomer()', () => {
   it('throws in mock provider', async () => {
-    await expect(archiveCustomer(RIVER_CITY_ID)).rejects.toThrow('not implemented')
+    await expect(
+      archiveCustomer(brandId<ShopId>('shop_4ink'), brandId<CustomerId>(RIVER_CITY_ID))
+    ).rejects.toThrow('not implemented')
   })
 })
 
@@ -450,13 +455,20 @@ describe('Supabase mode routing', () => {
   })
 
   it('updateCustomer() → repo.updateCustomer()', async () => {
-    await updateCustomer(RIVER_CITY_ID, {})
-    expect(mockSupabaseRepo.updateCustomer).toHaveBeenCalledWith(RIVER_CITY_ID, {})
+    await updateCustomer(brandId<ShopId>('shop_4ink'), brandId<CustomerId>(RIVER_CITY_ID), {})
+    expect(mockSupabaseRepo.updateCustomer).toHaveBeenCalledWith(
+      brandId<ShopId>('shop_4ink'),
+      brandId<CustomerId>(RIVER_CITY_ID),
+      {}
+    )
   })
 
   it('archiveCustomer() → repo.archiveCustomer()', async () => {
-    await archiveCustomer(RIVER_CITY_ID)
-    expect(mockSupabaseRepo.archiveCustomer).toHaveBeenCalledWith(RIVER_CITY_ID)
+    await archiveCustomer(brandId<ShopId>('shop_4ink'), brandId<CustomerId>(RIVER_CITY_ID))
+    expect(mockSupabaseRepo.archiveCustomer).toHaveBeenCalledWith(
+      brandId<ShopId>('shop_4ink'),
+      brandId<CustomerId>(RIVER_CITY_ID)
+    )
   })
 
   it('getAccountBalance() → repo.getAccountBalance()', async () => {
@@ -503,5 +515,127 @@ describe('Supabase mode routing', () => {
   it('deleteAddress() → repo.deleteAddress()', async () => {
     await deleteAddress(brandId<AddressId>('address-id'))
     expect(mockSupabaseRepo.deleteAddress).toHaveBeenCalledWith(brandId<AddressId>('address-id'))
+  })
+})
+
+// ── Cross-tenant rejection (IDOR protection) ─────────────────────────────────
+// These tests verify that when a mutation targets a customer not owned by the
+// caller's shop, the Supabase provider's DalError('NOT_FOUND') propagates
+// through the router layer — the core security guarantee of PR #842.
+
+describe('Cross-tenant rejection — updateCustomer', () => {
+  const WRONG_SHOP = 'shop_attacker'
+  const VICTIM_CUSTOMER = 'c1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
+
+  beforeEach(() => {
+    vi.stubEnv('DATA_PROVIDER', 'supabase')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.clearAllMocks()
+  })
+
+  it('throws DalError NOT_FOUND when shopId does not own the customer', async () => {
+    const notFoundError = new DalError(
+      'NOT_FOUND',
+      `updateCustomer: no customer found for id ${VICTIM_CUSTOMER} in shop ${WRONG_SHOP}`
+    )
+    mockSupabaseRepo.updateCustomer.mockRejectedValueOnce(notFoundError)
+
+    const rejection = updateCustomer(
+      brandId<ShopId>(WRONG_SHOP),
+      brandId<CustomerId>(VICTIM_CUSTOMER),
+      { company: 'Hacked Corp' }
+    )
+    await expect(rejection).rejects.toThrow(DalError)
+  })
+
+  it('DalError carries NOT_FOUND code for cross-tenant attempt', async () => {
+    const notFoundError = new DalError(
+      'NOT_FOUND',
+      `updateCustomer: no customer found for id ${VICTIM_CUSTOMER} in shop ${WRONG_SHOP}`
+    )
+    mockSupabaseRepo.updateCustomer.mockRejectedValueOnce(notFoundError)
+
+    const rejection = updateCustomer(
+      brandId<ShopId>(WRONG_SHOP),
+      brandId<CustomerId>(VICTIM_CUSTOMER),
+      { company: 'Hacked Corp' }
+    )
+    await expect(rejection).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('passes shopId to the Supabase provider for compound WHERE enforcement', async () => {
+    const fakeCustomer = { id: RIVER_CITY_ID, company: 'Updated' }
+    mockSupabaseRepo.updateCustomer.mockResolvedValueOnce(fakeCustomer)
+
+    const result = await updateCustomer(
+      brandId<ShopId>('shop_4ink'),
+      brandId<CustomerId>(RIVER_CITY_ID),
+      { company: 'Updated' }
+    )
+
+    expect(mockSupabaseRepo.updateCustomer).toHaveBeenCalledWith(
+      brandId<ShopId>('shop_4ink'),
+      brandId<CustomerId>(RIVER_CITY_ID),
+      {
+        company: 'Updated',
+      }
+    )
+    expect(result).toEqual(fakeCustomer)
+  })
+})
+
+describe('Cross-tenant rejection — archiveCustomer', () => {
+  const WRONG_SHOP = 'shop_attacker'
+  const VICTIM_CUSTOMER = 'c1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
+
+  beforeEach(() => {
+    vi.stubEnv('DATA_PROVIDER', 'supabase')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.clearAllMocks()
+  })
+
+  it('throws DalError NOT_FOUND when shopId does not own the customer', async () => {
+    const notFoundError = new DalError(
+      'NOT_FOUND',
+      `archiveCustomer: no customer found for id ${VICTIM_CUSTOMER} in shop ${WRONG_SHOP}`
+    )
+    mockSupabaseRepo.archiveCustomer.mockRejectedValueOnce(notFoundError)
+
+    const rejection = archiveCustomer(
+      brandId<ShopId>(WRONG_SHOP),
+      brandId<CustomerId>(VICTIM_CUSTOMER)
+    )
+    await expect(rejection).rejects.toThrow(DalError)
+  })
+
+  it('DalError carries NOT_FOUND code for cross-tenant attempt', async () => {
+    const notFoundError = new DalError(
+      'NOT_FOUND',
+      `archiveCustomer: no customer found for id ${VICTIM_CUSTOMER} in shop ${WRONG_SHOP}`
+    )
+    mockSupabaseRepo.archiveCustomer.mockRejectedValueOnce(notFoundError)
+
+    const rejection = archiveCustomer(
+      brandId<ShopId>(WRONG_SHOP),
+      brandId<CustomerId>(VICTIM_CUSTOMER)
+    )
+    await expect(rejection).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('passes shopId to the Supabase provider for compound WHERE enforcement', async () => {
+    mockSupabaseRepo.archiveCustomer.mockResolvedValueOnce(undefined)
+
+    await archiveCustomer(brandId<ShopId>('shop_4ink'), brandId<CustomerId>(RIVER_CITY_ID))
+
+    expect(mockSupabaseRepo.archiveCustomer).toHaveBeenCalledWith(
+      brandId<ShopId>('shop_4ink'),
+      brandId<CustomerId>(RIVER_CITY_ID)
+    )
   })
 })

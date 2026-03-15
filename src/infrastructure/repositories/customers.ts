@@ -170,25 +170,29 @@ export async function createCustomer(
 }
 
 export async function updateCustomer(
-  ...[id, input]: Parameters<
+  ...[shopId, id, input]: Parameters<
     import('@domain/ports/customer.repository').ICustomerRepository['updateCustomer']
   >
 ) {
   if (isSupabaseMode()) {
     const mod = await loadSupabaseModule()
-    return mod.supabaseCustomerRepository.updateCustomer(id, input)
+    return mod.supabaseCustomerRepository.updateCustomer(shopId, id, input)
   }
   const { updateCustomer: getMock } = await import('./_providers/mock/customers')
-  return getMock(id, input)
+  return getMock(shopId, id, input)
 }
 
-export async function archiveCustomer(id: string) {
+export async function archiveCustomer(
+  ...[shopId, id]: Parameters<
+    import('@domain/ports/customer.repository').ICustomerRepository['archiveCustomer']
+  >
+) {
   if (isSupabaseMode()) {
     const mod = await loadSupabaseModule()
-    return mod.supabaseCustomerRepository.archiveCustomer(id)
+    return mod.supabaseCustomerRepository.archiveCustomer(shopId, id)
   }
   const { archiveCustomer: getMock } = await import('./_providers/mock/customers')
-  return getMock(id)
+  return getMock(shopId, id)
 }
 
 export async function getAccountBalance(customerId: string) {
