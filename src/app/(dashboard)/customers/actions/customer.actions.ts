@@ -162,8 +162,8 @@ export async function updateCustomer(
   }
 
   try {
-    const customer = await repoUpdateCustomer(id, parsed.data)
-    log.info('Customer updated', { id })
+    const customer = await repoUpdateCustomer(session.shopId, id, parsed.data)
+    log.info('Customer updated', { id, shopId: session.shopId })
 
     // Record audit event — fire-and-forget (non-critical path)
     activityEventService
@@ -182,6 +182,14 @@ export async function updateCustomer(
     revalidatePath(`/customers/${id}`)
     return ok(customer)
   } catch (e) {
+    const message = e instanceof Error ? e.message : ''
+    if (message.includes('no customer found')) {
+      log.warn('updateCustomer: not found (possible cross-tenant attempt)', {
+        id,
+        shopId: session.shopId,
+      })
+      return err('NOT_FOUND')
+    }
     log.error('updateCustomer: repository error', { id, err: e })
     return err('UNKNOWN')
   }
@@ -207,8 +215,8 @@ export async function archiveCustomer(id: string): Promise<Result<void, Customer
   }
 
   try {
-    await repoArchiveCustomer(id)
-    log.info('Customer archived', { id })
+    await repoArchiveCustomer(session.shopId, id)
+    log.info('Customer archived', { id, shopId: session.shopId })
 
     // Record audit event — fire-and-forget (non-critical path)
     activityEventService
@@ -226,6 +234,14 @@ export async function archiveCustomer(id: string): Promise<Result<void, Customer
     revalidatePath(`/customers/${id}`)
     return ok(undefined)
   } catch (e) {
+    const message = e instanceof Error ? e.message : ''
+    if (message.includes('no customer found')) {
+      log.warn('archiveCustomer: not found (possible cross-tenant attempt)', {
+        id,
+        shopId: session.shopId,
+      })
+      return err('NOT_FOUND')
+    }
     log.error('archiveCustomer: repository error', { id, err: e })
     return err('UNKNOWN')
   }

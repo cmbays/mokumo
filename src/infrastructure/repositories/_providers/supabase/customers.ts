@@ -441,9 +441,11 @@ export const supabaseCustomerRepository: ICustomerRepository = {
   },
 
   async updateCustomer(
+    shopId: string,
     id: string,
     input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
   ): Promise<Customer> {
+    assertValidUUID(shopId, 'updateCustomer:shopId')
     assertValidUUID(id, 'updateCustomer')
 
     const updateFields: Partial<typeof customersTable.$inferInsert> = {}
@@ -476,32 +478,38 @@ export const supabaseCustomerRepository: ICustomerRepository = {
       const updated = await db
         .update(customersTable)
         .set(updateFields)
-        .where(eq(customersTable.id, id))
+        .where(and(eq(customersTable.id, id), eq(customersTable.shopId, shopId)))
         .returning()
 
       const row = updated[0]
       if (!row) throw new Error(`updateCustomer: no customer found for id ${id}`)
 
-      repoLogger.info('Customer updated', { id })
+      repoLogger.info('Customer updated', { id, shopId })
       return mapCustomerRow(row)
     } catch (err) {
-      repoLogger.error('updateCustomer failed', { id, err })
+      repoLogger.error('updateCustomer failed', { id, shopId, err })
       throw err
     }
   },
 
-  async archiveCustomer(id: string): Promise<void> {
+  async archiveCustomer(shopId: string, id: string): Promise<void> {
+    assertValidUUID(shopId, 'archiveCustomer:shopId')
     assertValidUUID(id, 'archiveCustomer')
 
     try {
-      await db
+      const result = await db
         .update(customersTable)
         .set({ isArchived: true, updatedAt: new Date() })
-        .where(eq(customersTable.id, id))
+        .where(and(eq(customersTable.id, id), eq(customersTable.shopId, shopId)))
+        .returning({ id: customersTable.id })
 
-      repoLogger.info('Customer archived', { id })
+      if (result.length === 0) {
+        throw new Error(`archiveCustomer: no customer found for id ${id}`)
+      }
+
+      repoLogger.info('Customer archived', { id, shopId })
     } catch (err) {
-      repoLogger.error('archiveCustomer failed', { id, err })
+      repoLogger.error('archiveCustomer failed', { id, shopId, err })
       throw err
     }
   },

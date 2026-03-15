@@ -119,13 +119,14 @@ export async function createCustomer(
 }
 
 export async function updateCustomer(
+  _shopId: string,
   _id: string,
   _input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
 ): Promise<Customer> {
   throw new Error('updateCustomer: not implemented in mock provider')
 }
 
-export async function archiveCustomer(_id: string): Promise<void> {
+export async function archiveCustomer(_shopId: string, _id: string): Promise<void> {
   throw new Error('archiveCustomer: not implemented in mock provider')
 }
 

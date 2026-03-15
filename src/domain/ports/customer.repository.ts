@@ -81,14 +81,15 @@ export type ICustomerRepository = {
     input: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<Customer>
 
-  /** Update mutable fields on a customer */
+  /** Update mutable fields on a customer (scoped to shopId for tenant isolation) */
   updateCustomer(
+    shopId: string,
     id: string,
     input: Partial<Omit<Customer, 'id' | 'shopId' | 'createdAt'>>
   ): Promise<Customer>
 
-  /** Soft-delete — sets isArchived = true */
-  archiveCustomer(id: string): Promise<void>
+  /** Soft-delete — sets isArchived = true (scoped to shopId for tenant isolation) */
+  archiveCustomer(shopId: string, id: string): Promise<void>
 
   /** Current outstanding balance (sum of unpaid invoice balanceDue) */
   getAccountBalance(customerId: string): Promise<number>

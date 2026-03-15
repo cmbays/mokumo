@@ -318,13 +318,13 @@ describe('createCustomer()', () => {
 
 describe('updateCustomer()', () => {
   it('throws in mock provider', async () => {
-    await expect(updateCustomer(RIVER_CITY_ID, {})).rejects.toThrow('not implemented')
+    await expect(updateCustomer('shop_4ink', RIVER_CITY_ID, {})).rejects.toThrow('not implemented')
   })
 })
 
 describe('archiveCustomer()', () => {
   it('throws in mock provider', async () => {
-    await expect(archiveCustomer(RIVER_CITY_ID)).rejects.toThrow('not implemented')
+    await expect(archiveCustomer('shop_4ink', RIVER_CITY_ID)).rejects.toThrow('not implemented')
   })
 })
 
@@ -450,13 +450,13 @@ describe('Supabase mode routing', () => {
   })
 
   it('updateCustomer() → repo.updateCustomer()', async () => {
-    await updateCustomer(RIVER_CITY_ID, {})
-    expect(mockSupabaseRepo.updateCustomer).toHaveBeenCalledWith(RIVER_CITY_ID, {})
+    await updateCustomer('shop_4ink', RIVER_CITY_ID, {})
+    expect(mockSupabaseRepo.updateCustomer).toHaveBeenCalledWith('shop_4ink', RIVER_CITY_ID, {})
   })
 
   it('archiveCustomer() → repo.archiveCustomer()', async () => {
-    await archiveCustomer(RIVER_CITY_ID)
-    expect(mockSupabaseRepo.archiveCustomer).toHaveBeenCalledWith(RIVER_CITY_ID)
+    await archiveCustomer('shop_4ink', RIVER_CITY_ID)
+    expect(mockSupabaseRepo.archiveCustomer).toHaveBeenCalledWith('shop_4ink', RIVER_CITY_ID)
   })
 
   it('getAccountBalance() → repo.getAccountBalance()', async () => {
