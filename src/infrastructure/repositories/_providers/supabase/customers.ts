@@ -491,8 +491,9 @@ export const supabaseCustomerRepository: ICustomerRepository = {
         )
       }
 
+      const customer = mapCustomerRow(row)
       repoLogger.info('Customer updated', { id, shopId })
-      return mapCustomerRow(row)
+      return customer
     } catch (err) {
       if (err instanceof DalError) throw err
       repoLogger.error('updateCustomer failed', { id, shopId, err })
