@@ -28,18 +28,8 @@ import type { Job } from '@domain/entities/job'
 import type { Invoice } from '@domain/entities/invoice'
 import type { Artwork } from '@domain/entities/artwork'
 import type { Note } from '@domain/entities/note'
-import {
-  mapContactRow,
-  createContact,
-  updateContact,
-  deleteContact,
-} from './contacts'
-import {
-  mapAddressRow,
-  createAddress,
-  updateAddress,
-  deleteAddress,
-} from './addresses'
+import { mapContactRow, createContact, updateContact, deleteContact } from './contacts'
+import { mapAddressRow, createAddress, updateAddress, deleteAddress } from './addresses'
 
 const repoLogger = logger.child({ domain: 'supabase-customers' })
 

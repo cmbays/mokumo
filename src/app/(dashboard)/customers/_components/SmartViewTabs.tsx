@@ -113,7 +113,8 @@ export function SmartViewTabs() {
               // Active state — single bg signal, no border to avoid double-outline noise
               isActive && 'bg-action/10 text-action',
               // Inactive state
-              !isActive && 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
+              !isActive &&
+                'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted'
             )}
           >
             {tab.label}

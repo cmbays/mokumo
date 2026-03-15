@@ -92,7 +92,10 @@ export async function createAddress(input: AddressInput): Promise<AddressRow> {
   }
 }
 
-export async function updateAddress(id: AddressId, input: Partial<AddressInput>): Promise<AddressRow> {
+export async function updateAddress(
+  id: AddressId,
+  input: Partial<AddressInput>
+): Promise<AddressRow> {
   assertValidUUID(id, 'updateAddress')
 
   const updateFields: Partial<typeof addressesTable.$inferInsert> = {}

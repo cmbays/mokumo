@@ -87,7 +87,10 @@ export async function createContact(input: ContactInput): Promise<ContactRow> {
   }
 }
 
-export async function updateContact(id: ContactId, input: Partial<ContactInput>): Promise<ContactRow> {
+export async function updateContact(
+  id: ContactId,
+  input: Partial<ContactInput>
+): Promise<ContactRow> {
   assertValidUUID(id, 'updateContact')
 
   const updateFields: Partial<typeof contactsTable.$inferInsert> = {}

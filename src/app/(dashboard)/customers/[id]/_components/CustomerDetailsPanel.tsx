@@ -163,9 +163,7 @@ export function CustomerDetailsPanel({ customer, customers }: CustomerDetailsPan
       <section>
         <SectionHeader title="Metadata" />
         <div>
-          <FieldRow label="Created">
-            {new Date(customer.createdAt).toLocaleDateString()}
-          </FieldRow>
+          <FieldRow label="Created">{new Date(customer.createdAt).toLocaleDateString()}</FieldRow>
           <Divider />
           <FieldRow label="Last Updated">
             {new Date(customer.updatedAt).toLocaleDateString()}

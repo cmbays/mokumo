@@ -336,7 +336,9 @@ describe('createContact()', () => {
 
 describe('updateContact()', () => {
   it('throws in mock provider', async () => {
-    await expect(updateContact(brandId<ContactId>('contact-id'), {})).rejects.toThrow('not implemented')
+    await expect(updateContact(brandId<ContactId>('contact-id'), {})).rejects.toThrow(
+      'not implemented'
+    )
   })
 })
 
@@ -354,7 +356,9 @@ describe('createAddress()', () => {
 
 describe('updateAddress()', () => {
   it('throws in mock provider', async () => {
-    await expect(updateAddress(brandId<AddressId>('address-id'), {})).rejects.toThrow('not implemented')
+    await expect(updateAddress(brandId<AddressId>('address-id'), {})).rejects.toThrow(
+      'not implemented'
+    )
   })
 })
 
@@ -472,7 +476,10 @@ describe('Supabase mode routing', () => {
 
   it('updateContact() → repo.updateContact()', async () => {
     await updateContact(brandId<ContactId>('contact-id'), {})
-    expect(mockSupabaseRepo.updateContact).toHaveBeenCalledWith(brandId<ContactId>('contact-id'), {})
+    expect(mockSupabaseRepo.updateContact).toHaveBeenCalledWith(
+      brandId<ContactId>('contact-id'),
+      {}
+    )
   })
 
   it('deleteContact() → repo.deleteContact()', async () => {
@@ -487,7 +494,10 @@ describe('Supabase mode routing', () => {
 
   it('updateAddress() → repo.updateAddress()', async () => {
     await updateAddress(brandId<AddressId>('address-id'), {})
-    expect(mockSupabaseRepo.updateAddress).toHaveBeenCalledWith(brandId<AddressId>('address-id'), {})
+    expect(mockSupabaseRepo.updateAddress).toHaveBeenCalledWith(
+      brandId<AddressId>('address-id'),
+      {}
+    )
   })
 
   it('deleteAddress() → repo.deleteAddress()', async () => {
