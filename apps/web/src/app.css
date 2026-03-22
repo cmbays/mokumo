@@ -120,155 +120,13 @@
 }
 
 /* =====================================================================
-   DARK MODE (Default) — Niji personality
-   Ghostty Niji theme palette
-   "Linear Calm + Raycast Polish + Neobrutalist Delight"
+   LIGHT MODE (Default) — Niji personality
+   mode-watcher convention: :root = light, .dark = dark
    ===================================================================== */
 
 :root {
   --radius: 0.5rem;
 
-  /* Background — Niji warm dark */
-  --background: #141515;
-  --foreground: rgba(255, 255, 255, 0.87);
-  --surface: #232425;
-  --elevated: #1c1d1e;
-
-  /* Card */
-  --card: #1c1d1e;
-  --card-foreground: rgba(255, 255, 255, 0.87);
-
-  /* Popover */
-  --popover: #1c1d1e;
-  --popover-foreground: rgba(255, 255, 255, 0.87);
-
-  /* Primary — Niji blue */
-  --primary: #2ab9ff;
-  --primary-foreground: #000000;
-
-  /* Secondary — surface */
-  --secondary: #232425;
-  --secondary-foreground: rgba(255, 255, 255, 0.87);
-
-  /* Muted */
-  --muted: #111213;
-  --muted-foreground: rgba(255, 255, 255, 0.6);
-
-  /* Accent */
-  --accent: #232425;
-  --accent-foreground: rgba(255, 255, 255, 0.87);
-
-  /* Destructive — Niji red */
-  --destructive: #d23e08;
-
-  /* Borders — subtle opacity */
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #2ab9ff;
-
-  /* Status colors — Niji palette */
-  --action: #2ab9ff;
-  --action-hover: #1da0e0;
-  --action-bold: #8efff3;
-
-  --success: #54ca74;
-  --success-hover: #43a860;
-  --success-bold: #c1ffae;
-
-  --error: #d23e08;
-  --error-hover: #b33407;
-  --error-bold: #ffb7b7;
-
-  --warning: #ffc663;
-  --warning-hover: #e6b050;
-  --warning-bold: #fff700;
-
-  /* Categorical colors — entity/service identity (dark mode) */
-  --purple: #a855f7;
-  --purple-hover: #9333ea;
-  --purple-bold: #c084fc;
-
-  --magenta: #ff50da;
-  --magenta-hover: #e040c0;
-  --magenta-bold: #ff85e6;
-
-  --lime: #84cc16;
-  --lime-hover: #65a30d;
-  --lime-bold: #a3e635;
-
-  --brown: #c47a3a;
-  --brown-hover: #a8652e;
-  --brown-bold: #d9954f;
-
-  --teal: #2dd4bf;
-  --teal-hover: #14b8a6;
-  --teal-bold: #5eead4;
-
-  --emerald: #22c55e;
-  --emerald-hover: #16a34a;
-  --emerald-bold: #86efac;
-
-  --yellow: #f5e642;
-  --yellow-hover: #dccc28;
-  --yellow-bold: #fef3a0;
-
-  --amber: #f59e0b;
-  --amber-hover: #d97706;
-  --amber-bold: #fbbf24;
-
-  --graphite: #94a3b8;
-  --graphite-hover: #b0bec9;
-  --graphite-bold: #cbd5e1;
-
-  --cyan: #06b6d4;
-  --cyan-hover: #0891b2;
-  --cyan-bold: #22d3ee;
-
-  /* Charts — Niji rainbow */
-  --chart-1: #2ab9ff;
-  --chart-2: #54ca74;
-  --chart-3: #ffc663;
-  --chart-4: #d23e08;
-  --chart-5: #ff50da;
-
-  /* Urgency — semantic aliases */
-  --urgency-critical: var(--error);
-  --urgency-high: var(--warning);
-  --urgency-low: var(--muted-foreground);
-
-  /* Sidebar */
-  --sidebar: #111213;
-  --sidebar-foreground: rgba(255, 255, 255, 0.87);
-  --sidebar-primary: #2ab9ff;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #232425;
-  --sidebar-accent-foreground: rgba(255, 255, 255, 0.87);
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #2ab9ff;
-
-  /* ds- semantic tokens: Niji dark (default) */
-  --ds-surface-inner: var(--background, #141515);
-  --ds-surface-thumb: #1a1b1c;
-  --ds-text-dim: rgba(255, 255, 255, 0.32);
-  --ds-text-micro: rgba(255, 255, 255, 0.2);
-  --ds-accent-emphasis: var(--action-bold, #8efff3);
-  --ds-neutral-emphasis: var(--muted-foreground, rgba(255, 255, 255, 0.6));
-  --ds-cta-bg: rgba(42, 185, 255, 0.12);
-  --ds-cta-text: var(--action, #2ab9ff);
-  --ds-divider: rgba(255, 255, 255, 0.08);
-  --ds-border-subtle: rgba(255, 255, 255, 0.1);
-
-  /* Personality behavior — Niji: neobrutalist shadows, no gradient rings */
-  --ds-shadow-offset: 1.5px;
-  --ds-text-shadow: none;
-  --ds-gradient-borders: 0;
-}
-
-/* =====================================================================
-   LIGHT MODE — Niji personality
-   ===================================================================== */
-
-.light {
   --background: #fafaf9;
   --foreground: rgba(0, 0, 0, 0.87);
   --surface: #f0f0ee;
@@ -390,6 +248,149 @@
   --ds-divider: rgba(0, 0, 0, 0.06);
   --ds-border-subtle: rgba(0, 0, 0, 0.1);
 
+  --ds-shadow-offset: 1.5px;
+  --ds-text-shadow: none;
+  --ds-gradient-borders: 0;
+}
+
+/* =====================================================================
+   DARK MODE — Niji personality
+   Ghostty Niji theme palette
+   "Linear Calm + Raycast Polish + Neobrutalist Delight"
+   ===================================================================== */
+
+.dark {
+  /* Background — Niji warm dark */
+  --background: #141515;
+  --foreground: rgba(255, 255, 255, 0.87);
+  --surface: #232425;
+  --elevated: #1c1d1e;
+
+  /* Card */
+  --card: #1c1d1e;
+  --card-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Popover */
+  --popover: #1c1d1e;
+  --popover-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Primary — Niji blue */
+  --primary: #2ab9ff;
+  --primary-foreground: #000000;
+
+  /* Secondary — surface */
+  --secondary: #232425;
+  --secondary-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Muted */
+  --muted: #111213;
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+
+  /* Accent */
+  --accent: #232425;
+  --accent-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Destructive — Niji red */
+  --destructive: #d23e08;
+
+  /* Borders — subtle opacity */
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #2ab9ff;
+
+  /* Status colors — Niji palette */
+  --action: #2ab9ff;
+  --action-hover: #1da0e0;
+  --action-bold: #8efff3;
+
+  --success: #54ca74;
+  --success-hover: #43a860;
+  --success-bold: #c1ffae;
+
+  --error: #d23e08;
+  --error-hover: #b33407;
+  --error-bold: #ffb7b7;
+
+  --warning: #ffc663;
+  --warning-hover: #e6b050;
+  --warning-bold: #fff700;
+
+  /* Categorical colors — entity/service identity (dark mode) */
+  --purple: #a855f7;
+  --purple-hover: #9333ea;
+  --purple-bold: #c084fc;
+
+  --magenta: #ff50da;
+  --magenta-hover: #e040c0;
+  --magenta-bold: #ff85e6;
+
+  --lime: #84cc16;
+  --lime-hover: #65a30d;
+  --lime-bold: #a3e635;
+
+  --brown: #c47a3a;
+  --brown-hover: #a8652e;
+  --brown-bold: #d9954f;
+
+  --teal: #2dd4bf;
+  --teal-hover: #14b8a6;
+  --teal-bold: #5eead4;
+
+  --emerald: #22c55e;
+  --emerald-hover: #16a34a;
+  --emerald-bold: #86efac;
+
+  --yellow: #f5e642;
+  --yellow-hover: #dccc28;
+  --yellow-bold: #fef3a0;
+
+  --amber: #f59e0b;
+  --amber-hover: #d97706;
+  --amber-bold: #fbbf24;
+
+  --graphite: #94a3b8;
+  --graphite-hover: #b0bec9;
+  --graphite-bold: #cbd5e1;
+
+  --cyan: #06b6d4;
+  --cyan-hover: #0891b2;
+  --cyan-bold: #22d3ee;
+
+  /* Charts — Niji rainbow */
+  --chart-1: #2ab9ff;
+  --chart-2: #54ca74;
+  --chart-3: #ffc663;
+  --chart-4: #d23e08;
+  --chart-5: #ff50da;
+
+  /* Urgency — semantic aliases */
+  --urgency-critical: var(--error);
+  --urgency-high: var(--warning);
+  --urgency-low: var(--muted-foreground);
+
+  /* Sidebar */
+  --sidebar: #111213;
+  --sidebar-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-primary: #2ab9ff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #232425;
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #2ab9ff;
+
+  /* ds- semantic tokens: Niji dark */
+  --ds-surface-inner: var(--background, #141515);
+  --ds-surface-thumb: #1a1b1c;
+  --ds-text-dim: rgba(255, 255, 255, 0.32);
+  --ds-text-micro: rgba(255, 255, 255, 0.2);
+  --ds-accent-emphasis: var(--action-bold, #8efff3);
+  --ds-neutral-emphasis: var(--muted-foreground, rgba(255, 255, 255, 0.6));
+  --ds-cta-bg: rgba(42, 185, 255, 0.12);
+  --ds-cta-text: var(--action, #2ab9ff);
+  --ds-divider: rgba(255, 255, 255, 0.08);
+  --ds-border-subtle: rgba(255, 255, 255, 0.1);
+
+  /* Personality behavior — Niji: neobrutalist shadows, no gradient rings */
   --ds-shadow-offset: 1.5px;
   --ds-text-shadow: none;
   --ds-gradient-borders: 0;
