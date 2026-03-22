@@ -1,0 +1,10 @@
+[package]
+name = "mokumo-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mokumo-types = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }

@@ -1,0 +1,12 @@
+[package]
+name = "mokumo-db"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mokumo-core = { workspace = true }
+mokumo-types = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
