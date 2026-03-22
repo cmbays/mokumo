@@ -1,0 +1,38 @@
+# Rust
+target/
+*.rs.bk
+
+# Node / SvelteKit
+node_modules/
+.svelte-kit/
+apps/web/build/
+
+# Environment
+.env
+.env.*
+!.env.example
+.envrc
+
+# SQLite
+*.db
+*.db-wal
+*.db-shm
+
+# Moon
+.moon/cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+tmp/
+dist/
+
+# SQLx offline cache (.sqlx/) — commit after running: moon run api:db-prepare

@@ -1,0 +1,5 @@
+# Development environment — copy to .envrc and run `direnv allow`
+# The binary does NOT read .env files. These are for dev tooling only.
+
+# Rust log level (standard RUST_LOG filter syntax)
+export RUST_LOG="mokumo_api=debug,tower_http=debug"

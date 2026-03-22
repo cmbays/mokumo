@@ -1,0 +1,429 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* shadcn-svelte semantic colors */
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* Design system: status colors */
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-bold: var(--action-bold);
+  --color-success: var(--success);
+  --color-success-hover: var(--success-hover);
+  --color-success-bold: var(--success-bold);
+  --color-error: var(--error);
+  --color-error-hover: var(--error-hover);
+  --color-error-bold: var(--error-bold);
+  --color-warning: var(--warning);
+  --color-warning-hover: var(--warning-hover);
+  --color-warning-bold: var(--warning-bold);
+
+  /* Design system: categorical entity/service colors */
+  --color-purple: var(--purple);
+  --color-purple-hover: var(--purple-hover);
+  --color-purple-bold: var(--purple-bold);
+  --color-magenta: var(--magenta);
+  --color-magenta-hover: var(--magenta-hover);
+  --color-magenta-bold: var(--magenta-bold);
+  --color-lime: var(--lime);
+  --color-lime-hover: var(--lime-hover);
+  --color-lime-bold: var(--lime-bold);
+  --color-brown: var(--brown);
+  --color-brown-hover: var(--brown-hover);
+  --color-brown-bold: var(--brown-bold);
+  --color-teal: var(--teal);
+  --color-teal-hover: var(--teal-hover);
+  --color-teal-bold: var(--teal-bold);
+  --color-emerald: var(--emerald);
+  --color-emerald-hover: var(--emerald-hover);
+  --color-emerald-bold: var(--emerald-bold);
+  --color-yellow: var(--yellow);
+  --color-yellow-hover: var(--yellow-hover);
+  --color-yellow-bold: var(--yellow-bold);
+  --color-amber: var(--amber);
+  --color-amber-hover: var(--amber-hover);
+  --color-amber-bold: var(--amber-bold);
+  --color-graphite: var(--graphite);
+  --color-graphite-hover: var(--graphite-hover);
+  --color-graphite-bold: var(--graphite-bold);
+  --color-cyan: var(--cyan);
+  --color-cyan-hover: var(--cyan-hover);
+  --color-cyan-bold: var(--cyan-bold);
+
+  /* Design system: surface colors */
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+
+  /* Design system: urgency aliases */
+  --color-urgency-critical: var(--urgency-critical);
+  --color-urgency-high: var(--urgency-high);
+  --color-urgency-low: var(--urgency-low);
+
+  /* Design system: ds- semantic tokens */
+  --color-ds-surface-inner: var(--ds-surface-inner);
+  --color-ds-surface-thumb: var(--ds-surface-thumb);
+  --color-ds-text-dim: var(--ds-text-dim);
+  --color-ds-text-micro: var(--ds-text-micro);
+  --color-ds-accent-emphasis: var(--ds-accent-emphasis);
+  --color-ds-neutral-emphasis: var(--ds-neutral-emphasis);
+  --color-ds-cta-bg: var(--ds-cta-bg);
+  --color-ds-cta-text: var(--ds-cta-text);
+  --color-ds-divider: var(--ds-divider);
+  --color-ds-border-subtle: var(--ds-border-subtle);
+
+  /* Neobrutalist shadow scale */
+  --shadow-brutal-sm: 2px 2px 0px;
+  --shadow-brutal: 4px 4px 0px;
+  --shadow-brutal-lg: 6px 6px 0px;
+
+  /* Spring transition */
+  --transition-timing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* =====================================================================
+   LIGHT MODE (Default) — Niji personality
+   mode-watcher convention: :root = light, .dark = dark
+   ===================================================================== */
+
+:root {
+  --radius: 0.5rem;
+
+  --background: #fafaf9;
+  --foreground: rgba(0, 0, 0, 0.87);
+  --surface: #f0f0ee;
+  --elevated: #ffffff;
+
+  --card: #ffffff;
+  --card-foreground: rgba(0, 0, 0, 0.87);
+
+  --popover: #ffffff;
+  --popover-foreground: rgba(0, 0, 0, 0.87);
+
+  --primary: #0077cc;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f0f0ee;
+  --secondary-foreground: rgba(0, 0, 0, 0.87);
+
+  --muted: #f0f0ee;
+  --muted-foreground: rgba(0, 0, 0, 0.45);
+
+  --accent: #eeeeec;
+  --accent-foreground: rgba(0, 0, 0, 0.87);
+
+  --destructive: #dc2626;
+
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: #0077cc;
+
+  /* Status colors — darker for light bg */
+  --action: #0077cc;
+  --action-hover: #005fa3;
+  --action-bold: #38bdf8;
+
+  --success: #059669;
+  --success-hover: #047857;
+  --success-bold: #34d399;
+
+  --error: #dc2626;
+  --error-hover: #b91c1c;
+  --error-bold: #f87171;
+
+  --warning: #d97706;
+  --warning-hover: #b45309;
+  --warning-bold: #fbbf24;
+
+  /* Categorical colors — darker for light bg */
+  --purple: #7c3aed;
+  --purple-hover: #6d28d9;
+  --purple-bold: #a78bfa;
+
+  --magenta: #d946c7;
+  --magenta-hover: #c026a8;
+  --magenta-bold: #f0abfc;
+
+  --lime: #65a30d;
+  --lime-hover: #4d7c0f;
+  --lime-bold: #84cc16;
+
+  --brown: #a8652e;
+  --brown-hover: #8b5125;
+  --brown-bold: #c47a3a;
+
+  --teal: #0d9488;
+  --teal-hover: #0f766e;
+  --teal-bold: #2dd4bf;
+
+  --emerald: #15803d;
+  --emerald-hover: #166534;
+  --emerald-bold: #4ade80;
+
+  --yellow: #ca8a04;
+  --yellow-hover: #a16207;
+  --yellow-bold: #facc15;
+
+  --amber: #c2410c;
+  --amber-hover: #9a3412;
+  --amber-bold: #fb923c;
+
+  --graphite: #64748b;
+  --graphite-hover: #475569;
+  --graphite-bold: #94a3b8;
+
+  --cyan: #0ea5e9;
+  --cyan-hover: #0284c7;
+  --cyan-bold: #38bdf8;
+
+  /* Charts */
+  --chart-1: #0077cc;
+  --chart-2: #059669;
+  --chart-3: #d97706;
+  --chart-4: #dc2626;
+  --chart-5: #d946c7;
+
+  /* Urgency */
+  --urgency-critical: var(--error);
+  --urgency-high: var(--warning);
+  --urgency-low: var(--muted-foreground);
+
+  /* Sidebar */
+  --sidebar: #f8f8f7;
+  --sidebar-foreground: rgba(0, 0, 0, 0.87);
+  --sidebar-primary: #0077cc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eeeeec;
+  --sidebar-accent-foreground: rgba(0, 0, 0, 0.87);
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #0077cc;
+
+  /* ds- semantic tokens: Niji light */
+  --ds-surface-inner: var(--background, #fafaf9);
+  --ds-surface-thumb: #f3f3f2;
+  --ds-text-dim: rgba(0, 0, 0, 0.32);
+  --ds-text-micro: rgba(0, 0, 0, 0.16);
+  --ds-accent-emphasis: var(--action-bold, #38bdf8);
+  --ds-neutral-emphasis: rgba(0, 0, 0, 0.55);
+  --ds-cta-bg: rgba(0, 119, 204, 0.1);
+  --ds-cta-text: var(--action, #0077cc);
+  --ds-divider: rgba(0, 0, 0, 0.06);
+  --ds-border-subtle: rgba(0, 0, 0, 0.1);
+
+  --ds-shadow-offset: 1.5px;
+  --ds-text-shadow: none;
+  --ds-gradient-borders: 0;
+}
+
+/* =====================================================================
+   DARK MODE — Niji personality
+   Ghostty Niji theme palette
+   "Linear Calm + Raycast Polish + Neobrutalist Delight"
+   ===================================================================== */
+
+.dark {
+  /* Background — Niji warm dark */
+  --background: #141515;
+  --foreground: rgba(255, 255, 255, 0.87);
+  --surface: #232425;
+  --elevated: #1c1d1e;
+
+  /* Card */
+  --card: #1c1d1e;
+  --card-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Popover */
+  --popover: #1c1d1e;
+  --popover-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Primary — Niji blue */
+  --primary: #2ab9ff;
+  --primary-foreground: #000000;
+
+  /* Secondary — surface */
+  --secondary: #232425;
+  --secondary-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Muted */
+  --muted: #111213;
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+
+  /* Accent */
+  --accent: #232425;
+  --accent-foreground: rgba(255, 255, 255, 0.87);
+
+  /* Destructive — Niji red */
+  --destructive: #d23e08;
+
+  /* Borders — subtle opacity */
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #2ab9ff;
+
+  /* Status colors — Niji palette */
+  --action: #2ab9ff;
+  --action-hover: #1da0e0;
+  --action-bold: #8efff3;
+
+  --success: #54ca74;
+  --success-hover: #43a860;
+  --success-bold: #c1ffae;
+
+  --error: #d23e08;
+  --error-hover: #b33407;
+  --error-bold: #ffb7b7;
+
+  --warning: #ffc663;
+  --warning-hover: #e6b050;
+  --warning-bold: #fff700;
+
+  /* Categorical colors — entity/service identity (dark mode) */
+  --purple: #a855f7;
+  --purple-hover: #9333ea;
+  --purple-bold: #c084fc;
+
+  --magenta: #ff50da;
+  --magenta-hover: #e040c0;
+  --magenta-bold: #ff85e6;
+
+  --lime: #84cc16;
+  --lime-hover: #65a30d;
+  --lime-bold: #a3e635;
+
+  --brown: #c47a3a;
+  --brown-hover: #a8652e;
+  --brown-bold: #d9954f;
+
+  --teal: #2dd4bf;
+  --teal-hover: #14b8a6;
+  --teal-bold: #5eead4;
+
+  --emerald: #22c55e;
+  --emerald-hover: #16a34a;
+  --emerald-bold: #86efac;
+
+  --yellow: #f5e642;
+  --yellow-hover: #dccc28;
+  --yellow-bold: #fef3a0;
+
+  --amber: #f59e0b;
+  --amber-hover: #d97706;
+  --amber-bold: #fbbf24;
+
+  --graphite: #94a3b8;
+  --graphite-hover: #b0bec9;
+  --graphite-bold: #cbd5e1;
+
+  --cyan: #06b6d4;
+  --cyan-hover: #0891b2;
+  --cyan-bold: #22d3ee;
+
+  /* Charts — Niji rainbow */
+  --chart-1: #2ab9ff;
+  --chart-2: #54ca74;
+  --chart-3: #ffc663;
+  --chart-4: #d23e08;
+  --chart-5: #ff50da;
+
+  /* Urgency — semantic aliases */
+  --urgency-critical: var(--error);
+  --urgency-high: var(--warning);
+  --urgency-low: var(--muted-foreground);
+
+  /* Sidebar */
+  --sidebar: #111213;
+  --sidebar-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-primary: #2ab9ff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #232425;
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #2ab9ff;
+
+  /* ds- semantic tokens: Niji dark */
+  --ds-surface-inner: var(--background, #141515);
+  --ds-surface-thumb: #1a1b1c;
+  --ds-text-dim: rgba(255, 255, 255, 0.32);
+  --ds-text-micro: rgba(255, 255, 255, 0.2);
+  --ds-accent-emphasis: var(--action-bold, #8efff3);
+  --ds-neutral-emphasis: var(--muted-foreground, rgba(255, 255, 255, 0.6));
+  --ds-cta-bg: rgba(42, 185, 255, 0.12);
+  --ds-cta-text: var(--action, #2ab9ff);
+  --ds-divider: rgba(255, 255, 255, 0.08);
+  --ds-border-subtle: rgba(255, 255, 255, 0.1);
+
+  /* Personality behavior — Niji: neobrutalist shadows, no gradient rings */
+  --ds-shadow-offset: 1.5px;
+  --ds-text-shadow: none;
+  --ds-gradient-borders: 0;
+}
+
+/* =====================================================================
+   Utilities
+   ===================================================================== */
+
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

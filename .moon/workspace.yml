@@ -1,0 +1,15 @@
+$schema: 'https://moonrepo.dev/schemas/workspace.json'
+
+projects:
+  web: 'apps/web'
+  api: 'services/api'
+  core: 'crates/core'
+  types: 'crates/types'
+  db: 'crates/db'
+
+vcs:
+  provider: 'github'
+  defaultBranch: 'main'
+
+pipeline:
+  logRunningCommand: true
