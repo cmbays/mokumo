@@ -54,18 +54,17 @@ async fn health() -> Json<HealthResponse> {
 async fn serve_spa(uri: axum::http::Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
 
-    // Try the exact path first, then fall back to index.html for SPA routing
-    if let Some(file) = SpaAssets::get(path) {
-        let mime = mime_guess::from_path(path).first_or_octet_stream();
-        (StatusCode::OK, [(axum::http::header::CONTENT_TYPE, mime.as_ref())], file.data.into())
+    let (status, mime, body) = if let Some(file) = SpaAssets::get(path) {
+        (StatusCode::OK, file.metadata.mimetype().to_owned(), file.data.to_vec())
     } else if let Some(index) = SpaAssets::get("index.html") {
-        let mime = mime_guess::from_path("index.html").first_or_octet_stream();
-        (StatusCode::OK, [(axum::http::header::CONTENT_TYPE, mime.as_ref())], index.data.into())
+        (StatusCode::OK, index.metadata.mimetype().to_owned(), index.data.to_vec())
     } else {
         (
             StatusCode::NOT_FOUND,
-            [(axum::http::header::CONTENT_TYPE, "text/plain")],
-            "SPA not built. Run: moon run web:build".as_bytes().into(),
+            "text/plain".to_owned(),
+            b"SPA not built. Run: moon run web:build".to_vec(),
         )
-    }
+    };
+
+    (status, [(axum::http::header::CONTENT_TYPE, mime)], body)
 }

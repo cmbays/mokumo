@@ -7,3 +7,13 @@ pub struct HealthResponse {
     pub status: String,
     pub version: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_bindings() {
+        HealthResponse::export_all().expect("Failed to export TypeScript bindings");
+    }
+}

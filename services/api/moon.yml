@@ -1,0 +1,81 @@
+language: 'rust'
+type: 'application'
+
+env:
+  CARGO_TERM_COLOR: 'always'
+  SQLX_OFFLINE: 'true'
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+    - 'Cargo.toml'
+    - '/Cargo.toml'
+    - '/Cargo.lock'
+  migrations:
+    - '/crates/db/migrations/**/*'
+  allRust:
+    - '/crates/*/src/**/*'
+    - '/crates/*/Cargo.toml'
+    - 'src/**/*'
+    - 'Cargo.toml'
+    - '/Cargo.toml'
+    - '/Cargo.lock'
+
+tasks:
+  build:
+    command: 'cargo build --package mokumo-api'
+    inputs:
+      - '@group(allRust)'
+
+  dev:
+    command: 'cargo run --package mokumo-api'
+    inputs:
+      - '@group(allRust)'
+    local: true
+    deps:
+      - 'web:build'
+
+  test:
+    command: 'cargo test --workspace'
+    inputs:
+      - '@group(allRust)'
+      - '/crates/*/tests/**/*'
+
+  lint:
+    command: 'cargo clippy --workspace --all-targets -- -D warnings'
+    inputs:
+      - '@group(allRust)'
+
+  fmt:
+    command: 'cargo fmt --all --check'
+    inputs:
+      - '@group(allRust)'
+
+  fmt-write:
+    command: 'cargo fmt --all'
+    inputs:
+      - '@group(allRust)'
+    local: true
+
+  gen-types:
+    command: 'cargo test --package mokumo-types -- export_bindings'
+    env:
+      TS_RS_EXPORT_DIR: '../../apps/web/src/lib/types'
+    inputs:
+      - '/crates/types/src/**/*'
+      - '/crates/types/Cargo.toml'
+    outputs:
+      - '/apps/web/src/lib/types/'
+
+  db-migrate:
+    command: 'cargo run --package mokumo-api -- --migrate-only'
+    inputs:
+      - '@group(migrations)'
+    local: true
+
+  db-prepare:
+    command: 'cargo sqlx prepare --workspace'
+    inputs:
+      - '@group(allRust)'
+      - '@group(migrations)'
+    local: true

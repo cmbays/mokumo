@@ -1,0 +1,46 @@
+language: 'javascript'
+type: 'application'
+
+fileGroups:
+  app:
+    - 'static/**/*'
+    - 'svelte.config.*'
+    - 'vite.config.*'
+  sources:
+    - 'src/**/*'
+  tests:
+    - 'tests/**/*'
+    - 'src/**/*.test.*'
+
+tasks:
+  dev:
+    command: 'pnpm dev'
+    local: true
+
+  build:
+    command: 'pnpm build'
+    inputs:
+      - '@group(app)'
+      - '@group(sources)'
+      - 'package.json'
+      - 'tsconfig.json'
+    outputs:
+      - 'build'
+
+  preview:
+    command: 'pnpm preview'
+    deps:
+      - 'build'
+    local: true
+
+  test:
+    command: 'pnpm test'
+    inputs:
+      - '@group(sources)'
+      - '@group(tests)'
+
+  check:
+    command: 'pnpm check'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
