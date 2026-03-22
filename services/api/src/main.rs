@@ -1,4 +1,5 @@
 use axum::{Router, routing::get, Json, response::IntoResponse, http::StatusCode};
+use clap::Parser;
 use rust_embed::Embed;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
@@ -6,6 +7,22 @@ use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
 use mokumo_types::HealthResponse;
+
+#[derive(Parser)]
+#[command(name = "mokumo", about = "Mokumo Print — production management server")]
+struct Cli {
+    /// Port to listen on
+    #[arg(short, long, default_value = "3000")]
+    port: u16,
+
+    /// Address to bind to
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
+
+    /// Directory for application data (database, uploads)
+    #[arg(long, default_value = "./data")]
+    data_dir: String,
+}
 
 #[derive(Embed)]
 #[folder = "../../apps/web/build"]
@@ -17,15 +34,20 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:mokumo.db?mode=rwc".into());
+    // Ensure data directory exists
+    std::fs::create_dir_all(&cli.data_dir)?;
+
+    let db_path = format!("{}/mokumo.db", cli.data_dir);
+    let database_url = format!("sqlite:{db_path}?mode=rwc");
 
     let pool = mokumo_db::create_pool(&database_url).await?;
-    tracing::info!("Database ready");
+    tracing::info!("Database ready at {db_path}");
 
     let state = Arc::new(AppState { db: pool });
 
@@ -36,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into());
+    let addr = format!("{}:{}", cli.host, cli.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("Listening on {addr}");
     axum::serve(listener, app).await?;

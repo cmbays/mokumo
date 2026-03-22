@@ -50,6 +50,9 @@ ts-rs = { version = "11", features = ["format"] }
 # SPA embedding
 rust-embed = { version = "8", features = ["mime-guess"] }
 
+# CLI
+clap = { version = "4", features = ["derive"] }
+
 # Date/time
 chrono = { version = "0.4", features = ["serde"] }
 
