@@ -1,18 +1,16 @@
-use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
-use clap::Parser;
-use rust_embed::Embed;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tower_http::trace::TraceLayer;
+
+use clap::Parser;
+use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
-use mokumo_types::HealthResponse;
+use mokumo_api::{ServerConfig, build_app, ensure_data_dirs, try_bind};
 
 #[derive(Parser)]
 #[command(name = "mokumo", about = "Mokumo Print — production management server")]
 struct Cli {
     /// Port to listen on
-    #[arg(short, long, default_value = "3000")]
+    #[arg(short, long, default_value = "6565")]
     port: u16,
 
     /// Address to bind to
@@ -20,132 +18,148 @@ struct Cli {
     host: String,
 
     /// Directory for application data (database, uploads)
-    #[arg(long, default_value = "./data")]
-    data_dir: PathBuf,
+    #[arg(long)]
+    data_dir: Option<PathBuf>,
 }
 
-#[derive(Embed)]
-#[folder = "../../apps/web/build"]
-struct SpaAssets;
-
-struct AppState {
-    db: sqlx::SqlitePool,
+/// Resolve the default data directory using platform conventions.
+///
+/// Falls back to `./data` if the platform directory cannot be determined.
+fn resolve_default_data_dir() -> PathBuf {
+    directories::ProjectDirs::from("com", "breezybayslabs", "mokumo")
+        .map(|dirs| dirs.data_dir().to_path_buf())
+        .unwrap_or_else(|| {
+            let fallback = PathBuf::from("./data");
+            // tracing may not be initialized yet, so use eprintln
+            eprintln!(
+                "WARNING: Could not determine platform data directory, using {:?}. \
+                 Set --data-dir explicitly to control where data is stored.",
+                fallback
+            );
+            fallback
+        })
 }
-
-type SharedState = Arc<AppState>;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() {
     let cli = Cli::parse();
 
-    let filter = match EnvFilter::try_from_default_env() {
-        Ok(f) => f,
-        Err(e) => {
-            if std::env::var("RUST_LOG").is_ok() {
-                eprintln!("WARNING: Invalid RUST_LOG value, falling back to 'info': {e}");
-            }
-            "info".into()
+    // Initialize tracing
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
+        if std::env::var_os("RUST_LOG").is_some() {
+            eprintln!("WARNING: Invalid RUST_LOG value, falling back to 'info': {e}");
         }
-    };
+        "info".into()
+    });
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    std::fs::create_dir_all(&cli.data_dir)?;
+    let data_dir = cli.data_dir.unwrap_or_else(resolve_default_data_dir);
 
-    let db_path = cli.data_dir.join("mokumo.db");
+    let config = ServerConfig {
+        port: cli.port,
+        host: cli.host,
+        data_dir,
+    };
+
+    // Create data directories
+    if let Err(e) = ensure_data_dirs(&config.data_dir) {
+        eprintln!(
+            "Cannot create data directory {}: {e}",
+            config.data_dir.display()
+        );
+        tracing::error!(
+            "Cannot create data directory {}: {e}",
+            config.data_dir.display()
+        );
+        std::process::exit(1);
+    }
+
+    // Pre-migration backup — fatal for existing databases, skipped for first run.
+    // We check existence before calling pre_migration_backup so that an I/O error
+    // on the path itself is treated as a real failure, not "first run".
+    let db_path = config.data_dir.join("mokumo.db");
+    let db_exists = match db_path.try_exists() {
+        Ok(exists) => exists,
+        Err(e) => {
+            eprintln!("Cannot check database at {}: {e}", db_path.display());
+            tracing::error!("Cannot check database at {}: {e}", db_path.display());
+            std::process::exit(1);
+        }
+    };
+    if db_exists && let Err(e) = mokumo_db::pre_migration_backup(&db_path).await {
+        eprintln!(
+            "Pre-migration backup failed for {}: {e}. \
+             Refusing to run migrations without a backup. \
+             Check disk space and permissions.",
+            db_path.display()
+        );
+        tracing::error!("Pre-migration backup failed for existing database: {e}");
+        std::process::exit(1);
+    }
+
+    // Initialize database
     let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
+    let pool = match mokumo_db::initialize_database(&database_url).await {
+        Ok(pool) => {
+            tracing::info!("Database ready at {}", db_path.display());
+            pool
+        }
+        Err(e) => {
+            tracing::error!("Failed to initialize database: {e}");
+            std::process::exit(1);
+        }
+    };
 
-    let pool = mokumo_db::initialize_database(&database_url).await?;
-    tracing::info!("Database ready at {}", db_path.display());
+    // Build application
+    let app = build_app(&config, pool);
 
-    let state: SharedState = Arc::new(AppState { db: pool });
+    // Bind to port (with fallback)
+    let (listener, actual_port) = match try_bind(&config.host, config.port).await {
+        Ok(result) => result,
+        Err(e) => {
+            eprintln!("{e}");
+            tracing::error!("{e}");
+            std::process::exit(1);
+        }
+    };
 
-    let app = Router::new()
-        .route("/api/health", get(health))
-        .fallback(serve_spa)
-        .layer(TraceLayer::new_for_http())
-        .with_state(state);
-
-    let addr = format!("{}:{}", cli.host, cli.port);
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    tracing::info!("Listening on {addr}");
-    axum::serve(listener, app).await?;
-
-    Ok(())
-}
-
-async fn health(State(state): State<SharedState>) -> Result<Json<HealthResponse>, StatusCode> {
-    sqlx::query("SELECT 1")
-        .execute(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("Health check DB query failed: {e}");
-            StatusCode::SERVICE_UNAVAILABLE
-        })?;
-
-    Ok(Json(HealthResponse {
-        status: "ok".into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-    }))
-}
-
-async fn serve_spa(uri: axum::http::Uri) -> impl IntoResponse {
-    let path = uri.path().trim_start_matches('/');
-
-    // Return a proper JSON 404 for unmatched API paths instead of serving the SPA shell
-    if path.starts_with("api/") {
-        return (
-            StatusCode::NOT_FOUND,
-            [
-                (
-                    axum::http::header::CONTENT_TYPE,
-                    "application/json".to_owned(),
-                ),
-                (axum::http::header::CACHE_CONTROL, "no-store".to_owned()),
-            ],
-            r#"{"error":"not_found","message":"No API route matches this path"}"#
-                .as_bytes()
-                .to_vec(),
+    if actual_port != config.port {
+        tracing::warn!(
+            "Requested port {} was unavailable, using port {} instead",
+            config.port,
+            actual_port
         );
     }
 
-    if let Some(file) = SpaAssets::get(path) {
-        let cache = if path.contains("/_app/immutable/") {
-            "public, max-age=31536000, immutable"
-        } else {
-            "public, max-age=3600"
-        };
-        (
-            StatusCode::OK,
-            [
-                (
-                    axum::http::header::CONTENT_TYPE,
-                    file.metadata.mimetype().to_owned(),
-                ),
-                (axum::http::header::CACHE_CONTROL, cache.to_owned()),
-            ],
-            file.data.to_vec(),
-        )
-    } else if let Some(index) = SpaAssets::get("index.html") {
-        (
-            StatusCode::OK,
-            [
-                (
-                    axum::http::header::CONTENT_TYPE,
-                    index.metadata.mimetype().to_owned(),
-                ),
-                (axum::http::header::CACHE_CONTROL, "no-cache".to_owned()),
-            ],
-            index.data.to_vec(),
-        )
-    } else {
-        tracing::warn!("SPA assets not found — run: moon run web:build");
-        (
-            StatusCode::NOT_FOUND,
-            [
-                (axum::http::header::CONTENT_TYPE, "text/plain".to_owned()),
-                (axum::http::header::CACHE_CONTROL, "no-store".to_owned()),
-            ],
-            b"SPA not built. Run: moon run web:build".to_vec(),
-        )
+    // Graceful shutdown via CancellationToken
+    let shutdown_token = CancellationToken::new();
+    let signal_token = shutdown_token.clone();
+
+    tokio::spawn(async move {
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => {
+                tracing::info!("Shutdown signal received, draining connections...");
+                signal_token.cancel();
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to listen for ctrl+c: {e}. \
+                     Server will continue running but graceful shutdown via Ctrl+C is unavailable."
+                );
+                // Do NOT cancel — let the server keep running.
+            }
+        }
+    });
+
+    if let Err(e) = axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            shutdown_token.cancelled().await;
+        })
+        .await
+    {
+        tracing::error!("Server error: {e}");
+        std::process::exit(1);
     }
+
+    tracing::info!("Server shut down cleanly");
 }
