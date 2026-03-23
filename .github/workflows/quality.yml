@@ -54,7 +54,16 @@ jobs:
         run: moon run api:bindings-check
 
   verdict:
+    if: always()
     runs-on: ubuntu-latest
     needs: [quality-rust, quality-ts, seam-check]
     steps:
-      - run: echo "All quality gates passed"
+      - name: Check upstream results
+        run: |
+          if [ "${{ needs.quality-rust.result }}" != "success" ] || \
+             [ "${{ needs.quality-ts.result }}" != "success" ] || \
+             [ "${{ needs.seam-check.result }}" != "success" ]; then
+            echo "One or more quality gates failed"
+            exit 1
+          fi
+          echo "All quality gates passed"

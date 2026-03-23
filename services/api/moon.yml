@@ -40,12 +40,14 @@ tasks:
     inputs:
     - '@group(allRust)'
     - /crates/*/tests/**/*
+    - tests/**/*.rs
     options:
       runFromWorkspaceRoot: true
   test-bdd:
     command: cargo test --package mokumo-api --test bdd --features bdd
     inputs:
     - '@group(allRust)'
+    - tests/**/*.rs
     - tests/features/**/*.feature
     options:
       runFromWorkspaceRoot: true
