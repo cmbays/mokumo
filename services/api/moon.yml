@@ -110,15 +110,15 @@ tasks:
       cache: false
       runFromWorkspaceRoot: true
   bindings-check:
-    # Regenerate bindings into a temp dir, then compare against committed types.
-    # Catches added, removed, and modified bindings.
+    deps:
+    - web:build
     script: |
-      TEMP_BINDINGS=$(mktemp -d)
+      set -euo pipefail
+      TEMP_BINDINGS="$(mktemp -d)"
+      trap 'rm -rf "$TEMP_BINDINGS"' EXIT
+
       TS_RS_EXPORT_DIR="$TEMP_BINDINGS" cargo test --workspace --exclude mokumo-desktop
-      diff -r apps/web/src/lib/types/ "$TEMP_BINDINGS/"
-      rm -rf "$TEMP_BINDINGS"
-    env:
-      TS_RS_EXPORT_DIR: apps/web/src/lib/types
+      diff -ru apps/web/src/lib/types/ "$TEMP_BINDINGS/"
     inputs:
     - '@group(allRust)'
     options:
