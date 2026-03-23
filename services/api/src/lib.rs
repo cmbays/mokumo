@@ -1,3 +1,4 @@
+pub mod error;
 pub mod ws;
 
 use std::path::{Path, PathBuf};
@@ -173,14 +174,13 @@ async fn serve_spa(uri: axum::http::Uri) -> impl IntoResponse {
 
     // Return a proper JSON 404 for unmatched API paths instead of serving the SPA shell
     if path.starts_with("api/") {
-        return spa_response(
-            StatusCode::NOT_FOUND,
-            "application/json",
-            "no-store",
-            r#"{"error":"not_found","message":"No API route matches this path"}"#
-                .as_bytes()
-                .to_vec(),
-        );
+        let body = mokumo_types::error::ErrorBody {
+            code: "not_found".into(),
+            message: "No API route matches this path".into(),
+            details: None,
+        };
+        let json = serde_json::to_vec(&body).unwrap_or_default();
+        return spa_response(StatusCode::NOT_FOUND, "application/json", "no-store", json);
     }
 
     if let Some(file) = SpaAssets::get(path) {

@@ -152,5 +152,6 @@ async fn spa_fallback_returns_json_404_for_unknown_api_paths() {
         .await
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["error"], "not_found");
+    assert_eq!(json["code"], "not_found");
+    assert!(json["message"].as_str().is_some(), "Expected message field");
 }
