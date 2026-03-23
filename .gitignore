@@ -40,6 +40,9 @@ Thumbs.db
 tmp/
 dist/
 
+# ts-rs default output (canonical path is apps/web/src/lib/types/ via Moon)
+**/bindings/
+
 # SQLx offline cache (.sqlx/) — commit after running: moon run api:db-prepare
 mutants.out/
 mutants.out.old/

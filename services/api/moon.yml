@@ -43,13 +43,15 @@ tasks:
     options:
       runFromWorkspaceRoot: true
   test-bdd:
-    command: cargo test --test bdd --features bdd
+    command: cargo test --package mokumo-api --test bdd --features bdd
     inputs:
     - '@group(allRust)'
     - tests/features/**/*.feature
     options:
       runFromWorkspaceRoot: true
   coverage:
+    # --lib: unit tests only. Integration/BDD coverage excluded intentionally at M0.
+    # Add --tests when domain logic in crates/core/ warrants full-stack coverage.
     command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --json --output-path coverage.json
     inputs:
     - '@group(allRust)'
@@ -98,7 +100,9 @@ tasks:
       cache: false
       runFromWorkspaceRoot: true
   bindings-check:
-    script: "cargo test --workspace && git diff --exit-code bindings/"
+    script: "cargo test --workspace --exclude mokumo-desktop && git add apps/web/src/lib/types/ && git diff --cached --exit-code apps/web/src/lib/types/"
+    env:
+      TS_RS_EXPORT_DIR: apps/web/src/lib/types
     inputs:
     - '@group(allRust)'
     options:
