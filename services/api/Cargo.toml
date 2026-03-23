@@ -19,6 +19,9 @@ clap = { workspace = true }
 directories = { workspace = true }
 serde = { workspace = true }
 
+[features]
+bdd = []
+
 [dev-dependencies]
 serial_test = { workspace = true }
 tempfile = "3"
@@ -26,3 +29,11 @@ reqwest = { version = "0.12", features = ["json"] }
 tower = { version = "0.5", features = ["util"] }
 http = "1"
 serde_json = { workspace = true }
+axum-test = { workspace = true }
+cucumber = { workspace = true }
+tokio = { workspace = true }
+
+[[test]]
+name = "bdd"
+harness = false
+required-features = ["bdd"]

@@ -36,11 +36,25 @@ tasks:
       outputStyle: stream
       runFromWorkspaceRoot: true
   test:
-    command: cargo test --workspace --exclude mokumo-desktop
+    command: cargo nextest run --profile ci --workspace --exclude mokumo-desktop
     inputs:
     - '@group(allRust)'
     - /crates/*/tests/**/*
     options:
+      runFromWorkspaceRoot: true
+  test-bdd:
+    command: cargo test --test bdd --features bdd
+    inputs:
+    - '@group(allRust)'
+    - tests/features/**/*.feature
+    options:
+      runFromWorkspaceRoot: true
+  coverage:
+    command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --json --output-path coverage.json
+    inputs:
+    - '@group(allRust)'
+    options:
+      cache: false
       runFromWorkspaceRoot: true
   lint:
     command: cargo clippy --workspace --exclude mokumo-desktop --all-targets -- -D warnings
@@ -77,4 +91,15 @@ tasks:
     - '@group(migrations)'
     options:
       cache: false
+      runFromWorkspaceRoot: true
+  mutate:
+    command: cargo mutants --test-tool nextest --workspace --exclude mokumo-desktop
+    options:
+      cache: false
+      runFromWorkspaceRoot: true
+  bindings-check:
+    script: "cargo test --workspace && git diff --exit-code bindings/"
+    inputs:
+    - '@group(allRust)'
+    options:
       runFromWorkspaceRoot: true
