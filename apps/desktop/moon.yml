@@ -19,12 +19,9 @@ tasks:
       cache: false
       persistent: true
       outputStyle: stream
-      runFromWorkspaceRoot: true
   build:
     command: cargo tauri build
     deps:
     - web:build
     inputs:
     - '@group(sources)'
-    options:
-      runFromWorkspaceRoot: true

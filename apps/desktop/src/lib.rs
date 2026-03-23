@@ -9,6 +9,9 @@ use mokumo_api::{ServerConfig, build_app, ensure_data_dirs, try_bind};
 const DEFAULT_PORT: u16 = 6565;
 const DEFAULT_HOST: &str = "127.0.0.1";
 
+/// Holds the server task handle so `ExitRequested` can await a clean drain.
+struct ServerHandle(std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
+
 /// Initialize the server: create dirs, backup, run migrations, build app, bind port.
 ///
 /// Extracted so the orchestration sequence can be tested without a window system.
@@ -97,7 +100,7 @@ pub fn run() {
                     })?;
 
             // Spawn the Axum server on Tauri's async runtime (NOT tokio::spawn)
-            tauri::async_runtime::spawn(async move {
+            let server_handle = tauri::async_runtime::spawn(async move {
                 if let Err(e) = axum::serve(listener, router)
                     .with_graceful_shutdown(async move {
                         server_token.cancelled().await;
@@ -108,6 +111,9 @@ pub fn run() {
                 }
                 tracing::info!("Server shut down cleanly");
             });
+
+            // Store the handle so ExitRequested can await server drain
+            app.manage(ServerHandle(std::sync::Mutex::new(Some(server_handle))));
 
             let url = format!("http://localhost:{actual_port}");
             tracing::info!("Opening webview at {url}");
@@ -125,10 +131,26 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(move |_app, event| {
-            if let tauri::RunEvent::Exit = event {
-                tracing::info!("Tauri exiting, shutting down server...");
+        .run(move |app, event| {
+            if let tauri::RunEvent::ExitRequested { api, .. } = &event {
+                tracing::info!("Exit requested, draining server...");
                 exit_token.cancel();
+
+                // Take the server handle and await drain before allowing exit
+                if let Some(handle) = app
+                    .try_state::<ServerHandle>()
+                    .and_then(|sh| sh.0.lock().ok()?.take())
+                {
+                    // Prevent immediate exit while we drain
+                    api.prevent_exit();
+
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let _ = handle.await;
+                        tracing::info!("Server drained, exiting");
+                        app_handle.exit(0);
+                    });
+                }
             }
         });
 }
