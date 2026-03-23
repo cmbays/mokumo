@@ -1,4 +1,5 @@
 pub mod error;
+pub mod pagination;
 pub mod ws;
 
 use serde::{Deserialize, Serialize};
