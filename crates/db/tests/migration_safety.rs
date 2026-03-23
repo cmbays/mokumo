@@ -88,3 +88,35 @@ async fn backup_rotation_keeps_only_last_three() {
         backups
     );
 }
+
+#[tokio::test]
+async fn backup_skipped_when_db_exists_but_no_migrations_table() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("test.db");
+
+    // Create a plain SQLite file with no _sqlx_migrations table
+    let conn = rusqlite::Connection::open(&db_path).unwrap();
+    conn.execute("CREATE TABLE dummy (id INTEGER PRIMARY KEY)", [])
+        .unwrap();
+    drop(conn);
+
+    let result = pre_migration_backup(&db_path).await;
+    assert!(
+        result.is_ok(),
+        "Should succeed (skip) when no migrations table exists"
+    );
+
+    // Verify no backup files were created
+    let mut entries = tokio::fs::read_dir(dir.path()).await.unwrap();
+    let mut backup_count = 0;
+    while let Some(entry) = entries.next_entry().await.unwrap() {
+        let name = entry.file_name().to_str().unwrap().to_string();
+        if name.contains("backup-v") {
+            backup_count += 1;
+        }
+    }
+    assert_eq!(
+        backup_count, 0,
+        "No backup files should exist when migrations table is missing"
+    );
+}

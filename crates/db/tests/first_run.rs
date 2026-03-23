@@ -33,3 +33,41 @@ async fn completed_setup_is_remembered() {
 
     pool.close().await;
 }
+
+#[tokio::test]
+async fn setup_with_null_value_reports_incomplete() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("test.db");
+    let url = format!("sqlite:{}?mode=rwc", db_path.display());
+
+    let pool = initialize_database(&url).await.unwrap();
+
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('setup_complete', NULL)")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let complete = is_setup_complete(&pool).await.unwrap();
+    assert!(!complete, "NULL value should report setup incomplete");
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn setup_with_non_true_value_reports_incomplete() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("test.db");
+    let url = format!("sqlite:{}?mode=rwc", db_path.display());
+
+    let pool = initialize_database(&url).await.unwrap();
+
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('setup_complete', 'false')")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let complete = is_setup_complete(&pool).await.unwrap();
+    assert!(!complete, "Non-'true' value should report setup incomplete");
+
+    pool.close().await;
+}
