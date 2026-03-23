@@ -38,10 +38,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: moonrepo/setup-toolchain@v0
-      # Moon auto-provisions Node + pnpm via proto from .moon/toolchains.yml.
-      # moon setup bootstraps the toolchain; moon run would also do it lazily.
-      - name: Install dependencies
-        run: moon setup && pnpm install --frozen-lockfile
+      # Moon auto-provisions Node + pnpm via proto and installs
+      # dependencies automatically when running JS project tasks.
       - name: Lint + format + check
         run: moon run web:check
       - name: Tests
