@@ -95,9 +95,9 @@ pub fn run() {
             let (listener, router, actual_port) =
                 tauri::async_runtime::block_on(init_server(data_dir, DEFAULT_PORT, DEFAULT_HOST))
                     .map_err(|e| {
-                        tracing::error!("Server initialization failed: {e}");
-                        e
-                    })?;
+                    tracing::error!("Server initialization failed: {e}");
+                    e
+                })?;
 
             // Spawn the Axum server on Tauri's async runtime (NOT tokio::spawn)
             let server_handle = tauri::async_runtime::spawn(async move {

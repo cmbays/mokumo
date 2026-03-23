@@ -1,0 +1,3 @@
+[profile.ci]
+# JUnit XML output for GitHub Actions test reporting
+junit.path = "target/nextest/ci/junit.xml"

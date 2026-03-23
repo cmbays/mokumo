@@ -36,14 +36,40 @@ tasks:
       outputStyle: stream
       runFromWorkspaceRoot: true
   test:
-    command: cargo test --workspace --exclude mokumo-desktop
+    command: cargo nextest run --profile ci --workspace --exclude mokumo-desktop
+    deps:
+    - web:build
     inputs:
     - '@group(allRust)'
     - /crates/*/tests/**/*
+    - tests/**/*.rs
     options:
+      runFromWorkspaceRoot: true
+  test-bdd:
+    command: cargo test --package mokumo-api --test bdd --features bdd
+    deps:
+    - web:build
+    inputs:
+    - '@group(allRust)'
+    - tests/**/*.rs
+    - tests/features/**/*.feature
+    options:
+      runFromWorkspaceRoot: true
+  coverage:
+    # --lib: unit tests only. Integration/BDD coverage excluded intentionally at M0.
+    # Add --tests when domain logic in crates/core/ warrants full-stack coverage.
+    command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --json --output-path coverage.json
+    deps:
+    - web:build
+    inputs:
+    - '@group(allRust)'
+    options:
+      cache: false
       runFromWorkspaceRoot: true
   lint:
     command: cargo clippy --workspace --exclude mokumo-desktop --all-targets -- -D warnings
+    deps:
+    - web:build
     inputs:
     - '@group(allRust)'
     options:
@@ -77,4 +103,23 @@ tasks:
     - '@group(migrations)'
     options:
       cache: false
+      runFromWorkspaceRoot: true
+  mutate:
+    command: cargo mutants --test-tool nextest --workspace --exclude mokumo-desktop
+    options:
+      cache: false
+      runFromWorkspaceRoot: true
+  bindings-check:
+    deps:
+    - web:build
+    script: |
+      set -euo pipefail
+      TEMP_BINDINGS="$(mktemp -d)"
+      trap 'rm -rf "$TEMP_BINDINGS"' EXIT
+
+      TS_RS_EXPORT_DIR="$TEMP_BINDINGS" cargo test --workspace --exclude mokumo-desktop
+      diff -ru apps/web/src/lib/types/ "$TEMP_BINDINGS/"
+    inputs:
+    - '@group(allRust)'
+    options:
       runFromWorkspaceRoot: true

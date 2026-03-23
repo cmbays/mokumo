@@ -72,6 +72,10 @@ tauri-plugin-single-instance = "2"
 
 # Testing
 serial_test = "3"
+axum-test = "17"
+cucumber = "0.21"
+proptest = "1"
+insta = { version = "1", features = ["json", "redactions"] }
 
 # Internal crates
 mokumo-core = { path = "crates/core" }
