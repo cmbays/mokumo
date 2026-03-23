@@ -102,8 +102,13 @@ tasks:
       cache: false
       runFromWorkspaceRoot: true
   bindings-check:
-    # Clear before regenerating so removed/renamed exports leave no stale .ts files
-    script: "rm -f apps/web/src/lib/types/*.ts && cargo test --workspace --exclude mokumo-desktop && git add apps/web/src/lib/types/ && git diff --cached --exit-code apps/web/src/lib/types/"
+    # Regenerate bindings into a temp dir, then compare against committed types.
+    # Catches added, removed, and modified bindings.
+    script: |
+      TEMP_BINDINGS=$(mktemp -d)
+      TS_RS_EXPORT_DIR="$TEMP_BINDINGS" cargo test --workspace --exclude mokumo-desktop
+      diff -r apps/web/src/lib/types/ "$TEMP_BINDINGS/"
+      rm -rf "$TEMP_BINDINGS"
     env:
       TS_RS_EXPORT_DIR: apps/web/src/lib/types
     inputs:
