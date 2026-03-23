@@ -40,6 +40,9 @@ Thumbs.db
 tmp/
 dist/
 
+# Pipeline state (transient, per-session)
+.workflow/
+
 # ts-rs default output (canonical path is apps/web/src/lib/types/ via Moon)
 **/bindings/
 
