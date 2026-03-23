@@ -12,9 +12,13 @@ jobs:
         with:
           fetch-depth: 0
       - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
       - uses: moonrepo/setup-rust@v1
         with:
           bins: cargo-nextest,cargo-llvm-cov
+      - name: Build SvelteKit SPA
+        run: moon run web:build
       - name: Lint + format
         run: moon run api:lint api:fmt
       - name: Unit + integration tests
@@ -38,8 +42,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: moonrepo/setup-toolchain@v0
-      # Moon auto-provisions Node + pnpm via proto and installs
-      # dependencies automatically when running JS project tasks.
+        with:
+          auto-install: true
       - name: Lint + format + check
         run: moon run web:check
       - name: Tests
@@ -53,7 +57,11 @@ jobs:
         with:
           fetch-depth: 0
       - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
       - uses: moonrepo/setup-rust@v1
+      - name: Build SvelteKit SPA
+        run: moon run web:build
       - name: Verify ts-rs bindings in sync
         run: moon run api:bindings-check
 
