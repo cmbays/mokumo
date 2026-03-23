@@ -1,8 +1,27 @@
+use axum::Router;
 use axum::body::Body;
 use http::Request;
 use tower::ServiceExt;
 
 use mokumo_api::{ServerConfig, build_app, ensure_data_dirs};
+
+/// Create a test app with a temp database. Returns the router and tempdir
+/// (tempdir must be held alive for the duration of the test).
+async fn test_app(name: &str) -> (Router, tempfile::TempDir) {
+    let tmp = tempfile::tempdir().unwrap();
+    let data_dir = tmp.path().join(name);
+    ensure_data_dirs(&data_dir).unwrap();
+    let db_path = data_dir.join("mokumo.db");
+    let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
+    let pool = mokumo_db::initialize_database(&database_url).await.unwrap();
+    let config = ServerConfig {
+        port: 0,
+        host: "127.0.0.1".into(),
+        data_dir,
+    };
+    let app = build_app(&config, pool);
+    (app, tmp)
+}
 
 #[test]
 fn ensure_data_dirs_creates_all_subdirectories() {
@@ -42,21 +61,7 @@ async fn full_startup_flow_with_temp_dirs() {
 
 #[tokio::test]
 async fn health_endpoint_returns_ok_and_version() {
-    let tmp = tempfile::tempdir().unwrap();
-    let data_dir = tmp.path().join("health_test");
-    ensure_data_dirs(&data_dir).unwrap();
-
-    let db_path = data_dir.join("mokumo.db");
-    let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
-    let pool = mokumo_db::initialize_database(&database_url).await.unwrap();
-
-    let config = ServerConfig {
-        port: 0,
-        host: "127.0.0.1".into(),
-        data_dir,
-    };
-
-    let app = build_app(&config, pool);
+    let (app, _tmp) = test_app("health_test").await;
 
     let response = app
         .oneshot(
@@ -80,14 +85,17 @@ async fn health_endpoint_returns_ok_and_version() {
 }
 
 #[tokio::test]
-async fn spa_fallback_returns_json_404_for_unknown_api_paths() {
+async fn health_endpoint_returns_503_with_json_on_db_failure() {
     let tmp = tempfile::tempdir().unwrap();
-    let data_dir = tmp.path().join("spa_test");
+    let data_dir = tmp.path().join("health_503_test");
     ensure_data_dirs(&data_dir).unwrap();
 
     let db_path = data_dir.join("mokumo.db");
     let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
     let pool = mokumo_db::initialize_database(&database_url).await.unwrap();
+
+    // Close the pool to simulate database failure
+    pool.close().await;
 
     let config = ServerConfig {
         port: 0,
@@ -96,6 +104,31 @@ async fn spa_fallback_returns_json_404_for_unknown_api_paths() {
     };
 
     let app = build_app(&config, pool);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(json["status"], "unhealthy");
+    assert!(json["version"].is_string(), "503 should include version");
+}
+
+#[tokio::test]
+async fn spa_fallback_returns_json_404_for_unknown_api_paths() {
+    let (app, _tmp) = test_app("spa_test").await;
 
     let response = app
         .oneshot(

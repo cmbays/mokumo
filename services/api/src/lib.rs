@@ -63,8 +63,16 @@ pub async fn try_bind(
                 tracing::info!("Listening on {addr}");
                 return Ok((listener, p));
             }
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+                tracing::debug!("Port {p} in use, trying next");
+            }
             Err(e) => {
-                tracing::debug!("Port {p} unavailable: {e}");
+                // Permission denied, address not available, etc. — these won't
+                // resolve by trying the next port.
+                return Err(std::io::Error::new(
+                    e.kind(),
+                    format!("Cannot bind to {host}:{p}: {e}"),
+                ));
             }
         }
     }
@@ -75,7 +83,8 @@ pub async fn try_bind(
 }
 
 /// Build the Axum router with health check, SPA fallback, and tracing.
-pub fn build_app(_config: &ServerConfig, pool: SqlitePool) -> Router {
+#[allow(unused_variables)] // config will be used by Tauri shell (W2) and future CORS/rate-limit settings
+pub fn build_app(config: &ServerConfig, pool: SqlitePool) -> Router {
     let state: SharedState = Arc::new(AppState { db: pool });
 
     Router::new()
@@ -85,13 +94,21 @@ pub fn build_app(_config: &ServerConfig, pool: SqlitePool) -> Router {
         .with_state(state)
 }
 
-async fn health(State(state): State<SharedState>) -> Result<Json<HealthResponse>, StatusCode> {
+async fn health(
+    State(state): State<SharedState>,
+) -> Result<Json<HealthResponse>, (StatusCode, Json<HealthResponse>)> {
     sqlx::query("SELECT 1")
         .execute(&state.db)
         .await
         .map_err(|e| {
             tracing::error!("Health check DB query failed: {e}");
-            StatusCode::SERVICE_UNAVAILABLE
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(HealthResponse {
+                    status: "unhealthy".into(),
+                    version: env!("CARGO_PKG_VERSION").into(),
+                }),
+            )
         })?;
 
     Ok(Json(HealthResponse {
@@ -100,20 +117,28 @@ async fn health(State(state): State<SharedState>) -> Result<Json<HealthResponse>
     }))
 }
 
+type SpaResponse = (StatusCode, [(axum::http::HeaderName, String); 2], Vec<u8>);
+
+fn spa_response(status: StatusCode, content_type: &str, cache: &str, body: Vec<u8>) -> SpaResponse {
+    (
+        status,
+        [
+            (axum::http::header::CONTENT_TYPE, content_type.to_owned()),
+            (axum::http::header::CACHE_CONTROL, cache.to_owned()),
+        ],
+        body,
+    )
+}
+
 async fn serve_spa(uri: axum::http::Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
 
     // Return a proper JSON 404 for unmatched API paths instead of serving the SPA shell
     if path.starts_with("api/") {
-        return (
+        return spa_response(
             StatusCode::NOT_FOUND,
-            [
-                (
-                    axum::http::header::CONTENT_TYPE,
-                    "application/json".to_owned(),
-                ),
-                (axum::http::header::CACHE_CONTROL, "no-store".to_owned()),
-            ],
+            "application/json",
+            "no-store",
             r#"{"error":"not_found","message":"No API route matches this path"}"#
                 .as_bytes()
                 .to_vec(),
@@ -126,37 +151,25 @@ async fn serve_spa(uri: axum::http::Uri) -> impl IntoResponse {
         } else {
             "public, max-age=3600"
         };
-        (
+        spa_response(
             StatusCode::OK,
-            [
-                (
-                    axum::http::header::CONTENT_TYPE,
-                    file.metadata.mimetype().to_owned(),
-                ),
-                (axum::http::header::CACHE_CONTROL, cache.to_owned()),
-            ],
+            file.metadata.mimetype(),
+            cache,
             file.data.to_vec(),
         )
     } else if let Some(index) = SpaAssets::get("index.html") {
-        (
+        spa_response(
             StatusCode::OK,
-            [
-                (
-                    axum::http::header::CONTENT_TYPE,
-                    index.metadata.mimetype().to_owned(),
-                ),
-                (axum::http::header::CACHE_CONTROL, "no-cache".to_owned()),
-            ],
+            index.metadata.mimetype(),
+            "no-cache",
             index.data.to_vec(),
         )
     } else {
         tracing::warn!("SPA assets not found — run: moon run web:build");
-        (
+        spa_response(
             StatusCode::NOT_FOUND,
-            [
-                (axum::http::header::CONTENT_TYPE, "text/plain".to_owned()),
-                (axum::http::header::CACHE_CONTROL, "no-store".to_owned()),
-            ],
+            "text/plain",
+            "no-store",
             b"SPA not built. Run: moon run web:build".to_vec(),
         )
     }

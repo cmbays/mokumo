@@ -28,7 +28,16 @@ struct Cli {
 fn resolve_default_data_dir() -> PathBuf {
     directories::ProjectDirs::from("com", "breezybayslabs", "mokumo")
         .map(|dirs| dirs.data_dir().to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("./data"))
+        .unwrap_or_else(|| {
+            let fallback = PathBuf::from("./data");
+            // tracing may not be initialized yet, so use eprintln
+            eprintln!(
+                "WARNING: Could not determine platform data directory, using {:?}. \
+                 Set --data-dir explicitly to control where data is stored.",
+                fallback
+            );
+            fallback
+        })
 }
 
 #[tokio::main]
@@ -36,15 +45,12 @@ async fn main() {
     let cli = Cli::parse();
 
     // Initialize tracing
-    let filter = match EnvFilter::try_from_default_env() {
-        Ok(f) => f,
-        Err(e) => {
-            if std::env::var("RUST_LOG").is_ok() {
-                eprintln!("WARNING: Invalid RUST_LOG value, falling back to 'info': {e}");
-            }
-            "info".into()
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
+        if std::env::var_os("RUST_LOG").is_some() {
+            eprintln!("WARNING: Invalid RUST_LOG value, falling back to 'info': {e}");
         }
-    };
+        "info".into()
+    });
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     let data_dir = cli.data_dir.unwrap_or_else(resolve_default_data_dir);
@@ -58,17 +64,29 @@ async fn main() {
     // Create data directories
     if let Err(e) = ensure_data_dirs(&config.data_dir) {
         eprintln!(
-            "Cannot create data directory: {}. Check permissions.",
+            "Cannot create data directory {}: {e}",
             config.data_dir.display()
         );
-        tracing::error!("{e}");
+        tracing::error!(
+            "Cannot create data directory {}: {e}",
+            config.data_dir.display()
+        );
         std::process::exit(1);
     }
 
-    // Pre-migration backup (best-effort, errors are non-fatal for first run)
+    // Pre-migration backup
     let db_path = config.data_dir.join("mokumo.db");
     if let Err(e) = mokumo_db::pre_migration_backup(&db_path).await {
-        tracing::warn!("Pre-migration backup failed: {e}");
+        if db_path.exists() {
+            tracing::error!(
+                "Pre-migration backup failed for existing database: {e}. \
+                 Proceeding without backup — if the migration fails, data may be unrecoverable. \
+                 Check disk space and permissions on {:?}",
+                config.data_dir.join("backups")
+            );
+        } else {
+            tracing::debug!("No existing database to back up (first run): {e}");
+        }
     }
 
     // Initialize database
@@ -106,20 +124,28 @@ async fn main() {
     }
 
     // Graceful shutdown via CancellationToken
-    let cancel_token = CancellationToken::new();
-    let shutdown_token = cancel_token.clone();
+    let shutdown_token = CancellationToken::new();
+    let signal_token = shutdown_token.clone();
 
     tokio::spawn(async move {
-        if let Err(e) = tokio::signal::ctrl_c().await {
-            tracing::error!("Failed to listen for ctrl+c: {e}");
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => {
+                tracing::info!("Shutdown signal received, draining connections...");
+                signal_token.cancel();
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to listen for ctrl+c: {e}. \
+                     Server will continue running but graceful shutdown via Ctrl+C is unavailable."
+                );
+                // Do NOT cancel — let the server keep running.
+            }
         }
-        tracing::info!("Shutdown signal received, draining connections...");
-        shutdown_token.cancel();
     });
 
     if let Err(e) = axum::serve(listener, app)
         .with_graceful_shutdown(async move {
-            cancel_token.cancelled().await;
+            shutdown_token.cancelled().await;
         })
         .await
     {

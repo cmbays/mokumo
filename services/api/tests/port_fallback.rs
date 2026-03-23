@@ -5,37 +5,30 @@ use mokumo_api::try_bind;
 #[tokio::test]
 #[serial]
 async fn try_bind_finds_requested_port_when_available() {
-    let (listener, actual_port) = try_bind("127.0.0.1", 16565).await.unwrap();
+    let (_, actual_port) = try_bind("127.0.0.1", 16565).await.unwrap();
     assert_eq!(actual_port, 16565);
-    drop(listener);
 }
 
 #[tokio::test]
 #[serial]
 async fn try_bind_skips_occupied_port_and_finds_next() {
     // Occupy the first port with a std::net listener
-    let blocker = std::net::TcpListener::bind("127.0.0.1:16600").unwrap();
+    let _blocker = std::net::TcpListener::bind("127.0.0.1:16600").unwrap();
 
-    let (listener, actual_port) = try_bind("127.0.0.1", 16600).await.unwrap();
-    assert_ne!(actual_port, 16600, "should not bind to the occupied port");
-    assert!(
-        actual_port > 16600 && actual_port <= 16610,
-        "should find a port in the fallback range, got {actual_port}"
+    let (_, actual_port) = try_bind("127.0.0.1", 16600).await.unwrap();
+    assert_eq!(
+        actual_port, 16601,
+        "should bind to the exact next port after the occupied one"
     );
-
-    drop(listener);
-    drop(blocker);
 }
 
 #[tokio::test]
 #[serial]
 async fn try_bind_returns_error_when_all_ports_exhausted() {
     // Occupy all 11 ports in the range 16700..=16710
-    let mut blockers = Vec::new();
-    for p in 16700..=16710 {
-        let l = std::net::TcpListener::bind(format!("127.0.0.1:{p}")).unwrap();
-        blockers.push(l);
-    }
+    let _blockers: Vec<_> = (16700..=16710)
+        .map(|p| std::net::TcpListener::bind(format!("127.0.0.1:{p}")).unwrap())
+        .collect();
 
     let result = try_bind("127.0.0.1", 16700).await;
     assert!(
@@ -48,6 +41,23 @@ async fn try_bind_returns_error_when_all_ports_exhausted() {
         err_msg.contains("16700") && err_msg.contains("16710"),
         "error should mention the port range, got: {err_msg}"
     );
+}
 
-    drop(blockers);
+#[tokio::test]
+#[serial]
+async fn try_bind_handles_port_near_u16_max() {
+    // With saturating_add(10), port 65535 should try exactly one port (65535)
+    // and either succeed or fail without panicking
+    let result = try_bind("127.0.0.1", 65530).await;
+    // We just verify it doesn't panic — the port may or may not be available
+    match result {
+        Ok((_, port)) => assert!(
+            port >= 65530,
+            "should bind to a port in the saturated range"
+        ),
+        Err(e) => assert!(
+            e.to_string().contains("65530"),
+            "error should mention the starting port"
+        ),
+    }
 }

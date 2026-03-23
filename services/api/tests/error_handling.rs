@@ -46,8 +46,8 @@ async fn graceful_shutdown_completes_cleanly() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let cancel_token = CancellationToken::new();
-    let shutdown_token = cancel_token.clone();
+    let shutdown_token = CancellationToken::new();
+    let signal_token = shutdown_token.clone();
 
     let server_handle = tokio::spawn(async move {
         axum::serve(listener, app)
@@ -68,10 +68,25 @@ async fn graceful_shutdown_completes_cleanly() {
     assert_eq!(resp.status(), 200);
 
     // Signal shutdown
-    cancel_token.cancel();
+    signal_token.cancel();
 
     // Server should exit cleanly within a reasonable timeout
     let result = tokio::time::timeout(std::time::Duration::from_secs(5), server_handle).await;
     assert!(result.is_ok(), "server should shut down within 5 seconds");
     result.unwrap().unwrap();
+}
+
+#[tokio::test]
+async fn try_bind_short_circuits_on_permission_error() {
+    // Trying to bind to a privileged port without root should fail immediately,
+    // not try all 11 ports
+    let result = mokumo_api::try_bind("127.0.0.1", 1).await;
+    assert!(result.is_err(), "should fail on privileged port");
+
+    let err_msg = result.unwrap_err().to_string();
+    // Should short-circuit with a specific error, not "all ports exhausted"
+    assert!(
+        !err_msg.contains("Could not bind to any port in range"),
+        "should short-circuit on permission error, not exhaust all ports. Got: {err_msg}"
+    );
 }
