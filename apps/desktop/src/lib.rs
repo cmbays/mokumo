@@ -6,7 +6,10 @@ use tracing_subscriber::EnvFilter;
 
 use mokumo_api::{ServerConfig, build_app, ensure_data_dirs, try_bind};
 
-/// Initialize the server: create dirs, backup, init DB, build app, bind port.
+const DEFAULT_PORT: u16 = 6565;
+const DEFAULT_HOST: &str = "127.0.0.1";
+
+/// Initialize the server: create dirs, backup, run migrations, build app, bind port.
 ///
 /// Extracted so the orchestration sequence can be tested without a window system.
 async fn init_server(
@@ -17,7 +20,7 @@ async fn init_server(
     let config = ServerConfig {
         port,
         host: host.to_owned(),
-        data_dir: data_dir.clone(),
+        data_dir,
     };
 
     ensure_data_dirs(&config.data_dir)?;
@@ -31,12 +34,10 @@ async fn init_server(
         mokumo_db::pre_migration_backup(&db_path).await?;
     }
 
-    // Initialize database
     let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
     let pool = mokumo_db::initialize_database(&database_url).await?;
     tracing::info!("Database ready at {}", db_path.display());
 
-    // Build application
     let app = build_app(&config, pool);
 
     // Bind to port (with fallback)
@@ -54,7 +55,6 @@ async fn init_server(
 }
 
 pub fn run() {
-    // Initialize tracing
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
         if std::env::var_os("RUST_LOG").is_some() {
             eprintln!("WARNING: Invalid RUST_LOG value, falling back to 'info': {e}");
@@ -70,8 +70,12 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the existing window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_focus();
-                let _ = window.unminimize();
+                if let Err(e) = window.set_focus() {
+                    tracing::warn!("Failed to focus existing window: {e}");
+                }
+                if let Err(e) = window.unminimize() {
+                    tracing::warn!("Failed to unminimize existing window: {e}");
+                }
             }
         }))
         .setup(move |app| {
@@ -85,14 +89,12 @@ pub fn run() {
 
             let server_token = shutdown_token.clone();
 
-            // Initialize server synchronously in setup (DB init, port binding)
-            let (listener, router, actual_port) = tauri::async_runtime::block_on(init_server(
-                data_dir, 6565, "0.0.0.0",
-            ))
-            .map_err(|e| {
-                tracing::error!("Server initialization failed: {e}");
-                e
-            })?;
+            let (listener, router, actual_port) =
+                tauri::async_runtime::block_on(init_server(data_dir, DEFAULT_PORT, DEFAULT_HOST))
+                    .map_err(|e| {
+                        tracing::error!("Server initialization failed: {e}");
+                        e
+                    })?;
 
             // Spawn the Axum server on Tauri's async runtime (NOT tokio::spawn)
             tauri::async_runtime::spawn(async move {
@@ -107,7 +109,6 @@ pub fn run() {
                 tracing::info!("Server shut down cleanly");
             });
 
-            // Create the main window pointing to the local server
             let url = format!("http://localhost:{actual_port}");
             tracing::info!("Opening webview at {url}");
 

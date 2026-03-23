@@ -31,6 +31,3 @@ tracing-subscriber = { workspace = true }
 
 # Axum (for axum::serve in the spawned server task)
 axum = { workspace = true }
-
-# Serialization (for single-instance payload)
-serde = { workspace = true }

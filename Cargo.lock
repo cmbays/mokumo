@@ -2884,7 +2884,6 @@ dependencies = [
  "axum",
  "mokumo-api",
  "mokumo-db",
- "serde",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
