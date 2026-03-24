@@ -81,6 +81,8 @@ tasks:
     - coverage
   test-mutation:
     command: pnpm test:mutation
+    deps:
+    - check
     inputs:
     - '@group(sources)'
     - '@group(tests)'
