@@ -1,5 +1,3 @@
-use std::future::Future;
-
 use super::FormattedSequence;
 use crate::error::DomainError;
 
@@ -7,9 +5,7 @@ use crate::error::DomainError;
 ///
 /// Implementors must guarantee that concurrent calls never produce
 /// duplicate values for the same sequence name.
+#[allow(async_fn_in_trait)] // All impls are Send; single-binary app with no external consumers.
 pub trait SequenceGenerator: Send + Sync {
-    fn next_value(
-        &self,
-        sequence_name: &str,
-    ) -> impl Future<Output = Result<FormattedSequence, DomainError>> + Send;
+    async fn next_value(&self, sequence_name: &str) -> Result<FormattedSequence, DomainError>;
 }

@@ -13,6 +13,7 @@ pub struct DbWorld {
     generator: SqliteSequenceGenerator,
     result: Option<Result<FormattedSequence, DomainError>>,
     results: Vec<Result<FormattedSequence, DomainError>>,
+    last_seeded_name: Option<String>,
     _tmp: tempfile::TempDir,
 }
 
@@ -30,6 +31,7 @@ impl DbWorld {
             generator,
             result: None,
             results: Vec::new(),
+            last_seeded_name: None,
             _tmp: tmp,
         }
     }
@@ -38,9 +40,19 @@ impl DbWorld {
 // ---- Given steps ----
 
 #[given(expr = "the customer sequence is seeded with prefix {string} and padding {int}")]
-async fn customer_sequence_seeded(_w: &mut DbWorld, _prefix: String, _padding: i32) {
-    // The migration already seeds "customer" with prefix "C" and padding 4.
-    // This step is a no-op — the seed matches the feature file expectations.
+async fn customer_sequence_seeded(w: &mut DbWorld, prefix: String, padding: i32) {
+    // Verify the migration-seeded values match what the scenario expects.
+    let row = sqlx::query_as::<_, (String, i64)>(
+        "SELECT prefix, padding FROM number_sequences WHERE name = 'customer'",
+    )
+    .fetch_one(&w.pool)
+    .await
+    .expect("customer sequence should be seeded by migration");
+    assert_eq!(row.0, prefix, "Migration prefix doesn't match scenario");
+    assert_eq!(
+        row.1, padding as i64,
+        "Migration padding doesn't match scenario"
+    );
 }
 
 #[given(expr = "a sequence with prefix {string} and padding {int}")]
@@ -54,6 +66,7 @@ async fn sequence_with_prefix(w: &mut DbWorld, prefix: String, padding: i32) {
         .execute(&w.pool)
         .await
         .expect("failed to insert sequence");
+    w.last_seeded_name = Some(name);
 }
 
 #[given(expr = "a quote sequence is seeded with prefix {string} and padding {int}")]
@@ -84,8 +97,11 @@ async fn next_customer_number(w: &mut DbWorld) {
 
 #[when("the next number is requested")]
 async fn next_number(w: &mut DbWorld) {
-    // For the "INV" scenario — derive name from lowercase prefix
-    w.result = Some(w.generator.next_value("inv").await);
+    let name = w
+        .last_seeded_name
+        .as_deref()
+        .expect("no sequence seeded — use a Given step first");
+    w.result = Some(w.generator.next_value(name).await);
 }
 
 #[when("the next quote number is requested")]
