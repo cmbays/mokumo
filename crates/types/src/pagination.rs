@@ -70,6 +70,12 @@ mod tests {
     }
 
     #[test]
+    fn total_pages_per_page_zero_returns_zero() {
+        let list = PaginatedList::<HealthResponse>::new(vec![], 10, 1, 0);
+        assert_eq!(list.total_pages, 0);
+    }
+
+    #[test]
     fn serde_roundtrip() {
         let items = vec![HealthResponse {
             status: "ok".into(),
