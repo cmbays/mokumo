@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { navItems } from "$lib/config/nav-items";
+  import { isActive } from "$lib/config/nav-utils";
   import * as Avatar from "$lib/components/ui/avatar";
   import * as Popover from "$lib/components/ui/popover";
   import * as Sidebar from "$lib/components/ui/sidebar";
@@ -21,11 +23,6 @@
     { label: "System", value: "system", icon: Monitor },
   ] as const;
 
-  function isActive(url: string, pathname: string): boolean {
-    if (url === "/") return pathname === "/";
-    return pathname.startsWith(url);
-  }
-
   function handleLogout() {
     goto("/");
   }
@@ -33,10 +30,12 @@
   const sidebar = useSidebar();
 
   $effect(() => {
-    void $page.url.pathname;
-    if (sidebar.isMobile && sidebar.openMobile) {
-      sidebar.setOpenMobile(false);
-    }
+    void page.url.pathname;
+    untrack(() => {
+      if (sidebar.isMobile && sidebar.openMobile) {
+        sidebar.setOpenMobile(false);
+      }
+    });
   });
 </script>
 
@@ -47,7 +46,7 @@
         {#each visibleItems as item (item.url)}
           <Sidebar.SidebarMenuItem>
             <Sidebar.SidebarMenuButton
-              isActive={isActive(item.url, $page.url.pathname)}
+              isActive={isActive(item.url, page.url.pathname)}
               tooltipContent={item.title}
             >
               {#snippet child({ props })}

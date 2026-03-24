@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 
   let { children } = $props();
 
@@ -9,7 +9,7 @@
     { label: "System", href: "/settings/system" },
   ];
 
-  const activeTab = $derived($page.url.pathname);
+  const activeTab = $derived(page.url.pathname);
 </script>
 
 <div class="space-y-6">
@@ -21,8 +21,9 @@
     {#each tabs as tab (tab.href)}
       <a
         href={tab.href}
-        class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab ===
-        tab.href
+        class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab.startsWith(
+          tab.href,
+        )
           ? 'border-primary text-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground'}"
       >

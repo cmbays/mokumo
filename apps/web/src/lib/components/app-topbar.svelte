@@ -1,35 +1,13 @@
 <script lang="ts">
-  import { page } from "$app/stores";
-  import { navItems } from "$lib/config/nav-items";
+  import { page } from "$app/state";
+  import { buildBreadcrumbs } from "$lib/config/nav-utils";
   import * as Avatar from "$lib/components/ui/avatar";
   import * as Breadcrumb from "$lib/components/ui/breadcrumb";
   import { Separator } from "$lib/components/ui/separator";
   import { SidebarTrigger } from "$lib/components/ui/sidebar";
   import UserRound from "@lucide/svelte/icons/user-round";
 
-  const titleBySlug = new Map(
-    navItems.map((item) => [
-      item.url.split("/").filter(Boolean)[0] ?? "",
-      item.title,
-    ]),
-  );
-
-  function labelForSlug(slug: string): string {
-    return (
-      titleBySlug.get(slug) ?? slug.charAt(0).toUpperCase() + slug.slice(1)
-    );
-  }
-
-  const segments = $derived.by(() => {
-    const pathname = $page.url.pathname;
-    if (pathname === "/") return [{ label: "Home", href: "/" }];
-
-    const parts = pathname.split("/").filter(Boolean);
-    return parts.map((part, i) => ({
-      label: labelForSlug(part),
-      href: "/" + parts.slice(0, i + 1).join("/"),
-    }));
-  });
+  const segments = $derived(buildBreadcrumbs(page.url.pathname));
 </script>
 
 <header class="flex h-14 items-center gap-2 border-b px-4">
