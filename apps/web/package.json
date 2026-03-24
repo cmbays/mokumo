@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "depcruise": "depcruise src --config .dependency-cruiser.cjs",
+    "test:mutation": "stryker run"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.0",
