@@ -9,7 +9,19 @@ const THEME_CLASSES = [
   "theme-sunset-horizon",
 ];
 
+const MOKUMO_VIEWPORTS = {
+  mobile: { name: "Mobile", styles: { width: "375px", height: "812px" } },
+  sm: { name: "SM (640px)", styles: { width: "640px", height: "900px" } },
+  md: { name: "MD (768px)", styles: { width: "768px", height: "900px" } },
+  lg: { name: "LG (1024px)", styles: { width: "1024px", height: "900px" } },
+  "2xl": { name: "2XL (1536px)", styles: { width: "1536px", height: "900px" } },
+};
+
 const preview: Preview = {
+  parameters: {
+    viewport: { viewports: MOKUMO_VIEWPORTS },
+    a11y: { test: "warn" },
+  },
   globalTypes: {
     mode: {
       name: "Mode",

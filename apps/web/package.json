@@ -17,7 +17,9 @@
     "test-storybook": "pnpm exec bddgen && pnpm exec playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2",
+    "@storybook/addon-a11y": "^10.3.3",
     "@storybook/addon-svelte-csf": "^5.1.0",
     "@storybook/sveltekit": "10.3.3",
     "@stryker-mutator/core": "^9.6.0",
