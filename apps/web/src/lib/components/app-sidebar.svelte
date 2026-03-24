@@ -5,6 +5,7 @@
   import * as Avatar from "$lib/components/ui/avatar";
   import * as Popover from "$lib/components/ui/popover";
   import * as Sidebar from "$lib/components/ui/sidebar";
+  import { useSidebar } from "$lib/components/ui/sidebar";
   import { setMode, userPrefersMode } from "mode-watcher";
   import LogOut from "@lucide/svelte/icons/log-out";
   import Monitor from "@lucide/svelte/icons/monitor";
@@ -28,6 +29,15 @@
   function handleLogout() {
     goto("/");
   }
+
+  const sidebar = useSidebar();
+
+  $effect(() => {
+    void $page.url.pathname;
+    if (sidebar.isMobile && sidebar.openMobile) {
+      sidebar.setOpenMobile(false);
+    }
+  });
 </script>
 
 <Sidebar.Sidebar variant="sidebar" collapsible="icon">
