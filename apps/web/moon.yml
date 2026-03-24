@@ -96,6 +96,30 @@ tasks:
     inputs:
     - '@group(sources)'
     - .dependency-cruiser.cjs
+  storybook:
+    command: pnpm storybook
+    options:
+      cache: false
+      persistent: true
+      outputStyle: stream
+  build-storybook:
+    command: pnpm build-storybook
+    # TODO(#32): add `deps: [check]` once svelte-check type errors are resolved
+    inputs:
+    - '@group(sources)'
+    - '@group(app)'
+    - .storybook/**/*
+    - package.json
+    outputs:
+    - storybook-static
+  test-storybook:
+    command: pnpm test-storybook
+    deps:
+    - build-storybook
+    inputs:
+    - '@group(sources)'
+    - '@group(tests)'
+    - .storybook/**/*
   check:
     command: pnpm check
     inputs:
