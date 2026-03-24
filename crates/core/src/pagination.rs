@@ -1,6 +1,7 @@
 pub const DEFAULT_PER_PAGE: u32 = 25;
 pub const MAX_PER_PAGE: u32 = 100;
 
+#[derive(Debug, Clone, Copy)]
 pub struct PageParams {
     page: u32,
     per_page: u32,
