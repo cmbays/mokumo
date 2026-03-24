@@ -40,6 +40,9 @@ Thumbs.db
 tmp/
 dist/
 
+# Test coverage
+coverage/
+
 # Lefthook personal overrides
 lefthook-local.yml
 

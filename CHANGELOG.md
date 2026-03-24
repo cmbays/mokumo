@@ -17,7 +17,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 9 BDD scenarios covering connection, broadcast, and shutdown behavior
 - 12 Vitest tests covering client reconnection, backoff, and error handling
 - Origin header validation on WebSocket endpoint to prevent cross-site hijacking
+- Standardized API error responses with `ErrorBody` wire format (`code`, `message`, `details`)
+- Domain error hierarchy: `DomainError` (core) -> `AppError` (api) -> `ErrorBody` (wire)
+- Internal/database error redaction — sensitive details logged server-side, generic message returned to clients
+- `PageParams` with clamped pagination (page >= 1, per_page 1..100, defaults 1/25)
+- `PaginatedList<T>` generic pagination response type with computed `total_pages`
+- `IncludeDeleted` soft-delete filter enum (excludes by default)
+- `PaginationParams` Axum query extractor bridging HTTP params to domain types
+- `apiFetch<T>` typed frontend fetch utility with discriminated union responses
+- TypeScript bindings for `ErrorBody` and `PaginatedList<T>` via ts-rs
+- JSON 404 responses for unmatched API routes (instead of serving the SPA shell)
+- BDD feature files specifying error, pagination, and response convention behaviors
 
 ### Changed
 
 - Default standalone server bind address from `0.0.0.0` to `127.0.0.1` (use `--host 0.0.0.0` for LAN access)
+
+### Fixed
+
+- `ErrorBody.details` now always serializes as `null` when absent (not omitted from JSON)
