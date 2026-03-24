@@ -68,12 +68,19 @@ export function createWebSocketConnection(
     };
 
     ws.onmessage = (event: MessageEvent) => {
+      let data: BroadcastEvent;
       try {
-        const data = JSON.parse(event.data as string) as BroadcastEvent;
-        options.onMessage(data);
+        data = JSON.parse(event.data as string) as BroadcastEvent;
       } catch {
-        // Silently ignore malformed messages
+        // Silently ignore malformed JSON — don't propagate parse failures
+        return;
       }
+      options.onMessage(data);
+    };
+
+    ws.onerror = () => {
+      // Connection failures (TLS, DNS, refused) are surfaced here.
+      // onclose will fire next and trigger reconnection.
     };
 
     ws.onclose = () => {
