@@ -3215,13 +3215,17 @@ dependencies = [
 name = "mokumo-core"
 version = "0.1.0"
 dependencies = [
+ "cucumber",
  "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]
 name = "mokumo-db"
 version = "0.1.0"
 dependencies = [
+ "cucumber",
+ "mokumo-core",
  "rusqlite",
  "sqlx",
  "tempfile",

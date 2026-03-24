@@ -9,6 +9,16 @@ sqlx = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 rusqlite = { workspace = true }
+mokumo-core = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+cucumber = { workspace = true }
+
+[features]
+bdd = []
+
+[[test]]
+name = "bdd"
+harness = false
+required-features = ["bdd"]
