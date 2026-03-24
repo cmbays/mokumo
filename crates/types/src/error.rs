@@ -12,7 +12,6 @@ use ts_rs::TS;
 pub struct ErrorBody {
     pub code: String,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<HashMap<String, Vec<String>>>,
 }
 
@@ -62,7 +61,7 @@ mod tests {
     }
 
     #[test]
-    fn details_omitted_from_json_when_none() {
+    fn details_serialized_as_null_when_none() {
         let body = ErrorBody {
             code: "not_found".into(),
             message: "Not found".into(),
@@ -70,8 +69,8 @@ mod tests {
         };
         let json = serde_json::to_string(&body).unwrap();
         assert!(
-            !json.contains("details"),
-            "details should be omitted when None, got: {json}"
+            json.contains("\"details\":null"),
+            "details should serialize as null when None, got: {json}"
         );
     }
 
