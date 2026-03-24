@@ -148,4 +148,76 @@ describe("apiFetch", () => {
       });
     });
   });
+
+  describe("204 No Content", () => {
+    it("returns ok:true with undefined data on 204", async () => {
+      vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+
+      const result = await apiFetch("/api/items/1");
+
+      expect(result).toEqual({ ok: true, data: undefined });
+    });
+  });
+
+  describe("success response with non-JSON body", () => {
+    it("returns parse_error when success response is not JSON", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response("OK", {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        }),
+      );
+
+      const result = await apiFetch("/api/test");
+
+      expect(result).toEqual({
+        ok: false,
+        status: 200,
+        error: {
+          code: "parse_error",
+          message: "Server returned a non-JSON success response",
+          details: null,
+        },
+      });
+    });
+  });
+
+  describe("non-JSON error responses", () => {
+    it("returns parse_error when error response is not JSON", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response("<html>502 Bad Gateway</html>", {
+          status: 502,
+          headers: { "Content-Type": "text/html" },
+        }),
+      );
+
+      const result = await apiFetch("/api/test");
+
+      expect(result).toEqual({
+        ok: false,
+        status: 502,
+        error: {
+          code: "parse_error",
+          message: "Server returned a non-JSON error response",
+          details: null,
+        },
+      });
+    });
+
+    it("preserves status code when error body is empty", async () => {
+      vi.mocked(fetch).mockResolvedValue(new Response("", { status: 503 }));
+
+      const result = await apiFetch("/api/test");
+
+      expect(result).toEqual({
+        ok: false,
+        status: 503,
+        error: {
+          code: "parse_error",
+          message: "Server returned a non-JSON error response",
+          details: null,
+        },
+      });
+    });
+  });
 });

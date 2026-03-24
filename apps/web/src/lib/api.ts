@@ -7,12 +7,39 @@ export async function apiFetch<T>(url: string, options?: RequestInit): Promise<A
     const response = await fetch(url, options);
 
     if (response.ok) {
-      const data: T = await response.json();
-      return { ok: true, data };
+      if (response.status === 204) {
+        return { ok: true, data: undefined as T };
+      }
+      try {
+        const data: T = await response.json();
+        return { ok: true, data };
+      } catch {
+        return {
+          ok: false,
+          status: response.status,
+          error: {
+            code: "parse_error",
+            message: "Server returned a non-JSON success response",
+            details: null,
+          },
+        };
+      }
     }
 
-    const error: ErrorBody = await response.json();
-    return { ok: false, status: response.status, error };
+    try {
+      const error: ErrorBody = await response.json();
+      return { ok: false, status: response.status, error };
+    } catch {
+      return {
+        ok: false,
+        status: response.status,
+        error: {
+          code: "parse_error",
+          message: "Server returned a non-JSON error response",
+          details: null,
+        },
+      };
+    }
   } catch (err) {
     return {
       ok: false,
