@@ -1,0 +1,151 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { apiFetch } from "./api";
+import type { ErrorBody } from "./types/ErrorBody";
+
+describe("apiFetch", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  describe("success responses", () => {
+    it("returns ok:true with parsed data on 200", async () => {
+      const data = { id: 1, name: "Test" };
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify(data), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const result = await apiFetch<{ id: number; name: string }>("/api/test");
+
+      expect(result).toEqual({ ok: true, data });
+    });
+
+    it("returns ok:true for 201 created", async () => {
+      const data = { id: 42 };
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify(data), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const result = await apiFetch<{ id: number }>("/api/items");
+
+      expect(result).toEqual({ ok: true, data: { id: 42 } });
+    });
+
+    it("passes through request options", async () => {
+      vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+
+      await apiFetch("/api/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "test" }),
+      });
+
+      expect(fetch).toHaveBeenCalledWith("/api/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "test" }),
+      });
+    });
+  });
+
+  describe("error responses", () => {
+    it("returns ok:false with ErrorBody on 404", async () => {
+      const error: ErrorBody = {
+        code: "not_found",
+        message: "Customer not found",
+        details: null,
+      };
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify(error), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const result = await apiFetch("/api/customers/999");
+
+      expect(result).toEqual({ ok: false, status: 404, error });
+    });
+
+    it("returns ok:false with validation details on 422", async () => {
+      const error: ErrorBody = {
+        code: "validation_error",
+        message: "Validation failed",
+        details: { email: ["must be a valid email"] },
+      };
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify(error), {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const result = await apiFetch("/api/customers");
+
+      expect(result).toEqual({ ok: false, status: 422, error });
+    });
+
+    it("returns ok:false with ErrorBody on 500", async () => {
+      const error: ErrorBody = {
+        code: "internal_error",
+        message: "An internal error occurred",
+        details: null,
+      };
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify(error), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const result = await apiFetch("/api/health");
+
+      expect(result).toEqual({ ok: false, status: 500, error });
+    });
+  });
+
+  describe("network errors", () => {
+    it("returns synthetic ErrorBody when fetch throws", async () => {
+      vi.mocked(fetch).mockRejectedValue(new TypeError("Failed to fetch"));
+
+      const result = await apiFetch("/api/test");
+
+      expect(result).toEqual({
+        ok: false,
+        status: 0,
+        error: {
+          code: "network_error",
+          message: "Failed to fetch",
+          details: null,
+        },
+      });
+    });
+
+    it("handles non-Error thrown values", async () => {
+      vi.mocked(fetch).mockRejectedValue("unexpected string error");
+
+      const result = await apiFetch("/api/test");
+
+      expect(result).toEqual({
+        ok: false,
+        status: 0,
+        error: {
+          code: "network_error",
+          message: "Network request failed",
+          details: null,
+        },
+      });
+    });
+  });
+});
