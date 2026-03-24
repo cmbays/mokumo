@@ -37,21 +37,22 @@ pub async fn ws_handler(
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, state)))
 }
 
-/// Extract the host (without port) from an Origin header value.
+/// Extract the host and port from an Origin header value.
 ///
 /// Origin format is always `scheme://host[:port]` with no path.
-fn origin_host(origin: &str) -> Option<&str> {
-    let without_scheme = origin
+/// Returns the full `host[:port]` portion after stripping the scheme.
+fn origin_host_port(origin: &str) -> Option<&str> {
+    origin
         .strip_prefix("http://")
-        .or_else(|| origin.strip_prefix("https://"))?;
-    Some(without_scheme.split(':').next().unwrap_or(without_scheme))
+        .or_else(|| origin.strip_prefix("https://"))
 }
 
 /// Check whether a WebSocket Origin header is from a trusted source.
 ///
-/// Compares the Origin's host against the request's Host header — if they match,
-/// the request came from a page served by this server. Always allows `tauri://`
-/// for the desktop shell. Falls back to localhost-only when no Host header is present.
+/// Compares the Origin's full `host:port` against the request's Host header — if
+/// they match, the request came from a page served by this same server on the same
+/// port. Always allows `tauri://` for the desktop shell. Falls back to
+/// localhost-only when no Host header is present.
 fn is_allowed_origin(origin: &str, headers: &axum::http::HeaderMap) -> bool {
     let origin = origin.trim();
 
@@ -60,24 +61,24 @@ fn is_allowed_origin(origin: &str, headers: &axum::http::HeaderMap) -> bool {
         return true;
     }
 
-    let o_host = match origin_host(origin) {
+    let o_host_port = match origin_host_port(origin) {
         Some(h) => h,
         None => return false,
     };
 
-    // Compare against the request's Host header. Browsers set Host to the target
-    // server and Origin to the page's own origin — if an attacker's page at
-    // evil.com connects to ws://192.168.1.50:6565/ws, Origin will be
-    // http://evil.com while Host will be 192.168.1.50:6565 → mismatch → rejected.
+    // Compare full host:port from Origin against the Host header. Browsers set
+    // Host to the target server (host:port) and Origin to the page's own origin
+    // (scheme://host:port). Comparing the full host:port ensures a different app
+    // on the same hostname but a different port cannot hijack the WebSocket.
     if let Some(host_val) = headers.get(axum::http::header::HOST)
         && let Ok(host_str) = host_val.to_str()
     {
-        let request_host = host_str.split(':').next().unwrap_or(host_str);
-        return o_host.eq_ignore_ascii_case(request_host);
+        return o_host_port.eq_ignore_ascii_case(host_str);
     }
 
     // No Host header (HTTP/1.0 or weird client) — fall back to loopback only
-    o_host == "localhost" || o_host == "127.0.0.1"
+    let host_only = o_host_port.split(':').next().unwrap_or(o_host_port);
+    host_only == "localhost" || host_only == "127.0.0.1"
 }
 
 #[cfg(debug_assertions)]
@@ -204,7 +205,16 @@ mod tests {
 
         let h = headers_with_host("localhost:6565");
         assert!(is_allowed_origin("http://localhost:6565", &h));
-        assert!(is_allowed_origin("http://localhost:3000", &h));
+    }
+
+    #[test]
+    fn different_port_rejected() {
+        // A different app on the same host but different port must be rejected
+        let h = headers_with_host("localhost:6565");
+        assert!(!is_allowed_origin("http://localhost:3000", &h));
+
+        let h = headers_with_host("mokumo.local:6565");
+        assert!(!is_allowed_origin("http://mokumo.local:3000", &h));
     }
 
     #[test]
