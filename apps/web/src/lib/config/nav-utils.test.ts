@@ -34,12 +34,16 @@ describe("buildBreadcrumbs", () => {
     expect(buildBreadcrumbs("/")).toEqual([{ label: "Home", href: "/" }]);
   });
 
-  it("returns single segment for top-level route", () => {
-    expect(buildBreadcrumbs("/customers")).toEqual([{ label: "Customers", href: "/customers" }]);
+  it("returns Home + single segment for top-level route", () => {
+    expect(buildBreadcrumbs("/customers")).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Customers", href: "/customers" },
+    ]);
   });
 
-  it("returns multiple segments for nested route", () => {
+  it("returns Home + multiple segments for nested route", () => {
     expect(buildBreadcrumbs("/settings/shop")).toEqual([
+      { label: "Home", href: "/" },
       { label: "Settings", href: "/settings" },
       { label: "Shop", href: "/settings/shop" },
     ]);

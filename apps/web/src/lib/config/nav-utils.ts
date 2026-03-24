@@ -22,8 +22,11 @@ export function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
   if (pathname === "/") return [{ label: "Home", href: "/" }];
 
   const parts = pathname.split("/").filter(Boolean);
-  return parts.map((part, i) => ({
-    label: labelForSlug(part),
-    href: "/" + parts.slice(0, i + 1).join("/"),
-  }));
+  return [
+    { label: "Home", href: "/" },
+    ...parts.map((part, i) => ({
+      label: labelForSlug(part),
+      href: "/" + parts.slice(0, i + 1).join("/"),
+    })),
+  ];
 }
