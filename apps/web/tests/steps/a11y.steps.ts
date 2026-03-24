@@ -5,6 +5,8 @@ import { When, Then } from "../support/storybook.fixture";
 let axeResults: Awaited<ReturnType<AxeBuilder["analyze"]>>;
 
 When("I open the accessibility panel", async ({ page }) => {
+  // Reset to prevent stale results from a previous scenario in the same worker
+  axeResults = undefined!;
   axeResults = await new AxeBuilder({ page }).include("body").analyze();
 });
 

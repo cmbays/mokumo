@@ -1,36 +1,31 @@
 import { expect } from "@playwright/test";
 import { When, Then } from "../support/storybook.fixture";
+import { gotoStory, getCssVariableValue, BUTTON_SELECTOR } from "../support/storybook.helpers";
 
 When("I view a Button story", async ({ page, storybookUrl }) => {
-  await page.goto(`${storybookUrl}/iframe.html?id=ui-button--default&viewMode=story`);
-  await expect(page.locator('[data-slot="button"]').first()).toBeVisible({ timeout: 15_000 });
+  await gotoStory(page, storybookUrl);
 });
 
 Then(
   "the {string} CSS variable is defined on the root element",
   async ({ page }, varName: string) => {
-    const value = await page.locator(":root").evaluate((el, prop) => {
-      return getComputedStyle(el).getPropertyValue(prop).trim();
-    }, varName);
+    const value = await getCssVariableValue(page, varName);
     expect(value).not.toBe("");
   },
 );
 
 Then("the Button is visible and interactive", async ({ page }) => {
-  const button = page.locator('[data-slot="button"]').first();
+  const button = page.locator(BUTTON_SELECTOR).first();
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
 });
 
 When("I view any component story", async ({ page, storybookUrl }) => {
-  await page.goto(`${storybookUrl}/iframe.html?id=ui-button--default&viewMode=story`);
-  await expect(page.locator('[data-slot="button"]').first()).toBeVisible({ timeout: 15_000 });
+  await gotoStory(page, storybookUrl);
 });
 
 Then("the root element has a computed {string} CSS variable", async ({ page }, varName: string) => {
-  const value = await page.locator(":root").evaluate((el, prop) => {
-    return getComputedStyle(el).getPropertyValue(prop).trim();
-  }, varName);
+  const value = await getCssVariableValue(page, varName);
   expect(value).not.toBe("");
 });
 

@@ -104,6 +104,7 @@ tasks:
       outputStyle: stream
   build-storybook:
     command: pnpm build-storybook
+    # TODO(#32): add `deps: [check]` once svelte-check type errors are resolved
     inputs:
     - '@group(sources)'
     - '@group(app)'

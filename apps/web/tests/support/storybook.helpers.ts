@@ -22,7 +22,7 @@ export function storybookIframeUrl(
 }
 
 /**
- * Navigate to a story iframe and wait for the default component to render.
+ * Navigate to a story iframe and wait for the Button component to render.
  */
 export async function gotoStory(
   page: Page,
@@ -34,7 +34,8 @@ export async function gotoStory(
 }
 
 /**
- * Convert a theme display name to a CSS class slug.
+ * Convert a theme display name to a bare slug (e.g. "Midnight Bloom" → "midnight-bloom").
+ * Does not include the `theme-` prefix — callers add it when needed.
  */
 export function toThemeSlug(theme: string): string {
   return theme.toLowerCase().replace(/\s+/g, "-");
