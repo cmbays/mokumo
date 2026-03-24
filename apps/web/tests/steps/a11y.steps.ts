@@ -5,7 +5,7 @@ import { When, Then } from "../support/storybook.fixture";
 let axeResults: Awaited<ReturnType<AxeBuilder["analyze"]>>;
 
 When("I open the accessibility panel", async ({ page }) => {
-  axeResults = await new AxeBuilder({ page }).analyze();
+  axeResults = await new AxeBuilder({ page }).include("body").analyze();
 });
 
 Then("axe-core violations are displayed at warning level", async () => {
@@ -17,7 +17,6 @@ Then("axe-core violations are displayed at warning level", async () => {
       .join("\n");
     console.warn(`axe-core found ${axeResults.violations.length} violation(s):\n${summary}`);
   }
-  // Assert the scan completed (results object exists)
   expect(axeResults).toBeDefined();
   expect(axeResults.testEngine.name).toBe("axe-core");
 });
