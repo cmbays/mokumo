@@ -49,13 +49,8 @@ impl ConnectionManager {
 mod tests {
     use super::*;
 
-    fn make_event(type_: &str, topic: &str) -> BroadcastEvent {
-        BroadcastEvent {
-            v: 1,
-            type_: type_.into(),
-            topic: topic.into(),
-            payload: serde_json::json!({"test": true}),
-        }
+    fn make_event(type_: &str) -> BroadcastEvent {
+        BroadcastEvent::new(type_, serde_json::json!({"test": true}))
     }
 
     #[test]
@@ -88,7 +83,7 @@ mod tests {
         let mgr = ConnectionManager::new(16);
         let (_id, mut rx) = mgr.add();
 
-        let event = make_event("customer.created", "customer");
+        let event = make_event("customer.created");
         let sent = mgr.broadcast(event.clone());
         assert_eq!(sent, 1);
 
@@ -100,7 +95,7 @@ mod tests {
     #[test]
     fn test_broadcast_no_receivers_does_not_panic() {
         let mgr = ConnectionManager::new(16);
-        let event = make_event("customer.created", "customer");
+        let event = make_event("customer.created");
         let sent = mgr.broadcast(event);
         assert_eq!(sent, 0);
     }

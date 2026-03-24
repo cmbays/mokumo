@@ -31,12 +31,10 @@ pub async fn debug_broadcast(
     State(state): State<SharedState>,
     axum::Json(body): axum::Json<DebugBroadcastRequest>,
 ) -> impl IntoResponse {
-    let event = mokumo_types::ws::BroadcastEvent {
-        v: 1,
-        type_: body.type_,
-        topic: body.topic,
-        payload: body.payload.unwrap_or(serde_json::Value::Null),
-    };
+    let event = mokumo_types::ws::BroadcastEvent::new(
+        body.type_,
+        body.payload.unwrap_or(serde_json::Value::Null),
+    );
     let count = state.ws.broadcast(event);
     axum::Json(serde_json::json!({ "receivers": count }))
 }
@@ -46,7 +44,6 @@ pub async fn debug_broadcast(
 pub struct DebugBroadcastRequest {
     #[serde(rename = "type")]
     pub type_: String,
-    pub topic: String,
     pub payload: Option<serde_json::Value>,
 }
 

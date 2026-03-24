@@ -100,10 +100,20 @@ async fn connection_accepted(w: &mut ApiWorld) {
 }
 
 async fn assert_connection_count(w: &ApiWorld, count: usize) {
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    let resp = w.server.get("/api/debug/connections").await;
-    let json: serde_json::Value = resp.json();
-    assert_eq!(json["count"].as_u64().unwrap() as usize, count);
+    let deadline = std::time::Duration::from_secs(2);
+    let poll = std::time::Duration::from_millis(25);
+    tokio::time::timeout(deadline, async {
+        loop {
+            let resp = w.server.get("/api/debug/connections").await;
+            let json: serde_json::Value = resp.json();
+            if json["count"].as_u64().unwrap() as usize == count {
+                return;
+            }
+            tokio::time::sleep(poll).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("Timed out waiting for connection count to reach {count}"));
 }
 
 #[then(expr = "the server tracks {int} connected client")]
@@ -161,38 +171,26 @@ async fn no_clients_connected(_w: &mut ApiWorld) {
 
 #[when(expr = "a {string} event is broadcast")]
 async fn broadcast_event(w: &mut ApiWorld, event_type: String) {
-    let topic = event_type
-        .split('.')
-        .next()
-        .unwrap_or("unknown")
-        .to_string();
     let body = serde_json::json!({
         "type": event_type,
-        "topic": topic,
     });
     w.last_broadcast_type = Some(event_type);
     w.broadcast_response = Some(w.server.post("/api/debug/broadcast").json(&body).await);
-    // Give sender tasks time to forward the broadcast
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // Yield to let sender tasks forward the broadcast
+    tokio::task::yield_now().await;
 }
 
 #[when(expr = "a {string} event is broadcast with payload '{}'")]
 async fn broadcast_event_with_payload(w: &mut ApiWorld, event_type: String, payload: String) {
-    let topic = event_type
-        .split('.')
-        .next()
-        .unwrap_or("unknown")
-        .to_string();
     let payload_value: serde_json::Value =
         serde_json::from_str(&payload).expect("invalid payload JSON");
     let body = serde_json::json!({
         "type": event_type,
-        "topic": topic,
         "payload": payload_value,
     });
     w.last_broadcast_type = Some(event_type);
     w.broadcast_response = Some(w.server.post("/api/debug/broadcast").json(&body).await);
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    tokio::task::yield_now().await;
 }
 
 #[then(expr = "the client receives a message with type {string}")]
@@ -256,8 +254,8 @@ async fn broadcast_completes_without_error(w: &mut ApiWorld) {
 #[when("the server begins shutting down")]
 async fn server_begins_shutdown(w: &mut ApiWorld) {
     w.shutdown_token.cancel();
-    // Give the sender task time to send the close frame
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // Yield to let the sender task send the close frame
+    tokio::task::yield_now().await;
 }
 
 #[then(expr = "the client receives a close frame with code {int}")]

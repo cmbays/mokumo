@@ -11,6 +11,23 @@ pub struct BroadcastEvent {
     pub payload: serde_json::Value,
 }
 
+impl BroadcastEvent {
+    /// Create a new BroadcastEvent with v=1 and topic derived from the event type.
+    ///
+    /// The topic is the prefix before the first `.` in the type string
+    /// (e.g. `"customer.created"` → topic `"customer"`).
+    pub fn new(type_: impl Into<String>, payload: serde_json::Value) -> Self {
+        let type_ = type_.into();
+        let topic = type_.split('.').next().unwrap_or("unknown").to_string();
+        Self {
+            v: 1,
+            type_,
+            topic,
+            payload,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,6 +66,21 @@ mod tests {
         assert_eq!(event.type_, "job.completed");
         assert_eq!(event.topic, "job");
         assert_eq!(event.payload["id"], 1);
+    }
+
+    #[test]
+    fn new_derives_topic_from_type() {
+        let event = BroadcastEvent::new("customer.created", serde_json::json!({"id": 1}));
+        assert_eq!(event.v, 1);
+        assert_eq!(event.type_, "customer.created");
+        assert_eq!(event.topic, "customer");
+        assert_eq!(event.payload["id"], 1);
+    }
+
+    #[test]
+    fn new_handles_no_dot_in_type() {
+        let event = BroadcastEvent::new("ping", serde_json::Value::Null);
+        assert_eq!(event.topic, "ping");
     }
 
     #[test]
