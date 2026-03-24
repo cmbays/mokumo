@@ -40,6 +40,10 @@ impl ApiWorld {
         let shutdown_token = CancellationToken::new();
         let app = build_app_with_shutdown(&config, pool, shutdown_token.clone());
 
+        // HttpRandomPort for ALL scenarios: WebSocket tests require real TCP sockets
+        // (axum-test's mock transport doesn't support WS upgrade). Using the same
+        // transport for HTTP-only scenarios keeps the test world simple and tests
+        // more realistic. Port 0 lets the OS assign an ephemeral port.
         let server = TestServer::new_with_config(
             app,
             axum_test::TestServerConfig {
