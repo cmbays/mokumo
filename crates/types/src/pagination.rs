@@ -17,7 +17,8 @@ impl<T: TS> PaginatedList<T> {
         let total_pages = if total <= 0 || per_page == 0 {
             0
         } else {
-            (total as u32).div_ceil(per_page)
+            let pages = (total as u64).div_ceil(per_page as u64);
+            pages.min(u32::MAX as u64) as u32
         };
         Self {
             items,
@@ -74,6 +75,12 @@ mod tests {
     fn total_pages_per_page_zero_returns_zero() {
         let list = PaginatedList::<HealthResponse>::new(vec![], 10, 1, 0);
         assert_eq!(list.total_pages, 0);
+    }
+
+    #[test]
+    fn total_pages_large_total_saturates() {
+        let list = PaginatedList::<HealthResponse>::new(vec![], 5_000_000_000, 1, 100);
+        assert_eq!(list.total_pages, 50_000_000);
     }
 
     #[test]
