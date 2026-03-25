@@ -12,6 +12,7 @@ export const toastClasses = {
   error: "border-error bg-error/10 text-foreground",
   warning: "border-warning bg-warning/10 text-foreground",
   info: "border-border bg-muted text-foreground",
+  closeButton: "!bg-background !border-border !text-foreground hover:!bg-muted !rounded-full",
 };
 
 export { toast, Toaster };
