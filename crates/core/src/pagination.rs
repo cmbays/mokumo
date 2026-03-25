@@ -30,7 +30,7 @@ impl PageParams {
     }
 
     pub fn offset(&self) -> u32 {
-        (self.page - 1) * self.per_page
+        (self.page - 1).saturating_mul(self.per_page)
     }
 }
 
@@ -83,5 +83,11 @@ mod tests {
         let params = PageParams::new(Some(3), Some(50));
         assert_eq!(params.page(), 3);
         assert_eq!(params.per_page(), 50);
+    }
+
+    #[test]
+    fn offset_saturates_instead_of_overflowing() {
+        let params = PageParams::new(Some(u32::MAX), Some(100));
+        assert_eq!(params.offset(), u32::MAX);
     }
 }
