@@ -16,7 +16,7 @@
     variant?: ButtonVariant;
     confirmLabel?: string;
     cancelLabel?: string;
-    children?: Snippet;
+    children?: Snippet<[Record<string, unknown>]>;
   }
 
   let {
@@ -32,6 +32,13 @@
 
   let loading = $state(false);
   let error = $state<string | null>(null);
+
+  // Clear stale error when dialog reopens
+  $effect(() => {
+    if (open) {
+      error = null;
+    }
+  });
 
   async function handleConfirm() {
     loading = true;
@@ -50,10 +57,12 @@
 <AlertDialog.Root bind:open>
   {#if children}
     <AlertDialog.Trigger>
-      {@render children()}
+      {#snippet child({ props })}
+        {@render children(props)}
+      {/snippet}
     </AlertDialog.Trigger>
   {/if}
-  <AlertDialog.Content>
+  <AlertDialog.Content onEscapeKeydown={(e) => e.preventDefault()}>
     <AlertDialog.Header>
       <AlertDialog.Title>{title}</AlertDialog.Title>
       <AlertDialog.Description>{description}</AlertDialog.Description>

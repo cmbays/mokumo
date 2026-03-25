@@ -8,6 +8,7 @@
 
 <ModeWatcher defaultMode="system" />
 <Toaster
+  closeButton
   theme={mode.current}
   toastOptions={{ unstyled: true, classes: toastClasses }}
 />

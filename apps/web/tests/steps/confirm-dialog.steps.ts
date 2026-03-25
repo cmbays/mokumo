@@ -9,7 +9,7 @@ const DIALOG_DESCRIPTION = '[data-slot="alert-dialog-description"]';
 const CANCEL_BUTTON = '[data-slot="alert-dialog-cancel"]';
 const ACTION_BUTTON = '[data-slot="alert-dialog-action"]';
 const STORY_ROOT = "#storybook-root";
-const TRIGGER_BUTTON = `${STORY_ROOT} [data-slot="alert-dialog-trigger"] [data-slot="button"]`;
+const TRIGGER_BUTTON = `${STORY_ROOT} [data-slot="alert-dialog-trigger"]`;
 
 /**
  * Click a button inside Bits UI AlertDialog.

@@ -19,7 +19,9 @@
     description="Are you sure you want to proceed? This action can be undone."
     onConfirm={() => Promise.resolve()}
   >
-    <Button variant="outline">Open dialog</Button>
+    {#snippet children(props)}
+      <Button variant="outline" {...props}>Open dialog</Button>
+    {/snippet}
   </ConfirmDialog>
 </Story>
 
@@ -31,7 +33,9 @@
     confirmLabel="Delete"
     onConfirm={() => Promise.resolve()}
   >
-    <Button variant="destructive">Delete item</Button>
+    {#snippet children(props)}
+      <Button variant="destructive" {...props}>Delete item</Button>
+    {/snippet}
   </ConfirmDialog>
 </Story>
 
@@ -41,7 +45,9 @@
     description="This may take a moment."
     onConfirm={() => new Promise((resolve) => setTimeout(resolve, 30000))}
   >
-    <Button>Save changes</Button>
+    {#snippet children(props)}
+      <Button {...props}>Save changes</Button>
+    {/snippet}
   </ConfirmDialog>
 </Story>
 
@@ -52,6 +58,8 @@
     onConfirm={() =>
       Promise.reject(new Error("Network error: unable to reach server"))}
   >
-    <Button variant="outline">Try action</Button>
+    {#snippet children(props)}
+      <Button variant="outline" {...props}>Try action</Button>
+    {/snippet}
   </ConfirmDialog>
 </Story>
