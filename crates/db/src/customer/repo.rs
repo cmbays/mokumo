@@ -120,7 +120,7 @@ impl CustomerRepository for SqliteCustomerRepo {
 
         let rows: Vec<CustomerRow> = sqlx::query_as(
             "SELECT * FROM customers WHERE (deleted_at IS NULL OR ?1) \
-             ORDER BY created_at DESC LIMIT ?2 OFFSET ?3",
+             ORDER BY created_at DESC, id DESC LIMIT ?2 OFFSET ?3",
         )
         .bind(include)
         .bind(params.per_page() as i64)
