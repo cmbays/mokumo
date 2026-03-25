@@ -1,1 +1,144 @@
-// Customer domain — traits and business logic.
+pub mod service;
+pub mod traits;
+
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+/// Strongly-typed customer identifier. Wraps a UUID v4.
+///
+/// No `Deref` — use `.get()` for explicit access at boundaries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CustomerId(Uuid);
+
+impl CustomerId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+
+    pub fn get(self) -> Uuid {
+        self.0
+    }
+}
+
+impl std::fmt::Display for CustomerId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::str::FromStr for CustomerId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
+}
+
+/// Domain entity representing a customer record.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Customer {
+    pub id: CustomerId,
+    pub company_name: Option<String>,
+    pub display_name: String,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub address_line1: Option<String>,
+    pub address_line2: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub postal_code: Option<String>,
+    pub country: Option<String>,
+    pub notes: Option<String>,
+    pub portal_enabled: bool,
+    pub portal_user_id: Option<String>,
+    pub tax_exempt: bool,
+    pub tax_exemption_certificate_path: Option<String>,
+    pub tax_exemption_expires_at: Option<String>,
+    pub payment_terms: Option<String>,
+    pub credit_limit_cents: Option<i64>,
+    pub stripe_customer_id: Option<String>,
+    pub quickbooks_customer_id: Option<String>,
+    pub lead_source: Option<String>,
+    pub tags: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub deleted_at: Option<String>,
+}
+
+/// Request to create a new customer. Only `display_name` is required.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCustomer {
+    pub display_name: String,
+    pub company_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub address_line1: Option<String>,
+    pub address_line2: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub postal_code: Option<String>,
+    pub country: Option<String>,
+    pub notes: Option<String>,
+    pub portal_enabled: Option<bool>,
+    pub tax_exempt: Option<bool>,
+    pub payment_terms: Option<String>,
+    pub credit_limit_cents: Option<i64>,
+    pub lead_source: Option<String>,
+    pub tags: Option<String>,
+}
+
+/// Request to update an existing customer. All fields are optional.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCustomer {
+    pub display_name: Option<String>,
+    pub company_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub address_line1: Option<String>,
+    pub address_line2: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub postal_code: Option<String>,
+    pub country: Option<String>,
+    pub notes: Option<String>,
+    pub portal_enabled: Option<bool>,
+    pub tax_exempt: Option<bool>,
+    pub payment_terms: Option<String>,
+    pub credit_limit_cents: Option<i64>,
+    pub lead_source: Option<String>,
+    pub tags: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn customer_id_display() {
+        let id = CustomerId::generate();
+        let display = id.to_string();
+        assert!(!display.is_empty());
+        // Round-trip through Display → FromStr
+        let parsed: CustomerId = display.parse().unwrap();
+        assert_eq!(id, parsed);
+    }
+
+    #[test]
+    fn customer_id_serialize_roundtrip() {
+        let id = CustomerId::generate();
+        let json = serde_json::to_string(&id).unwrap();
+        let restored: CustomerId = serde_json::from_str(&json).unwrap();
+        assert_eq!(id, restored);
+    }
+
+    #[test]
+    fn customer_id_get_returns_inner() {
+        let uuid = Uuid::new_v4();
+        let id = CustomerId::new(uuid);
+        assert_eq!(id.get(), uuid);
+    }
+}

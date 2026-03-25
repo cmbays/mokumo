@@ -28,6 +28,10 @@ impl PageParams {
     pub fn per_page(&self) -> u32 {
         self.per_page
     }
+
+    pub fn offset(&self) -> u32 {
+        (self.page - 1) * self.per_page
+    }
 }
 
 #[cfg(test)]
@@ -57,6 +61,21 @@ mod tests {
     #[test]
     fn per_page_above_max_clamped_to_100() {
         assert_eq!(PageParams::new(None, Some(200)).per_page(), 100);
+    }
+
+    #[test]
+    fn offset_first_page_is_zero() {
+        assert_eq!(PageParams::new(Some(1), Some(25)).offset(), 0);
+    }
+
+    #[test]
+    fn offset_second_page() {
+        assert_eq!(PageParams::new(Some(2), Some(25)).offset(), 25);
+    }
+
+    #[test]
+    fn offset_third_page_custom_per_page() {
+        assert_eq!(PageParams::new(Some(3), Some(10)).offset(), 20);
     }
 
     #[test]

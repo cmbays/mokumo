@@ -78,7 +78,7 @@ axum-test = { version = "17", features = ["ws"] }
 futures-util = "0.3"
 
 # Concurrent data structures
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 dashmap = "6"
 cucumber = "0.21"
 proptest = "1"
