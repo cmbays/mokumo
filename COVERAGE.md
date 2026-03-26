@@ -72,7 +72,7 @@ Enforcement via `cargo llvm-cov` `--fail-under-lines` flag added to the CI cover
 
 ## CI Integration
 
-The `quality-rust` job in `.github/workflows/quality.yml` runs `moon run api:coverage` and uploads `coverage.json` as an artifact (`rust-coverage`). Download from any CI run's Artifacts tab.
+The `coverage-rust` job in `.github/workflows/quality.yml` runs `moon run api:coverage` and uploads `coverage.json` as an artifact (`rust-coverage`). This job only runs on pushes to `main` (not on PRs). Download from any main-branch CI run's Artifacts tab.
 
 ## Interpreting the Report
 
