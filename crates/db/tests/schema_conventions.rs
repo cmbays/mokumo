@@ -187,9 +187,9 @@ async fn timestamp_columns_are_text() {
 /// Tables explicitly exempt from the updated_at trigger requirement.
 /// Each exemption must have a documented reason.
 const TRIGGER_EXEMPT_TABLES: &[&str] = &[
-    "settings",          // simple KV store, no updated_at column
-    "number_sequences",  // infrastructure counter, not a domain entity
-    "activity_log",      // append-only audit log, never updated
+    "settings",         // simple KV store, no updated_at column
+    "number_sequences", // infrastructure counter, not a domain entity
+    "activity_log",     // append-only audit log, never updated
 ];
 
 #[tokio::test]
@@ -314,7 +314,8 @@ async fn assert_timestamp_has_default(pool: &sqlx::SqlitePool, column_name: &str
                 assert!(
                     col.dflt_value.is_some(),
                     "Table '{}' column {} must have a DEFAULT value",
-                    table, column_name
+                    table,
+                    column_name
                 );
                 let default = col.dflt_value.as_ref().unwrap().to_uppercase();
                 assert!(
