@@ -47,7 +47,7 @@ jobs:
           path: target/nextest/ci/junit.xml
           if-no-files-found: ignore
       - name: BDD acceptance tests
-        run: moon run api:test-bdd
+        run: moon run api:test-bdd core:test-bdd
       - name: Coverage
         run: moon run api:coverage
 
