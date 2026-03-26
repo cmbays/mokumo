@@ -33,7 +33,8 @@ Feature: Mutation and activity log atomicity
     Given a customer "Acme Corp" exists in the database
     And that customer has 1 activity entry
     When an update to a non-existent customer is attempted
-    Then the activity log for "Acme Corp" should still have 1 entry
+    Then the operation should have failed
+    And the activity log for "Acme Corp" should still have 1 entry
     And no new activity entries should exist
 
   # Covered by unit test: repo_create_rolls_back_on_activity_failure

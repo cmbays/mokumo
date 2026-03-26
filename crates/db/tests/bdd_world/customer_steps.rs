@@ -16,6 +16,10 @@ fn activity_repo(w: &DbWorld) -> SqliteActivityLogRepo {
     SqliteActivityLogRepo::new(w.pool.clone())
 }
 
+fn test_page_params() -> PageParams {
+    PageParams::new(Some(1), Some(100))
+}
+
 fn make_create_request(name: &str) -> CreateCustomer {
     CreateCustomer {
         display_name: name.to_string(),
@@ -79,7 +83,7 @@ async fn customer_exists(w: &mut DbWorld, name: String) {
 async fn customer_has_n_activity_entries(w: &mut DbWorld, count: i32) {
     let customer = w.last_customer.as_ref().expect("no customer created yet");
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (_, total) = repo
         .list(Some("customer"), Some(&customer.id.to_string()), params)
         .await
@@ -172,7 +176,7 @@ async fn create_update_delete(w: &mut DbWorld) {
 #[when(expr = "the activity log is queried for entity type {string}")]
 async fn query_activity_by_type(w: &mut DbWorld, entity_type: String) {
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (entries, total) = repo
         .list(Some(&entity_type), None, params)
         .await
@@ -192,7 +196,7 @@ async fn customer_should_exist(w: &mut DbWorld, name: String) {
 async fn activity_log_has_entry(w: &mut DbWorld, action: String) {
     let customer = w.last_customer.as_ref().expect("no customer");
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (entries, _) = repo
         .list(Some("customer"), Some(&customer.id.to_string()), params)
         .await
@@ -211,7 +215,7 @@ async fn activity_log_has_entry(w: &mut DbWorld, action: String) {
 async fn activity_has_customer_details(w: &mut DbWorld) {
     let customer = w.last_customer.as_ref().expect("no customer");
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (entries, _) = repo
         .list(Some("customer"), Some(&customer.id.to_string()), params)
         .await
@@ -249,7 +253,7 @@ async fn customer_is_deleted(w: &mut DbWorld) {
 async fn activity_log_count_for_customer(w: &mut DbWorld, _name: String, count: i32) {
     let customer = w.last_customer.as_ref().expect("no customer");
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (_, total) = repo
         .list(Some("customer"), Some(&customer.id.to_string()), params)
         .await
@@ -264,7 +268,7 @@ async fn activity_log_count_for_customer(w: &mut DbWorld, _name: String, count: 
 #[then("no new activity entries should exist")]
 async fn no_new_activity_entries(w: &mut DbWorld) {
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (_, total) = repo
         .list(None, None, params)
         .await
@@ -281,7 +285,7 @@ async fn no_new_activity_entries(w: &mut DbWorld) {
 async fn activity_log_has_n_entries(w: &mut DbWorld, count: i32) {
     let customer = w.last_customer.as_ref().expect("no customer");
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (_, total) = repo
         .list(Some("customer"), Some(&customer.id.to_string()), params)
         .await
@@ -297,7 +301,7 @@ async fn activity_log_has_n_entries(w: &mut DbWorld, count: i32) {
 async fn actions_in_order(w: &mut DbWorld, first: String, second: String, third: String) {
     let customer = w.last_customer.as_ref().expect("no customer");
     let repo = activity_repo(w);
-    let params = PageParams::new(Some(1), Some(100));
+    let params = test_page_params();
     let (entries, _) = repo
         .list(Some("customer"), Some(&customer.id.to_string()), params)
         .await
@@ -328,5 +332,13 @@ async fn response_contains_entries(w: &mut DbWorld, count: i32, _name: String) {
         *total, count as i64,
         "Expected {} entries, found {}",
         count, total
+    );
+}
+
+#[then("the operation should have failed")]
+async fn operation_should_have_failed(w: &mut DbWorld) {
+    assert!(
+        w.last_error.is_some(),
+        "Expected the operation to fail, but it succeeded"
     );
 }
