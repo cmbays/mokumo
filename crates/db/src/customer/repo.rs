@@ -238,12 +238,10 @@ impl CustomerRepository for SeaOrmCustomerRepo {
     async fn soft_delete(&self, id: &CustomerId) -> Result<Customer, DomainError> {
         let txn = self.db.begin().await.map_err(sea_err)?;
 
-        let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
-
         let result = CustomerEntity::update_many()
             .col_expr(
                 entity::Column::DeletedAt,
-                sea_orm::sea_query::Expr::value(now),
+                sea_orm::sea_query::Expr::current_timestamp(),
             )
             .filter(entity::Column::Id.eq(id.get()))
             .filter(entity::Column::DeletedAt.is_null())
