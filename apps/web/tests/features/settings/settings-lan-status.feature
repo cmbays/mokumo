@@ -33,7 +33,7 @@ Feature: Settings page displays LAN status information
   Scenario: LAN status shows unavailable when mDNS is inactive
     Given the server-info API returns mDNS inactive
     When I navigate to the Shop settings page
-    Then I see a "Unavailable" status badge
+    Then I see an "Unavailable" status badge
     And I see the IP address "http://192.168.1.42:3000"
     And the LAN status helper text is "mDNS discovery is unavailable. Use the IP address below to reach this server."
 

@@ -58,7 +58,7 @@ export async function startStaticServer({
     },
   );
 
-  await waitForServer(url, server);
+  await waitForServer(url, server, "http-server");
 
   return { server, url };
 }
@@ -79,7 +79,7 @@ export async function startPreviewServer(
     },
   );
 
-  await waitForServer(url, server);
+  await waitForServer(url, server, "vite preview");
 
   return { server, url };
 }
@@ -87,6 +87,7 @@ export async function startPreviewServer(
 async function waitForServer(
   url: string,
   process: ChildProcess,
+  processName = "http-server",
   timeoutMs = 15_000,
 ): Promise<void> {
   const start = Date.now();
@@ -99,11 +100,11 @@ async function waitForServer(
     }
 
     if (process.exitCode !== null) {
-      throw new Error(`http-server exited with code ${process.exitCode}`);
+      throw new Error(`${processName} exited with code ${process.exitCode}`);
     }
 
     await new Promise((r) => setTimeout(r, 250));
   }
 
-  throw new Error(`Static server did not start within ${timeoutMs}ms`);
+  throw new Error(`${processName} did not start within ${timeoutMs}ms at ${url}`);
 }

@@ -117,7 +117,6 @@ tasks:
     deps:
     - build
     - build-storybook
-    - build
     inputs:
     - '@group(sources)'
     - '@group(tests)'

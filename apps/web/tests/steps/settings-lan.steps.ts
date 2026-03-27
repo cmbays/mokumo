@@ -62,6 +62,29 @@ function statusBadge(page: Page, status: string) {
     .or(page.locator("[data-slot='badge']").filter({ hasText: status }));
 }
 
+function requireServerInfoUrl(
+  stepName: string,
+  serverInfo: ServerInfoResponse | null,
+  field: "ip_url" | "lan_url",
+): string {
+  expect(
+    serverInfo,
+    `Step "${stepName}" requires lanTestState.serverInfo before page.getByText/page.getByRole assertions.`,
+  ).not.toBeNull();
+
+  const url = serverInfo?.[field];
+  expect(
+    url,
+    `Step "${stepName}" requires lanTestState.serverInfo.${field} before page.getByText/page.getByRole assertions.`,
+  ).toBeTruthy();
+
+  if (!url) {
+    throw new Error(`Step "${stepName}" requires lanTestState.serverInfo.${field}.`);
+  }
+
+  return url;
+}
+
 Given("the server-info API returns LAN status", async ({ lanTestState, page }) => {
   lanTestState.serverInfo = ACTIVE_SERVER_INFO;
   await mockServerInfo(page, ACTIVE_SERVER_INFO);
@@ -126,7 +149,9 @@ Then("I see the LAN URL {string}", async ({ page }, url: string) => {
 });
 
 Then("the LAN URL is shown", async ({ lanTestState, page }) => {
-  await expect(page.getByText(lanTestState.serverInfo?.lan_url ?? "")).toBeVisible();
+  const lanUrl = requireServerInfoUrl("the LAN URL is shown", lanTestState.serverInfo, "lan_url");
+
+  await expect(page.getByText(lanUrl)).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy LAN URL to clipboard" })).toBeVisible();
 });
 
@@ -140,7 +165,13 @@ Then("I see the IP address {string}", async ({ page }, ip: string) => {
 });
 
 Then("the IP fallback URL is shown", async ({ lanTestState, page }) => {
-  await expect(page.getByText(lanTestState.serverInfo?.ip_url ?? "")).toBeVisible();
+  const ipUrl = requireServerInfoUrl(
+    "the IP fallback URL is shown",
+    lanTestState.serverInfo,
+    "ip_url",
+  );
+
+  await expect(page.getByText(ipUrl)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Copy IP address URL to clipboard" }),
   ).toBeVisible();
