@@ -107,14 +107,19 @@ impl CustomerRepository for SeaOrmCustomerRepo {
 
         // Search across display_name, company_name, and email with wildcard escaping
         if let Some(term) = search.filter(|s| !s.is_empty()) {
-            let escaped = term.replace('%', "\\%").replace('_', "\\_");
+            let escaped = term
+                .replace('\\', "\\\\")
+                .replace('%', "\\%")
+                .replace('_', "\\_");
             let pattern = format!("%{escaped}%");
             use sea_orm::Condition;
+            use sea_orm::sea_query::LikeExpr;
+            let like_expr = LikeExpr::new(&pattern).escape('\\');
             base = base.filter(
                 Condition::any()
-                    .add(entity::Column::DisplayName.like(&pattern))
-                    .add(entity::Column::CompanyName.like(&pattern))
-                    .add(entity::Column::Email.like(&pattern)),
+                    .add(entity::Column::DisplayName.like(like_expr.clone()))
+                    .add(entity::Column::CompanyName.like(like_expr.clone()))
+                    .add(entity::Column::Email.like(like_expr)),
             );
         }
 
