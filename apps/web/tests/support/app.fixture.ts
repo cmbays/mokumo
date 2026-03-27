@@ -24,7 +24,7 @@ export const test = base.extend<object, WorkerFixtures>({
         );
       }
 
-      const port = await getPort({ portRange: [4200, 4299] });
+      const port = await getPort({ random: true });
       const url = `http://localhost:${port}`;
 
       const httpServerBin = resolve(webRoot, "node_modules/.bin/http-server");

@@ -46,20 +46,19 @@ Then("I see the {string} card", async ({ page }, cardTitle: string) => {
   await expect(card).toBeVisible();
 });
 
-Then("I see an {string} status badge", async ({ page }, status: string) => {
-  const badge = page
+function statusBadge(page: import("@playwright/test").Page, status: string) {
+  return page
     .getByRole("status")
     .filter({ hasText: status })
     .or(page.locator("[data-slot='badge']").filter({ hasText: status }));
-  await expect(badge).toBeVisible();
+}
+
+Then("I see an {string} status badge", async ({ page }, status: string) => {
+  await expect(statusBadge(page, status)).toBeVisible();
 });
 
 Then("a {string} status badge", async ({ page }, status: string) => {
-  const badge = page
-    .getByRole("status")
-    .filter({ hasText: status })
-    .or(page.locator("[data-slot='badge']").filter({ hasText: status }));
-  await expect(badge).toBeVisible();
+  await expect(statusBadge(page, status)).toBeVisible();
 });
 
 Then("I see the LAN URL {string}", async ({ page }, url: string) => {
@@ -92,9 +91,5 @@ Then("the LAN URL contains the mDNS hostname {string}", async ({ page }, hostnam
 });
 
 Then("I see a {string} status badge", async ({ page }, status: string) => {
-  const badge = page
-    .getByRole("status")
-    .filter({ hasText: status })
-    .or(page.locator("[data-slot='badge']").filter({ hasText: status }));
-  await expect(badge).toBeVisible();
+  await expect(statusBadge(page, status)).toBeVisible();
 });
