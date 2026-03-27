@@ -1,0 +1,238 @@
+pub mod backend;
+pub mod user;
+
+use std::sync::atomic::Ordering;
+
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::routing::{get, post};
+use axum::{Json, Router};
+use axum_login::AuthSession;
+use mokumo_core::activity::ActivityAction;
+use mokumo_core::user::RoleId;
+use mokumo_core::user::traits::UserRepository;
+use mokumo_db::user::repo::SeaOrmUserRepo;
+use mokumo_types::auth::{LoginRequest, MeResponse, SetupRequest, SetupResponse};
+use mokumo_types::error::{ErrorBody, ErrorCode};
+use mokumo_types::user::UserResponse;
+
+use crate::SharedState;
+
+use backend::{Backend, Credentials};
+
+pub type AuthSessionType = AuthSession<Backend>;
+
+pub fn auth_router() -> Router<SharedState> {
+    Router::new()
+        .route("/login", post(login))
+        .route("/logout", post(logout))
+        .route("/me", get(me))
+}
+
+pub fn setup_router() -> Router<SharedState> {
+    Router::new().route("/", post(setup))
+}
+
+fn user_to_response(user: &mokumo_core::user::User) -> UserResponse {
+    UserResponse {
+        id: user.id.get(),
+        email: user.email.clone(),
+        name: user.name.clone(),
+        role_name: match user.role_id {
+            RoleId::ADMIN => "Admin".into(),
+            RoleId::STAFF => "Staff".into(),
+            RoleId::GUEST => "Guest".into(),
+            _ => "Unknown".into(),
+        },
+        is_active: user.is_active,
+        last_login_at: user.last_login_at.clone(),
+        created_at: user.created_at.clone(),
+    }
+}
+
+fn error_response(status: StatusCode, code: ErrorCode, message: &str) -> Response {
+    (
+        status,
+        Json(ErrorBody {
+            code,
+            message: message.into(),
+            details: None,
+        }),
+    )
+        .into_response()
+}
+
+async fn login(
+    State(state): State<SharedState>,
+    mut auth_session: AuthSessionType,
+    Json(req): Json<LoginRequest>,
+) -> Response {
+    let repo = SeaOrmUserRepo::new(state.db.clone());
+    let creds = Credentials {
+        email: req.email.clone(),
+        password: req.password,
+    };
+
+    let user = match auth_session.authenticate(creds).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            log_failed_login(&repo, &req.email).await;
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                ErrorCode::InvalidCredentials,
+                "Invalid email or password",
+            );
+        }
+        Err(e) => {
+            tracing::error!("Authentication error: {e}");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorCode::InternalError,
+                "An internal error occurred",
+            );
+        }
+    };
+
+    if let Err(e) = auth_session.login(&user).await {
+        tracing::error!("Session login error: {e}");
+        return error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ErrorCode::InternalError,
+            "Failed to create session",
+        );
+    }
+
+    let _ = repo
+        .log_auth_activity(&user.user, ActivityAction::LoginSuccess)
+        .await;
+
+    Json(user_to_response(&user.user)).into_response()
+}
+
+async fn log_failed_login(repo: &SeaOrmUserRepo, email: &str) {
+    if let Ok(Some(found)) = repo.find_by_email(email).await {
+        let _ = repo
+            .log_auth_activity(&found, ActivityAction::LoginFailed)
+            .await;
+    }
+}
+
+async fn logout(mut auth_session: AuthSessionType) -> Response {
+    match auth_session.logout().await {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => {
+            tracing::error!("Logout error: {e}");
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorCode::InternalError,
+                "Failed to destroy session",
+            )
+        }
+    }
+}
+
+async fn me(State(state): State<SharedState>, auth_session: AuthSessionType) -> Response {
+    match auth_session.user {
+        Some(ref user) => {
+            let setup_complete = state.setup_completed.load(Ordering::Relaxed);
+            Json(MeResponse {
+                user: user_to_response(&user.user),
+                setup_complete,
+            })
+            .into_response()
+        }
+        None => error_response(
+            StatusCode::UNAUTHORIZED,
+            ErrorCode::Unauthorized,
+            "Not authenticated",
+        ),
+    }
+}
+
+async fn setup(
+    State(state): State<SharedState>,
+    mut auth_session: AuthSessionType,
+    Json(req): Json<SetupRequest>,
+) -> Response {
+    if let Some(err) = validate_setup_request(&state, &req) {
+        return err;
+    }
+
+    let repo = SeaOrmUserRepo::new(state.db.clone());
+    let (user, recovery_codes) = match repo
+        .create_admin_with_setup(
+            &req.admin_email,
+            &req.admin_name,
+            &req.admin_password,
+            &req.shop_name,
+        )
+        .await
+    {
+        Ok(result) => result,
+        Err(e) => {
+            tracing::error!("Setup failed: {e}");
+            return error_response(
+                StatusCode::CONFLICT,
+                ErrorCode::SetupFailed,
+                "Setup failed — an admin account may already exist",
+            );
+        }
+    };
+
+    state.setup_completed.store(true, Ordering::Relaxed);
+    auto_login(&repo, &user, &mut auth_session).await;
+
+    (StatusCode::CREATED, Json(SetupResponse { recovery_codes })).into_response()
+}
+
+fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Option<Response> {
+    if state.setup_completed.load(Ordering::Relaxed) {
+        return Some(error_response(
+            StatusCode::FORBIDDEN,
+            ErrorCode::Forbidden,
+            "Setup already completed",
+        ));
+    }
+
+    let valid_token = state
+        .setup_token
+        .as_ref()
+        .is_some_and(|t| t == &req.setup_token);
+    if !valid_token {
+        return Some(error_response(
+            StatusCode::UNAUTHORIZED,
+            ErrorCode::InvalidToken,
+            "Invalid setup token",
+        ));
+    }
+
+    if req.admin_email.is_empty()
+        || req.admin_password.is_empty()
+        || req.admin_name.is_empty()
+        || req.shop_name.is_empty()
+    {
+        return Some(error_response(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorCode::ValidationError,
+            "All fields are required",
+        ));
+    }
+
+    None
+}
+
+async fn auto_login(
+    repo: &SeaOrmUserRepo,
+    user: &mokumo_core::user::User,
+    auth_session: &mut AuthSessionType,
+) {
+    let hash = match repo.find_by_id_with_hash(&user.id).await {
+        Ok(Some((_, hash))) => hash,
+        _ => return,
+    };
+    let auth_user = user::AuthenticatedUser::new(user.clone(), hash);
+    if let Err(e) = auth_session.login(&auth_user).await {
+        tracing::warn!("Auto-login after setup failed: {e}");
+    }
+}

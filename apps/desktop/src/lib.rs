@@ -45,7 +45,8 @@ async fn init_server(
     // Pre-allocate mDNS status (desktop always uses loopback, so mDNS is always skipped)
     let mdns_status = discovery::MdnsStatus::shared();
 
-    let app = build_app_with_shutdown(&config, pool, shutdown, mdns_status.clone());
+    let (app, _setup_token) =
+        build_app_with_shutdown(&config, pool, shutdown, mdns_status.clone()).await;
 
     // Bind to port (with fallback)
     let (listener, actual_port) = try_bind(&config.host, config.port).await?;

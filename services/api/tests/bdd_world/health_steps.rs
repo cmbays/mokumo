@@ -96,22 +96,31 @@ async fn get_without_credentials(w: &mut ApiWorld, path: String) {
 
 #[given("the database is unavailable")]
 async fn database_unavailable(w: &mut ApiWorld) {
-    // Create a pool and immediately close it — queries will fail with PoolClosed
-    let bad_pool = sqlx::SqlitePool::connect("sqlite::memory:")
+    // Build the app with a VALID DB first (session store needs migration),
+    // then close the pool to simulate DB failure at request time.
+    let tmp = tempfile::tempdir().expect("failed to create temp dir");
+    let data_dir = tmp.path().join("bad_db_test");
+    mokumo_api::ensure_data_dirs(&data_dir).expect("failed to create dirs");
+    let db_path = data_dir.join("mokumo.db");
+    let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
+    let db = mokumo_db::initialize_database(&database_url)
         .await
-        .expect("failed to create in-memory pool");
-    bad_pool.close().await;
-    let bad_db: mokumo_db::DatabaseConnection = bad_pool.into();
+        .expect("failed to init db");
 
     let config = mokumo_api::ServerConfig {
         port: 0,
         host: "127.0.0.1".into(),
-        data_dir: std::path::PathBuf::from("/tmp/mokumo_bdd_bad_db"),
+        data_dir,
     };
 
     let shutdown = tokio_util::sync::CancellationToken::new();
     let mdns_status = mokumo_api::discovery::MdnsStatus::shared();
-    let app = mokumo_api::build_app_with_shutdown(&config, bad_db, shutdown.clone(), mdns_status);
+    let (app, _) =
+        mokumo_api::build_app_with_shutdown(&config, db.clone(), shutdown.clone(), mdns_status)
+            .await;
+
+    // NOW close the pool to simulate database failure at request time
+    db.close().await.ok();
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -122,6 +131,7 @@ async fn database_unavailable(w: &mut ApiWorld) {
         .with_graceful_shutdown(async move { shutdown_clone.cancelled().await });
 
     let server = axum_test::TestServer::builder()
+        .save_cookies()
         .build(serve)
         .expect("failed to create test server");
 

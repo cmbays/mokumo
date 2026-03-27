@@ -116,8 +116,9 @@ async fn main() {
     // Pre-allocate mDNS status (default: inactive)
     let mdns_status = discovery::MdnsStatus::shared();
 
-    // Build application
-    let app = build_app_with_shutdown(&config, pool, shutdown_token.clone(), mdns_status.clone());
+    // Build application (now async — initializes session store)
+    let (app, _setup_token) =
+        build_app_with_shutdown(&config, pool, shutdown_token.clone(), mdns_status.clone()).await;
 
     // Bind to port (with fallback)
     let (listener, actual_port) = match try_bind(&config.host, config.port).await {

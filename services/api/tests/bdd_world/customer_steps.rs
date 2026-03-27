@@ -3,6 +3,7 @@ use cucumber::{given, then, when};
 
 #[given(expr = "a customer {string} exists")]
 async fn customer_with_name_exists(w: &mut ApiWorld, name: String) {
+    w.ensure_auth().await;
     let body = serde_json::json!({ "display_name": name });
     let resp = w.server.post("/api/customers").json(&body).await;
     resp.assert_status(axum::http::StatusCode::CREATED);
@@ -15,6 +16,7 @@ async fn customer_with_name_exists(w: &mut ApiWorld, name: String) {
 
 #[given(expr = "a customer {string} exists with email {string}")]
 async fn customer_with_name_and_email_exists(w: &mut ApiWorld, name: String, email: String) {
+    w.ensure_auth().await;
     let body = serde_json::json!({ "display_name": name, "email": email });
     let resp = w.server.post("/api/customers").json(&body).await;
     resp.assert_status(axum::http::StatusCode::CREATED);
@@ -27,6 +29,7 @@ async fn customer_with_name_and_email_exists(w: &mut ApiWorld, name: String, ema
 
 #[given("a customer exists")]
 async fn customer_exists(w: &mut ApiWorld) {
+    w.ensure_auth().await;
     let body = serde_json::json!({ "display_name": "Test Customer" });
     let resp = w.server.post("/api/customers").json(&body).await;
     resp.assert_status(axum::http::StatusCode::CREATED);
@@ -38,6 +41,7 @@ async fn customer_exists(w: &mut ApiWorld) {
 
 #[given(expr = "{int} customers exist")]
 async fn n_customers_exist(w: &mut ApiWorld, count: usize) {
+    w.ensure_auth().await;
     for i in 0..count {
         let body = serde_json::json!({ "display_name": format!("Customer {}", i + 1) });
         let resp = w.server.post("/api/customers").json(&body).await;

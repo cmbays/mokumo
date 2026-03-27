@@ -19,7 +19,7 @@ async fn test_app(name: &str) -> (Router, tempfile::TempDir) {
         host: "127.0.0.1".into(),
         data_dir,
     };
-    let app = build_app(&config, pool);
+    let (app, _) = build_app(&config, pool).await;
     (app, tmp)
 }
 
@@ -92,16 +92,17 @@ async fn health_endpoint_returns_500_error_body_on_db_failure() {
     let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
     let db = mokumo_db::initialize_database(&database_url).await.unwrap();
 
-    // Close the connection to simulate database failure
-    db.clone().close().await.ok();
-
     let config = ServerConfig {
         port: 0,
         host: "127.0.0.1".into(),
         data_dir,
     };
 
-    let app = build_app(&config, db);
+    // Build app while DB is alive (session store needs migration)
+    let (app, _) = build_app(&config, db.clone()).await;
+
+    // Close the connection AFTER build to simulate database failure at request time
+    db.close().await.ok();
 
     let response = app
         .oneshot(
