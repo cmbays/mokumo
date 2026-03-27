@@ -8,7 +8,7 @@ export const PAYMENT_TERMS_OPTIONS = [
 ] as const;
 
 export const customerFormSchema = z.object({
-  display_name: z.string().min(1, "Display name is required"),
+  display_name: z.string().trim().min(1, "Display name is required"),
   company_name: z.string().optional(),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional(),
