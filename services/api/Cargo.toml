@@ -23,6 +23,8 @@ serde_json = { workspace = true }
 uuid = { workspace = true }
 dashmap = { workspace = true }
 futures-util = { workspace = true }
+mdns-sd = { workspace = true }
+local-ip-address = { workspace = true }
 
 [features]
 bdd = []
