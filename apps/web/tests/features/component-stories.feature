@@ -14,7 +14,6 @@ Feature: Every installed component has a story
       | Tabs          |
       | Tooltip       |
 
-  @wip
   Scenario: App shell components have stories
     Given Storybook is running
     Then each of the following components has at least one story:
@@ -35,7 +34,6 @@ Feature: Every installed component has a story
       | Switch        |
       | Textarea      |
 
-  @wip
   Scenario: Overlay and feedback components have stories
     Given Storybook is running
     Then each of the following components has at least one story:

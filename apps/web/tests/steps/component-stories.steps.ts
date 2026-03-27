@@ -16,9 +16,17 @@ Then(
         `Story "${storyId}" for ${component} did not load (HTTP ${response?.status()})`,
       ).toBe(true);
 
+      // Check #storybook-root OR body for content — portal-based components
+      // (Dialog, Select, Sheet, Sidebar) render outside #storybook-root.
       const root = page.locator("#storybook-root");
       await root.waitFor({ state: "attached", timeout: 5000 });
-      const hasContent = await root.evaluate((el) => el.innerHTML.trim().length > 0);
+      const hasContent = await page.evaluate(() => {
+        const root = document.getElementById("storybook-root");
+        const rootContent = root ? root.innerHTML.trim().length > 0 : false;
+        // Check for portal content rendered as direct children of body
+        const portalContent = document.querySelectorAll("body > [data-bits-portal]").length > 0;
+        return rootContent || portalContent;
+      });
       expect(hasContent, `Story "${storyId}" for ${component} rendered no content`).toBe(true);
     }
   },
