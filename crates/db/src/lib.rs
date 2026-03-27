@@ -9,10 +9,6 @@ use sqlx::sqlite::SqlitePoolOptions;
 pub use sea_orm::DatabaseConnection;
 
 /// Error type for database initialization (pool creation + migration).
-///
-/// Replaces the prior pattern of shoehorning `sea_orm::DbErr` into
-/// `sqlx::Error::Protocol`. Each variant preserves the original error
-/// type so callers can distinguish pool failures from migration failures.
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseSetupError {
     #[error("pool creation failed: {0}")]
