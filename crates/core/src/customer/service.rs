@@ -25,8 +25,9 @@ impl<R: CustomerRepository> CustomerService<R> {
         &self,
         params: PageParams,
         filter: IncludeDeleted,
+        search: Option<&str>,
     ) -> Result<(Vec<Customer>, i64), DomainError> {
-        self.repo.list(params, filter).await
+        self.repo.list(params, filter, search).await
     }
 
     pub async fn create(&self, req: &CreateCustomer) -> Result<Customer, DomainError> {
