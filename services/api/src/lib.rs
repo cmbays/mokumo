@@ -39,6 +39,7 @@ pub struct AppState {
     pub shutdown: CancellationToken,
     pub started_at: std::time::Instant,
     pub mdns_status: discovery::SharedMdnsStatus,
+    pub local_ip: Option<std::net::IpAddr>,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -123,12 +124,21 @@ pub fn build_app_with_shutdown(
     shutdown: CancellationToken,
     mdns_status: discovery::SharedMdnsStatus,
 ) -> Router {
+    let local_ip = match local_ip_address::local_ip() {
+        Ok(ip) => Some(ip),
+        Err(e) => {
+            tracing::warn!("Failed to detect LAN IP at startup: {e}");
+            None
+        }
+    };
+
     let state: SharedState = Arc::new(AppState {
         db,
         ws: Arc::new(ws::manager::ConnectionManager::new(64)),
         shutdown,
         started_at: std::time::Instant::now(),
         mdns_status,
+        local_ip,
     });
 
     let mut router = Router::new()
