@@ -101,22 +101,28 @@ pub async fn try_bind(
 
 /// Build the Axum router with health check, SPA fallback, and tracing.
 ///
-/// Convenience wrapper that creates a default `CancellationToken`.
-/// Prefer `build_app_with_shutdown` when you need graceful-shutdown control.
+/// Test-only convenience wrapper. Does NOT spawn the background IP refresh
+/// task — the local IP is computed once and never updated. Use
+/// `build_app_with_shutdown` in production for graceful lifecycle control.
 #[allow(unused_variables)] // config will be used by future CORS/rate-limit settings
 pub fn build_app(config: &ServerConfig, db: DatabaseConnection) -> Router {
-    build_app_with_shutdown(
+    let local_ip = local_ip_address::local_ip().ok();
+    let (_, local_ip_rx) = tokio::sync::watch::channel(local_ip);
+
+    build_app_inner(
         config,
         db,
         CancellationToken::new(),
         discovery::MdnsStatus::shared(),
+        local_ip_rx,
     )
 }
 
 /// Build the Axum router with an explicit shutdown token.
 ///
 /// The token is stored in `AppState` so handlers (e.g. WebSocket) can observe
-/// shutdown and drain gracefully.
+/// shutdown and drain gracefully. Spawns a background task that refreshes the
+/// cached local IP every 30s, stopped by the shutdown token.
 #[allow(unused_variables)] // config will be used by future CORS/rate-limit settings
 pub fn build_app_with_shutdown(
     config: &ServerConfig,
@@ -151,13 +157,24 @@ pub fn build_app_with_shutdown(
         }
     });
 
+    build_app_inner(config, db, shutdown, mdns_status, local_ip_rx)
+}
+
+#[allow(unused_variables)] // config will be used by future CORS/rate-limit settings
+fn build_app_inner(
+    config: &ServerConfig,
+    db: DatabaseConnection,
+    shutdown: CancellationToken,
+    mdns_status: discovery::SharedMdnsStatus,
+    local_ip: tokio::sync::watch::Receiver<Option<std::net::IpAddr>>,
+) -> Router {
     let state: SharedState = Arc::new(AppState {
         db,
         ws: Arc::new(ws::manager::ConnectionManager::new(64)),
         shutdown,
         started_at: std::time::Instant::now(),
         mdns_status,
-        local_ip: local_ip_rx,
+        local_ip,
     });
 
     let mut router = Router::new()
