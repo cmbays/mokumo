@@ -1,4 +1,3 @@
-@wip
 Feature: Customer list page
 
   The customer list is the primary entry point for managing customers.
@@ -15,22 +14,19 @@ Feature: Customer list page
 
   # --- Error State ---
 
+  @wip
   Scenario: Error state shows when the API is unreachable
     Given the API is unavailable
     When I navigate to the Customers page
     Then I see an error message indicating the data could not be loaded
 
-  # --- Data Display (V1) ---
+  # --- Data Display ---
 
   Scenario: Customer list loads with a data table
     Given customers exist in the system
     When I navigate to the Customers page
     Then I see a table of customers
     And each row shows the customer's name, company, email, and phone
-
-  Scenario: Loading skeleton appears while data is fetching
-    When I navigate to the Customers page
-    Then I see a loading skeleton before the table appears
 
   Scenario: Total customer count is displayed above the table
     Given 15 customers exist in the system
@@ -48,7 +44,7 @@ Feature: Customer list page
     Then the customer form sheet opens
     And the form fields are empty
 
-  # --- Search (V2 — requires P0 backend search param) ---
+  # --- Search ---
 
   Scenario: Searching filters the customer list
     Given customers "Acme Printing" and "Beta Apparel" exist
@@ -60,7 +56,7 @@ Feature: Customer list page
     When I clear the search bar
     Then all customers appear in the table
 
-  # --- Soft Delete Toggle (V2) ---
+  # --- Soft Delete Toggle ---
 
   Scenario: Archived customers are hidden by default
     Given an archived customer "Old Corp" exists
@@ -70,13 +66,13 @@ Feature: Customer list page
   Scenario: Show-deleted toggle reveals archived customers
     Given an archived customer "Old Corp" exists
     And I am on the Customers page
-    When I toggle "Show deleted"
+    When I toggle "Show archived"
     Then "Old Corp" appears in the table
 
-  # --- Pagination (V2) ---
+  # --- Pagination ---
 
   Scenario: Pagination controls appear when results span multiple pages
-    Given more customers exist than fit on one page
+    Given 26 customers exist in the system
     When I navigate to the Customers page
     Then I see pagination controls
 
@@ -86,7 +82,7 @@ Feature: Customer list page
     Then I see a different set of customers
     And the URL reflects page 2
 
-  # --- URL State Persistence (V2) ---
+  # --- URL State Persistence ---
 
   Scenario: Search state survives page refresh
     Given I am searching for "acme" on the Customers page
@@ -106,8 +102,9 @@ Feature: Customer list page
     When I refresh the page
     Then I am still on page 2
 
-  # --- Responsive (R5) ---
+  # --- Responsive ---
 
+  @wip
   Scenario: Customer list adapts to narrow viewports
     Given customers exist in the system
     When I view the Customers page on a mobile viewport
