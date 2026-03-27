@@ -30,6 +30,7 @@ pub async fn handler(State(state): State<SharedState>) -> Json<ServerInfoRespons
     } else {
         state
             .local_ip
+            .borrow()
             .map(|ip| format!("http://{}:{}", format_host(&ip), status.port))
     };
 

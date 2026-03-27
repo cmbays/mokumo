@@ -39,7 +39,7 @@ pub struct AppState {
     pub shutdown: CancellationToken,
     pub started_at: std::time::Instant,
     pub mdns_status: discovery::SharedMdnsStatus,
-    pub local_ip: Option<std::net::IpAddr>,
+    pub local_ip: tokio::sync::watch::Receiver<Option<std::net::IpAddr>>,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -124,13 +124,32 @@ pub fn build_app_with_shutdown(
     shutdown: CancellationToken,
     mdns_status: discovery::SharedMdnsStatus,
 ) -> Router {
-    let local_ip = match local_ip_address::local_ip() {
-        Ok(ip) => Some(ip),
-        Err(e) => {
-            tracing::warn!("Failed to detect LAN IP at startup: {e}");
-            None
+    let initial_ip = local_ip_address::local_ip().ok();
+    let (local_ip_tx, local_ip_rx) = tokio::sync::watch::channel(initial_ip);
+
+    // Background task: re-check local IP every 30s so the settings UI
+    // reflects network changes (Wi-Fi reconnect, VPN toggle, DHCP lease).
+    let shutdown_token = shutdown.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        interval.tick().await; // skip immediate first tick
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    let current = local_ip_address::local_ip().ok();
+                    local_ip_tx.send_if_modified(|prev| {
+                        if *prev != current {
+                            *prev = current;
+                            true
+                        } else {
+                            false
+                        }
+                    });
+                }
+                _ = shutdown_token.cancelled() => break,
+            }
         }
-    };
+    });
 
     let state: SharedState = Arc::new(AppState {
         db,
@@ -138,7 +157,7 @@ pub fn build_app_with_shutdown(
         shutdown,
         started_at: std::time::Instant::now(),
         mdns_status,
-        local_ip,
+        local_ip: local_ip_rx,
     });
 
     let mut router = Router::new()
