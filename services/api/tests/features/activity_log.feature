@@ -20,12 +20,14 @@ Feature: Activity log
     Given a customer "Acme Corp" exists
     When I update that customer's display name to "Acme Industries"
     Then the latest activity action for that customer should be "updated"
+    And the activity actor should be the authenticated user
     And the activity payload should reflect the updated name
 
   Scenario: Deleting a customer logs a "soft_deleted" activity
     Given a customer exists
     When I delete that customer
     Then the latest activity action for that customer should be "soft_deleted"
+    And the activity actor should be the authenticated user
 
   # --- Query endpoint ---
 
