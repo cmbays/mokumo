@@ -13,11 +13,13 @@ fn is_exempt(tags: &[String]) -> bool {
 #[tokio::main]
 async fn main() {
     bdd_world::DbWorld::cucumber()
-        .fail_on_skipped_with(|feature, _rule, scenario| {
+        .fail_on_skipped_with(|feature, rule, scenario| {
             // Only fail on skipped if the scenario is NOT exempt.
             // Returning true = "yes, fail this skipped scenario".
             // Returning false = "allow this scenario to be skipped".
-            !is_exempt(&feature.tags) && !is_exempt(&scenario.tags)
+            !is_exempt(&feature.tags)
+                && rule.map_or(true, |r| !is_exempt(&r.tags))
+                && !is_exempt(&scenario.tags)
         })
         .filter_run_and_exit("tests/features", |feature, _, sc| {
             let dominated_by_wip =

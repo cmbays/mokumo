@@ -13,8 +13,10 @@ fn is_exempt(tags: &[String]) -> bool {
 #[tokio::main]
 async fn main() {
     bdd_world::ApiWorld::cucumber()
-        .fail_on_skipped_with(|feature, _rule, scenario| {
-            !is_exempt(&feature.tags) && !is_exempt(&scenario.tags)
+        .fail_on_skipped_with(|feature, rule, scenario| {
+            !is_exempt(&feature.tags)
+                && rule.map_or(true, |r| !is_exempt(&r.tags))
+                && !is_exempt(&scenario.tags)
         })
         .filter_run("tests/features", |feature, _, sc| {
             let dominated_by_wip =
