@@ -88,26 +88,28 @@
           </div>
         {/if}
 
-        <div class="space-y-1">
-          <p class="text-sm font-medium">IP Address</p>
-          <div class="flex items-center gap-2">
-            <code class="rounded bg-muted px-2 py-1 text-sm font-mono">
-              {serverInfo.ip_url}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon"
-              onclick={() => copyUrl(serverInfo!.ip_url)}
-            >
-              <Copy class="size-4" />
-            </Button>
+        {#if serverInfo.ip_url}
+          <div class="space-y-1">
+            <p class="text-sm font-medium">IP Address</p>
+            <div class="flex items-center gap-2">
+              <code class="rounded bg-muted px-2 py-1 text-sm font-mono">
+                {serverInfo.ip_url}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon"
+                onclick={() => copyUrl(serverInfo!.ip_url!)}
+              >
+                <Copy class="size-4" />
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <p class="text-sm text-muted-foreground">
-          No authentication is configured. Anyone on your network can access
-          this server.
-        </p>
+          <p class="text-sm text-muted-foreground">
+            No authentication is configured. Anyone on your network can access
+            this server.
+          </p>
+        {/if}
       {/if}
     </Card.CardContent>
   </Card.Card>

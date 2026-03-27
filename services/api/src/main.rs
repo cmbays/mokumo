@@ -137,10 +137,11 @@ async fn main() {
         );
     }
 
-    // Record the bound port so /api/server-info always knows it
+    // Record the bound port and bind host so /api/server-info always knows them
     {
         let mut s = mdns_status.write().expect("MdnsStatus lock poisoned");
         s.port = actual_port;
+        s.bind_host = config.host.clone();
     }
 
     // Register mDNS after binding (uses actual bound port)

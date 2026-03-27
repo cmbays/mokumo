@@ -2,7 +2,7 @@
 
 export type ServerInfoResponse = {
   lan_url: string | null;
-  ip_url: string;
+  ip_url: string | null;
   mdns_active: boolean;
   host: string;
   port: number;

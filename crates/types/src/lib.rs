@@ -21,7 +21,7 @@ pub struct HealthResponse {
 #[ts(export)]
 pub struct ServerInfoResponse {
     pub lan_url: Option<String>,
-    pub ip_url: String,
+    pub ip_url: Option<String>,
     pub mdns_active: bool,
     pub host: String,
     #[ts(type = "number")]

@@ -9,6 +9,8 @@ use mokumo_types::ServerInfoResponse;
 async fn server_started_with(w: &mut ApiWorld, flag: String) {
     if flag == "--host 0.0.0.0" {
         w.mdns_host = "0.0.0.0".into();
+        let mut s = w.mdns_status.write().expect("MdnsStatus lock poisoned");
+        s.bind_host = "0.0.0.0".into();
     }
 }
 
@@ -169,10 +171,11 @@ async fn request_server_info(w: &mut ApiWorld) {
 
 #[when("another device registers the same hostname")]
 async fn another_device_registers_hostname(w: &mut ApiWorld) {
-    // Simulate collision by directly updating MdnsStatus hostname
+    // Simulate host-type collision by directly updating MdnsStatus hostname.
+    // Per RFC 6762 + mdns-sd convention, host renames use "-N" suffix (e.g. mokumo-2.local),
+    // NOT "(N)" which is the service-instance rename format.
     let mut s = w.mdns_status.write().expect("MdnsStatus lock poisoned");
-    // Per RFC 6762, collision resolution appends a suffix
-    s.hostname = Some("mokumo (2).local".into());
+    s.hostname = Some("mokumo-2.local".into());
 }
 
 #[then("the response shows LAN access is active")]
@@ -200,11 +203,13 @@ async fn lan_url_with_port(w: &mut ApiWorld, expected_base: String) {
 async fn ip_url_included(w: &mut ApiWorld) {
     let resp = w.response.as_ref().expect("no response captured");
     let info: ServerInfoResponse = resp.json();
-    assert!(!info.ip_url.is_empty(), "Expected ip_url to be non-empty");
+    let ip_url = info
+        .ip_url
+        .as_deref()
+        .expect("Expected ip_url to be present");
     assert!(
-        info.ip_url.starts_with("http://"),
-        "Expected ip_url to start with http://, got {}",
-        info.ip_url
+        ip_url.starts_with("http://"),
+        "Expected ip_url to start with http://, got {ip_url}",
     );
 }
 
@@ -226,11 +231,15 @@ async fn lan_url_absent(w: &mut ApiWorld) {
     );
 }
 
-#[then("an IP-based URL is still included")]
-async fn ip_url_still_included(w: &mut ApiWorld) {
+#[then("no IP-based URL is included")]
+async fn no_ip_url_included(w: &mut ApiWorld) {
     let resp = w.response.as_ref().expect("no response captured");
     let info: ServerInfoResponse = resp.json();
-    assert!(!info.ip_url.is_empty(), "Expected ip_url to be non-empty");
+    assert!(
+        info.ip_url.is_none(),
+        "Expected ip_url to be None on loopback, got {:?}",
+        info.ip_url
+    );
 }
 
 #[then("the response shows mDNS is not active")]

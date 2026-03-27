@@ -56,7 +56,7 @@ Feature: LAN Discovery
     When a client requests the server info endpoint
     Then the response shows LAN access is disabled
     And the LAN URL is absent
-    And an IP-based URL is still included
+    And no IP-based URL is included
 
   Scenario: Server info reports LAN access unavailable when mDNS fails
     Given the server is started with "--host 0.0.0.0"

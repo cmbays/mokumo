@@ -1,10 +1,22 @@
 use std::sync::{Arc, RwLock};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct MdnsStatus {
     pub active: bool,
     pub hostname: Option<String>,
     pub port: u16,
+    pub bind_host: String,
+}
+
+impl Default for MdnsStatus {
+    fn default() -> Self {
+        Self {
+            active: false,
+            hostname: None,
+            port: 0,
+            bind_host: "127.0.0.1".into(),
+        }
+    }
 }
 
 pub type SharedMdnsStatus = Arc<RwLock<MdnsStatus>>;
@@ -161,13 +173,23 @@ pub fn spawn_collision_monitor(
         loop {
             match receiver.recv_async().await {
                 Ok(mdns_sd::DaemonEvent::NameChange(change)) => {
-                    tracing::warn!(
-                        "mDNS name collision: '{}' changed to '{}'",
-                        change.original,
-                        change.new_name
-                    );
-                    let mut s = status.write().expect("MdnsStatus lock poisoned");
-                    s.hostname = Some(change.new_name);
+                    if matches!(change.rr_type, mdns_sd::RRType::A | mdns_sd::RRType::AAAA) {
+                        tracing::warn!(
+                            "mDNS name collision: '{}' changed to '{}'",
+                            change.original,
+                            change.new_name
+                        );
+                        let hostname = change.new_name.trim_end_matches('.').to_string();
+                        let mut s = status.write().expect("MdnsStatus lock poisoned");
+                        s.hostname = Some(hostname);
+                    } else {
+                        tracing::debug!(
+                            "mDNS service-instance rename ({}): '{}' → '{}'",
+                            change.rr_type,
+                            change.original,
+                            change.new_name
+                        );
+                    }
                 }
                 Ok(_) => {} // Ignore other events
                 Err(_) => {
