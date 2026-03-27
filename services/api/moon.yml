@@ -137,6 +137,11 @@ tasks:
       trap 'rm -rf "$TEMP_BINDINGS"' EXIT
 
       TS_RS_EXPORT_DIR="$TEMP_BINDINGS" cargo test --workspace --exclude mokumo-desktop
+
+      # Format generated files so diff ignores stylistic differences (oxfmt vs ts-rs)
+      npx oxfmt "$TEMP_BINDINGS"/*.ts 2>/dev/null || true
+      npx oxfmt apps/web/src/lib/types/*.ts 2>/dev/null || true
+
       diff -ru apps/web/src/lib/types/ "$TEMP_BINDINGS/"
     inputs:
     - '@group(allRust)'
