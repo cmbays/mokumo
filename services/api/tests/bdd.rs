@@ -15,7 +15,7 @@ async fn main() {
     bdd_world::ApiWorld::cucumber()
         .fail_on_skipped_with(|feature, rule, scenario| {
             !is_exempt(&feature.tags)
-                && rule.map_or(true, |r| !is_exempt(&r.tags))
+                && rule.is_none_or(|r| !is_exempt(&r.tags))
                 && !is_exempt(&scenario.tags)
         })
         .filter_run("tests/features", |feature, _, sc| {
