@@ -12,12 +12,12 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 /// Holds the server task handle so `ExitRequested` can await a clean drain.
 struct ServerHandle(std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
 
-fn initial_webview_url(port: u16, setup_token: Option<&str>) -> String {
+fn initial_webview_url(host: &str, port: u16, setup_token: Option<&str>) -> String {
     let path = match setup_token {
         Some(token) => format!("/setup?setup_token={token}"),
         None => "/".to_string(),
     };
-    format!("http://localhost:{port}{path}")
+    format!("http://{host}:{port}{path}")
 }
 
 /// Initialize the server: create dirs, backup, run migrations, build app, bind port.
@@ -146,8 +146,13 @@ pub fn run() {
             // Store the handle so ExitRequested can await server drain
             app.manage(ServerHandle(std::sync::Mutex::new(Some(server_handle))));
 
-            let url = initial_webview_url(actual_port, setup_token.as_deref());
-            tracing::info!("Opening webview at {url}");
+            let url = initial_webview_url(DEFAULT_HOST, actual_port, setup_token.as_deref());
+            let log_url = initial_webview_url(
+                DEFAULT_HOST,
+                actual_port,
+                setup_token.as_ref().map(|_| "[redacted]"),
+            );
+            tracing::info!("Opening webview at {log_url}");
 
             tauri::WebviewWindowBuilder::new(
                 app,
@@ -193,13 +198,16 @@ mod tests {
     #[test]
     fn setup_url_prefills_setup_token() {
         assert_eq!(
-            initial_webview_url(6565, Some("test-token")),
-            "http://localhost:6565/setup?setup_token=test-token"
+            initial_webview_url("127.0.0.1", 6565, Some("test-token")),
+            "http://127.0.0.1:6565/setup?setup_token=test-token"
         );
     }
 
     #[test]
     fn setup_complete_url_opens_dashboard_root() {
-        assert_eq!(initial_webview_url(6565, None), "http://localhost:6565/");
+        assert_eq!(
+            initial_webview_url("127.0.0.1", 6565, None),
+            "http://127.0.0.1:6565/"
+        );
     }
 }
