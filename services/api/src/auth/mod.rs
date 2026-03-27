@@ -166,7 +166,7 @@ async fn setup(
 
     let setup_guard = match SetupAttemptGuard::acquire(&state) {
         Ok(guard) => guard,
-        Err(err) => return err,
+        Err(err) => return *err,
     };
 
     let repo = SeaOrmUserRepo::new(state.db.clone());
@@ -202,13 +202,13 @@ struct SetupAttemptGuard {
 }
 
 impl SetupAttemptGuard {
-    fn acquire(state: &SharedState) -> Result<Self, Response> {
+    fn acquire(state: &SharedState) -> Result<Self, Box<Response>> {
         if state.setup_completed.load(Ordering::Acquire) {
-            return Err(error_response(
+            return Err(Box::new(error_response(
                 StatusCode::FORBIDDEN,
                 ErrorCode::Forbidden,
                 "Setup already completed",
-            ));
+            )));
         }
 
         if state
@@ -216,20 +216,20 @@ impl SetupAttemptGuard {
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
         {
-            return Err(error_response(
+            return Err(Box::new(error_response(
                 StatusCode::CONFLICT,
                 ErrorCode::Conflict,
                 "Setup is already in progress",
-            ));
+            )));
         }
 
         if state.setup_completed.load(Ordering::Acquire) {
             state.setup_in_progress.store(false, Ordering::Release);
-            return Err(error_response(
+            return Err(Box::new(error_response(
                 StatusCode::FORBIDDEN,
                 ErrorCode::Forbidden,
                 "Setup already completed",
-            ));
+            )));
         }
 
         Ok(Self {
