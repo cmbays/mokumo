@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { apiFetch } from "$lib/api";
   import PasswordInput from "$lib/components/password-input.svelte";
   import RecoveryCodes from "$lib/components/recovery-codes.svelte";
@@ -36,7 +37,7 @@
   let adminName = $state("");
   let adminEmail = $state("");
   let adminPassword = $state("");
-  let setupToken = $state("");
+  let setupToken = $state(page.url.searchParams.get("setup_token") ?? "");
 
   // Step 4: Recovery codes
   let recoveryCodes = $state<string[]>([]);
@@ -197,7 +198,9 @@
             autocomplete="off"
           />
           <p class="text-xs text-muted-foreground">
-            Find this in the terminal where you started Mokumo.
+            {page.url.searchParams.has("setup_token")
+              ? "Prefilled by the desktop app for first-run setup."
+              : "Find this in the terminal where you started Mokumo."}
           </p>
         </div>
 
