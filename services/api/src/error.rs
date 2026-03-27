@@ -9,6 +9,7 @@ use mokumo_types::error::ErrorBody;
 /// This is the boundary between domain logic and HTTP semantics.
 /// Internal errors are redacted — real messages are logged, not returned.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum AppError {
     Domain(DomainError),
     Database(sqlx::Error),
@@ -56,6 +57,11 @@ impl IntoResponse for AppError {
                 ),
                 DomainError::Internal { message } => {
                     tracing::error!("Internal error: {message}");
+                    (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
+                }
+                // New DomainError variants need an explicit arm above with the correct status code.
+                _ => {
+                    tracing::error!("Unhandled domain error: {domain_err}");
                     (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
                 }
             },
