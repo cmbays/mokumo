@@ -12,6 +12,10 @@
     CustomerContext,
     setCustomerContext,
   } from "$lib/contexts/customer-context.svelte";
+  import {
+    clearBreadcrumbLabel,
+    setBreadcrumbLabel,
+  } from "$lib/config/breadcrumb-overrides.svelte";
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
 
   let { data, children } = $props();
@@ -23,6 +27,14 @@
     ctx.customer = data.customer;
     ctx.error = data.error;
     ctx.loading = false;
+    if (data.customer) {
+      setBreadcrumbLabel(data.customer.id, data.customer.display_name);
+    }
+    return () => {
+      if (data.customer) {
+        clearBreadcrumbLabel(data.customer.id);
+      }
+    };
   });
 
   let tabs = $derived(
