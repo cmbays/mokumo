@@ -66,6 +66,9 @@ impl IntoResponse for AppError {
                     (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
                 }
             },
+            // Boundary safeguard: repo impls currently normalise DB errors into
+            // DomainError before they reach here, so this arm fires only for raw
+            // SQLx queries (e.g. future reporting endpoints) that bypass the repo layer.
             Self::Database(err) => match &err {
                 sqlx::Error::RowNotFound => (
                     StatusCode::NOT_FOUND,
