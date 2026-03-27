@@ -13,7 +13,7 @@ Feature: Activity log
     When I create a customer "Acme Corp"
     Then the activity log for that customer should have 1 entry
     And the latest activity action should be "created"
-    And the activity actor should be "system"
+    And the activity actor should be the authenticated user
     And the activity payload should contain the customer snapshot
 
   Scenario: Updating a customer logs an "updated" activity

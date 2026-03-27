@@ -1,3 +1,4 @@
+use crate::actor::Actor;
 use crate::customer::{CreateCustomer, Customer, CustomerId, UpdateCustomer};
 use crate::error::DomainError;
 use crate::filter::IncludeDeleted;
@@ -21,16 +22,19 @@ pub trait CustomerRepository: Send + Sync {
     fn create(
         &self,
         req: &CreateCustomer,
+        actor: &Actor,
     ) -> impl Future<Output = Result<Customer, DomainError>> + Send;
 
     fn update(
         &self,
         id: &CustomerId,
         req: &UpdateCustomer,
+        actor: &Actor,
     ) -> impl Future<Output = Result<Customer, DomainError>> + Send;
 
     fn soft_delete(
         &self,
         id: &CustomerId,
+        actor: &Actor,
     ) -> impl Future<Output = Result<Customer, DomainError>> + Send;
 }

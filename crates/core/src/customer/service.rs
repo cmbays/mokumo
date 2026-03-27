@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::actor::Actor;
 use crate::customer::traits::CustomerRepository;
 use crate::customer::{CreateCustomer, Customer, CustomerId, UpdateCustomer};
 use crate::error::DomainError;
@@ -32,7 +33,11 @@ impl<R: CustomerRepository> CustomerService<R> {
         self.repo.list(params, filter, search).await
     }
 
-    pub async fn create(&self, req: &CreateCustomer) -> Result<Customer, DomainError> {
+    pub async fn create(
+        &self,
+        req: &CreateCustomer,
+        actor: &Actor,
+    ) -> Result<Customer, DomainError> {
         if req.display_name.trim().is_empty() {
             return Err(DomainError::Validation {
                 details: HashMap::from([(
@@ -43,13 +48,14 @@ impl<R: CustomerRepository> CustomerService<R> {
         }
         let mut normalized = req.clone();
         normalized.display_name = req.display_name.trim().to_string();
-        self.repo.create(&normalized).await
+        self.repo.create(&normalized, actor).await
     }
 
     pub async fn update(
         &self,
         id: &CustomerId,
         req: &UpdateCustomer,
+        actor: &Actor,
     ) -> Result<Customer, DomainError> {
         if req
             .display_name
@@ -67,10 +73,14 @@ impl<R: CustomerRepository> CustomerService<R> {
         if let Some(ref name) = normalized.display_name {
             normalized.display_name = Some(name.trim().to_string());
         }
-        self.repo.update(id, &normalized).await
+        self.repo.update(id, &normalized, actor).await
     }
 
-    pub async fn soft_delete(&self, id: &CustomerId) -> Result<Customer, DomainError> {
-        self.repo.soft_delete(id).await
+    pub async fn soft_delete(
+        &self,
+        id: &CustomerId,
+        actor: &Actor,
+    ) -> Result<Customer, DomainError> {
+        self.repo.soft_delete(id, actor).await
     }
 }

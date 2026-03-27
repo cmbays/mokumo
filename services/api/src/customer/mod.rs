@@ -2,6 +2,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
+use mokumo_core::actor::Actor;
 use mokumo_core::customer::service::CustomerService;
 use mokumo_core::customer::{CreateCustomer, Customer, CustomerId, UpdateCustomer};
 use mokumo_core::error::DomainError;
@@ -12,6 +13,7 @@ use mokumo_types::pagination::PaginatedList;
 use serde::Deserialize;
 
 use crate::SharedState;
+use crate::auth::AuthSessionType;
 use crate::error::AppError;
 use crate::pagination::PaginationParams;
 
@@ -70,6 +72,13 @@ fn customer_service(state: &SharedState) -> CustomerService<SeaOrmCustomerRepo> 
     CustomerService::new(SeaOrmCustomerRepo::new(state.db.clone()))
 }
 
+fn actor_from_session(auth_session: &AuthSessionType) -> Actor {
+    match &auth_session.user {
+        Some(user) => Actor::user(user.user.id.get()),
+        None => Actor::system(),
+    }
+}
+
 fn include_deleted_filter(flag: Option<bool>) -> IncludeDeleted {
     if flag.unwrap_or(false) {
         IncludeDeleted::IncludeDeleted
@@ -93,10 +102,12 @@ struct ListCustomersQuery {
 
 async fn create_customer(
     State(state): State<SharedState>,
+    auth_session: AuthSessionType,
     Json(req): Json<CreateCustomer>,
 ) -> Result<(StatusCode, Json<CustomerResponse>), AppError> {
+    let actor = actor_from_session(&auth_session);
     let svc = customer_service(&state);
-    let customer = svc.create(&req).await?;
+    let customer = svc.create(&req, &actor).await?;
     Ok((StatusCode::CREATED, Json(to_response(customer))))
 }
 
@@ -146,21 +157,25 @@ async fn list_customers(
 
 async fn update_customer(
     State(state): State<SharedState>,
+    auth_session: AuthSessionType,
     Path(id): Path<String>,
     Json(req): Json<UpdateCustomer>,
 ) -> Result<Json<CustomerResponse>, AppError> {
+    let actor = actor_from_session(&auth_session);
     let customer_id = parse_customer_id(&id)?;
     let svc = customer_service(&state);
-    let customer = svc.update(&customer_id, &req).await?;
+    let customer = svc.update(&customer_id, &req, &actor).await?;
     Ok(Json(to_response(customer)))
 }
 
 async fn delete_customer(
     State(state): State<SharedState>,
+    auth_session: AuthSessionType,
     Path(id): Path<String>,
 ) -> Result<Json<CustomerResponse>, AppError> {
+    let actor = actor_from_session(&auth_session);
     let customer_id = parse_customer_id(&id)?;
     let svc = customer_service(&state);
-    let customer = svc.soft_delete(&customer_id).await?;
+    let customer = svc.soft_delete(&customer_id, &actor).await?;
     Ok(Json(to_response(customer)))
 }

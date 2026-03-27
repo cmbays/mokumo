@@ -1,4 +1,5 @@
 use mokumo_core::activity::ActivityAction;
+use mokumo_core::actor::Actor;
 use mokumo_core::customer::traits::CustomerRepository;
 use mokumo_core::customer::{CreateCustomer, Customer, CustomerId, UpdateCustomer};
 use mokumo_core::error::DomainError;
@@ -46,11 +47,12 @@ impl From<entity::Model> for Customer {
 }
 
 /// Serialize the customer snapshot and insert an activity log entry within
-/// the caller's transaction. Hardcodes actor to "system" until auth lands.
+/// the caller's transaction.
 async fn log_customer_activity(
     conn: &impl ConnectionTrait,
     customer: &Customer,
     action: ActivityAction,
+    actor: &Actor,
 ) -> Result<(), DomainError> {
     let payload = serde_json::to_value(customer).map_err(|e| DomainError::Internal {
         message: format!("failed to serialize customer for activity log: {e}"),
@@ -60,8 +62,8 @@ async fn log_customer_activity(
         "customer",
         &customer.id.to_string(),
         action,
-        "system",
-        "system",
+        actor.id(),
+        &actor.actor_type().to_string(),
         &payload,
     )
     .await
@@ -138,7 +140,7 @@ impl CustomerRepository for SeaOrmCustomerRepo {
         Ok((customers, count))
     }
 
-    async fn create(&self, req: &CreateCustomer) -> Result<Customer, DomainError> {
+    async fn create(&self, req: &CreateCustomer, actor: &Actor) -> Result<Customer, DomainError> {
         let id = CustomerId::generate();
         let txn = self.db.begin().await.map_err(sea_err)?;
 
@@ -180,13 +182,18 @@ impl CustomerRepository for SeaOrmCustomerRepo {
         let model = active.insert(&txn).await.map_err(sea_err)?;
         let customer = Customer::from(model);
 
-        log_customer_activity(&txn, &customer, ActivityAction::Created).await?;
+        log_customer_activity(&txn, &customer, ActivityAction::Created, actor).await?;
 
         txn.commit().await.map_err(sea_err)?;
         Ok(customer)
     }
 
-    async fn update(&self, id: &CustomerId, req: &UpdateCustomer) -> Result<Customer, DomainError> {
+    async fn update(
+        &self,
+        id: &CustomerId,
+        req: &UpdateCustomer,
+        actor: &Actor,
+    ) -> Result<Customer, DomainError> {
         let txn = self.db.begin().await.map_err(sea_err)?;
 
         // Verify customer exists and is not soft-deleted
@@ -249,12 +256,12 @@ impl CustomerRepository for SeaOrmCustomerRepo {
             })?;
 
         let customer = Customer::from(model);
-        log_customer_activity(&txn, &customer, ActivityAction::Updated).await?;
+        log_customer_activity(&txn, &customer, ActivityAction::Updated, actor).await?;
         txn.commit().await.map_err(sea_err)?;
         Ok(customer)
     }
 
-    async fn soft_delete(&self, id: &CustomerId) -> Result<Customer, DomainError> {
+    async fn soft_delete(&self, id: &CustomerId, actor: &Actor) -> Result<Customer, DomainError> {
         let txn = self.db.begin().await.map_err(sea_err)?;
 
         let result = CustomerEntity::update_many()
@@ -285,7 +292,7 @@ impl CustomerRepository for SeaOrmCustomerRepo {
             })?;
 
         let customer = Customer::from(model);
-        log_customer_activity(&txn, &customer, ActivityAction::SoftDeleted).await?;
+        log_customer_activity(&txn, &customer, ActivityAction::SoftDeleted, actor).await?;
         txn.commit().await.map_err(sea_err)?;
         Ok(customer)
     }
@@ -294,6 +301,7 @@ impl CustomerRepository for SeaOrmCustomerRepo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mokumo_core::actor::Actor;
     use mokumo_core::customer::traits::CustomerRepository;
 
     async fn test_db() -> (
@@ -350,25 +358,28 @@ mod tests {
         company_name: Option<&str>,
         email: Option<&str>,
     ) -> Customer {
-        repo.create(&CreateCustomer {
-            display_name: display_name.to_string(),
-            company_name: company_name.map(String::from),
-            email: email.map(String::from),
-            phone: None,
-            address_line1: None,
-            address_line2: None,
-            city: None,
-            state: None,
-            postal_code: None,
-            country: None,
-            notes: None,
-            portal_enabled: None,
-            tax_exempt: None,
-            payment_terms: None,
-            credit_limit_cents: None,
-            lead_source: None,
-            tags: None,
-        })
+        repo.create(
+            &CreateCustomer {
+                display_name: display_name.to_string(),
+                company_name: company_name.map(String::from),
+                email: email.map(String::from),
+                phone: None,
+                address_line1: None,
+                address_line2: None,
+                city: None,
+                state: None,
+                postal_code: None,
+                country: None,
+                notes: None,
+                portal_enabled: None,
+                tax_exempt: None,
+                payment_terms: None,
+                credit_limit_cents: None,
+                lead_source: None,
+                tags: None,
+            },
+            &Actor::system(),
+        )
         .await
         .expect("create test customer")
     }
@@ -460,7 +471,7 @@ mod tests {
             .unwrap();
 
         let repo = SeaOrmCustomerRepo::new(db);
-        let result = repo.create(&sample_create()).await;
+        let result = repo.create(&sample_create(), &Actor::system()).await;
         assert!(
             result.is_err(),
             "create should fail when activity_log table is missing"
@@ -507,13 +518,14 @@ mod tests {
         let (db, _pool, _tmp) = test_db().await;
         let repo = SeaOrmCustomerRepo::new(db);
 
-        let customer = repo.create(&sample_create()).await.unwrap();
+        let actor = Actor::system();
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
 
         // First soft-delete succeeds
-        repo.soft_delete(&customer.id).await.unwrap();
+        repo.soft_delete(&customer.id, &actor).await.unwrap();
 
         // Second soft-delete should return NotFound
-        let result = repo.soft_delete(&customer.id).await;
+        let result = repo.soft_delete(&customer.id, &actor).await;
         assert!(
             matches!(result, Err(DomainError::NotFound { .. })),
             "double soft-delete should return NotFound, got: {result:?}"
@@ -524,8 +536,9 @@ mod tests {
     async fn test_empty_update_is_noop() {
         let (db, _pool, _tmp) = test_db().await;
         let repo = SeaOrmCustomerRepo::new(db);
+        let actor = Actor::system();
 
-        let customer = repo.create(&sample_create()).await.unwrap();
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
         let before = repo
             .find_by_id(&customer.id, IncludeDeleted::ExcludeDeleted)
             .await
@@ -533,7 +546,10 @@ mod tests {
             .unwrap();
 
         // Update with all None fields — should be a no-op
-        let after = repo.update(&customer.id, &empty_update()).await.unwrap();
+        let after = repo
+            .update(&customer.id, &empty_update(), &actor)
+            .await
+            .unwrap();
 
         assert_eq!(before.display_name, after.display_name);
         assert_eq!(before.company_name, after.company_name);

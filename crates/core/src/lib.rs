@@ -1,4 +1,5 @@
 pub mod activity;
+pub mod actor;
 pub mod customer;
 pub mod error;
 pub mod filter;
