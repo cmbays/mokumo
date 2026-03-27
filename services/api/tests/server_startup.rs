@@ -121,8 +121,11 @@ async fn health_endpoint_returns_500_error_body_on_db_failure() {
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-    assert_eq!(json["code"], "internal_error");
-    assert_eq!(json["message"], "An internal error occurred");
+    assert_eq!(json["code"].as_str().unwrap(), "internal_error");
+    assert_eq!(
+        json["message"].as_str().unwrap(),
+        "An internal error occurred"
+    );
 }
 
 #[tokio::test]
@@ -153,6 +156,6 @@ async fn spa_fallback_returns_json_404_for_unknown_api_paths() {
         .await
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["code"], "not_found");
+    assert_eq!(json["code"].as_str().unwrap(), "not_found");
     assert!(json["message"].as_str().is_some(), "Expected message field");
 }

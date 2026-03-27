@@ -66,10 +66,20 @@ impl IntoResponse for AppError {
                     (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
                 }
             },
-            Self::Database(err) => {
-                tracing::error!("Database error: {err}");
-                (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
-            }
+            Self::Database(err) => match &err {
+                sqlx::Error::RowNotFound => (
+                    StatusCode::NOT_FOUND,
+                    ErrorBody {
+                        code: ErrorCode::NotFound,
+                        message: "The requested record was not found".into(),
+                        details: None,
+                    },
+                ),
+                other => {
+                    tracing::error!("Database error: {other}");
+                    (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
+                }
+            },
         };
 
         let mut response = (status, Json(body)).into_response();
@@ -275,6 +285,47 @@ mod tests {
             content_type.to_str().unwrap().contains("application/json"),
             "Expected JSON content type, got: {:?}",
             content_type
+        );
+    }
+
+    // --- sqlx::Error categorization (#38) ---
+
+    #[test]
+    fn sqlx_row_not_found_maps_to_404() {
+        let err = AppError::Database(sqlx::Error::RowNotFound);
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn sqlx_row_not_found_response_body() {
+        let err = AppError::Database(sqlx::Error::RowNotFound);
+        let response = err.into_response();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::NotFound);
+        assert!(
+            !error_body.message.is_empty(),
+            "RowNotFound should have a user-facing message"
+        );
+    }
+
+    #[tokio::test]
+    async fn sqlx_other_errors_still_map_to_500_and_redact() {
+        let err = AppError::Database(sqlx::Error::PoolTimedOut);
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::InternalError);
+        assert!(
+            !error_body.message.contains("PoolTimedOut"),
+            "sqlx error variant should not leak: {}",
+            error_body.message
         );
     }
 }
