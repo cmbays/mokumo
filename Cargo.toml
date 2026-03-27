@@ -73,6 +73,7 @@ rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 
 # Platform directories
 directories = "6"
+dirs = "6"
 
 # Graceful shutdown
 tokio-util = { version = "0.7", features = ["rt"] }

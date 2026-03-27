@@ -30,6 +30,7 @@ mdns-sd = { workspace = true }
 local-ip-address = { workspace = true }
 time = { workspace = true }
 rand = { workspace = true }
+dirs = { workspace = true }
 
 [features]
 bdd = []
