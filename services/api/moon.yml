@@ -120,6 +120,12 @@ tasks:
     options:
       cache: false
       runFromWorkspaceRoot: true
+  entity-check:
+    command: cargo test --package mokumo-db --test entity_drift
+    inputs:
+    - '@group(allRust)'
+    options:
+      runFromWorkspaceRoot: true
   bindings-check:
     deps:
     - web:build

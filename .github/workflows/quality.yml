@@ -218,6 +218,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify ts-rs bindings in sync
         run: moon run api:bindings-check
+      - name: Verify entity-schema alignment
+        run: moon run api:entity-check
 
   verdict:
     if: always()
