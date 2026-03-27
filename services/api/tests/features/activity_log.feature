@@ -13,19 +13,21 @@ Feature: Activity log
     When I create a customer "Acme Corp"
     Then the activity log for that customer should have 1 entry
     And the latest activity action should be "created"
-    And the activity actor should be "system"
+    And the activity actor should be the authenticated user
     And the activity payload should contain the customer snapshot
 
   Scenario: Updating a customer logs an "updated" activity
     Given a customer "Acme Corp" exists
     When I update that customer's display name to "Acme Industries"
     Then the latest activity action for that customer should be "updated"
+    And the activity actor should be the authenticated user
     And the activity payload should reflect the updated name
 
   Scenario: Deleting a customer logs a "soft_deleted" activity
     Given a customer exists
     When I delete that customer
     Then the latest activity action for that customer should be "soft_deleted"
+    And the activity actor should be the authenticated user
 
   # --- Query endpoint ---
 

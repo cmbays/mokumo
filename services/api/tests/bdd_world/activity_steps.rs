@@ -53,13 +53,31 @@ async fn latest_action_should_be(w: &mut ApiWorld, expected: String) {
     assert_eq!(latest["action"].as_str().unwrap(), expected);
 }
 
-#[then(expr = "the activity actor should be {string}")]
-async fn activity_actor_should_be(w: &mut ApiWorld, expected: String) {
-    let resp = w.response.as_ref().expect("no response");
+#[then("the activity actor should be the authenticated user")]
+async fn activity_actor_should_be_authenticated_user(w: &mut ApiWorld) {
+    // Get the actual authenticated user's ID from /api/auth/me
+    let me_resp = w.server.get("/api/auth/me").await;
+    me_resp.assert_status(axum::http::StatusCode::OK);
+    let me_json: serde_json::Value = me_resp.json();
+    let expected_user_id = me_json["user"]["id"]
+        .as_i64()
+        .expect("user.id should be numeric");
+
+    let resp = w
+        .response
+        .as_ref()
+        .expect("no response — query activity first");
     let json: serde_json::Value = resp.json();
     let items = json["items"].as_array().expect("items should be an array");
     let latest = items.first().expect("no activity entries");
-    assert_eq!(latest["actor_id"].as_str().unwrap(), expected);
+    let actor_id = latest["actor_id"].as_str().unwrap();
+    let actor_type = latest["actor_type"].as_str().unwrap();
+    assert_eq!(
+        actor_id,
+        expected_user_id.to_string(),
+        "actor_id should match the authenticated user's ID"
+    );
+    assert_eq!(actor_type, "user", "actor_type should be 'user'");
 }
 
 #[then("the activity payload should contain the customer snapshot")]

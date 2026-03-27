@@ -1,5 +1,6 @@
 use cucumber::{given, then, when};
 use mokumo_core::activity::traits::ActivityLogRepository;
+use mokumo_core::actor::Actor;
 use mokumo_core::customer::traits::CustomerRepository;
 use mokumo_core::customer::{CreateCustomer, CustomerId, UpdateCustomer};
 use mokumo_core::pagination::PageParams;
@@ -75,7 +76,10 @@ async fn empty_database(_w: &mut DbWorld) {
 async fn customer_exists(w: &mut DbWorld, name: String) {
     let repo = customer_repo(w);
     let req = make_create_request(&name);
-    let customer = repo.create(&req).await.expect("failed to create customer");
+    let customer = repo
+        .create(&req, &Actor::system())
+        .await
+        .expect("failed to create customer");
     w.last_customer = Some(customer);
 }
 
@@ -107,7 +111,7 @@ async fn customer_exists_with_entries(w: &mut DbWorld, name: String, count: i32)
 async fn create_customer(w: &mut DbWorld, name: String) {
     let repo = customer_repo(w);
     let req = make_create_request(&name);
-    match repo.create(&req).await {
+    match repo.create(&req, &Actor::system()).await {
         Ok(customer) => w.last_customer = Some(customer),
         Err(e) => w.last_error = Some(e),
     }
@@ -119,7 +123,7 @@ async fn update_customer_name(w: &mut DbWorld, new_name: String) {
     let id = customer.id;
     let repo = customer_repo(w);
     let req = make_update_request(Some(&new_name));
-    match repo.update(&id, &req).await {
+    match repo.update(&id, &req, &Actor::system()).await {
         Ok(customer) => w.last_customer = Some(customer),
         Err(e) => w.last_error = Some(e),
     }
@@ -133,7 +137,7 @@ async fn soft_delete_customer(w: &mut DbWorld) {
         .expect("no customer to soft-delete");
     let id = customer.id;
     let repo = customer_repo(w);
-    match repo.soft_delete(&id).await {
+    match repo.soft_delete(&id, &Actor::system()).await {
         Ok(customer) => w.last_customer = Some(customer),
         Err(e) => w.last_error = Some(e),
     }
@@ -144,7 +148,7 @@ async fn update_nonexistent(w: &mut DbWorld) {
     let repo = customer_repo(w);
     let fake_id = CustomerId::generate();
     let req = make_update_request(Some("Should Not Exist"));
-    match repo.update(&fake_id, &req).await {
+    match repo.update(&fake_id, &req, &Actor::system()).await {
         Ok(customer) => w.last_customer = Some(customer),
         Err(e) => w.last_error = Some(e),
     }
@@ -153,23 +157,27 @@ async fn update_nonexistent(w: &mut DbWorld) {
 #[when("a customer is created, then updated, then soft-deleted")]
 async fn create_update_delete(w: &mut DbWorld) {
     let repo = customer_repo(w);
+    let actor = Actor::system();
 
     // Create
     let req = make_create_request("Lifecycle Corp");
-    let customer = repo.create(&req).await.expect("failed to create");
+    let customer = repo.create(&req, &actor).await.expect("failed to create");
     let id = customer.id;
     w.last_customer = Some(customer);
 
     // Update
     let update_req = make_update_request(Some("Lifecycle Corp Updated"));
     let customer = repo
-        .update(&id, &update_req)
+        .update(&id, &update_req, &actor)
         .await
         .expect("failed to update");
     w.last_customer = Some(customer);
 
     // Soft-delete
-    let customer = repo.soft_delete(&id).await.expect("failed to soft-delete");
+    let customer = repo
+        .soft_delete(&id, &actor)
+        .await
+        .expect("failed to soft-delete");
     w.last_customer = Some(customer);
 }
 
