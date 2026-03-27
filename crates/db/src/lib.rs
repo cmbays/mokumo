@@ -8,6 +8,20 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 pub use sea_orm::DatabaseConnection;
 
+/// Error type for database initialization (pool creation + migration).
+///
+/// Replaces the prior pattern of shoehorning `sea_orm::DbErr` into
+/// `sqlx::Error::Protocol`. Each variant preserves the original error
+/// type so callers can distinguish pool failures from migration failures.
+#[derive(Debug, thiserror::Error)]
+pub enum DatabaseSetupError {
+    #[error("pool creation failed: {0}")]
+    Pool(#[from] sqlx::Error),
+
+    #[error("migration failed: {0}")]
+    Migration(#[from] sea_orm::DbErr),
+}
+
 /// Convert a sqlx error into a DomainError::Internal.
 /// Shared across all repository implementations.
 pub(crate) fn db_err(e: sqlx::Error) -> DomainError {
@@ -30,7 +44,9 @@ pub(crate) fn sea_err(e: sea_orm::DbErr) -> DomainError {
 /// via `SqlxSqliteConnector::from_sqlx_sqlite_pool` for `DatabaseConnection`.
 ///
 /// The `database_url` should include `?mode=rwc` if the file may not exist yet.
-pub async fn initialize_database(database_url: &str) -> Result<DatabaseConnection, sqlx::Error> {
+pub async fn initialize_database(
+    database_url: &str,
+) -> Result<DatabaseConnection, DatabaseSetupError> {
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .after_connect(|conn, _meta| {
@@ -59,9 +75,7 @@ pub async fn initialize_database(database_url: &str) -> Result<DatabaseConnectio
     let db = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool);
 
     use sea_orm_migration::MigratorTrait;
-    migration::Migrator::up(&db, None)
-        .await
-        .map_err(|e| sqlx::Error::Protocol(format!("SeaORM migration failed: {e}")))?;
+    migration::Migrator::up(&db, None).await?;
 
     Ok(db)
 }
