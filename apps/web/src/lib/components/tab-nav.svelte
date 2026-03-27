@@ -17,11 +17,7 @@
 
   function isActive(href: string): boolean {
     const path = page.url.pathname;
-    // Exact match for the base path (overview), prefix match for sub-tabs
-    if (href.endsWith("/")) {
-      return path === href.slice(0, -1) || path === href;
-    }
-    return path === href || path.startsWith(href + "/");
+    return path === href || path === href + "/";
   }
 </script>
 
