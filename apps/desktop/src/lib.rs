@@ -7,12 +7,25 @@ use tracing_subscriber::EnvFilter;
 use mokumo_api::{ServerConfig, build_app_with_shutdown, discovery, ensure_data_dirs, try_bind};
 
 const DEFAULT_PORT: u16 = 6565;
-const DEFAULT_HOST: &str = "127.0.0.1";
+const DEFAULT_HOST: &str = "0.0.0.0";
 
 /// Holds the server task handle so `ExitRequested` can await a clean drain.
 struct ServerHandle(std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
 
+/// Map the bind host to a routable address for the webview.
+///
+/// `0.0.0.0` means "all interfaces" — valid for `bind()` but not routable.
+/// The webview always runs on the same machine, so rewrite to loopback.
+fn webview_host(bind_host: &str) -> &str {
+    if bind_host == "0.0.0.0" {
+        "127.0.0.1"
+    } else {
+        bind_host
+    }
+}
+
 fn initial_webview_url(host: &str, port: u16, setup_token: Option<&str>) -> String {
+    let host = webview_host(host);
     let path = match setup_token {
         Some(token) => format!("/setup?setup_token={token}"),
         None => "/".to_string(),
@@ -52,7 +65,7 @@ async fn init_server(
     let pool = mokumo_db::initialize_database(&database_url).await?;
     tracing::info!("Database ready at {}", db_path.display());
 
-    // Pre-allocate mDNS status (desktop always uses loopback, so mDNS is always skipped)
+    // Pre-allocate mDNS status (will be populated after mDNS registration)
     let mdns_status = discovery::MdnsStatus::shared();
 
     let (app, setup_token) =
@@ -76,7 +89,7 @@ async fn init_server(
         s.bind_host = config.host.to_owned();
     }
 
-    // Register mDNS (will be skipped since DEFAULT_HOST is 127.0.0.1)
+    // Register mDNS (skipped if bound to loopback, active on 0.0.0.0)
     let _mdns_handle = discovery::register_mdns(
         &config.host,
         actual_port,
@@ -193,7 +206,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::initial_webview_url;
+    use super::{initial_webview_url, webview_host};
 
     #[test]
     fn setup_url_prefills_setup_token() {
@@ -208,6 +221,29 @@ mod tests {
         assert_eq!(
             initial_webview_url("127.0.0.1", 6565, None),
             "http://127.0.0.1:6565/"
+        );
+    }
+
+    #[test]
+    fn wildcard_bind_rewrites_to_loopback_for_webview() {
+        assert_eq!(webview_host("0.0.0.0"), "127.0.0.1");
+    }
+
+    #[test]
+    fn explicit_host_passes_through() {
+        assert_eq!(webview_host("127.0.0.1"), "127.0.0.1");
+        assert_eq!(webview_host("192.168.1.50"), "192.168.1.50");
+    }
+
+    #[test]
+    fn wildcard_bind_webview_url_uses_loopback() {
+        assert_eq!(
+            initial_webview_url("0.0.0.0", 6565, None),
+            "http://127.0.0.1:6565/"
+        );
+        assert_eq!(
+            initial_webview_url("0.0.0.0", 6565, Some("tok")),
+            "http://127.0.0.1:6565/setup?setup_token=tok"
         );
     }
 }
