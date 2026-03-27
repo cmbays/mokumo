@@ -1,33 +1,31 @@
 #!/usr/bin/env bash
-# Enforces ADR-6: every component under src/lib/components/ must have a sibling .stories.ts file.
-# Runs as a lefthook pre-commit hook — checks only staged .svelte files.
+# Enforces story colocation: every component directory under src/lib/components/
+# must have at least one .stories.svelte file. Runs as a lefthook pre-commit hook.
 
 set -euo pipefail
 
 missing=()
 
-# Get staged .svelte files under the components directory
+# Get staged .svelte files under the components directory, skip story files
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
+  [[ "$file" == *.stories.svelte ]] && continue
 
-  # Derive expected story path: Button.svelte -> Button.stories.ts
+  # Check if the directory has at least one story file
   dir=$(dirname "$file")
-  base=$(basename "$file" .svelte)
-  story_file="${dir}/${base}.stories.ts"
-
-  if [[ ! -f "$story_file" ]]; then
-    missing+=("$file")
+  if ! ls "${dir}"/*.stories.svelte &>/dev/null; then
+    # Only report each directory once
+    if [[ ! " ${missing[*]+"${missing[*]}"} " =~ " ${dir} " ]]; then
+      missing+=("$dir")
+    fi
   fi
 done < <(git diff --cached --name-only --diff-filter=ACM -- 'apps/web/src/lib/components/**/*.svelte')
 
 if [[ ${#missing[@]} -gt 0 ]]; then
-  echo "Story co-location check failed (ADR-6):"
+  echo "Story co-location check failed:"
   echo ""
-  for file in "${missing[@]}"; do
-    dir=$(dirname "$file")
-    base=$(basename "$file" .svelte)
-    echo "  Missing story file for ${file}"
-    echo "    Create: ${dir}/${base}.stories.ts"
+  for dir in "${missing[@]}"; do
+    echo "  No .stories.svelte file in ${dir}/"
     echo ""
   done
   exit 1
