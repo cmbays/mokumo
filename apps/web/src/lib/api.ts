@@ -1,9 +1,4 @@
 import type { ErrorBody } from "./types/ErrorBody";
-import type { ErrorCode } from "./types/ErrorCode";
-
-type ClientErrorCode = "parse_error" | "network_error";
-export type AnyErrorCode = ErrorCode | ClientErrorCode;
-export type ClientErrorBody = Omit<ErrorBody, "code"> & { code: AnyErrorCode };
 
 /** Builds a URL query string, filtering out undefined, empty, and false values. */
 export function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
@@ -17,7 +12,7 @@ export function buildQuery(params: Record<string, string | number | boolean | un
 export type ApiResult<T> =
   | { ok: true; status: 204 }
   | { ok: true; status: number; data: T }
-  | { ok: false; status: number; error: ClientErrorBody };
+  | { ok: false; status: number; error: ErrorBody };
 
 export async function apiFetch<T>(url: string, options?: RequestInit): Promise<ApiResult<T>> {
   try {
