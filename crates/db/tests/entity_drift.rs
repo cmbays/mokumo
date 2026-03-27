@@ -90,13 +90,22 @@ async fn customer_entity_columns_match_schema() {
     assert_columns_match("customers", &schema, &entity);
 }
 
-// Future entity verticals: add one test function per entity following the
-// same pattern. Example:
-//
-// #[tokio::test]
-// async fn garment_entity_columns_match_schema() {
-//     let (pool, _dir) = migrated_pool().await;
-//     let schema = schema_columns(&pool, "garments").await;
-//     let entity = entity_columns::<mokumo_db::garment::entity::Entity>();
-//     assert_columns_match("garments", &schema, &entity);
-// }
+#[tokio::test]
+async fn user_entity_columns_match_schema() {
+    let (pool, _dir) = migrated_pool().await;
+
+    let schema = schema_columns(&pool, "users").await;
+    let entity = entity_columns::<mokumo_db::user::entity::Entity>();
+
+    assert_columns_match("users", &schema, &entity);
+}
+
+#[tokio::test]
+async fn role_entity_columns_match_schema() {
+    let (pool, _dir) = migrated_pool().await;
+
+    let schema = schema_columns(&pool, "roles").await;
+    let entity = entity_columns::<mokumo_db::role::entity::Entity>();
+
+    assert_columns_match("roles", &schema, &entity);
+}
