@@ -23,6 +23,12 @@ tokio = { version = "1", features = ["full"] }
 axum = { version = "0.8", features = ["macros", "ws"] }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
 
+# Auth
+axum-login = "0.18"
+tower-sessions = { version = "0.14", default-features = false }
+tower-sessions-sqlx-store = { version = "0.15", features = ["sqlite"] }
+password-auth = "1.0"
+
 # Database
 sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio",
@@ -60,12 +66,14 @@ clap = { version = "4", features = ["derive"] }
 
 # Date/time
 chrono = { version = "0.4", features = ["serde"] }
+time = "0.3"
 
 # SQLite direct access (backup version queries)
 rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 
 # Platform directories
 directories = "6"
+dirs = "6"
 
 # Graceful shutdown
 tokio-util = { version = "0.7", features = ["rt"] }
@@ -82,9 +90,13 @@ axum-test = { version = "17", features = ["ws"] }
 # Async utilities
 futures-util = "0.3"
 
+# Random number generation
+rand = "0.9"
+
 # Concurrent data structures
 uuid = { version = "1", features = ["v4", "serde"] }
 dashmap = "6"
+rpassword = "7"
 cucumber = "0.21"
 proptest = "1"
 insta = { version = "1", features = ["json", "redactions"] }
@@ -98,3 +110,6 @@ mokumo-core = { path = "crates/core" }
 mokumo-types = { path = "crates/types" }
 mokumo-db = { path = "crates/db" }
 mokumo-api = { path = "services/api" }
+
+[profile.dev.package.argon2]
+opt-level = 3

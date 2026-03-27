@@ -20,6 +20,16 @@ pub enum ErrorCode {
     ParseError,
     /// Client-side only: network request failed (offline, DNS, etc.).
     NetworkError,
+    /// Invalid credentials (wrong email or password).
+    InvalidCredentials,
+    /// Not authenticated (no valid session).
+    Unauthorized,
+    /// Action forbidden (e.g., setup already completed).
+    Forbidden,
+    /// Invalid setup token.
+    InvalidToken,
+    /// Setup failed (e.g., admin already exists).
+    SetupFailed,
 }
 
 impl std::fmt::Display for ErrorCode {
@@ -31,6 +41,11 @@ impl std::fmt::Display for ErrorCode {
             Self::InternalError => write!(f, "internal_error"),
             Self::ParseError => write!(f, "parse_error"),
             Self::NetworkError => write!(f, "network_error"),
+            Self::InvalidCredentials => write!(f, "invalid_credentials"),
+            Self::Unauthorized => write!(f, "unauthorized"),
+            Self::Forbidden => write!(f, "forbidden"),
+            Self::InvalidToken => write!(f, "invalid_token"),
+            Self::SetupFailed => write!(f, "setup_failed"),
         }
     }
 }
@@ -52,8 +67,8 @@ mod tests {
     use super::*;
 
     /// Exhaustive list of all ErrorCode variants.
-    /// Compiler error on missing variant forces update when a variant is added.
-    fn all_error_codes() -> [ErrorCode; 6] {
+    /// Update the array size when adding variants — the compiler enforces the count.
+    fn all_error_codes() -> [ErrorCode; 11] {
         [
             ErrorCode::NotFound,
             ErrorCode::Conflict,
@@ -61,6 +76,11 @@ mod tests {
             ErrorCode::InternalError,
             ErrorCode::ParseError,
             ErrorCode::NetworkError,
+            ErrorCode::InvalidCredentials,
+            ErrorCode::Unauthorized,
+            ErrorCode::Forbidden,
+            ErrorCode::InvalidToken,
+            ErrorCode::SetupFailed,
         ]
     }
 
@@ -72,30 +92,26 @@ mod tests {
 
     #[test]
     fn error_code_serializes_to_snake_case() {
-        assert_eq!(
-            serde_json::to_string(&ErrorCode::NotFound).unwrap(),
-            "\"not_found\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ErrorCode::Conflict).unwrap(),
-            "\"conflict\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ErrorCode::ValidationError).unwrap(),
-            "\"validation_error\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ErrorCode::InternalError).unwrap(),
-            "\"internal_error\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ErrorCode::ParseError).unwrap(),
-            "\"parse_error\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ErrorCode::NetworkError).unwrap(),
-            "\"network_error\""
-        );
+        let cases = [
+            (ErrorCode::NotFound, "\"not_found\""),
+            (ErrorCode::Conflict, "\"conflict\""),
+            (ErrorCode::ValidationError, "\"validation_error\""),
+            (ErrorCode::InternalError, "\"internal_error\""),
+            (ErrorCode::ParseError, "\"parse_error\""),
+            (ErrorCode::NetworkError, "\"network_error\""),
+            (ErrorCode::InvalidCredentials, "\"invalid_credentials\""),
+            (ErrorCode::Unauthorized, "\"unauthorized\""),
+            (ErrorCode::Forbidden, "\"forbidden\""),
+            (ErrorCode::InvalidToken, "\"invalid_token\""),
+            (ErrorCode::SetupFailed, "\"setup_failed\""),
+        ];
+        for (variant, expected) in cases {
+            assert_eq!(
+                serde_json::to_string(&variant).unwrap(),
+                expected,
+                "Failed to serialize {variant:?}"
+            );
+        }
     }
 
     #[test]
@@ -107,6 +123,11 @@ mod tests {
             ("\"internal_error\"", ErrorCode::InternalError),
             ("\"parse_error\"", ErrorCode::ParseError),
             ("\"network_error\"", ErrorCode::NetworkError),
+            ("\"invalid_credentials\"", ErrorCode::InvalidCredentials),
+            ("\"unauthorized\"", ErrorCode::Unauthorized),
+            ("\"forbidden\"", ErrorCode::Forbidden),
+            ("\"invalid_token\"", ErrorCode::InvalidToken),
+            ("\"setup_failed\"", ErrorCode::SetupFailed),
         ];
         for (json, expected) in cases {
             let code: ErrorCode = serde_json::from_str(json).unwrap();
@@ -122,12 +143,21 @@ mod tests {
 
     #[test]
     fn error_code_display() {
+        // Uses all_error_codes() so new variants are automatically covered
+        for variant in all_error_codes() {
+            let display = variant.to_string();
+            assert!(
+                !display.is_empty(),
+                "Display for {variant:?} should not be empty"
+            );
+        }
+        // Spot-check a few values
         assert_eq!(ErrorCode::NotFound.to_string(), "not_found");
-        assert_eq!(ErrorCode::Conflict.to_string(), "conflict");
-        assert_eq!(ErrorCode::ValidationError.to_string(), "validation_error");
-        assert_eq!(ErrorCode::InternalError.to_string(), "internal_error");
-        assert_eq!(ErrorCode::ParseError.to_string(), "parse_error");
-        assert_eq!(ErrorCode::NetworkError.to_string(), "network_error");
+        assert_eq!(
+            ErrorCode::InvalidCredentials.to_string(),
+            "invalid_credentials"
+        );
+        assert_eq!(ErrorCode::SetupFailed.to_string(), "setup_failed");
     }
 
     #[test]
@@ -216,8 +246,8 @@ mod tests {
         use proptest::prelude::*;
 
         fn arb_error_code() -> impl Strategy<Value = ErrorCode> {
-            // Kept in sync with all_error_codes() — both use exhaustive lists
-            // that the compiler will flag when a variant is added.
+            // Kept in sync with all_error_codes() — both use exhaustive lists.
+            // Update when adding variants.
             prop_oneof![
                 Just(ErrorCode::NotFound),
                 Just(ErrorCode::Conflict),
@@ -225,6 +255,11 @@ mod tests {
                 Just(ErrorCode::InternalError),
                 Just(ErrorCode::ParseError),
                 Just(ErrorCode::NetworkError),
+                Just(ErrorCode::InvalidCredentials),
+                Just(ErrorCode::Unauthorized),
+                Just(ErrorCode::Forbidden),
+                Just(ErrorCode::InvalidToken),
+                Just(ErrorCode::SetupFailed),
             ]
         }
 

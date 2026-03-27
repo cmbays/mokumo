@@ -12,6 +12,14 @@ const DEFAULT_HOST: &str = "127.0.0.1";
 /// Holds the server task handle so `ExitRequested` can await a clean drain.
 struct ServerHandle(std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
 
+fn initial_webview_url(host: &str, port: u16, setup_token: Option<&str>) -> String {
+    let path = match setup_token {
+        Some(token) => format!("/setup?setup_token={token}"),
+        None => "/".to_string(),
+    };
+    format!("http://{host}:{port}{path}")
+}
+
 /// Initialize the server: create dirs, backup, run migrations, build app, bind port.
 ///
 /// Extracted so the orchestration sequence can be tested without a window system.
@@ -20,10 +28,12 @@ async fn init_server(
     port: u16,
     host: &str,
     shutdown: CancellationToken,
-) -> Result<(tokio::net::TcpListener, axum::Router, u16), Box<dyn std::error::Error>> {
+) -> Result<(tokio::net::TcpListener, axum::Router, u16, Option<String>), Box<dyn std::error::Error>>
+{
     let config = ServerConfig {
         port,
         host: host.to_owned(),
+        recovery_dir: mokumo_api::resolve_recovery_dir(),
         data_dir,
     };
 
@@ -45,7 +55,8 @@ async fn init_server(
     // Pre-allocate mDNS status (desktop always uses loopback, so mDNS is always skipped)
     let mdns_status = discovery::MdnsStatus::shared();
 
-    let app = build_app_with_shutdown(&config, pool, shutdown, mdns_status.clone());
+    let (app, setup_token) =
+        build_app_with_shutdown(&config, pool, shutdown, mdns_status.clone()).await;
 
     // Bind to port (with fallback)
     let (listener, actual_port) = try_bind(&config.host, config.port).await?;
@@ -73,7 +84,7 @@ async fn init_server(
         &discovery::RealDiscovery,
     );
 
-    Ok((listener, app, actual_port))
+    Ok((listener, app, actual_port, setup_token))
 }
 
 pub fn run() {
@@ -111,12 +122,9 @@ pub fn run() {
 
             let server_token = shutdown_token.clone();
 
-            let (listener, router, actual_port) = tauri::async_runtime::block_on(init_server(
-                data_dir,
-                DEFAULT_PORT,
-                DEFAULT_HOST,
-                shutdown_token.clone(),
-            ))
+            let (listener, router, actual_port, setup_token) = tauri::async_runtime::block_on(
+                init_server(data_dir, DEFAULT_PORT, DEFAULT_HOST, shutdown_token.clone()),
+            )
             .map_err(|e| {
                 tracing::error!("Server initialization failed: {e}");
                 e
@@ -138,8 +146,13 @@ pub fn run() {
             // Store the handle so ExitRequested can await server drain
             app.manage(ServerHandle(std::sync::Mutex::new(Some(server_handle))));
 
-            let url = format!("http://localhost:{actual_port}");
-            tracing::info!("Opening webview at {url}");
+            let url = initial_webview_url(DEFAULT_HOST, actual_port, setup_token.as_deref());
+            let log_url = initial_webview_url(
+                DEFAULT_HOST,
+                actual_port,
+                setup_token.as_ref().map(|_| "[redacted]"),
+            );
+            tracing::info!("Opening webview at {log_url}");
 
             tauri::WebviewWindowBuilder::new(
                 app,
@@ -176,4 +189,25 @@ pub fn run() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::initial_webview_url;
+
+    #[test]
+    fn setup_url_prefills_setup_token() {
+        assert_eq!(
+            initial_webview_url("127.0.0.1", 6565, Some("test-token")),
+            "http://127.0.0.1:6565/setup?setup_token=test-token"
+        );
+    }
+
+    #[test]
+    fn setup_complete_url_opens_dashboard_root() {
+        assert_eq!(
+            initial_webview_url("127.0.0.1", 6565, None),
+            "http://127.0.0.1:6565/"
+        );
+    }
 }

@@ -1,9 +1,11 @@
 pub mod activity_steps;
+pub mod auth_steps;
 pub mod customer_steps;
 pub mod discovery_steps;
 pub mod health_steps;
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use axum_test::TestServer;
 use axum_test::TestWebSocket;
@@ -25,7 +27,6 @@ pub struct ApiWorld {
     pub last_received_event: Option<serde_json::Value>,
     pub last_broadcast_type: Option<String>,
     pub broadcast_response: Option<axum_test::TestResponse>,
-    // Wave 1 fields (pre-added to avoid merge conflicts)
     pub previous_uptime: Option<u64>,
     pub last_customer_id: Option<String>,
     pub customer_ids: Vec<String>,
@@ -35,6 +36,13 @@ pub struct ApiWorld {
     pub mdns_status: SharedMdnsStatus,
     pub mdns_host: String,
     pub mdns_should_fail: bool,
+    // Auth fields
+    pub setup_token: Option<String>,
+    pub recovery_codes: Vec<String>,
+    pub auth_done: bool,
+    // File-drop reset fields
+    pub recovery_dir: PathBuf,
+    pub last_pin: Option<String>,
     // Hold the tempdir alive for the lifetime of the world
     _tmp: tempfile::TempDir,
 }
@@ -44,6 +52,9 @@ impl ApiWorld {
         let tmp = tempfile::tempdir().expect("failed to create temp dir");
         let data_dir = tmp.path().join("bdd_test");
         ensure_data_dirs(&data_dir).expect("failed to create data dirs");
+
+        let recovery_dir = tmp.path().join("recovery");
+        std::fs::create_dir_all(&recovery_dir).expect("failed to create recovery dir");
 
         let db_path = data_dir.join("mokumo.db");
         let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
@@ -56,16 +67,18 @@ impl ApiWorld {
             port: 0,
             host: "127.0.0.1".into(),
             data_dir,
+            recovery_dir: recovery_dir.clone(),
         };
 
         let shutdown_token = CancellationToken::new();
         let mdns_status = MdnsStatus::shared();
-        let app = build_app_with_shutdown(
+        let (app, setup_token) = build_app_with_shutdown(
             &config,
             db.clone(),
             shutdown_token.clone(),
             mdns_status.clone(),
-        );
+        )
+        .await;
 
         // Pre-bind with OS-assigned port to bypass axum-test's reserve_port
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -79,6 +92,7 @@ impl ApiWorld {
             });
 
         let server = TestServer::builder()
+            .save_cookies()
             .build(serve)
             .expect("failed to create test server");
 
@@ -99,16 +113,72 @@ impl ApiWorld {
             mdns_status,
             mdns_host: "127.0.0.1".into(),
             mdns_should_fail: false,
+            setup_token,
+            recovery_codes: Vec::new(),
+            auth_done: false,
+            recovery_dir,
+            last_pin: None,
             _tmp: tmp,
         }
+    }
+
+    /// Programmatically complete setup and login so protected routes are accessible.
+    /// Uses the setup API with the real token to ensure AppState is properly updated.
+    pub async fn ensure_auth(&mut self) {
+        if self.auth_done {
+            return;
+        }
+
+        let token = self
+            .setup_token
+            .as_ref()
+            .expect("setup_token should be set for fresh server")
+            .clone();
+
+        // Use the actual setup endpoint so AppState.setup_completed gets updated
+        let resp = self
+            .server
+            .post("/api/setup")
+            .json(&serde_json::json!({
+                "shop_name": "Test Shop",
+                "admin_name": "Admin",
+                "admin_email": "admin@test.local",
+                "admin_password": "testpassword123",
+                "setup_token": token
+            }))
+            .await;
+        assert_eq!(
+            resp.status_code(),
+            201,
+            "BDD auth bootstrap setup failed: {}",
+            resp.text()
+        );
+
+        let body: serde_json::Value = resp.json();
+        if let Some(codes) = body["recovery_codes"].as_array() {
+            self.recovery_codes = codes
+                .iter()
+                .filter_map(|c| c.as_str().map(String::from))
+                .collect();
+        }
+
+        // Setup auto-logs in, but verify we're authenticated
+        let me_resp = self.server.get("/api/auth/me").await;
+        assert_eq!(
+            me_resp.status_code(),
+            200,
+            "BDD auth bootstrap: not authenticated after setup"
+        );
+
+        self.auth_done = true;
     }
 }
 
 // ---- Existing steps ----
 
 #[given("the API server is running")]
-async fn server_running(_w: &mut ApiWorld) {
-    // Server is created in World::new — this step is a no-op placeholder
+async fn server_running(w: &mut ApiWorld) {
+    w.ensure_auth().await;
 }
 
 #[when(expr = "I request GET {string}")]
@@ -132,6 +202,7 @@ async fn client_connects(w: &mut ApiWorld, path: String) {
 
 #[given(expr = "a client is connected to {string}")]
 async fn client_already_connected(w: &mut ApiWorld, path: String) {
+    w.ensure_auth().await;
     let ws = w.server.get_websocket(&path).await.into_websocket().await;
     w.ws_clients.push(ws);
 }
@@ -199,6 +270,7 @@ async fn connection_remains_open(w: &mut ApiWorld) {
 
 #[given(expr = "{int} clients are connected to {string}")]
 async fn n_clients_already_connected(w: &mut ApiWorld, count: usize, path: String) {
+    w.ensure_auth().await;
     for _ in 0..count {
         let ws = w.server.get_websocket(&path).await.into_websocket().await;
         w.ws_clients.push(ws);
@@ -206,8 +278,8 @@ async fn n_clients_already_connected(w: &mut ApiWorld, count: usize, path: Strin
 }
 
 #[given("no clients are connected")]
-async fn no_clients_connected(_w: &mut ApiWorld) {
-    // No-op — no clients connected by default
+async fn no_clients_connected(w: &mut ApiWorld) {
+    w.ensure_auth().await;
 }
 
 #[when(expr = "a {string} event is broadcast")]

@@ -3,6 +3,7 @@ pub mod m20260322_000000_settings;
 pub mod m20260324_000000_number_sequences;
 pub mod m20260324_000001_customers_and_activity;
 pub mod m20260326_000000_customers_deleted_at_index;
+pub mod m20260327_000000_users_and_roles;
 
 use sea_orm_migration::prelude::*;
 
@@ -16,6 +17,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260324_000000_number_sequences::Migration),
             Box::new(m20260324_000001_customers_and_activity::Migration),
             Box::new(m20260326_000000_customers_deleted_at_index::Migration),
+            Box::new(m20260327_000000_users_and_roles::Migration),
         ]
     }
 }

@@ -37,10 +37,11 @@ async fn graceful_shutdown_completes_cleanly() {
     let config = mokumo_api::ServerConfig {
         port: 0,
         host: "127.0.0.1".into(),
+        recovery_dir: data_dir.join("recovery"),
         data_dir,
     };
 
-    let app = mokumo_api::build_app(&config, pool);
+    let (app, _) = mokumo_api::build_app(&config, pool).await;
 
     // Bind to an ephemeral port
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

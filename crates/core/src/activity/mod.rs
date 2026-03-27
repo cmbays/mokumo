@@ -11,6 +11,11 @@ pub enum ActivityAction {
     Updated,
     SoftDeleted,
     Restored,
+    LoginSuccess,
+    LoginFailed,
+    PasswordChanged,
+    SetupCompleted,
+    PasswordReset,
 }
 
 impl std::fmt::Display for ActivityAction {
@@ -20,6 +25,11 @@ impl std::fmt::Display for ActivityAction {
             Self::Updated => write!(f, "updated"),
             Self::SoftDeleted => write!(f, "soft_deleted"),
             Self::Restored => write!(f, "restored"),
+            Self::LoginSuccess => write!(f, "login_success"),
+            Self::LoginFailed => write!(f, "login_failed"),
+            Self::PasswordChanged => write!(f, "password_changed"),
+            Self::SetupCompleted => write!(f, "setup_completed"),
+            Self::PasswordReset => write!(f, "password_reset"),
         }
     }
 }
@@ -53,5 +63,16 @@ mod tests {
         assert_eq!(ActivityAction::Updated.to_string(), "updated");
         assert_eq!(ActivityAction::SoftDeleted.to_string(), "soft_deleted");
         assert_eq!(ActivityAction::Restored.to_string(), "restored");
+        assert_eq!(ActivityAction::LoginSuccess.to_string(), "login_success");
+        assert_eq!(ActivityAction::LoginFailed.to_string(), "login_failed");
+        assert_eq!(
+            ActivityAction::PasswordChanged.to_string(),
+            "password_changed"
+        );
+        assert_eq!(
+            ActivityAction::SetupCompleted.to_string(),
+            "setup_completed"
+        );
+        assert_eq!(ActivityAction::PasswordReset.to_string(), "password_reset");
     }
 }

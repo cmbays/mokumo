@@ -14,6 +14,8 @@ rusqlite = { workspace = true }
 mokumo-core = { workspace = true }
 thiserror = { workspace = true }
 serde_json = { workspace = true }
+password-auth = { workspace = true }
+rand = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 

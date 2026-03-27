@@ -1,7 +1,9 @@
 pub mod activity;
+pub mod auth;
 pub mod customer;
 pub mod error;
 pub mod pagination;
+pub mod user;
 pub mod ws;
 
 use serde::{Deserialize, Serialize};
