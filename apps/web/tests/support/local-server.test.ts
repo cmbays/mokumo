@@ -18,6 +18,12 @@ describe("parseListeningPort", () => {
     expect(parseListeningPort(line)).toBe(53578);
   });
 
+  it("strips ANSI codes that would break the port regex", () => {
+    // ANSI codes wrapping the port number itself
+    const line = "Listening on 127.0.0.1:\x1b[1m8080\x1b[0m";
+    expect(parseListeningPort(line)).toBe(8080);
+  });
+
   it("returns null for unrelated log lines", () => {
     expect(parseListeningPort("INFO mokumo_api: Database initialized")).toBeNull();
     expect(parseListeningPort("Setup required — token: abc-123")).toBeNull();
