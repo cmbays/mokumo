@@ -173,8 +173,12 @@ export async function startAxumServer(
   const startTime = Date.now();
   // oxlint-disable-next-line no-unmodified-loop-condition -- actualPort is mutated by the captureStartupInfo callback on data events
   while (actualPort === null && Date.now() - startTime < startupDeadline) {
-    if (server.exitCode !== null) {
-      throw new Error(`mokumo-api exited with code ${server.exitCode} before binding a port`);
+    if (server.exitCode !== null || server.signalCode !== null) {
+      throw new Error(
+        `mokumo-api terminated before binding a port ` +
+          `(exitCode=${server.exitCode}, signal=${server.signalCode}). ` +
+          `Output:\n${capturedOutput}`,
+      );
     }
     // Re-scan accumulated output each tick to handle lines split across chunks.
     // The callback parses each chunk independently, but if "Listening on HOST:PORT"
