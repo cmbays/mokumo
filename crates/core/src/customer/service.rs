@@ -39,26 +39,19 @@ fn validate_contact_fields(
 ) -> Result<(), DomainError> {
     let mut details: HashMap<String, Vec<String>> = HashMap::new();
 
-    if let Some(p) = phone
-        && !p.is_empty()
-        && let Err(msg) = validate_phone(p)
-    {
-        details.entry("phone".into()).or_default().push(msg);
-    }
+    let mut check =
+        |field: &str, value: Option<&str>, validator: fn(&str) -> Result<(), String>| {
+            if let Some(v) = value
+                && !v.is_empty()
+                && let Err(msg) = validator(v)
+            {
+                details.entry(field.into()).or_default().push(msg);
+            }
+        };
 
-    if let Some(a) = address_line1
-        && !a.is_empty()
-        && let Err(msg) = validate_address(a)
-    {
-        details.entry("address_line1".into()).or_default().push(msg);
-    }
-
-    if let Some(a) = address_line2
-        && !a.is_empty()
-        && let Err(msg) = validate_address(a)
-    {
-        details.entry("address_line2".into()).or_default().push(msg);
-    }
+    check("phone", phone, validate_phone);
+    check("address_line1", address_line1, validate_address);
+    check("address_line2", address_line2, validate_address);
 
     if details.is_empty() {
         Ok(())
