@@ -2,6 +2,13 @@ import type { Page } from "@playwright/test";
 import { test, expect, SCREENSHOT_BASE } from "../support/demo.fixture";
 import { TEST_ADMIN } from "../support/app-helpers";
 
+const DEMO_CUSTOMER = {
+  displayName: "Acme Screen Printing",
+  companyName: "Acme Apparel Co",
+  email: "orders@acmeprinting.com",
+  phone: "(555) 867-5309",
+};
+
 /**
  * Wait for animations to settle, then capture screenshot.
  * networkidle is safe here because we run against a local Axum server with no
@@ -105,7 +112,13 @@ test.describe("M0 Demo Screenshots", () => {
     await stableScreenshot(demoPage, "16-sidebar-collapsed");
     // Re-expand for subsequent tests
     await demoPage.locator("[data-sidebar='trigger']").click();
-    await demoPage.waitForTimeout(500);
+    await expect(demoPage.locator("[data-sidebar='sidebar']")).not.toHaveCSS(
+      "width",
+      /^4[7-8]px$/,
+      {
+        timeout: 5_000,
+      },
+    );
   });
 
   test("#17 empty-state-customers", async ({ demoPage }) => {
@@ -119,13 +132,14 @@ test.describe("M0 Demo Screenshots", () => {
   });
 
   test("#18 theme-switcher", async ({ demoPage }) => {
-    // First close the Help popover if open from navigation
+    // First close any open popover from navigation
     await demoPage.keyboard.press("Escape");
-    await demoPage.waitForTimeout(200);
+    await expect(demoPage.getByTestId("help-popover"))
+      .not.toBeVisible({ timeout: 3_000 })
+      .catch(() => {});
     // The theme switcher is inside the sidebar footer Owner popover
     await demoPage.getByText("Owner", { exact: true }).click();
     await expect(demoPage.getByLabel("Toggle light/dark mode")).toBeVisible({ timeout: 5_000 });
-    await demoPage.waitForTimeout(300);
     await stableScreenshot(demoPage, "18-theme-switcher");
     // Close popover
     await demoPage.keyboard.press("Escape");
@@ -145,12 +159,11 @@ test.describe("M0 Demo Screenshots", () => {
     await demoPage.getByRole("button", { name: "Add Customer" }).click();
     const dialog = demoPage.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await demoPage.waitForTimeout(300);
     // Fill with demo data
-    await dialog.locator("#display_name").fill("Acme Screen Printing");
-    await dialog.locator("#company_name").fill("Acme Apparel Co");
-    await dialog.locator("#email").fill("orders@acmeprinting.com");
-    await dialog.locator("#phone").fill("(555) 867-5309");
+    await dialog.locator("#display_name").fill(DEMO_CUSTOMER.displayName);
+    await dialog.locator("#company_name").fill(DEMO_CUSTOMER.companyName);
+    await dialog.locator("#email").fill(DEMO_CUSTOMER.email);
+    await dialog.locator("#phone").fill(DEMO_CUSTOMER.phone);
     await stableScreenshot(demoPage, "20-customer-form-filled");
   });
 
@@ -167,8 +180,8 @@ test.describe("M0 Demo Screenshots", () => {
     await demoPage.goto("/customers");
     await expect(demoPage.locator("table tbody tr").first()).toBeVisible({ timeout: 10_000 });
     // Click into detail
-    await demoPage.locator("table").getByText("Acme Screen Printing").click();
-    await expect(demoPage.getByRole("heading", { name: "Acme Screen Printing" })).toBeVisible({
+    await demoPage.locator("table").getByText(DEMO_CUSTOMER.displayName).click();
+    await expect(demoPage.getByRole("heading", { name: DEMO_CUSTOMER.displayName })).toBeVisible({
       timeout: 10_000,
     });
     await stableScreenshot(demoPage, "21-customer-detail");
@@ -178,9 +191,8 @@ test.describe("M0 Demo Screenshots", () => {
     await demoPage.getByRole("button", { name: "Edit" }).click();
     const dialog = demoPage.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await demoPage.waitForTimeout(300);
     // Assert form has existing data
-    await expect(dialog.locator("#display_name")).toHaveValue("Acme Screen Printing");
+    await expect(dialog.locator("#display_name")).toHaveValue(DEMO_CUSTOMER.displayName);
     await stableScreenshot(demoPage, "22-customer-edit");
     // Close without saving
     await demoPage.keyboard.press("Escape");
@@ -224,15 +236,14 @@ test.describe("M0 Demo Screenshots", () => {
 
   test("#25 soft-delete-confirm", async ({ demoPage }) => {
     // Navigate to the customer detail
-    await demoPage.locator("table").getByText("Acme Screen Printing").click();
-    await expect(demoPage.getByRole("heading", { name: "Acme Screen Printing" })).toBeVisible({
+    await demoPage.locator("table").getByText(DEMO_CUSTOMER.displayName).click();
+    await expect(demoPage.getByRole("heading", { name: DEMO_CUSTOMER.displayName })).toBeVisible({
       timeout: 10_000,
     });
     // Click archive
     await demoPage.getByRole("button", { name: "Archive" }).click();
     const dialog = demoPage.getByRole("alertdialog").or(demoPage.getByRole("dialog"));
     await expect(dialog).toBeVisible();
-    await demoPage.waitForTimeout(300);
     await stableScreenshot(demoPage, "25-soft-delete-confirm");
   });
 
@@ -247,15 +258,15 @@ test.describe("M0 Demo Screenshots", () => {
     // Assert archived row has visual indicator
     const archivedRow = demoPage
       .locator("table tbody tr")
-      .filter({ hasText: "Acme Screen Printing" });
+      .filter({ hasText: DEMO_CUSTOMER.displayName });
     await expect(archivedRow).toBeVisible();
     await stableScreenshot(demoPage, "26-show-deleted-toggle");
   });
 
   test("#27 restore-customer", async ({ demoPage }) => {
     // Click into the archived customer detail
-    await demoPage.locator("table").getByText("Acme Screen Printing").click();
-    await expect(demoPage.getByRole("heading", { name: "Acme Screen Printing" })).toBeVisible({
+    await demoPage.locator("table").getByText(DEMO_CUSTOMER.displayName).click();
+    await expect(demoPage.getByRole("heading", { name: DEMO_CUSTOMER.displayName })).toBeVisible({
       timeout: 10_000,
     });
     // Assert Restore button visible (from #89)
