@@ -343,6 +343,26 @@ async fn main() {
 
     // Server loop: runs once normally, restarts on demo reset.
     // Each iteration gets a fresh shutdown token, DB pool, and app state.
+    // Master shutdown token — Ctrl+C cancels this once; child tokens per loop iteration.
+    let master_shutdown = CancellationToken::new();
+    {
+        let token = master_shutdown.clone();
+        tokio::spawn(async move {
+            match tokio::signal::ctrl_c().await {
+                Ok(()) => {
+                    tracing::info!("Shutdown signal received, draining connections...");
+                    token.cancel();
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "Failed to listen for ctrl+c: {e}. \
+                         Server will continue running but graceful shutdown via Ctrl+C is unavailable."
+                    );
+                }
+            }
+        });
+    }
+
     let mut bound_port: Option<u16> = None;
 
     loop {
@@ -361,7 +381,7 @@ async fn main() {
                 }
             };
 
-        let shutdown_token = CancellationToken::new();
+        let shutdown_token = master_shutdown.child_token();
         let mdns_status = discovery::MdnsStatus::shared();
 
         let (app, _setup_token) = build_app_with_shutdown(
@@ -405,27 +425,6 @@ async fn main() {
             &discovery::RealDiscovery,
         );
 
-        // Ctrl+C handler — only set up once (subsequent loops reuse the same signal)
-        let signal_token = shutdown_token.clone();
-        let shutdown_status = mdns_status.clone();
-        tokio::spawn(async move {
-            match tokio::signal::ctrl_c().await {
-                Ok(()) => {
-                    tracing::info!("Shutdown signal received, draining connections...");
-                    if let Some(handle) = mdns_handle {
-                        discovery::deregister_mdns(handle, &shutdown_status);
-                    }
-                    signal_token.cancel();
-                }
-                Err(e) => {
-                    tracing::error!(
-                        "Failed to listen for ctrl+c: {e}. \
-                         Server will continue running but graceful shutdown via Ctrl+C is unavailable."
-                    );
-                }
-            }
-        });
-
         if let Err(e) = axum::serve(listener, app)
             .with_graceful_shutdown(async move {
                 shutdown_token.cancelled().await;
@@ -434,6 +433,11 @@ async fn main() {
         {
             tracing::error!("Server error: {e}");
             std::process::exit(1);
+        }
+
+        // Deregister mDNS after server stops (both Ctrl+C and restart paths)
+        if let Some(handle) = mdns_handle {
+            discovery::deregister_mdns(handle, &mdns_status);
         }
 
         // Check if restart was requested (e.g., demo reset)

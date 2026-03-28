@@ -22,6 +22,10 @@ struct MdnsState {
     status: discovery::SharedMdnsStatus,
 }
 
+/// Holds the live shutdown token so `ExitRequested` always cancels the current server,
+/// even after a demo-reset restart has replaced the original token.
+struct ShutdownState(std::sync::Mutex<CancellationToken>);
+
 /// Resources produced by `init_server`, consumed by Tauri setup.
 struct ServerInit {
     listener: tokio::net::TcpListener,
@@ -176,9 +180,6 @@ pub fn run() {
     });
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    let shutdown_token = CancellationToken::new();
-    let exit_token = shutdown_token.clone();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the existing window when a second instance is launched
@@ -211,8 +212,12 @@ pub fn run() {
                 }
             }
 
+            let shutdown_token = CancellationToken::new();
+            app.manage(ShutdownState(std::sync::Mutex::new(shutdown_token.clone())));
+
             let server_token = shutdown_token.clone();
             let restart_data_dir = data_dir.clone();
+            let app_handle_for_server = app.handle().clone();
 
             let ServerInit {
                 listener,
@@ -261,14 +266,37 @@ pub fn run() {
                     let _ = std::fs::remove_file(&sentinel);
                     tracing::info!("Restart requested — reinitializing server with fresh database");
 
+                    // Deregister stale mDNS before restarting
+                    if let Some(mdns) = app_handle_for_server.try_state::<MdnsState>() {
+                        if let Some(handle) = mdns.handle.lock().ok().and_then(|mut h| h.take()) {
+                            discovery::deregister_mdns(handle, &mdns.status);
+                        }
+                    }
+
                     let new_shutdown = CancellationToken::new();
                     let new_server_token = new_shutdown.clone();
+
+                    // Expose the live token so ExitRequested cancels the right server
+                    if let Some(state) = app_handle_for_server.try_state::<ShutdownState>() {
+                        if let Ok(mut token) = state.0.lock() {
+                            *token = new_shutdown.clone();
+                        }
+                    }
+
                     match init_server(data_dir.clone(), port, DEFAULT_HOST, new_shutdown)
                         .await
                         .map_err(|e| e.to_string())
                     {
                         Ok(init) => {
                             port = init.port;
+
+                            // Store the new mDNS handle for cleanup on exit
+                            if let Some(mdns) = app_handle_for_server.try_state::<MdnsState>() {
+                                if let Ok(mut h) = mdns.handle.lock() {
+                                    *h = init.mdns_handle;
+                                }
+                            }
+
                             if let Err(e) = axum::serve(init.listener, init.router)
                                 .with_graceful_shutdown(async move {
                                     new_server_token.cancelled().await;
@@ -326,7 +354,12 @@ pub fn run() {
                     }
                 }
 
-                exit_token.cancel();
+                // Cancel the LIVE shutdown token (updated by restart loop)
+                if let Some(state) = app.try_state::<ShutdownState>() {
+                    if let Ok(token) = state.0.lock() {
+                        token.cancel();
+                    }
+                }
 
                 // Take the server handle and await drain before allowing exit
                 if let Some(handle) = app
