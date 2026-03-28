@@ -39,7 +39,7 @@
     <p class="text-sm text-muted-foreground">Powered by Mokumo</p>
   </div>
 
-  <div class="grid gap-4 md:grid-cols-3">
+  <div class="grid gap-4 md:grid-cols-2">
     <Card.Card>
       <Card.CardHeader class="pb-2">
         <Card.CardTitle class="text-sm font-medium"
@@ -68,23 +68,6 @@
       </Card.CardHeader>
       <Card.CardContent>
         <p class="text-sm">{version || "—"}</p>
-      </Card.CardContent>
-    </Card.Card>
-
-    <Card.Card>
-      <Card.CardHeader class="pb-2">
-        <Card.CardTitle class="text-sm font-medium">LAN URL</Card.CardTitle>
-      </Card.CardHeader>
-      <Card.CardContent>
-        {#if displayUrl}
-          <CopyableUrl
-            url={displayUrl}
-            label="Copy LAN URL to clipboard"
-            testId="copy-lan-url"
-          />
-        {:else}
-          <p class="text-sm">—</p>
-        {/if}
       </Card.CardContent>
     </Card.Card>
   </div>
