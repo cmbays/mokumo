@@ -167,6 +167,10 @@ async fn me(State(state): State<SharedState>, auth_session: AuthSessionType) -> 
     }
 }
 
+/// Regenerate recovery codes for the authenticated user.
+///
+/// Intentional: this does NOT invalidate the user's existing sessions.
+/// Session invalidation on credential change is deferred to M1 (per CAO + Ada review).
 pub async fn regenerate_recovery_codes(
     State(state): State<SharedState>,
     auth_session: AuthSessionType,
