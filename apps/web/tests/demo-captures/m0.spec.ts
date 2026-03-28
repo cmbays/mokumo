@@ -2,7 +2,12 @@ import type { Page } from "@playwright/test";
 import { test, expect, SCREENSHOT_BASE } from "../support/demo.fixture";
 import { TEST_ADMIN } from "../support/app-helpers";
 
-/** Wait for animations to settle, then capture screenshot. */
+/**
+ * Wait for animations to settle, then capture screenshot.
+ * networkidle is safe here because we run against a local Axum server with no
+ * external requests, WebSockets, or SSE. If the server adds persistent connections,
+ * replace with targeted waitForResponse/waitForSelector per screenshot.
+ */
 async function stableScreenshot(page: Page, name: string): Promise<void> {
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(300);
