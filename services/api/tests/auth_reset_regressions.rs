@@ -47,6 +47,37 @@ impl RunningServer {
             _tmp: tmp,
         }
     }
+
+    /// Start a server that preserves cookies across requests (needed for session tests).
+    async fn start_with_cookies(name: &str) -> Self {
+        let tmp = tempfile::tempdir().unwrap();
+        let data_dir = tmp.path().join(name);
+        let recovery_dir = tmp.path().join("recovery");
+        ensure_data_dirs(&data_dir).unwrap();
+        std::fs::create_dir_all(&recovery_dir).unwrap();
+
+        let db_path = data_dir.join("mokumo.db");
+        let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
+        let db = mokumo_db::initialize_database(&database_url).await.unwrap();
+
+        let config = ServerConfig {
+            port: 0,
+            host: "127.0.0.1".into(),
+            data_dir,
+            recovery_dir: recovery_dir.clone(),
+        };
+
+        let (app, setup_token) = build_app(&config, db.clone()).await;
+        let server = TestServer::builder().save_cookies().build(app).unwrap();
+
+        Self {
+            server,
+            db,
+            recovery_dir,
+            _setup_token: setup_token,
+            _tmp: tmp,
+        }
+    }
 }
 
 fn extract_pin_from_html(html: &str) -> String {
@@ -277,4 +308,53 @@ async fn recovery_code_reset_rejects_short_passwords() {
     let body: serde_json::Value = response.json();
     assert_eq!(body["code"], "validation_error");
     assert_eq!(body["message"], "Password must be at least 8 characters");
+}
+
+/// Intentional behavior: recovery code regeneration does NOT invalidate existing
+/// sessions. Session invalidation on credential change is deferred to M1
+/// (per CAO + Ada review).
+#[tokio::test]
+async fn sessions_survive_recovery_code_regeneration() {
+    let server = RunningServer::start_with_cookies("session_survives_regen").await;
+
+    // Setup admin (creates recovery codes)
+    let setup_token = server._setup_token.as_ref().unwrap();
+    let resp = server
+        .server
+        .post("/api/setup")
+        .json(&json!({
+            "shop_name": "Test Shop",
+            "admin_name": "Admin",
+            "admin_email": "admin@shop.local",
+            "admin_password": "password123",
+            "setup_token": setup_token
+        }))
+        .await;
+    assert_eq!(resp.status_code(), http::StatusCode::CREATED);
+
+    // Verify we are authenticated (setup auto-logs in)
+    let me_resp = server.server.get("/api/auth/me").await;
+    assert_eq!(me_resp.status_code(), http::StatusCode::OK);
+
+    // Regenerate recovery codes
+    let regen_resp = server
+        .server
+        .post("/api/account/recovery-codes/regenerate")
+        .json(&json!({ "password": "password123" }))
+        .await;
+    assert_eq!(regen_resp.status_code(), http::StatusCode::OK);
+    let body: serde_json::Value = regen_resp.json();
+    assert_eq!(
+        body["recovery_codes"].as_array().unwrap().len(),
+        10,
+        "should receive 10 new codes"
+    );
+
+    // Session should still be valid after regeneration
+    let me_after = server.server.get("/api/auth/me").await;
+    assert_eq!(
+        me_after.status_code(),
+        http::StatusCode::OK,
+        "session should remain valid after recovery code regeneration"
+    );
 }
