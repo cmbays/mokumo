@@ -212,6 +212,7 @@ pub fn run() {
             }
 
             let server_token = shutdown_token.clone();
+            let restart_data_dir = data_dir.clone();
 
             let ServerInit {
                 listener,
@@ -231,8 +232,15 @@ pub fn run() {
                 e
             })?;
 
-            // Spawn the Axum server on Tauri's async runtime (NOT tokio::spawn)
+            // Spawn the Axum server on Tauri's async runtime with restart loop.
+            // On demo reset, the handler writes a ".restart" sentinel and cancels
+            // the shutdown token. The loop detects the sentinel, re-initializes the
+            // server with the fresh database, and re-binds to the same port.
             let server_handle = tauri::async_runtime::spawn(async move {
+                let data_dir = restart_data_dir;
+                let mut port = actual_port;
+
+                // First iteration uses the already-initialized server
                 if let Err(e) = axum::serve(listener, router)
                     .with_graceful_shutdown(async move {
                         server_token.cancelled().await;
@@ -240,8 +248,43 @@ pub fn run() {
                     .await
                 {
                     tracing::error!("Server error: {e}");
+                    return;
                 }
-                tracing::info!("Server shut down cleanly");
+
+                // Check for restart sentinel after each shutdown
+                loop {
+                    let sentinel = data_dir.join(".restart");
+                    if !sentinel.exists() {
+                        tracing::info!("Server shut down cleanly");
+                        break;
+                    }
+                    let _ = std::fs::remove_file(&sentinel);
+                    tracing::info!("Restart requested — reinitializing server with fresh database");
+
+                    let new_shutdown = CancellationToken::new();
+                    let new_server_token = new_shutdown.clone();
+                    match init_server(data_dir.clone(), port, DEFAULT_HOST, new_shutdown)
+                        .await
+                        .map_err(|e| e.to_string())
+                    {
+                        Ok(init) => {
+                            port = init.port;
+                            if let Err(e) = axum::serve(init.listener, init.router)
+                                .with_graceful_shutdown(async move {
+                                    new_server_token.cancelled().await;
+                                })
+                                .await
+                            {
+                                tracing::error!("Server error after restart: {e}");
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to reinitialize server after reset: {e}");
+                            break;
+                        }
+                    }
+                }
             });
 
             // Store handles so ExitRequested can deregister mDNS and await server drain

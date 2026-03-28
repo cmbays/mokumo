@@ -32,10 +32,15 @@ pub fn auth_router() -> Router<SharedState> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
-        .route("/me", get(me))
         .route("/forgot-password", post(reset::forgot_password))
         .route("/reset-password", post(reset::reset_password))
         .route("/recover", post(recover::recover))
+}
+
+/// Separate router for /api/auth/me — must be behind the demo auto-login
+/// middleware so that demo mode sessions are created before the auth check.
+pub fn auth_me_router() -> Router<SharedState> {
+    Router::new().route("/me", get(me))
 }
 
 pub fn setup_router() -> Router<SharedState> {
@@ -508,7 +513,11 @@ pub async fn demo_reset(State(state): State<SharedState>) -> Response {
     )
         .into_response();
 
-    // Signal graceful shutdown so the process restarts with the fresh DB
+    // Write a restart sentinel so the server loop knows to restart (not exit)
+    let sentinel = state.data_dir.join(".restart");
+    if let Err(e) = std::fs::write(&sentinel, b"reset") {
+        tracing::warn!("Failed to write restart sentinel: {e}");
+    }
     let shutdown = state.shutdown.clone();
     tokio::spawn(async move {
         // Small delay to allow the response to be sent

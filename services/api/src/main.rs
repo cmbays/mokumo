@@ -341,127 +341,112 @@ async fn main() {
         std::process::exit(1);
     }
 
-    // Initialize database
-    let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
-    let pool = match mokumo_db::initialize_database(&database_url).await {
-        Ok(pool) => {
-            tracing::info!("Database ready at {}", db_path.display());
-            pool
-        }
-        Err(e) => {
-            tracing::error!("Failed to initialize database: {e}");
-            std::process::exit(1);
-        }
-    };
+    // Server loop: runs once normally, restarts on demo reset.
+    // Each iteration gets a fresh shutdown token, DB pool, and app state.
+    let mut bound_port: Option<u16> = None;
 
-    // Run startup migrations on the NON-ACTIVE profile database (if it exists)
-    {
-        use mokumo_core::setup::SetupMode;
-        let other_profile = match profile {
-            SetupMode::Demo => "production",
-            SetupMode::Production => "demo",
-        };
-        let other_db_path = config.data_dir.join(other_profile).join("mokumo.db");
-        if other_db_path.try_exists().unwrap_or(false) {
-            if let Err(e) = mokumo_db::pre_migration_backup(&other_db_path).await {
-                tracing::warn!(
-                    "Pre-migration backup failed for {}: {e}",
-                    other_db_path.display()
-                );
-            }
-            let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
-            match mokumo_db::initialize_database(&other_url).await {
-                Ok(_db) => {
-                    tracing::info!("Startup migrations applied to {} database", other_profile);
-                    // _db dropped here — closes the temporary pool
+    loop {
+        // Re-open the database on each iteration (demo reset may have replaced the file)
+        let db_pool =
+            match mokumo_db::initialize_database(&format!("sqlite:{}?mode=rwc", db_path.display()))
+                .await
+            {
+                Ok(pool) => {
+                    tracing::info!("Database ready at {}", db_path.display());
+                    pool
                 }
                 Err(e) => {
-                    tracing::warn!(
-                        "Failed to run migrations on {} database: {e}",
-                        other_profile
+                    tracing::error!("Failed to initialize database: {e}");
+                    std::process::exit(1);
+                }
+            };
+
+        let shutdown_token = CancellationToken::new();
+        let mdns_status = discovery::MdnsStatus::shared();
+
+        let (app, _setup_token) = build_app_with_shutdown(
+            &config,
+            db_pool,
+            shutdown_token.clone(),
+            mdns_status.clone(),
+        )
+        .await;
+
+        // Bind to port (reuse the same port on restart)
+        let port = bound_port.unwrap_or(config.port);
+        let (listener, actual_port) = match try_bind(&config.host, port).await {
+            Ok(result) => result,
+            Err(e) => {
+                eprintln!("{e}");
+                tracing::error!("{e}");
+                std::process::exit(1);
+            }
+        };
+        bound_port = Some(actual_port);
+
+        if actual_port != config.port {
+            tracing::warn!(
+                "Requested port {} was unavailable, using port {} instead",
+                config.port,
+                actual_port
+            );
+        }
+
+        {
+            let mut s = mdns_status.write().expect("MdnsStatus lock poisoned");
+            s.port = actual_port;
+            s.bind_host = config.host.clone();
+        }
+
+        let mdns_handle = discovery::register_mdns(
+            &config.host,
+            actual_port,
+            &mdns_status,
+            &discovery::RealDiscovery,
+        );
+
+        // Ctrl+C handler — only set up once (subsequent loops reuse the same signal)
+        let signal_token = shutdown_token.clone();
+        let shutdown_status = mdns_status.clone();
+        tokio::spawn(async move {
+            match tokio::signal::ctrl_c().await {
+                Ok(()) => {
+                    tracing::info!("Shutdown signal received, draining connections...");
+                    if let Some(handle) = mdns_handle {
+                        discovery::deregister_mdns(handle, &shutdown_status);
+                    }
+                    signal_token.cancel();
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "Failed to listen for ctrl+c: {e}. \
+                         Server will continue running but graceful shutdown via Ctrl+C is unavailable."
                     );
                 }
             }
-        }
-    }
+        });
 
-    // Graceful shutdown via CancellationToken
-    let shutdown_token = CancellationToken::new();
-
-    // Pre-allocate mDNS status (default: inactive)
-    let mdns_status = discovery::MdnsStatus::shared();
-
-    // Build application (now async — initializes session store)
-    let (app, _setup_token) =
-        build_app_with_shutdown(&config, pool, shutdown_token.clone(), mdns_status.clone()).await;
-
-    // Bind to port (with fallback)
-    let (listener, actual_port) = match try_bind(&config.host, config.port).await {
-        Ok(result) => result,
-        Err(e) => {
-            eprintln!("{e}");
-            tracing::error!("{e}");
+        if let Err(e) = axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                shutdown_token.cancelled().await;
+            })
+            .await
+        {
+            tracing::error!("Server error: {e}");
             std::process::exit(1);
         }
-    };
 
-    if actual_port != config.port {
-        tracing::warn!(
-            "Requested port {} was unavailable, using port {} instead",
-            config.port,
-            actual_port
-        );
-    }
-
-    // Record the bound port and bind host so /api/server-info always knows them
-    {
-        let mut s = mdns_status.write().expect("MdnsStatus lock poisoned");
-        s.port = actual_port;
-        s.bind_host = config.host.clone();
-    }
-
-    // Register mDNS after binding (uses actual bound port)
-    let mdns_handle = discovery::register_mdns(
-        &config.host,
-        actual_port,
-        &mdns_status,
-        &discovery::RealDiscovery,
-    );
-
-    let signal_token = shutdown_token.clone();
-    let shutdown_status = mdns_status.clone();
-
-    tokio::spawn(async move {
-        match tokio::signal::ctrl_c().await {
-            Ok(()) => {
-                tracing::info!("Shutdown signal received, draining connections...");
-                // Deregister mDNS BEFORE cancelling the token
-                if let Some(handle) = mdns_handle {
-                    discovery::deregister_mdns(handle, &shutdown_status);
-                }
-                signal_token.cancel();
-            }
-            Err(e) => {
-                tracing::error!(
-                    "Failed to listen for ctrl+c: {e}. \
-                     Server will continue running but graceful shutdown via Ctrl+C is unavailable."
-                );
-                // Do NOT cancel — let the server keep running.
-            }
+        // Check if restart was requested (e.g., demo reset)
+        let restart_sentinel = config.data_dir.join(".restart");
+        if restart_sentinel.exists() {
+            let _ = std::fs::remove_file(&restart_sentinel);
+            tracing::info!("Restart requested — reinitializing server with fresh database");
+            continue;
         }
-    });
 
-    if let Err(e) = axum::serve(listener, app)
-        .with_graceful_shutdown(async move {
-            shutdown_token.cancelled().await;
-        })
-        .await
-    {
-        tracing::error!("Server error: {e}");
-        std::process::exit(1);
+        tracing::info!("Server shut down cleanly");
+        break;
     }
-
-    tracing::info!("Server shut down cleanly");
 }
 
 #[cfg(test)]

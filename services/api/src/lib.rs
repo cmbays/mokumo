@@ -406,6 +406,7 @@ fn build_app_inner(
     let protected_routes = Router::new()
         .nest("/api/customers", customer::router())
         .nest("/api/activity", activity::router())
+        .nest("/api/auth", auth::auth_me_router())
         .route(
             "/api/account/recovery-codes/regenerate",
             post(auth::regenerate_recovery_codes),

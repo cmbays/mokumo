@@ -33,6 +33,10 @@ pub fn copy_sidecar_if_needed(data_dir: &Path) -> Result<bool, std::io::Error> {
 /// Force-copy the demo sidecar database to `data_dir/demo/mokumo.db`,
 /// replacing any existing file. Used by the reset endpoint.
 ///
+/// Uses atomic rename: copies to a temp file in the same directory, then
+/// renames over the destination. This avoids corrupting an in-use SQLite
+/// file if any connections are still draining during graceful shutdown.
+///
 /// Returns an error if no sidecar can be found.
 pub fn force_copy_sidecar(data_dir: &Path) -> Result<(), std::io::Error> {
     let demo_dir = data_dir.join("demo");
@@ -44,12 +48,21 @@ pub fn force_copy_sidecar(data_dir: &Path) -> Result<(), std::io::Error> {
         )
     })?;
 
-    // Remove WAL/SHM files first to avoid stale journal issues
+    std::fs::create_dir_all(&demo_dir)?;
+
+    // Copy to a temp file in the same directory (same filesystem = atomic rename)
+    let tmp = demo_dir.join("mokumo.db.tmp");
+    std::fs::copy(&src, &tmp)?;
+
+    // Atomic rename replaces the destination without truncating the live file.
+    // Existing file descriptors (from draining connections) continue reading
+    // the old inode; new connections open the fresh copy.
+    std::fs::rename(&tmp, &dest)?;
+
+    // Remove WAL/SHM files after the rename — they belong to the old DB
     let _ = std::fs::remove_file(demo_dir.join("mokumo.db-wal"));
     let _ = std::fs::remove_file(demo_dir.join("mokumo.db-shm"));
 
-    std::fs::create_dir_all(&demo_dir)?;
-    std::fs::copy(&src, &dest)?;
     tracing::info!(
         "Force-copied demo sidecar from {} to {}",
         src.display(),
