@@ -6,7 +6,7 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	test: {
 		passWithNoTests: true,
-		exclude: [...configDefaults.exclude, '**/.claude/**', '.features-gen/**'],
+		exclude: [...configDefaults.exclude, '**/.claude/**', '.features-gen/**', 'tests/demo-captures/**'],
 		coverage: {
 			provider: 'v8',
 			reporter: ['json', 'text'],

@@ -13,6 +13,9 @@
   "bundle": {
     "active": true,
     "targets": ["dmg", "nsis"],
+    "resources": [
+      "../../apps/web/scripts/demo.db"
+    ],
     "windows": {
       "nsis": {
         "installMode": "currentUser"

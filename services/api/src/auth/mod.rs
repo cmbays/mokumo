@@ -22,6 +22,7 @@ use mokumo_types::error::{ErrorBody, ErrorCode};
 use mokumo_types::user::UserResponse;
 
 use crate::SharedState;
+use crate::demo;
 
 use backend::{Backend, Credentials};
 
@@ -31,10 +32,15 @@ pub fn auth_router() -> Router<SharedState> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
-        .route("/me", get(me))
         .route("/forgot-password", post(reset::forgot_password))
         .route("/reset-password", post(reset::reset_password))
         .route("/recover", post(recover::recover))
+}
+
+/// Separate router for /api/auth/me — must be behind the demo auto-login
+/// middleware so that demo mode sessions are created before the auth check.
+pub fn auth_me_router() -> Router<SharedState> {
+    Router::new().route("/me", get(me))
 }
 
 pub fn setup_router() -> Router<SharedState> {
@@ -396,10 +402,128 @@ async fn auto_login(
 ) {
     let hash = match repo.find_by_id_with_hash(&user.id).await {
         Ok(Some((_, hash))) => hash,
-        _ => return,
+        Ok(None) => return,
+        Err(e) => {
+            tracing::warn!("Auto-login after setup: failed to fetch user hash: {e}");
+            return;
+        }
     };
     let auth_user = user::AuthenticatedUser::new(user.clone(), hash);
     if let Err(e) = auth_session.login(&auth_user).await {
         tracing::warn!("Auto-login after setup failed: {e}");
     }
+}
+
+/// Combined middleware: demo auto-login + login-required check.
+///
+/// In demo mode: if no user is authenticated, automatically log in the demo admin.
+/// In all modes: reject the request with 401 if no user is authenticated after
+/// the auto-login attempt.
+///
+/// This replaces the separate `login_required!` + demo auto-login layers because
+/// `login_required!` checks the user from the incoming request, which doesn't
+/// reflect a session created by a preceding middleware in the same request cycle.
+pub async fn require_auth_with_demo_auto_login(
+    State(state): State<SharedState>,
+    mut auth_session: AuthSessionType,
+    request: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> Response {
+    use mokumo_core::setup::SetupMode;
+
+    // Demo mode auto-login: create a session for the demo admin if not authenticated.
+    // Uses find_by_email_with_hash to resolve user + hash in a single DB query
+    // (avoids the 2-query path through auto_login → find_by_id_with_hash).
+    if state.setup_mode == Some(SetupMode::Demo) && auth_session.user.is_none() {
+        let repo = SeaOrmUserRepo::new(state.db.clone());
+        match repo.find_by_email_with_hash("admin@demo.local").await {
+            Ok(Some((user, hash))) => {
+                let auth_user = user::AuthenticatedUser::new(user, hash);
+                if let Err(e) = auth_session.login(&auth_user).await {
+                    tracing::warn!("Demo auto-login session creation failed: {e}");
+                }
+            }
+            Ok(None) => {
+                tracing::warn!("Demo auto-login: admin@demo.local not found in database");
+                return error_response(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    ErrorCode::InternalError,
+                    "Demo admin account not found. The demo database may be corrupted — try resetting.",
+                );
+            }
+            Err(e) => {
+                tracing::error!("Demo auto-login: failed to look up admin: {e}");
+                return error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorCode::InternalError,
+                    "An internal error occurred",
+                );
+            }
+        }
+    }
+
+    // Login-required check: reject if still not authenticated
+    if auth_session.user.is_none() {
+        return error_response(
+            StatusCode::UNAUTHORIZED,
+            ErrorCode::Unauthorized,
+            "Not authenticated",
+        );
+    }
+
+    next.run(request).await
+}
+
+/// POST /api/demo/reset — reset the demo database to its original sidecar state.
+///
+/// Guards: demo mode only. Authentication is enforced by the
+/// `require_auth_with_demo_auto_login` route layer — this handler is only
+/// reachable by authenticated users.
+pub async fn demo_reset(State(state): State<SharedState>) -> Response {
+    use mokumo_core::setup::SetupMode;
+
+    // Must be demo mode
+    if state.setup_mode != Some(SetupMode::Demo) {
+        return error_response(
+            StatusCode::FORBIDDEN,
+            ErrorCode::Forbidden,
+            "Demo reset is only available in demo mode",
+        );
+    }
+
+    // Force-copy fresh sidecar over the demo database.
+    // The existing connection pool still holds the old file descriptor — this is fine
+    // because the server is about to shut down and restart with the fresh copy.
+    if let Err(e) = demo::force_copy_sidecar(&state.data_dir) {
+        tracing::error!("Demo reset: failed to copy sidecar: {e}");
+        return error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ErrorCode::InternalError,
+            "Failed to reset demo database",
+        );
+    }
+
+    // Respond before shutdown
+    let response = (
+        StatusCode::OK,
+        Json(mokumo_types::setup::DemoResetResponse {
+            success: true,
+            message: "Demo data reset successfully. Server will restart.".into(),
+        }),
+    )
+        .into_response();
+
+    // Write a restart sentinel so the server loop knows to restart (not exit)
+    let sentinel = state.data_dir.join(".restart");
+    if let Err(e) = std::fs::write(&sentinel, b"reset") {
+        tracing::warn!("Failed to write restart sentinel: {e}");
+    }
+    let shutdown = state.shutdown.clone();
+    tokio::spawn(async move {
+        // Small delay to allow the response to be sent
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        shutdown.cancel();
+    });
+
+    response
 }

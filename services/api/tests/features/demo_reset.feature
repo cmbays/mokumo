@@ -1,4 +1,3 @@
-@wip
 Feature: Demo data reset
 
   Shop owners can reset the demo database to its original state
@@ -30,6 +29,6 @@ Feature: Demo data reset
     Then the request is rejected with a forbidden status
 
   Scenario: Reset is rejected without authentication
-    Given the server is running in demo mode
+    Given the server is running in production mode
     When an unauthenticated client sends a demo reset request
     Then the request is rejected with an unauthorized status

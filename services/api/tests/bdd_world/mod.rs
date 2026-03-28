@@ -1,6 +1,7 @@
 pub mod activity_steps;
 pub mod auth_steps;
 pub mod customer_steps;
+pub mod demo_steps;
 pub mod discovery_steps;
 pub mod health_steps;
 pub mod regen_steps;
@@ -47,7 +48,7 @@ pub struct ApiWorld {
     pub recovery_dir: PathBuf,
     pub last_pin: Option<String>,
     // Hold the tempdir alive for the lifetime of the world
-    _tmp: tempfile::TempDir,
+    pub _tmp: tempfile::TempDir,
 }
 
 impl ApiWorld {

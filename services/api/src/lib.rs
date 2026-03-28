@@ -1,6 +1,7 @@
 pub mod activity;
 pub mod auth;
 pub mod customer;
+pub mod demo;
 pub mod discovery;
 pub mod error;
 pub mod pagination;
@@ -20,7 +21,6 @@ use axum::{
     routing::{get, post},
 };
 use axum_login::AuthManagerLayerBuilder;
-use axum_login::login_required;
 use mokumo_db::DatabaseConnection;
 use rust_embed::Embed;
 use time::Duration;
@@ -397,17 +397,26 @@ fn build_app_inner(
         });
     }
 
-    // Protected routes: require login
-    // /api/account/ — authenticated user-actions (distinct from /api/auth/ unauthenticated flows)
+    // Protected routes: require login (with demo auto-login support)
+    //
+    // Uses a combined middleware that handles both demo auto-login and auth checking
+    // in a single layer. This is necessary because login_required! checks the user
+    // from the incoming request, which doesn't reflect a session created by a
+    // preceding middleware in the same request cycle.
     let protected_routes = Router::new()
         .nest("/api/customers", customer::router())
         .nest("/api/activity", activity::router())
+        .nest("/api/auth", auth::auth_me_router())
         .route(
             "/api/account/recovery-codes/regenerate",
             post(auth::regenerate_recovery_codes),
         )
+        .route("/api/demo/reset", post(auth::demo_reset))
         .route("/ws", get(ws::ws_handler))
-        .route_layer(login_required!(Backend));
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth::require_auth_with_demo_auto_login,
+        ));
 
     let mut router = Router::new()
         .route("/api/health", get(health))

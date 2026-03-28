@@ -44,6 +44,8 @@ mod tests {
             .expect("Failed to export ServerInfoResponse TypeScript bindings");
         setup::SetupStatusResponse::export_all()
             .expect("Failed to export SetupStatusResponse TypeScript bindings");
+        setup::DemoResetResponse::export_all()
+            .expect("Failed to export DemoResetResponse TypeScript bindings");
     }
 
     mod proptest_roundtrips {

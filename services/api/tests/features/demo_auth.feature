@@ -1,4 +1,3 @@
-@wip
 Feature: Demo mode authentication
 
   When running in demo mode, Mokumo automatically logs in the

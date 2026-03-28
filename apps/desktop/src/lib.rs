@@ -22,6 +22,10 @@ struct MdnsState {
     status: discovery::SharedMdnsStatus,
 }
 
+/// Holds the live shutdown token so `ExitRequested` always cancels the current server,
+/// even after a demo-reset restart has replaced the original token.
+struct ShutdownState(std::sync::Mutex<CancellationToken>);
+
 /// Resources produced by `init_server`, consumed by Tauri setup.
 struct ServerInit {
     listener: tokio::net::TcpListener,
@@ -74,6 +78,11 @@ async fn init_server(
     // Migrate flat layout to dual-directory structure (idempotent)
     migrate_flat_layout(&config.data_dir)?;
 
+    // Copy demo sidecar if needed (first launch)
+    if let Err(e) = mokumo_api::demo::copy_sidecar_if_needed(&config.data_dir) {
+        tracing::warn!("Failed to copy demo sidecar: {e}");
+    }
+
     // Resolve which profile to use
     let profile = resolve_active_profile(&config.data_dir);
     let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
@@ -89,6 +98,36 @@ async fn init_server(
     let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
     let pool = mokumo_db::initialize_database(&database_url).await?;
     tracing::info!("Database ready at {}", db_path.display());
+
+    // Run startup migrations on the NON-ACTIVE profile database (if it exists)
+    {
+        use mokumo_core::setup::SetupMode;
+        let other_profile = match profile {
+            SetupMode::Demo => "production",
+            SetupMode::Production => "demo",
+        };
+        let other_db_path = config.data_dir.join(other_profile).join("mokumo.db");
+        if other_db_path.try_exists().unwrap_or(false) {
+            if let Err(e) = mokumo_db::pre_migration_backup(&other_db_path).await {
+                tracing::warn!(
+                    "Pre-migration backup failed for {}: {e}",
+                    other_db_path.display()
+                );
+            }
+            let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
+            match mokumo_db::initialize_database(&other_url).await {
+                Ok(_db) => {
+                    tracing::info!("Startup migrations applied to {} database", other_profile);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to run migrations on {} database: {e}",
+                        other_profile
+                    );
+                }
+            }
+        }
+    }
 
     // Pre-allocate mDNS status (will be populated after mDNS registration)
     let mdns_status = discovery::MdnsStatus::shared();
@@ -141,9 +180,6 @@ pub fn run() {
     });
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    let shutdown_token = CancellationToken::new();
-    let exit_token = shutdown_token.clone();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the existing window when a second instance is launched
@@ -165,7 +201,23 @@ pub fn run() {
 
             tracing::info!("Data directory: {}", data_dir.display());
 
+            // Point the API server to the bundled demo.db sidecar via resource_dir.
+            // SAFETY: called once during single-threaded Tauri setup, before spawning
+            // the server task. No other threads read this env var concurrently.
+            if let Ok(resource_dir) = app.path().resource_dir() {
+                let sidecar_path = resource_dir.join("demo.db");
+                if sidecar_path.exists() {
+                    unsafe { std::env::set_var("MOKUMO_DEMO_SIDECAR", &sidecar_path) };
+                    tracing::info!("Demo sidecar: {}", sidecar_path.display());
+                }
+            }
+
+            let shutdown_token = CancellationToken::new();
+            app.manage(ShutdownState(std::sync::Mutex::new(shutdown_token.clone())));
+
             let server_token = shutdown_token.clone();
+            let restart_data_dir = data_dir.clone();
+            let app_handle_for_server = app.handle().clone();
 
             let ServerInit {
                 listener,
@@ -185,8 +237,15 @@ pub fn run() {
                 e
             })?;
 
-            // Spawn the Axum server on Tauri's async runtime (NOT tokio::spawn)
+            // Spawn the Axum server on Tauri's async runtime with restart loop.
+            // On demo reset, the handler writes a ".restart" sentinel and cancels
+            // the shutdown token. The loop detects the sentinel, re-initializes the
+            // server with the fresh database, and re-binds to the same port.
             let server_handle = tauri::async_runtime::spawn(async move {
+                let data_dir = restart_data_dir;
+                let mut port = actual_port;
+
+                // First iteration uses the already-initialized server
                 if let Err(e) = axum::serve(listener, router)
                     .with_graceful_shutdown(async move {
                         server_token.cancelled().await;
@@ -194,8 +253,66 @@ pub fn run() {
                     .await
                 {
                     tracing::error!("Server error: {e}");
+                    return;
                 }
-                tracing::info!("Server shut down cleanly");
+
+                // Check for restart sentinel after each shutdown
+                loop {
+                    let sentinel = data_dir.join(".restart");
+                    if !sentinel.exists() {
+                        tracing::info!("Server shut down cleanly");
+                        break;
+                    }
+                    let _ = std::fs::remove_file(&sentinel);
+                    tracing::info!("Restart requested — reinitializing server with fresh database");
+
+                    // Deregister stale mDNS before restarting
+                    if let Some(mdns) = app_handle_for_server.try_state::<MdnsState>() {
+                        if let Some(handle) = mdns.handle.lock().ok().and_then(|mut h| h.take()) {
+                            discovery::deregister_mdns(handle, &mdns.status);
+                        }
+                    }
+
+                    let new_shutdown = CancellationToken::new();
+                    let new_server_token = new_shutdown.clone();
+
+                    // Expose the live token so ExitRequested cancels the right server
+                    if let Some(state) = app_handle_for_server.try_state::<ShutdownState>() {
+                        if let Ok(mut token) = state.0.lock() {
+                            *token = new_shutdown.clone();
+                        }
+                    }
+
+                    match init_server(data_dir.clone(), port, DEFAULT_HOST, new_shutdown)
+                        .await
+                        .map_err(|e| e.to_string())
+                    {
+                        Ok(init) => {
+                            port = init.port;
+
+                            // Store the new mDNS handle for cleanup on exit
+                            if let Some(mdns) = app_handle_for_server.try_state::<MdnsState>() {
+                                if let Ok(mut h) = mdns.handle.lock() {
+                                    *h = init.mdns_handle;
+                                }
+                            }
+
+                            if let Err(e) = axum::serve(init.listener, init.router)
+                                .with_graceful_shutdown(async move {
+                                    new_server_token.cancelled().await;
+                                })
+                                .await
+                            {
+                                tracing::error!("Server error after restart: {e}");
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to reinitialize server after reset: {e}");
+                            break;
+                        }
+                    }
+                }
             });
 
             // Store handles so ExitRequested can deregister mDNS and await server drain
@@ -237,7 +354,12 @@ pub fn run() {
                     }
                 }
 
-                exit_token.cancel();
+                // Cancel the LIVE shutdown token (updated by restart loop)
+                if let Some(state) = app.try_state::<ShutdownState>() {
+                    if let Ok(token) = state.0.lock() {
+                        token.cancel();
+                    }
+                }
 
                 // Take the server handle and await drain before allowing exit
                 if let Some(handle) = app
