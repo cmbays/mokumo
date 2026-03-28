@@ -6,8 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 use mokumo_api::{
     DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_reset_db, cli_reset_password,
-    demo, discovery, ensure_data_dirs, lock_file_path, migrate_flat_layout, resolve_active_profile,
-    try_bind,
+    discovery, ensure_data_dirs, lock_file_path, resolve_active_profile, try_bind,
 };
 
 #[derive(Parser)]
@@ -255,7 +254,8 @@ async fn main() {
         recovery_dir,
     };
 
-    // Create data directories (including demo/ and production/)
+    // Create data directories early — the lock file lives here, so dirs must
+    // exist before flock. prepare_database() re-calls this (idempotent).
     if let Err(e) = ensure_data_dirs(&config.data_dir) {
         eprintln!(
             "Cannot create data directory {}: {e}",
@@ -305,41 +305,17 @@ async fn main() {
         }
     };
 
-    // Migrate flat layout to dual-directory structure (idempotent)
-    if let Err(e) = migrate_flat_layout(&config.data_dir) {
-        eprintln!("Failed to migrate data directory layout: {e}");
-        tracing::error!("Failed to migrate data directory layout: {e}");
-        std::process::exit(1);
-    }
-
-    // Copy demo sidecar if needed (first launch)
-    if let Err(e) = demo::copy_sidecar_if_needed(&config.data_dir) {
-        tracing::warn!("Failed to copy demo sidecar: {e}");
-    }
-
-    // Resolve which profile to use
-    let profile = resolve_active_profile(&config.data_dir);
-    let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
-
-    // Pre-migration backup on ACTIVE PROFILE DB
-    let db_exists = match db_path.try_exists() {
-        Ok(exists) => exists,
+    // Shared startup: migrate layout, copy sidecar, backup, init DB, migrate non-active profile
+    let (initial_db, profile) = match mokumo_api::prepare_database(&config.data_dir).await {
+        Ok(result) => result,
         Err(e) => {
-            eprintln!("Cannot check database at {}: {e}", db_path.display());
-            tracing::error!("Cannot check database at {}: {e}", db_path.display());
+            eprintln!("Database initialization failed: {e}");
+            tracing::error!("Database initialization failed: {e}");
             std::process::exit(1);
         }
     };
-    if db_exists && let Err(e) = mokumo_db::pre_migration_backup(&db_path).await {
-        eprintln!(
-            "Pre-migration backup failed for {}: {e}. \
-             Refusing to run migrations without a backup. \
-             Check disk space and permissions.",
-            db_path.display()
-        );
-        tracing::error!("Pre-migration backup failed for existing database: {e}");
-        std::process::exit(1);
-    }
+    let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
+    drop(initial_db); // Closed — the server loop re-opens on each iteration
 
     // Server loop: runs once normally, restarts on demo reset.
     // Each iteration gets a fresh shutdown token, DB pool, and app state.
@@ -456,6 +432,7 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mokumo_api::migrate_flat_layout;
     use mokumo_core::setup::SetupMode;
     use tempfile::tempdir;
 

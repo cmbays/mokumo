@@ -5,10 +5,7 @@ use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
 use mokumo_api::discovery::MdnsHandle;
-use mokumo_api::{
-    ServerConfig, build_app_with_shutdown, discovery, ensure_data_dirs, migrate_flat_layout,
-    resolve_active_profile, try_bind,
-};
+use mokumo_api::{ServerConfig, build_app_with_shutdown, discovery, try_bind};
 
 const DEFAULT_PORT: u16 = 6565;
 const DEFAULT_HOST: &str = "0.0.0.0";
@@ -73,61 +70,8 @@ async fn init_server(
         data_dir,
     };
 
-    ensure_data_dirs(&config.data_dir)?;
-
-    // Migrate flat layout to dual-directory structure (idempotent)
-    migrate_flat_layout(&config.data_dir)?;
-
-    // Copy demo sidecar if needed (first launch)
-    if let Err(e) = mokumo_api::demo::copy_sidecar_if_needed(&config.data_dir) {
-        tracing::warn!("Failed to copy demo sidecar: {e}");
-    }
-
-    // Resolve which profile to use
-    let profile = resolve_active_profile(&config.data_dir);
-    let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
-
-    // Pre-migration backup — fatal for existing databases, skipped for first run.
-    let db_exists = db_path
-        .try_exists()
-        .map_err(|e| format!("Cannot check database at {}: {e}", db_path.display()))?;
-    if db_exists {
-        mokumo_db::pre_migration_backup(&db_path).await?;
-    }
-
-    let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
-    let pool = mokumo_db::initialize_database(&database_url).await?;
-    tracing::info!("Database ready at {}", db_path.display());
-
-    // Run startup migrations on the NON-ACTIVE profile database (if it exists)
-    {
-        use mokumo_core::setup::SetupMode;
-        let other_profile = match profile {
-            SetupMode::Demo => "production",
-            SetupMode::Production => "demo",
-        };
-        let other_db_path = config.data_dir.join(other_profile).join("mokumo.db");
-        if other_db_path.try_exists().unwrap_or(false) {
-            if let Err(e) = mokumo_db::pre_migration_backup(&other_db_path).await {
-                tracing::warn!(
-                    "Pre-migration backup failed for {}: {e}",
-                    other_db_path.display()
-                );
-            }
-            let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
-            match mokumo_db::initialize_database(&other_url).await {
-                Ok(_db) => {
-                    tracing::info!("Startup migrations applied to {} database", other_profile);
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        "Failed to run migrations on {} database: {e}",
-                        other_profile
-                    );
-                }
-            }
-        }
-    }
+    // Shared startup: create dirs, migrate layout, copy sidecar, backup, init DB, migrate non-active profile
+    let (pool, _profile) = mokumo_api::prepare_database(&config.data_dir).await?;
 
     // Pre-allocate mDNS status (will be populated after mDNS registration)
     let mdns_status = discovery::MdnsStatus::shared();

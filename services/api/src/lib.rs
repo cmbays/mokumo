@@ -232,6 +232,71 @@ pub async fn init_session_and_setup(
     (session_store, setup_completed, setup_token, setup_mode)
 }
 
+/// Shared startup sequence: create directories, migrate layout, copy sidecar,
+/// resolve profile, back up and initialize the database, and run migrations on
+/// the non-active profile database.
+///
+/// Used by both the CLI server (`main.rs`) and the desktop app (`lib.rs`).
+/// Returns `(db, profile)` on success.
+pub async fn prepare_database(
+    data_dir: &Path,
+) -> Result<(DatabaseConnection, mokumo_core::setup::SetupMode), Box<dyn std::error::Error>> {
+    use mokumo_core::setup::SetupMode;
+
+    ensure_data_dirs(data_dir)?;
+    migrate_flat_layout(data_dir)?;
+
+    if let Err(e) = demo::copy_sidecar_if_needed(data_dir) {
+        tracing::warn!("Failed to copy demo sidecar: {e}");
+    }
+
+    let profile = resolve_active_profile(data_dir);
+    let db_path = data_dir.join(profile.as_str()).join("mokumo.db");
+
+    // Pre-migration backup on active profile DB
+    let db_exists = db_path
+        .try_exists()
+        .map_err(|e| format!("Cannot check database at {}: {e}", db_path.display()))?;
+    if db_exists {
+        mokumo_db::pre_migration_backup(&db_path)
+            .await
+            .map_err(|e| {
+                format!(
+                    "Pre-migration backup failed for {}: {e}. \
+                 Refusing to run migrations without a backup. \
+                 Check disk space and permissions.",
+                    db_path.display()
+                )
+            })?;
+    }
+
+    let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
+    let db = mokumo_db::initialize_database(&database_url).await?;
+    tracing::info!("Database ready at {}", db_path.display());
+
+    // Run startup migrations on the non-active profile database (if it exists)
+    let other_profile = match profile {
+        SetupMode::Demo => "production",
+        SetupMode::Production => "demo",
+    };
+    let other_db_path = data_dir.join(other_profile).join("mokumo.db");
+    if other_db_path.try_exists().unwrap_or(false) {
+        if let Err(e) = mokumo_db::pre_migration_backup(&other_db_path).await {
+            tracing::warn!(
+                "Pre-migration backup failed for {}: {e}",
+                other_db_path.display()
+            );
+        }
+        let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
+        match mokumo_db::initialize_database(&other_url).await {
+            Ok(_) => tracing::info!("Startup migrations applied to {other_profile} database"),
+            Err(e) => tracing::warn!("Failed to run migrations on {other_profile} database: {e}"),
+        }
+    }
+
+    Ok((db, profile))
+}
+
 /// Build the Axum router with health check, SPA fallback, and tracing.
 ///
 /// Test-only convenience wrapper. Does NOT spawn the background IP refresh
@@ -411,7 +476,7 @@ fn build_app_inner(
             "/api/account/recovery-codes/regenerate",
             post(auth::regenerate_recovery_codes),
         )
-        .route("/api/demo/reset", post(auth::demo_reset))
+        .route("/api/demo/reset", post(demo::demo_reset))
         .route("/ws", get(ws::ws_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
