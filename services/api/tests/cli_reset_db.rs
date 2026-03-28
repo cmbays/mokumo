@@ -214,6 +214,56 @@ fn reset_db_ignores_subdirectory_in_recovery_dir() {
 }
 
 // ---------------------------------------------------------------------------
+// Recovery directory permission errors (EPERM / PermissionDenied)
+// ---------------------------------------------------------------------------
+
+#[cfg(unix)]
+#[test]
+fn reset_db_succeeds_when_recovery_dir_is_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let data_dir = tmp.path();
+    let recovery_dir = tmp.path().join("recovery");
+    fs::create_dir(&recovery_dir).unwrap();
+
+    touch(&data_dir.join("mokumo.db"));
+    touch(&recovery_dir.join("mokumo-recovery-abc123.html"));
+
+    // Remove read permission so read_dir fails with PermissionDenied
+    fs::set_permissions(&recovery_dir, fs::Permissions::from_mode(0o000)).unwrap();
+
+    // Reset should still succeed — recovery scan failure is non-fatal
+    let report = cli_reset_db(data_dir, &recovery_dir, false).unwrap();
+
+    // DB was deleted
+    assert!(report.deleted.contains(&data_dir.join("mokumo.db")));
+    // Recovery dir scan was skipped — check the warning field
+    assert!(report.recovery_dir_error.is_some());
+    let (dir, err) = report.recovery_dir_error.as_ref().unwrap();
+    assert_eq!(dir, &recovery_dir);
+    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
+
+    // Restore permissions for tempdir cleanup
+    fs::set_permissions(&recovery_dir, fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn reset_db_no_recovery_dir_error_when_readable() {
+    let tmp = tempfile::tempdir().unwrap();
+    let data_dir = tmp.path();
+    let recovery_dir = tmp.path().join("recovery");
+    fs::create_dir(&recovery_dir).unwrap();
+
+    touch(&data_dir.join("mokumo.db"));
+
+    let report = cli_reset_db(data_dir, &recovery_dir, false).unwrap();
+
+    assert!(report.recovery_dir_error.is_none());
+}
+
+// ---------------------------------------------------------------------------
 // Process-level lock (flock) integration tests
 // ---------------------------------------------------------------------------
 

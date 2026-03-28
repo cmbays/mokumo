@@ -510,6 +510,9 @@ pub struct ResetReport {
     pub deleted: Vec<PathBuf>,
     pub not_found: Vec<PathBuf>,
     pub failed: Vec<(PathBuf, std::io::Error)>,
+    /// Non-fatal: recovery directory could not be scanned (e.g. EPERM on macOS).
+    /// Contains (directory path, io error) when the scan was skipped.
+    pub recovery_dir_error: Option<(PathBuf, std::io::Error)>,
 }
 
 /// Fatal errors during database reset (not partial file failures).
@@ -564,7 +567,11 @@ pub fn cli_reset_db(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             // Recovery dir doesn't exist — nothing to clean up
         }
-        Err(e) => return Err(ResetError::Io(e)),
+        Err(e) => {
+            // Non-fatal: permission errors (e.g. macOS EPERM on ~/Desktop)
+            // are recorded as a warning, not a hard failure.
+            report.recovery_dir_error = Some((recovery_dir.to_path_buf(), e));
+        }
     }
 
     Ok(report)

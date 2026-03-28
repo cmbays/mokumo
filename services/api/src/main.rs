@@ -214,6 +214,15 @@ async fn main() {
                 }
             };
 
+            if let Some((dir, err)) = &report.recovery_dir_error {
+                eprintln!(
+                    "Warning: could not scan recovery directory {}: {err}\n\
+                     Recovery files were not cleaned up. \
+                     You may need to remove them manually.",
+                    dir.display()
+                );
+            }
+
             if report.failed.is_empty() {
                 println!(
                     "\nDatabase reset complete ({} files deleted). \
