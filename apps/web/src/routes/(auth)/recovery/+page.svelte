@@ -50,13 +50,10 @@
       return;
     }
 
-    toast.info("You used a recovery code. Consider regenerating your codes.", {
-      duration: 8000,
-      action: {
-        label: "Regenerate Codes",
-        onClick: () => goto("/settings/account?regen=true"),
-      },
-    });
+    toast.info(
+      "You used a recovery code. Consider regenerating your codes in Settings \u203A Account.",
+      { duration: 8000 },
+    );
     goto("/login");
   }
 </script>

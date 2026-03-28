@@ -19,37 +19,15 @@ struct RunningServer {
 
 impl RunningServer {
     async fn start(name: &str) -> Self {
-        let tmp = tempfile::tempdir().unwrap();
-        let data_dir = tmp.path().join(name);
-        let recovery_dir = tmp.path().join("recovery");
-        ensure_data_dirs(&data_dir).unwrap();
-        std::fs::create_dir_all(&recovery_dir).unwrap();
-
-        let db_path = data_dir.join("mokumo.db");
-        let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
-        let db = mokumo_db::initialize_database(&database_url).await.unwrap();
-
-        let config = ServerConfig {
-            port: 0,
-            host: "127.0.0.1".into(),
-            data_dir,
-            recovery_dir: recovery_dir.clone(),
-        };
-
-        let (app, setup_token) = build_app(&config, db.clone()).await;
-        let server = TestServer::new(app).unwrap();
-
-        Self {
-            server,
-            db,
-            recovery_dir,
-            _setup_token: setup_token,
-            _tmp: tmp,
-        }
+        Self::start_inner(name, false).await
     }
 
     /// Start a server that preserves cookies across requests (needed for session tests).
     async fn start_with_cookies(name: &str) -> Self {
+        Self::start_inner(name, true).await
+    }
+
+    async fn start_inner(name: &str, save_cookies: bool) -> Self {
         let tmp = tempfile::tempdir().unwrap();
         let data_dir = tmp.path().join(name);
         let recovery_dir = tmp.path().join("recovery");
@@ -68,7 +46,11 @@ impl RunningServer {
         };
 
         let (app, setup_token) = build_app(&config, db.clone()).await;
-        let server = TestServer::builder().save_cookies().build(app).unwrap();
+        let server = if save_cookies {
+            TestServer::builder().save_cookies().build(app).unwrap()
+        } else {
+            TestServer::new(app).unwrap()
+        };
 
         Self {
             server,

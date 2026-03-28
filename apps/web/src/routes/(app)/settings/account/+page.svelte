@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import ConfirmRegenDialog from "$lib/components/confirm-dialog/confirm-regen-dialog.svelte";
   import RecoveryCodes from "$lib/components/recovery-codes.svelte";
@@ -15,10 +15,11 @@
   let dialogOpen = $state(false);
   let savedChecked = $state(false);
 
-  // Auto-open regen dialog when linked from recovery toast
+  // Auto-open regen dialog when deep-linked with ?regen=true
   $effect(() => {
     if (page.url.searchParams.get("regen") === "true") {
       dialogOpen = true;
+      goto("/settings/account", { replaceState: true });
     }
   });
 
