@@ -17,6 +17,7 @@ tauri-plugin-single-instance = { workspace = true }
 
 # Shared server library
 mokumo-api = { workspace = true }
+mokumo-core = { workspace = true }
 mokumo-db = { workspace = true }
 
 # Async runtime (TcpListener type from try_bind)

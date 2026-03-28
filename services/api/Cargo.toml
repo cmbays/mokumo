@@ -50,6 +50,9 @@ serde_json = { workspace = true }
 axum-test = { workspace = true }
 cucumber = { workspace = true }
 tokio = { workspace = true }
+password-auth = { workspace = true }
+futures-util = { workspace = true }
+uuid = { workspace = true }
 
 [[test]]
 name = "bdd"

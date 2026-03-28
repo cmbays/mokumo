@@ -74,6 +74,11 @@ async fn init_server(
     // Migrate flat layout to dual-directory structure (idempotent)
     migrate_flat_layout(&config.data_dir)?;
 
+    // Copy demo sidecar if needed (first launch)
+    if let Err(e) = mokumo_api::demo::copy_sidecar_if_needed(&config.data_dir) {
+        tracing::warn!("Failed to copy demo sidecar: {e}");
+    }
+
     // Resolve which profile to use
     let profile = resolve_active_profile(&config.data_dir);
     let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
@@ -89,6 +94,36 @@ async fn init_server(
     let database_url = format!("sqlite:{}?mode=rwc", db_path.display());
     let pool = mokumo_db::initialize_database(&database_url).await?;
     tracing::info!("Database ready at {}", db_path.display());
+
+    // Run startup migrations on the NON-ACTIVE profile database (if it exists)
+    {
+        use mokumo_core::setup::SetupMode;
+        let other_profile = match profile {
+            SetupMode::Demo => "production",
+            SetupMode::Production => "demo",
+        };
+        let other_db_path = config.data_dir.join(other_profile).join("mokumo.db");
+        if other_db_path.try_exists().unwrap_or(false) {
+            if let Err(e) = mokumo_db::pre_migration_backup(&other_db_path).await {
+                tracing::warn!(
+                    "Pre-migration backup failed for {}: {e}",
+                    other_db_path.display()
+                );
+            }
+            let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
+            match mokumo_db::initialize_database(&other_url).await {
+                Ok(_db) => {
+                    tracing::info!("Startup migrations applied to {} database", other_profile);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to run migrations on {} database: {e}",
+                        other_profile
+                    );
+                }
+            }
+        }
+    }
 
     // Pre-allocate mDNS status (will be populated after mDNS registration)
     let mdns_status = discovery::MdnsStatus::shared();
@@ -164,6 +199,17 @@ pub fn run() {
                 .expect("Failed to resolve app data directory");
 
             tracing::info!("Data directory: {}", data_dir.display());
+
+            // Point the API server to the bundled demo.db sidecar via resource_dir.
+            // SAFETY: called once during single-threaded Tauri setup, before spawning
+            // the server task. No other threads read this env var concurrently.
+            if let Ok(resource_dir) = app.path().resource_dir() {
+                let sidecar_path = resource_dir.join("demo.db");
+                if sidecar_path.exists() {
+                    unsafe { std::env::set_var("MOKUMO_DEMO_SIDECAR", &sidecar_path) };
+                    tracing::info!("Demo sidecar: {}", sidecar_path.display());
+                }
+            }
 
             let server_token = shutdown_token.clone();
 

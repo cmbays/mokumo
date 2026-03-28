@@ -25,6 +25,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dual-directory data layout: `data_dir/{demo,production}/mokumo.db` with separate `sessions.db` at root
 - `SetupStatusResponse` typed API response with `setup_mode` field
 - Automatic flat-to-dual migration for existing installations
+- Demo sidecar auto-copy on first launch (copies bundled `demo.db` to data directory)
+- Demo auto-login middleware: unauthenticated requests in demo mode automatically log in as demo admin
+- `POST /api/demo/reset` endpoint to reset demo database to original sidecar state with graceful server restart
+- `DemoResetResponse` typed API response
+- Non-active profile database migrations at startup (both demo and production DBs stay up-to-date)
+- Tauri sidecar bundling for demo database
+- BDD test coverage for demo startup, demo authentication, and demo reset scenarios
 
 ### Changed
 

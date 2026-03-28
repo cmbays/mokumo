@@ -1,4 +1,3 @@
-@wip
 Feature: Demo database startup
 
   Mokumo ships a pre-seeded demo database so new users see a populated
@@ -8,12 +7,14 @@ Feature: Demo database startup
 
   # --- New User (First Launch) ---
 
+  @wip
   Scenario: First launch creates demo directory structure
     Given a fresh data directory with no databases
     When the server starts
     Then a "demo" subdirectory exists
     And a "production" subdirectory exists
 
+  @wip
   Scenario: First launch copies demo sidecar to demo directory
     Given a fresh data directory with no databases
     And a demo.db sidecar is available
@@ -21,6 +22,7 @@ Feature: Demo database startup
     Then "demo/mokumo.db" exists in the data directory
     And the active profile is "demo"
 
+  @wip
   Scenario: First launch opens the demo database
     Given a fresh data directory with no databases
     And a demo.db sidecar is available
@@ -33,6 +35,7 @@ Feature: Demo database startup
     When a client requests the customer list
     Then at least 25 customers are returned
 
+  @wip
   Scenario: First launch without sidecar starts in fresh mode
     Given a fresh data directory with no databases
     And no demo.db sidecar is available
@@ -48,6 +51,7 @@ Feature: Demo database startup
 
   # --- Existing User (Upgrade Migration) ---
 
+  @wip
   Scenario: Existing flat layout is migrated to dual-directory structure
     Given a data directory with a flat "mokumo.db" file
     When the server starts
@@ -55,12 +59,14 @@ Feature: Demo database startup
     And the active profile is "production"
     And the original flat "mokumo.db" is removed
 
+  @wip
   Scenario: Migration preserves existing data
     Given a data directory with a flat "mokumo.db" containing 5 customers
     When the server starts
     Then the server is connected to the production database
     And the customer list contains exactly 5 customers
 
+  @wip
   Scenario: Migration copies demo sidecar alongside production
     Given a data directory with a flat "mokumo.db" file
     And a demo.db sidecar is available
@@ -68,6 +74,7 @@ Feature: Demo database startup
     Then "demo/mokumo.db" exists in the data directory
     And "production/mokumo.db" exists in the data directory
 
+  @wip
   Scenario: Migration is idempotent after crash
     Given a data directory with both "production/mokumo.db" and flat "mokumo.db"
     When the server starts
@@ -77,11 +84,13 @@ Feature: Demo database startup
 
   # --- Session Store Separation ---
 
+  @wip
   Scenario: Sessions are stored in a separate database
     Given the server is running
     Then "sessions.db" exists in the root data directory
     And "sessions.db" is not inside the demo or production subdirectory
 
+  @wip
   Scenario: Session store is independent of the active profile database
     Given the server started with the demo profile
     When a session is created

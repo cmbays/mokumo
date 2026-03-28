@@ -3866,6 +3866,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "mokumo-api",
+ "mokumo-core",
  "mokumo-db",
  "tauri",
  "tauri-build",

@@ -6,7 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 use mokumo_api::{
     DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_reset_db, cli_reset_password,
-    discovery, ensure_data_dirs, lock_file_path, migrate_flat_layout, resolve_active_profile,
+    demo, discovery, ensure_data_dirs, lock_file_path, migrate_flat_layout, resolve_active_profile,
     try_bind,
 };
 
@@ -312,6 +312,11 @@ async fn main() {
         std::process::exit(1);
     }
 
+    // Copy demo sidecar if needed (first launch)
+    if let Err(e) = demo::copy_sidecar_if_needed(&config.data_dir) {
+        tracing::warn!("Failed to copy demo sidecar: {e}");
+    }
+
     // Resolve which profile to use
     let profile = resolve_active_profile(&config.data_dir);
     let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
@@ -348,6 +353,37 @@ async fn main() {
             std::process::exit(1);
         }
     };
+
+    // Run startup migrations on the NON-ACTIVE profile database (if it exists)
+    {
+        use mokumo_core::setup::SetupMode;
+        let other_profile = match profile {
+            SetupMode::Demo => "production",
+            SetupMode::Production => "demo",
+        };
+        let other_db_path = config.data_dir.join(other_profile).join("mokumo.db");
+        if other_db_path.try_exists().unwrap_or(false) {
+            if let Err(e) = mokumo_db::pre_migration_backup(&other_db_path).await {
+                tracing::warn!(
+                    "Pre-migration backup failed for {}: {e}",
+                    other_db_path.display()
+                );
+            }
+            let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
+            match mokumo_db::initialize_database(&other_url).await {
+                Ok(_db) => {
+                    tracing::info!("Startup migrations applied to {} database", other_profile);
+                    // _db dropped here — closes the temporary pool
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to run migrations on {} database: {e}",
+                        other_profile
+                    );
+                }
+            }
+        }
+    }
 
     // Graceful shutdown via CancellationToken
     let shutdown_token = CancellationToken::new();

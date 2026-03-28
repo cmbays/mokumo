@@ -8,3 +8,10 @@ pub struct SetupStatusResponse {
     #[ts(type = "\"demo\" | \"production\" | null")]
     pub setup_mode: Option<mokumo_core::setup::SetupMode>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DemoResetResponse {
+    pub success: bool,
+    pub message: String,
+}
