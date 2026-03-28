@@ -64,7 +64,7 @@ jobs:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: 'Mokumo ${{ github.ref_name }}'
-          releaseBody: 'See [CHANGELOG.md](https://github.com/cmbays/mokumo/blob/main/CHANGELOG.md) for details.'
+          releaseBody: 'See [CHANGELOG.md](https://github.com/breezy-bays-labs/mokumo/blob/main/CHANGELOG.md) for details.'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
