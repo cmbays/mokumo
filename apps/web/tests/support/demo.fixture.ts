@@ -62,7 +62,7 @@ export const test = base.extend<object, DemoWorkerFixtures>({
       handle.process?.kill("SIGTERM");
       rmSync(tmpDir, { recursive: true, force: true });
     },
-    { scope: "worker" },
+    { scope: "worker", timeout: 60_000 },
   ],
 
   demoPage: [
