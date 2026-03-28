@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use mokumo_api::cli_reset_db;
+use mokumo_api::{cli_reset_db, lock_file_path};
 
 /// Helper: create an empty file at the given path.
 fn touch(path: &Path) {
@@ -211,4 +211,75 @@ fn reset_db_ignores_subdirectory_in_recovery_dir() {
     );
     // Subdirectory still exists
     assert!(recovery_dir.join("unexpected-subdir").exists());
+}
+
+// ---------------------------------------------------------------------------
+// Process-level lock (flock) integration tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn lock_contention_blocks_second_acquire() {
+    let tmp = tempfile::tempdir().unwrap();
+    let data_dir = tmp.path();
+
+    // Simulate a running server: acquire exclusive flock
+    let lock_path = lock_file_path(data_dir);
+    let server_file = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .unwrap();
+    let mut server_lock = fd_lock::RwLock::new(server_file);
+    let _server_guard = server_lock
+        .try_write()
+        .expect("first acquire should succeed");
+
+    // Simulate reset-db: try to acquire the same lock — must get WouldBlock
+    let cli_file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .unwrap();
+    let mut cli_lock = fd_lock::RwLock::new(cli_file);
+    let err = cli_lock.try_write().unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::WouldBlock);
+}
+
+#[test]
+fn lock_available_after_server_drops_guard() {
+    let tmp = tempfile::tempdir().unwrap();
+    let data_dir = tmp.path();
+
+    let lock_path = lock_file_path(data_dir);
+
+    // Server acquires and then releases (simulating clean shutdown)
+    {
+        let server_file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(&lock_path)
+            .unwrap();
+        let mut server_lock = fd_lock::RwLock::new(server_file);
+        let _guard = server_lock.try_write().unwrap();
+        // _guard and server_lock dropped here
+    }
+
+    // CLI should now acquire successfully
+    let cli_file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .unwrap();
+    let mut cli_lock = fd_lock::RwLock::new(cli_file);
+    assert!(cli_lock.try_write().is_ok());
+}
+
+#[test]
+fn lock_file_path_uses_data_dir() {
+    let path = lock_file_path(Path::new("/tmp/mokumo-data"));
+    assert_eq!(path, Path::new("/tmp/mokumo-data/mokumo.lock"));
 }
