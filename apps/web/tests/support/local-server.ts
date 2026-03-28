@@ -137,16 +137,26 @@ export async function startAxumServer(
 ): Promise<{ server: ChildProcess; url: string; port: number; setupToken: string | null }> {
   const binary = resolveAxumBinary(webRoot);
 
-  // Ensure the "Listening on" INFO line is always emitted regardless of the
-  // user's RUST_LOG. The test harness depends on this line to discover the
-  // actual bound port. Strip any existing mokumo_api directives first —
-  // tracing_subscriber uses last-wins, so a trailing mokumo_api=error would
-  // suppress our prepended mokumo_api=info.
+  // Ensure the "Listening on" INFO line is always emitted. The test harness
+  // depends on it to discover the actual bound port. Only override mokumo_api
+  // directives that would suppress INFO (warn, error, off). Levels that are
+  // at least as verbose (info, debug, trace) already include it.
+  const LEVELS_THAT_SUPPRESS_INFO = new Set(["warn", "error", "off"]);
   const baseRustLog = (process.env.RUST_LOG ?? "")
     .split(",")
-    .filter((d) => !d.startsWith("mokumo_api="))
+    .filter((d) => {
+      if (!d.startsWith("mokumo_api=")) return true;
+      const level = d.split("=")[1];
+      return !LEVELS_THAT_SUPPRESS_INFO.has(level);
+    })
     .join(",");
-  const rustLog = baseRustLog ? `mokumo_api=info,${baseRustLog}` : "mokumo_api=info";
+  // Prepend mokumo_api=info only if no surviving directive already covers it
+  const hasMokumoDirective = baseRustLog.split(",").some((d) => d.startsWith("mokumo_api="));
+  const rustLog = hasMokumoDirective
+    ? baseRustLog
+    : baseRustLog
+      ? `mokumo_api=info,${baseRustLog}`
+      : "mokumo_api=info";
 
   const server = spawn(
     binary,
