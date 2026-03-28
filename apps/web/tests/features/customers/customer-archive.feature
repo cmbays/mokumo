@@ -17,7 +17,7 @@ Feature: Customer archiving
     When I confirm the archive
     Then I am redirected to the Customers page
 
-  Scenario: Archived customer reappears with the show-deleted toggle
+  Scenario: Archived customer reappears with the Show archived toggle
     Given "Acme Printing" has been archived
     And I am on the Customers page
     When I toggle "Show archived"

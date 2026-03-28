@@ -74,9 +74,11 @@ When("I type {string} in the search bar", async ({ axumUrl, page }, text: string
     await page.goto(`${axumUrl}/customers`);
     await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible({ timeout: 10_000 });
   }
-  await page.getByPlaceholder("Search customers…").fill(text);
-  // Wait for debounced search to trigger and results to update
-  await page.waitForTimeout(500);
+  const searchInput = page.getByPlaceholder("Search customers…");
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/api/customers") && r.ok()),
+    searchInput.fill(text),
+  ]);
 });
 
 Then("only {string} appears in the table", async ({ page }, name: string) => {
@@ -99,8 +101,10 @@ Given(
 
 When("I clear the search bar", async ({ page }) => {
   const searchInput = page.getByPlaceholder("Search customers…");
-  await searchInput.clear();
-  await page.waitForTimeout(500);
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/api/customers") && r.ok()),
+    searchInput.clear(),
+  ]);
 });
 
 Then("all customers appear in the table", async ({ page, customerContext }) => {
@@ -111,8 +115,10 @@ Then("all customers appear in the table", async ({ page, customerContext }) => {
 // --- Soft Delete Toggle ---
 
 When("I toggle {string}", async ({ page }, label: string) => {
-  await page.getByLabel(label).click();
-  await page.waitForTimeout(500);
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/api/customers") && r.ok()),
+    page.getByLabel(label).click(),
+  ]);
 });
 
 // --- Pagination ---
@@ -135,11 +141,13 @@ Given(
 );
 
 When("I click the next page button", async ({ page }) => {
-  await page
+  const nextBtn = page
     .getByRole("button", { name: "Next" })
-    .or(page.getByRole("button", { name: /next/i }))
-    .click();
-  await page.waitForTimeout(500);
+    .or(page.getByRole("button", { name: /next/i }));
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/api/customers") && r.ok()),
+    nextBtn.click(),
+  ]);
 });
 
 Then("I see a different set of customers", async ({ page }) => {

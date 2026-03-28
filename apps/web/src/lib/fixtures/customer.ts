@@ -16,6 +16,12 @@ export type CreateCustomerBody = {
   postal_code?: string | null;
   country?: string | null;
   notes?: string | null;
+  portal_enabled?: boolean | null;
+  tax_exempt?: boolean | null;
+  payment_terms?: string | null;
+  credit_limit_cents?: number | null;
+  lead_source?: string | null;
+  tags?: string | null;
 };
 
 export function createCustomer(overrides: Partial<CreateCustomerBody> = {}): CreateCustomerBody {

@@ -146,7 +146,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   // Worker-scoped Axum backend handle (internal — use axumUrl instead)
   _axumServer: [
-    // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires destructuring
+    // oxlint-disable-next-line no-empty-pattern -- Playwright requires destructuring for fixture params
     async ({}, use) => {
       const port = await getAvailablePort();
       const url = buildHttpUrl(TEST_SERVER_HOST, port);
@@ -243,7 +243,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 
   // Shared state for customer test data between steps
-  // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires destructuring
+  // oxlint-disable-next-line no-empty-pattern -- Playwright requires destructuring for fixture params
   customerContext: async ({}, use) => {
     await use({ customers: [], lastCustomer: null });
   },

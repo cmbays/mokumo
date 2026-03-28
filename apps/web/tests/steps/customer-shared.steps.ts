@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext } from "@playwright/test";
-import { createCustomer } from "../../src/lib/fixtures/customer";
+import { createCustomer, type CreateCustomerBody } from "../../src/lib/fixtures/customer";
 import type { CustomerResponse } from "../../src/lib/types/CustomerResponse";
 import { Given, When, Then } from "../support/app.fixture";
 
@@ -7,7 +7,7 @@ import { Given, When, Then } from "../support/app.fixture";
 
 export async function seedCustomer(
   apiContext: APIRequestContext,
-  overrides: Record<string, unknown> = {},
+  overrides: Partial<CreateCustomerBody> = {},
 ): Promise<CustomerResponse> {
   const body = createCustomer(overrides);
   const response = await apiContext.post("/api/customers", { data: body });

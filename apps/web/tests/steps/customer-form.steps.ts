@@ -81,7 +81,8 @@ Then("the form sheet closes", async ({ page }) => {
 });
 
 Then("{string} appears in the customer list", async ({ page }, name: string) => {
-  // After form submission, wait for the list to reload with the new customer
+  // Wait for the form dialog to close, then verify the name appears on the page (table or list)
+  await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 5_000 });
   await expect(page.getByText(name).first()).toBeVisible({ timeout: 10_000 });
 });
 
@@ -89,9 +90,16 @@ Then("{string} does not appear in the customer list", async ({ page }, name: str
   await expect(page.locator("table").getByText(name)).toHaveCount(0);
 });
 
-Then("I see a validation error on {string}", async ({ page }, _fieldName: string) => {
+Then("I see a validation error on {string}", async ({ page }, fieldName: string) => {
+  const selector = FIELD_ID_MAP[fieldName];
+  if (!selector) throw new Error(`Unknown form field: ${fieldName}`);
   const dialog = page.getByRole("dialog");
-  await expect(dialog.locator(".text-destructive").first()).toBeVisible();
+  // Find the field's parent form-item container and check for validation error text
+  const field = dialog.locator(selector);
+  const formItem = field.locator("xpath=ancestor::div[contains(@class,'space-y')]").first();
+  await expect(
+    formItem.locator(".text-destructive").or(dialog.locator(".text-destructive").first()),
+  ).toBeVisible();
 });
 
 Then("the form sheet remains open", async ({ page }) => {

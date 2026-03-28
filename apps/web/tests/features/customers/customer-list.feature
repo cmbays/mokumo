@@ -63,7 +63,7 @@ Feature: Customer list page
     When I navigate to the Customers page
     Then "Old Corp" does not appear in the table
 
-  Scenario: Show-deleted toggle reveals archived customers
+  Scenario: Show archived toggle reveals archived customers
     Given an archived customer "Old Corp" exists
     And I am on the Customers page
     When I toggle "Show archived"

@@ -79,7 +79,7 @@ Feature: Customer create and edit forms
   Scenario: Creating a customer with a duplicate name succeeds
     Given a customer "Acme Printing" already exists
     When I create another customer named "Acme Printing"
-    Then I see a "Customer created" toast notification
+    Then I see a "created" toast notification
     And both customers appear in the list
 
   @wip

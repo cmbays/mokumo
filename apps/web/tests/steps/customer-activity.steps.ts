@@ -45,8 +45,7 @@ When(
 );
 
 Then("I see exactly one activity entry", async ({ page }) => {
-  const entries = page.locator("[class*='rounded-lg'][class*='border'][class*='p-4']");
-  await expect(entries).toHaveCount(1);
+  await expect(page.getByTestId("activity-entry")).toHaveCount(1, { timeout: 10_000 });
 });
 
 Then("the entry shows a {string} action", async ({ page }, action: string) => {
@@ -68,9 +67,8 @@ Given(
 );
 
 Then("I see activity entries for both actions", async ({ page }) => {
-  const entries = page.locator(".rounded-lg.border.p-4");
-  const count = await entries.count();
-  expect(count).toBeGreaterThanOrEqual(2);
+  const entries = page.getByTestId("activity-entry");
+  await expect(entries).toHaveCount(2, { timeout: 10_000 });
 });
 
 When("I view the Activity tab", async ({ axumUrl, page, customerContext }) => {
@@ -87,7 +85,7 @@ Then("the most recent entry shows a {string} action", async ({ page }, action: s
 });
 
 Then("the entry shows a recent timestamp", async ({ page }) => {
-  const timestamp = page.locator(".text-xs.text-muted-foreground").first();
+  const timestamp = page.getByTestId("activity-timestamp").first();
   const text = await timestamp.textContent();
   expect(text).toBeTruthy();
 });

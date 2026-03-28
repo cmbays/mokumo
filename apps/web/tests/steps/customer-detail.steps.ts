@@ -126,8 +126,9 @@ Then(
 
 When("I click the {string} tab", async ({ page }, tab: string) => {
   const tabNav = page.getByLabel("Tab navigation");
-  await tabNav.getByRole("link", { name: tab }).click();
-  await page.waitForTimeout(500);
+  const link = tabNav.getByRole("link", { name: tab });
+  await link.click();
+  await expect(link).toHaveAttribute("aria-current", "page");
 });
 
 Then("the URL path includes {string}", async ({ page }, segment: string) => {
