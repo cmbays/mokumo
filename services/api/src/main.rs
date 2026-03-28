@@ -5,8 +5,8 @@ use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
 use mokumo_api::{
-    ServerConfig, build_app_with_shutdown, cli_reset_password, discovery, ensure_data_dirs,
-    try_bind,
+    DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_reset_db, cli_reset_password,
+    discovery, ensure_data_dirs, try_bind,
 };
 
 #[derive(Parser)]
@@ -36,6 +36,15 @@ enum Commands {
         #[arg(long)]
         email: String,
     },
+    /// Delete the database and start fresh (dev/testing)
+    ResetDb {
+        /// Skip the confirmation prompt
+        #[arg(long)]
+        force: bool,
+        /// Also delete pre-migration backup files
+        #[arg(long)]
+        include_backups: bool,
+    },
 }
 
 /// Resolve the default data directory using platform conventions.
@@ -63,34 +72,154 @@ async fn main() {
     let data_dir = cli.data_dir.unwrap_or_else(resolve_default_data_dir);
 
     // Handle subcommands before server startup
-    if let Some(Commands::ResetPassword { email }) = cli.command {
-        let db_path = data_dir.join("mokumo.db");
-        let password = rpassword::prompt_password("New password: ").unwrap_or_else(|e| {
-            eprintln!("Failed to read password: {e}");
-            std::process::exit(1);
-        });
-        if password.len() < 8 {
-            eprintln!("Password must be at least 8 characters");
-            std::process::exit(1);
-        }
-        let confirm = rpassword::prompt_password("Confirm password: ").unwrap_or_else(|e| {
-            eprintln!("Failed to read password: {e}");
-            std::process::exit(1);
-        });
-        if password != confirm {
-            eprintln!("Passwords do not match");
-            std::process::exit(1);
-        }
-        match cli_reset_password(&db_path, &email, &password) {
-            Ok(()) => {
-                println!("Password reset successfully for {email}");
-            }
-            Err(e) => {
-                eprintln!("Error: {e}");
+    match cli.command {
+        Some(Commands::ResetPassword { email }) => {
+            let db_path = data_dir.join("mokumo.db");
+            let password = rpassword::prompt_password("New password: ").unwrap_or_else(|e| {
+                eprintln!("Failed to read password: {e}");
+                std::process::exit(1);
+            });
+            if password.len() < 8 {
+                eprintln!("Password must be at least 8 characters");
                 std::process::exit(1);
             }
+            let confirm = rpassword::prompt_password("Confirm password: ").unwrap_or_else(|e| {
+                eprintln!("Failed to read password: {e}");
+                std::process::exit(1);
+            });
+            if password != confirm {
+                eprintln!("Passwords do not match");
+                std::process::exit(1);
+            }
+            match cli_reset_password(&db_path, &email, &password) {
+                Ok(()) => {
+                    println!("Password reset successfully for {email}");
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
         }
-        return;
+        Some(Commands::ResetDb {
+            force,
+            include_backups,
+        }) => {
+            let db_path = data_dir.join("mokumo.db");
+
+            // Early exit if no database exists (idempotent, exit 0)
+            match db_path.try_exists() {
+                Ok(false) => {
+                    println!("No database found at {}.", data_dir.display());
+                    return;
+                }
+                Err(e) => {
+                    eprintln!("Cannot access data directory {}: {e}", data_dir.display());
+                    std::process::exit(1);
+                }
+                Ok(true) => {} // proceed
+            }
+
+            // Lock probe — fail fast if server is running.
+            // Scoped so the connection is dropped before we delete files.
+            {
+                let conn = match rusqlite::Connection::open(&db_path) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("Cannot open database at {}: {e}", db_path.display());
+                        std::process::exit(1);
+                    }
+                };
+                if conn
+                    .execute_batch("PRAGMA locking_mode=EXCLUSIVE; BEGIN EXCLUSIVE;")
+                    .is_err()
+                {
+                    eprintln!(
+                        "The database appears to be in use by a running server.\n\
+                         Stop the server first, then try again."
+                    );
+                    std::process::exit(1);
+                }
+                // Rollback the exclusive lock before dropping
+                let _ = conn.execute_batch("ROLLBACK;");
+            }
+
+            // File inventory preview
+            let mut preview_files: Vec<PathBuf> = Vec::new();
+            for suffix in DB_SIDECAR_SUFFIXES {
+                let path = data_dir.join(format!("mokumo.db{suffix}"));
+                if path.exists() {
+                    preview_files.push(path);
+                }
+            }
+            if include_backups && let Ok(entries) = std::fs::read_dir(&data_dir) {
+                for entry in entries.flatten() {
+                    if let Some(name) = entry.file_name().to_str()
+                        && name.starts_with("mokumo.db.backup-v")
+                    {
+                        preview_files.push(entry.path());
+                    }
+                }
+            }
+
+            println!("The following files will be deleted:\n");
+            for f in &preview_files {
+                println!("  {}", f.display());
+            }
+
+            let recovery_dir = mokumo_api::resolve_recovery_dir();
+            if let Ok(entries) = std::fs::read_dir(&recovery_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    println!("  {}", path.display());
+                }
+            }
+            println!();
+
+            // Confirmation gate
+            if !force {
+                use std::io::Write;
+                print!("Type \"reset\" to confirm: ");
+                std::io::stdout().flush().unwrap_or(());
+                let mut input = String::new();
+                if std::io::stdin().read_line(&mut input).is_err() || input.trim() != "reset" {
+                    println!("Cancelled.");
+                    return;
+                }
+            }
+
+            // Execute the reset
+            match cli_reset_db(&data_dir, &recovery_dir, include_backups) {
+                Ok(report) => {
+                    if report.failed.is_empty() {
+                        println!(
+                            "\nDatabase reset complete ({} files deleted). \
+                             Start the server to begin fresh setup:\n\n  mokumo",
+                            report.deleted.len()
+                        );
+                    } else {
+                        eprintln!("\nSome files could not be deleted:");
+                        for (path, err) in &report.failed {
+                            eprintln!("  {}: {err}", path.display());
+                        }
+                        if !report.deleted.is_empty() {
+                            eprintln!(
+                                "\n{} files were deleted successfully.",
+                                report.deleted.len()
+                            );
+                        }
+                        std::process::exit(1);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Reset failed: {e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        None => {} // No subcommand — fall through to server startup
     }
 
     // Initialize tracing (server mode only)

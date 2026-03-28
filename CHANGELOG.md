@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `mokumo reset-db` CLI command to delete database and start fresh (#166)
 - Reusable `CopyableUrl` component with secure-context-aware clipboard error messages
 - "Connect Your Team" card on dashboard showing LAN URL for multi-device access
 - LAN URL display on setup wizard completion screen
