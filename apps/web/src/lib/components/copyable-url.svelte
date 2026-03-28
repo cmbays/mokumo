@@ -11,13 +11,27 @@
 
   let { url, label, testId }: Props = $props();
 
+  function fallbackCopy(text: string): boolean {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      return document.execCommand("copy");
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
   async function copyUrl() {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("URL copied to clipboard");
     } catch {
-      if (!window.isSecureContext) {
-        toast.error("Clipboard requires HTTPS — copy the URL manually");
+      if (fallbackCopy(url)) {
+        toast.success("URL copied to clipboard");
       } else {
         toast.error("Failed to copy URL");
       }
