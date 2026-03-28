@@ -139,9 +139,13 @@ export async function startAxumServer(
 
   // Ensure the "Listening on" INFO line is always emitted regardless of the
   // user's RUST_LOG. The test harness depends on this line to discover the
-  // actual bound port. Merge with any existing RUST_LOG so other directives
-  // (e.g. debug logging for a specific module) are preserved.
-  const baseRustLog = process.env.RUST_LOG ?? "";
+  // actual bound port. Strip any existing mokumo_api directives first —
+  // tracing_subscriber uses last-wins, so a trailing mokumo_api=error would
+  // suppress our prepended mokumo_api=info.
+  const baseRustLog = (process.env.RUST_LOG ?? "")
+    .split(",")
+    .filter((d) => !d.startsWith("mokumo_api="))
+    .join(",");
   const rustLog = baseRustLog ? `mokumo_api=info,${baseRustLog}` : "mokumo_api=info";
 
   const server = spawn(
