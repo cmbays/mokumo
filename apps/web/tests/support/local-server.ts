@@ -176,14 +176,15 @@ export async function startAxumServer(
     if (server.exitCode !== null) {
       throw new Error(`mokumo-api exited with code ${server.exitCode} before binding a port`);
     }
-    await new Promise((r) => setTimeout(r, 100));
-  }
-
-  // Re-check accumulated output in case the line was split across chunks
-  if (actualPort === null) {
+    // Re-scan accumulated output each tick to handle lines split across chunks.
+    // The callback parses each chunk independently, but if "Listening on HOST:PORT"
+    // spans two chunks, only the accumulated scan catches it.
     for (const line of capturedOutput.split("\n")) {
       actualPort = parseListeningPort(line);
       if (actualPort !== null) break;
+    }
+    if (actualPort === null) {
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 
