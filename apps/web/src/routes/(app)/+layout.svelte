@@ -1,11 +1,12 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import AppTopbar from "$lib/components/app-topbar.svelte";
   import RecoveryCodeWarning from "$lib/components/recovery-code-warning.svelte";
   import { SidebarInset, SidebarProvider } from "$lib/components/ui/sidebar";
   import type { LayoutData } from "./$types";
 
-  let { children, data }: { children: any; data: LayoutData } = $props();
+  let { children, data }: { children: Snippet; data: LayoutData } = $props();
 
   const STORAGE_KEY = "sidebar:state";
 
