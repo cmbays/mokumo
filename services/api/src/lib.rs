@@ -469,6 +469,109 @@ pub fn resolve_recovery_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
+// ---------------------------------------------------------------------------
+// Process-level lock (prevents concurrent server + reset-db)
+// ---------------------------------------------------------------------------
+
+/// Path to the process-level lock file within the data directory.
+///
+/// The server acquires an exclusive flock on this file at startup and holds it
+/// for its entire lifetime. `reset-db` checks this lock before deleting files —
+/// if it is held, the server is definitively running.
+///
+/// Unlike `BEGIN EXCLUSIVE` (which only detects active SQLite transactions),
+/// flock detects any process that has the lock file open, including idle servers.
+/// The OS automatically releases the lock on process exit, crash, or SIGKILL.
+pub fn lock_file_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("mokumo.lock")
+}
+
+/// SQLite sidecar suffixes deleted alongside the main database file.
+///
+/// Shared between the file inventory preview (main.rs) and the delete logic
+/// (cli_reset_db) so the two can never drift.
+pub const DB_SIDECAR_SUFFIXES: &[&str] = &["", "-wal", "-shm", "-journal"];
+
+/// Report from a database reset operation.
+///
+/// Partial failures (e.g. one sidecar couldn't be removed) are reported here,
+/// not as `Err`. The caller decides how to present them.
+#[derive(Debug, Default)]
+pub struct ResetReport {
+    pub deleted: Vec<PathBuf>,
+    pub not_found: Vec<PathBuf>,
+    pub failed: Vec<(PathBuf, std::io::Error)>,
+}
+
+/// Fatal errors during database reset (not partial file failures).
+#[derive(Debug, thiserror::Error)]
+pub enum ResetError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+/// Delete database files, sidecars, and optionally backups + recovery files.
+///
+/// This is a pure filesystem function with no stdin/stdout interaction.
+/// The caller (main.rs) handles confirmation prompts and result display.
+pub fn cli_reset_db(
+    data_dir: &Path,
+    recovery_dir: &Path,
+    include_backups: bool,
+) -> Result<ResetReport, ResetError> {
+    let mut report = ResetReport::default();
+
+    // 1. Database file + sidecars
+    for suffix in DB_SIDECAR_SUFFIXES {
+        let path = data_dir.join(format!("mokumo.db{suffix}"));
+        delete_file(&path, &mut report);
+    }
+
+    // 2. Backup files (opt-in)
+    if include_backups && let Ok(entries) = std::fs::read_dir(data_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            if let Some(name_str) = name.to_str()
+                && name_str.starts_with("mokumo.db.backup-v")
+            {
+                delete_file(&entry.path(), &mut report);
+            }
+        }
+    }
+
+    // 3. Recovery directory contents (only mokumo-recovery-*.html files)
+    match std::fs::read_dir(recovery_dir) {
+        Ok(entries) => {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                if let Some(name_str) = name.to_str()
+                    && name_str.starts_with("mokumo-recovery-")
+                    && name_str.ends_with(".html")
+                {
+                    delete_file(&entry.path(), &mut report);
+                }
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // Recovery dir doesn't exist — nothing to clean up
+        }
+        Err(e) => return Err(ResetError::Io(e)),
+    }
+
+    Ok(report)
+}
+
+/// Try to remove a single file, sorting the outcome into the report.
+fn delete_file(path: &Path, report: &mut ResetReport) {
+    match std::fs::remove_file(path) {
+        Ok(()) => report.deleted.push(path.to_path_buf()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            report.not_found.push(path.to_path_buf());
+        }
+        Err(e) => report.failed.push((path.to_path_buf(), e)),
+    }
+}
+
 #[cfg(debug_assertions)]
 async fn debug_recovery_dir(State(state): State<SharedState>) -> impl IntoResponse {
     Json(serde_json::json!({"path": state.recovery_dir.to_string_lossy()}))
