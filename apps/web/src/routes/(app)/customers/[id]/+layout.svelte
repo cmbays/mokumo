@@ -94,6 +94,7 @@
       toast.success(`"${ctx.customer.display_name}" restored`);
       restoreDialogOpen = false;
       invalidate(`customer:${ctx.customer.id}`);
+      invalidate(`activity:customer:${ctx.customer.id}`);
     } else {
       throw new Error(result.error.message);
     }
