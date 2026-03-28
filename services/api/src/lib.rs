@@ -101,19 +101,15 @@ pub fn ensure_data_dirs(data_dir: &Path) -> Result<(), std::io::Error> {
 
 /// Read the `active_profile` file from the data directory.
 ///
-/// Returns `"demo"` if the file does not exist (first launch defaults to demo).
-pub fn resolve_active_profile(data_dir: &Path) -> String {
+/// Returns `SetupMode::Demo` if the file does not exist, is empty, or contains
+/// an unrecognised value (first launch defaults to demo).
+pub fn resolve_active_profile(data_dir: &Path) -> mokumo_core::setup::SetupMode {
+    use mokumo_core::setup::SetupMode;
+
     let profile_path = data_dir.join("active_profile");
     match std::fs::read_to_string(&profile_path) {
-        Ok(contents) => {
-            let trimmed = contents.trim().to_string();
-            if trimmed.is_empty() {
-                "demo".to_string()
-            } else {
-                trimmed
-            }
-        }
-        Err(_) => "demo".to_string(),
+        Ok(contents) => contents.trim().parse().unwrap_or(SetupMode::Demo),
+        Err(_) => SetupMode::Demo,
     }
 }
 
@@ -132,8 +128,8 @@ pub fn migrate_flat_layout(data_dir: &Path) -> Result<(), std::io::Error> {
     let production_db = data_dir.join("production").join("mokumo.db");
     let profile_path = data_dir.join("active_profile");
 
-    let flat_exists = flat_db.try_exists().unwrap_or(false);
-    let production_exists = production_db.try_exists().unwrap_or(false);
+    let flat_exists = flat_db.try_exists()?;
+    let production_exists = production_db.try_exists()?;
 
     // Step 1: Copy flat DB to production/ if production doesn't have one yet
     if !production_exists && flat_exists {
@@ -143,7 +139,7 @@ pub fn migrate_flat_layout(data_dir: &Path) -> Result<(), std::io::Error> {
     }
 
     // Step 2: Write active_profile = "production" for existing users
-    if !profile_path.try_exists().unwrap_or(false) && flat_exists {
+    if !profile_path.try_exists()? && flat_exists {
         std::fs::write(&profile_path, "production")?;
         tracing::info!("Set active profile to 'production' (migrated from flat layout)");
     }

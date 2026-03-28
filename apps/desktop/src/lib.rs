@@ -76,7 +76,7 @@ async fn init_server(
 
     // Resolve which profile to use
     let profile = resolve_active_profile(&config.data_dir);
-    let db_path = config.data_dir.join(&profile).join("mokumo.db");
+    let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
 
     // Pre-migration backup — fatal for existing databases, skipped for first run.
     let db_exists = db_path

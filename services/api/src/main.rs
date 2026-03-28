@@ -65,7 +65,7 @@ async fn main() {
     // Handle subcommands before server startup
     if let Some(Commands::ResetPassword { email }) = cli.command {
         let profile = resolve_active_profile(&data_dir);
-        let db_path = data_dir.join(&profile).join("mokumo.db");
+        let db_path = data_dir.join(profile.as_str()).join("mokumo.db");
         let password = rpassword::prompt_password("New password: ").unwrap_or_else(|e| {
             eprintln!("Failed to read password: {e}");
             std::process::exit(1);
@@ -133,7 +133,7 @@ async fn main() {
 
     // Resolve which profile to use
     let profile = resolve_active_profile(&config.data_dir);
-    let db_path = config.data_dir.join(&profile).join("mokumo.db");
+    let db_path = config.data_dir.join(profile.as_str()).join("mokumo.db");
 
     // Pre-migration backup on ACTIVE PROFILE DB
     let db_exists = match db_path.try_exists() {
@@ -250,33 +250,41 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mokumo_core::setup::SetupMode;
     use tempfile::tempdir;
 
     #[test]
     fn resolve_active_profile_missing_file_defaults_to_demo() {
         let tmp = tempdir().unwrap();
-        assert_eq!(resolve_active_profile(tmp.path()), "demo");
+        assert_eq!(resolve_active_profile(tmp.path()), SetupMode::Demo);
     }
 
     #[test]
     fn resolve_active_profile_reads_content() {
         let tmp = tempdir().unwrap();
         std::fs::write(tmp.path().join("active_profile"), "production").unwrap();
-        assert_eq!(resolve_active_profile(tmp.path()), "production");
+        assert_eq!(resolve_active_profile(tmp.path()), SetupMode::Production);
     }
 
     #[test]
     fn resolve_active_profile_trims_whitespace() {
         let tmp = tempdir().unwrap();
         std::fs::write(tmp.path().join("active_profile"), "  demo\n").unwrap();
-        assert_eq!(resolve_active_profile(tmp.path()), "demo");
+        assert_eq!(resolve_active_profile(tmp.path()), SetupMode::Demo);
     }
 
     #[test]
     fn resolve_active_profile_empty_file_defaults_to_demo() {
         let tmp = tempdir().unwrap();
         std::fs::write(tmp.path().join("active_profile"), "").unwrap();
-        assert_eq!(resolve_active_profile(tmp.path()), "demo");
+        assert_eq!(resolve_active_profile(tmp.path()), SetupMode::Demo);
+    }
+
+    #[test]
+    fn resolve_active_profile_invalid_value_defaults_to_demo() {
+        let tmp = tempdir().unwrap();
+        std::fs::write(tmp.path().join("active_profile"), "../../escape").unwrap();
+        assert_eq!(resolve_active_profile(tmp.path()), SetupMode::Demo);
     }
 
     #[test]
