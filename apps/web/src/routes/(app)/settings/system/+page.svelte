@@ -38,9 +38,6 @@
       </Button>
     </div>
 
-    <DemoResetDialog
-      bind:open={resetDialogOpen}
-      onOpenChange={(open) => (resetDialogOpen = open)}
-    />
+    <DemoResetDialog bind:open={resetDialogOpen} />
   {/if}
 </div>

@@ -397,7 +397,11 @@ async fn auto_login(
 ) {
     let hash = match repo.find_by_id_with_hash(&user.id).await {
         Ok(Some((_, hash))) => hash,
-        _ => return,
+        Ok(None) => return,
+        Err(e) => {
+            tracing::warn!("Auto-login after setup: failed to fetch user hash: {e}");
+            return;
+        }
     };
     let auth_user = user::AuthenticatedUser::new(user.clone(), hash);
     if let Err(e) = auth_session.login(&auth_user).await {

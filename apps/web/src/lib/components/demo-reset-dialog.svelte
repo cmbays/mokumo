@@ -1,13 +1,13 @@
 <script lang="ts">
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
+  import type { DemoResetResponse } from "$lib/types/DemoResetResponse";
   import Loader from "@lucide/svelte/icons/loader";
 
   interface Props {
     open: boolean;
-    onOpenChange: (open: boolean) => void;
   }
 
-  let { open = $bindable(), onOpenChange }: Props = $props();
+  let { open = $bindable() }: Props = $props();
 
   let resetting = $state(false);
   let error = $state<string | null>(null);
@@ -19,7 +19,9 @@
     try {
       const res = await fetch("/api/demo/reset", { method: "POST" });
       if (!res.ok) {
-        const body = await res.json().catch(() => null);
+        const body: DemoResetResponse | null = await res
+          .json()
+          .catch(() => null);
         error = body?.message ?? "Failed to reset demo data";
         resetting = false;
         return;
@@ -39,7 +41,7 @@
   }
 </script>
 
-<AlertDialog.Root bind:open {onOpenChange}>
+<AlertDialog.Root bind:open>
   <AlertDialog.Content>
     <AlertDialog.Header>
       <AlertDialog.Title>Reset Demo Data</AlertDialog.Title>

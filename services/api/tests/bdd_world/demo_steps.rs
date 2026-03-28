@@ -487,9 +487,18 @@ async fn reset_completes(w: &mut ApiWorld) {
 }
 
 #[then("the demo database matches the original sidecar")]
-async fn demo_db_matches_sidecar(_w: &mut ApiWorld) {
-    // After reset, the test_marker we inserted should be gone
-    // (We verified the response was 200; the sidecar was force-copied)
+async fn demo_db_matches_sidecar(w: &mut ApiWorld) {
+    // The test_marker we inserted before reset should be absent in the fresh sidecar
+    let pool = w.db.get_sqlite_connection_pool();
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT value FROM settings WHERE key = 'test_marker'")
+            .fetch_optional(pool)
+            .await
+            .expect("failed to query settings");
+    assert!(
+        row.is_none(),
+        "test_marker should be absent after reset — sidecar was not restored"
+    );
 }
 
 // Note: "the request is rejected with a forbidden status" is defined in auth_steps.rs
