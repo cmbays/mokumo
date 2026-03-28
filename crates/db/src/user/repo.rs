@@ -52,8 +52,8 @@ fn split_user_and_hash(m: entity::Model) -> (User, String) {
     (User::from(m), hash)
 }
 
-fn is_sqlite_busy(err: &sea_orm::DbErr) -> bool {
-    err.to_string().contains("database is locked")
+fn is_sqlite_busy_domain(err: &DomainError) -> bool {
+    matches!(err, DomainError::Internal { message } if message.contains("database is locked"))
 }
 
 /// Generate 10 recovery codes with argon2 hashes.
@@ -262,99 +262,104 @@ impl SeaOrmUserRepo {
     ) -> Result<bool, DomainError> {
         let normalized = recovery_code.replace('-', "");
 
-        for attempt in 0..2 {
-            let txn = self.db.begin().await.map_err(sea_err)?;
+        for attempt in 0..3u64 {
+            let result: Result<bool, DomainError> = async {
+                let txn = self.db.begin().await.map_err(sea_err)?;
 
-            let model = UserEntity::find()
-                .filter(entity::Column::Email.eq(email))
-                .filter(entity::Column::DeletedAt.is_null())
-                .one(&txn)
-                .await
-                .map_err(sea_err)?;
-
-            let model = match model {
-                Some(m) => m,
-                None => return Ok(false),
-            };
-
-            let recovery_json = match &model.recovery_code_hash {
-                Some(json) => json.clone(),
-                None => return Ok(false),
-            };
-
-            let mut codes: Vec<serde_json::Value> =
-                serde_json::from_str(&recovery_json).map_err(|e| DomainError::Internal {
-                    message: format!("failed to parse recovery codes: {e}"),
-                })?;
-
-            let mut matched_index = None;
-            for (i, entry) in codes.iter().enumerate() {
-                let used = entry.get("used").and_then(|v| v.as_bool()).unwrap_or(true);
-                if used {
-                    continue;
-                }
-                let hash = entry
-                    .get("hash")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default();
-                if password::verify_password(normalized.clone(), hash.to_string()).await? {
-                    matched_index = Some(i);
-                    break;
-                }
-            }
-
-            let matched_index = match matched_index {
-                Some(i) => i,
-                None => return Ok(false),
-            };
-
-            codes[matched_index]["used"] = serde_json::Value::Bool(true);
-            let updated_json =
-                serde_json::to_string(&codes).map_err(|e| DomainError::Internal {
-                    message: format!("failed to serialize updated recovery codes: {e}"),
-                })?;
-
-            let new_hash = password::hash_password(new_password.to_string()).await?;
-            let update_result = match UserEntity::update_many()
-                .col_expr(
-                    entity::Column::PasswordHash,
-                    sea_orm::sea_query::Expr::value(new_hash),
-                )
-                .col_expr(
-                    entity::Column::RecoveryCodeHash,
-                    sea_orm::sea_query::Expr::value(updated_json),
-                )
-                .filter(entity::Column::Id.eq(model.id))
-                .filter(entity::Column::RecoveryCodeHash.eq(recovery_json))
-                .exec(&txn)
-                .await
-            {
-                Ok(result) => result,
-                Err(err) if attempt == 0 && is_sqlite_busy(&err) => {
-                    let _ = txn.rollback().await;
-                    continue;
-                }
-                Err(err) => return Err(sea_err(err)),
-            };
-
-            if update_result.rows_affected == 0 {
-                txn.rollback().await.map_err(sea_err)?;
-                return Ok(false);
-            }
-
-            let user = User::from(
-                UserEntity::find_by_id(model.id)
+                let model = UserEntity::find()
+                    .filter(entity::Column::Email.eq(email))
+                    .filter(entity::Column::DeletedAt.is_null())
                     .one(&txn)
                     .await
-                    .map_err(sea_err)?
-                    .ok_or_else(|| DomainError::Internal {
-                        message: "user disappeared mid-transaction".into(),
-                    })?,
-            );
+                    .map_err(sea_err)?;
 
-            log_user_activity(&txn, &user, ActivityAction::PasswordReset).await?;
-            txn.commit().await.map_err(sea_err)?;
-            return Ok(true);
+                let model = match model {
+                    Some(m) => m,
+                    None => return Ok(false),
+                };
+
+                let recovery_json = match &model.recovery_code_hash {
+                    Some(json) => json.clone(),
+                    None => return Ok(false),
+                };
+
+                let mut codes: Vec<serde_json::Value> = serde_json::from_str(&recovery_json)
+                    .map_err(|e| DomainError::Internal {
+                        message: format!("failed to parse recovery codes: {e}"),
+                    })?;
+
+                let mut matched_index = None;
+                for (i, entry) in codes.iter().enumerate() {
+                    let used = entry.get("used").and_then(|v| v.as_bool()).unwrap_or(true);
+                    if used {
+                        continue;
+                    }
+                    let hash = entry
+                        .get("hash")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default();
+                    if password::verify_password(normalized.clone(), hash.to_string()).await? {
+                        matched_index = Some(i);
+                        break;
+                    }
+                }
+
+                let matched_index = match matched_index {
+                    Some(i) => i,
+                    None => return Ok(false),
+                };
+
+                codes[matched_index]["used"] = serde_json::Value::Bool(true);
+                let updated_json =
+                    serde_json::to_string(&codes).map_err(|e| DomainError::Internal {
+                        message: format!("failed to serialize updated recovery codes: {e}"),
+                    })?;
+
+                let new_hash = password::hash_password(new_password.to_string()).await?;
+                let update_result = UserEntity::update_many()
+                    .col_expr(
+                        entity::Column::PasswordHash,
+                        sea_orm::sea_query::Expr::value(new_hash),
+                    )
+                    .col_expr(
+                        entity::Column::RecoveryCodeHash,
+                        sea_orm::sea_query::Expr::value(updated_json),
+                    )
+                    .filter(entity::Column::Id.eq(model.id))
+                    .filter(entity::Column::RecoveryCodeHash.eq(recovery_json))
+                    .exec(&txn)
+                    .await
+                    .map_err(sea_err)?;
+
+                if update_result.rows_affected == 0 {
+                    txn.rollback().await.map_err(sea_err)?;
+                    return Ok(false);
+                }
+
+                let user = User::from(
+                    UserEntity::find_by_id(model.id)
+                        .one(&txn)
+                        .await
+                        .map_err(sea_err)?
+                        .ok_or_else(|| DomainError::Internal {
+                            message: "user disappeared mid-transaction".into(),
+                        })?,
+                );
+
+                log_user_activity(&txn, &user, ActivityAction::PasswordReset).await?;
+                txn.commit().await.map_err(sea_err)?;
+                Ok(true)
+            }
+            .await;
+
+            match result {
+                Ok(val) => return Ok(val),
+                Err(ref err) if attempt < 2 && is_sqlite_busy_domain(err) => {
+                    tokio::time::sleep(std::time::Duration::from_millis(50 * (attempt + 1))).await;
+                    continue;
+                }
+                Err(err) => return Err(err),
+            }
         }
 
         Ok(false)
