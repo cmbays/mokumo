@@ -441,8 +441,9 @@ async fn admin_session_expired(w: &mut ApiWorld) {
     // Create admin and login
     w.ensure_auth().await;
     // Delete all sessions from the session store to simulate expiry
+    // Sessions are stored in a separate sessions.db, not the main DB
     sqlx::query("DELETE FROM tower_sessions")
-        .execute(&w.db_pool)
+        .execute(&w.session_pool)
         .await
         .ok();
 }

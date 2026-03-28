@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::Parser;
 use tokio_util::sync::CancellationToken;
@@ -56,6 +56,72 @@ fn resolve_default_data_dir() -> PathBuf {
         })
 }
 
+/// Read the `active_profile` file from the data directory.
+///
+/// Returns `"demo"` if the file does not exist (first launch defaults to demo).
+pub fn resolve_active_profile(data_dir: &Path) -> String {
+    let profile_path = data_dir.join("active_profile");
+    match std::fs::read_to_string(&profile_path) {
+        Ok(contents) => {
+            let trimmed = contents.trim().to_string();
+            if trimmed.is_empty() {
+                "demo".to_string()
+            } else {
+                trimmed
+            }
+        }
+        Err(_) => "demo".to_string(),
+    }
+}
+
+/// Migrate a flat data directory layout to the dual-profile structure.
+///
+/// Idempotent: safe to call on every startup.
+///
+/// Steps:
+/// 1. If `production/mokumo.db` does NOT exist AND flat `mokumo.db` DOES exist:
+///    copy flat -> production/mokumo.db
+/// 2. If `active_profile` does NOT exist: write "production"
+///    (existing users who had a flat layout are production users)
+/// 3. If BOTH `production/mokumo.db` AND flat `mokumo.db` exist: remove flat
+pub fn migrate_flat_layout(data_dir: &Path) -> Result<(), std::io::Error> {
+    let flat_db = data_dir.join("mokumo.db");
+    let production_db = data_dir.join("production").join("mokumo.db");
+    let profile_path = data_dir.join("active_profile");
+
+    let flat_exists = flat_db.try_exists().unwrap_or(false);
+    let production_exists = production_db.try_exists().unwrap_or(false);
+
+    // Step 1: Copy flat DB to production/ if production doesn't have one yet
+    if !production_exists && flat_exists {
+        // Ensure production dir exists
+        std::fs::create_dir_all(data_dir.join("production"))?;
+        std::fs::copy(&flat_db, &production_db)?;
+        tracing::info!("Migrated flat database to {}", production_db.display());
+    }
+
+    // Step 2: Write active_profile = "production" for existing users
+    if !profile_path.try_exists().unwrap_or(false) && flat_exists {
+        std::fs::write(&profile_path, "production")?;
+        tracing::info!("Set active profile to 'production' (migrated from flat layout)");
+    }
+
+    // Step 3: Clean up flat DB if production copy exists
+    let production_now_exists = production_db.try_exists().unwrap_or(false);
+    let flat_still_exists = flat_db.try_exists().unwrap_or(false);
+    if production_now_exists && flat_still_exists {
+        std::fs::remove_file(&flat_db)?;
+        tracing::info!("Removed flat database after migration");
+        // Also clean up WAL and SHM files if present
+        let wal = data_dir.join("mokumo.db-wal");
+        let shm = data_dir.join("mokumo.db-shm");
+        let _ = std::fs::remove_file(wal);
+        let _ = std::fs::remove_file(shm);
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -64,7 +130,8 @@ async fn main() {
 
     // Handle subcommands before server startup
     if let Some(Commands::ResetPassword { email }) = cli.command {
-        let db_path = data_dir.join("mokumo.db");
+        let profile = resolve_active_profile(&data_dir);
+        let db_path = data_dir.join(&profile).join("mokumo.db");
         let password = rpassword::prompt_password("New password: ").unwrap_or_else(|e| {
             eprintln!("Failed to read password: {e}");
             std::process::exit(1);
@@ -110,7 +177,7 @@ async fn main() {
         recovery_dir,
     };
 
-    // Create data directories
+    // Create data directories (including demo/ and production/)
     if let Err(e) = ensure_data_dirs(&config.data_dir) {
         eprintln!(
             "Cannot create data directory {}: {e}",
@@ -123,10 +190,18 @@ async fn main() {
         std::process::exit(1);
     }
 
-    // Pre-migration backup — fatal for existing databases, skipped for first run.
-    // We check existence before calling pre_migration_backup so that an I/O error
-    // on the path itself is treated as a real failure, not "first run".
-    let db_path = config.data_dir.join("mokumo.db");
+    // Migrate flat layout to dual-directory structure (idempotent)
+    if let Err(e) = migrate_flat_layout(&config.data_dir) {
+        eprintln!("Failed to migrate data directory layout: {e}");
+        tracing::error!("Failed to migrate data directory layout: {e}");
+        std::process::exit(1);
+    }
+
+    // Resolve which profile to use
+    let profile = resolve_active_profile(&config.data_dir);
+    let db_path = config.data_dir.join(&profile).join("mokumo.db");
+
+    // Pre-migration backup on ACTIVE PROFILE DB
     let db_exists = match db_path.try_exists() {
         Ok(exists) => exists,
         Err(e) => {
@@ -236,4 +311,103 @@ async fn main() {
     }
 
     tracing::info!("Server shut down cleanly");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn resolve_active_profile_missing_file_defaults_to_demo() {
+        let tmp = tempdir().unwrap();
+        assert_eq!(resolve_active_profile(tmp.path()), "demo");
+    }
+
+    #[test]
+    fn resolve_active_profile_reads_content() {
+        let tmp = tempdir().unwrap();
+        std::fs::write(tmp.path().join("active_profile"), "production").unwrap();
+        assert_eq!(resolve_active_profile(tmp.path()), "production");
+    }
+
+    #[test]
+    fn resolve_active_profile_trims_whitespace() {
+        let tmp = tempdir().unwrap();
+        std::fs::write(tmp.path().join("active_profile"), "  demo\n").unwrap();
+        assert_eq!(resolve_active_profile(tmp.path()), "demo");
+    }
+
+    #[test]
+    fn resolve_active_profile_empty_file_defaults_to_demo() {
+        let tmp = tempdir().unwrap();
+        std::fs::write(tmp.path().join("active_profile"), "").unwrap();
+        assert_eq!(resolve_active_profile(tmp.path()), "demo");
+    }
+
+    #[test]
+    fn migrate_flat_layout_fresh_directory_is_noop() {
+        let tmp = tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("production")).unwrap();
+        migrate_flat_layout(tmp.path()).unwrap();
+        // No flat DB, no production DB — nothing to do
+        assert!(!tmp.path().join("production").join("mokumo.db").exists());
+        assert!(!tmp.path().join("active_profile").exists());
+    }
+
+    #[test]
+    fn migrate_flat_layout_copies_flat_to_production() {
+        let tmp = tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("production")).unwrap();
+        std::fs::write(tmp.path().join("mokumo.db"), b"test-data").unwrap();
+
+        migrate_flat_layout(tmp.path()).unwrap();
+
+        // Production DB should exist with same content
+        let prod_content = std::fs::read(tmp.path().join("production").join("mokumo.db")).unwrap();
+        assert_eq!(prod_content, b"test-data");
+        // Flat DB should be removed
+        assert!(!tmp.path().join("mokumo.db").exists());
+        // active_profile should be "production"
+        let profile = std::fs::read_to_string(tmp.path().join("active_profile")).unwrap();
+        assert_eq!(profile, "production");
+    }
+
+    #[test]
+    fn migrate_flat_layout_already_migrated_is_noop() {
+        let tmp = tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("production")).unwrap();
+        std::fs::write(
+            tmp.path().join("production").join("mokumo.db"),
+            b"prod-data",
+        )
+        .unwrap();
+        std::fs::write(tmp.path().join("active_profile"), "production").unwrap();
+
+        migrate_flat_layout(tmp.path()).unwrap();
+
+        // Production DB unchanged
+        let content = std::fs::read(tmp.path().join("production").join("mokumo.db")).unwrap();
+        assert_eq!(content, b"prod-data");
+    }
+
+    #[test]
+    fn migrate_flat_layout_crash_recovery_removes_flat() {
+        let tmp = tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("production")).unwrap();
+        // Simulate crash: both flat and production exist
+        std::fs::write(tmp.path().join("mokumo.db"), b"flat-data").unwrap();
+        std::fs::write(
+            tmp.path().join("production").join("mokumo.db"),
+            b"prod-data",
+        )
+        .unwrap();
+
+        migrate_flat_layout(tmp.path()).unwrap();
+
+        // Flat should be removed, production preserved
+        assert!(!tmp.path().join("mokumo.db").exists());
+        let content = std::fs::read(tmp.path().join("production").join("mokumo.db")).unwrap();
+        assert_eq!(content, b"prod-data");
+    }
 }

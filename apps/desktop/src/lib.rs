@@ -50,6 +50,24 @@ fn initial_webview_url(host: &str, port: u16, setup_token: Option<&str>) -> Stri
     format!("http://{host}:{port}{path}")
 }
 
+/// Read the `active_profile` file from the data directory.
+///
+/// Returns `"demo"` if the file does not exist (first launch defaults to demo).
+fn resolve_active_profile(data_dir: &std::path::Path) -> String {
+    let profile_path = data_dir.join("active_profile");
+    match std::fs::read_to_string(&profile_path) {
+        Ok(contents) => {
+            let trimmed = contents.trim().to_string();
+            if trimmed.is_empty() {
+                "demo".to_string()
+            } else {
+                trimmed
+            }
+        }
+        Err(_) => "demo".to_string(),
+    }
+}
+
 /// Initialize the server: create dirs, backup, run migrations, build app, bind port.
 ///
 /// Extracted so the orchestration sequence can be tested without a window system.
@@ -68,8 +86,11 @@ async fn init_server(
 
     ensure_data_dirs(&config.data_dir)?;
 
+    // Resolve which profile to use
+    let profile = resolve_active_profile(&config.data_dir);
+    let db_path = config.data_dir.join(&profile).join("mokumo.db");
+
     // Pre-migration backup — fatal for existing databases, skipped for first run.
-    let db_path = config.data_dir.join("mokumo.db");
     let db_exists = db_path
         .try_exists()
         .map_err(|e| format!("Cannot check database at {}: {e}", db_path.display()))?;
