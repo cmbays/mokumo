@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Tauri cross-platform release workflow (macOS ARM/Intel + Windows) triggered on `v*` tag push
+- NSIS installer uses `currentUser` mode (no admin required on Windows)
 - Customer management UI: list page with search/filter/pagination, detail page with tab navigation (overview, activity, contacts, artwork, pricing, communication), create/edit form sheet, and archive flow
 - Server-side customer search across display name, company name, and email
 - Per-vertical frontend module pattern: API wrapper, Zod schemas, context class, tab navigation
