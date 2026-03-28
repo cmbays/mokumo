@@ -18,7 +18,7 @@ const webRoot = resolveWebRoot(import.meta.url);
 
 // demo.db location — TODO: update path after #153 merges and demo.db is created
 // For S0.1 smoke test, we skip the copy and use a fresh empty DB.
-const DEMO_DB_SOURCE = resolve(__dirname, "../../../../fixtures/demo.db");
+const _DEMO_DB_SOURCE = resolve(__dirname, "../../../../fixtures/demo.db");
 
 export const SCREENSHOT_BASE = resolve(__dirname, "../../../../docs/demo-guide/public/m0");
 
