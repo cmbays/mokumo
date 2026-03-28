@@ -84,10 +84,13 @@
       No activity recorded yet.
     </p>
   {:else}
-    <div class="space-y-3">
+    <div class="space-y-3" data-testid="activity-list">
       {#each data.activity.items as entry (entry.id)}
         {@const description = describeAction(entry)}
-        <div class="flex items-start gap-3 rounded-lg border p-4">
+        <div
+          class="flex items-start gap-3 rounded-lg border p-4"
+          data-testid="activity-entry"
+        >
           <Badge variant={actionVariant(entry.action)}>
             {actionLabel(entry.action)}
           </Badge>
@@ -96,7 +99,10 @@
               {description ??
                 `${actionLabel(entry.action)} by ${entry.actor_type}`}
             </p>
-            <p class="text-xs text-muted-foreground mt-1">
+            <p
+              class="text-xs text-muted-foreground mt-1"
+              data-testid="activity-timestamp"
+            >
               {formatTimestamp(entry.created_at)}
             </p>
           </div>

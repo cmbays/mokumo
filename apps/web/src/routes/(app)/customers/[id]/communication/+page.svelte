@@ -1,8 +1,44 @@
 <script lang="ts">
   import { Badge } from "$lib/components/ui/badge";
-  import { mockMessages } from "$lib/mocks/customer-communication";
   import ArrowDownLeft from "@lucide/svelte/icons/arrow-down-left";
   import ArrowUpRight from "@lucide/svelte/icons/arrow-up-right";
+
+  // Placeholder data — replaced by real API data in a later milestone
+  const mockMessages = [
+    {
+      id: "m1",
+      direction: "outbound" as const,
+      channel: "Email",
+      subject: "Quote #1042 - Spring Collection",
+      preview:
+        "Hi Sarah, please find attached the quote for your spring collection order...",
+      timestamp: "2026-03-25T14:30:00Z",
+    },
+    {
+      id: "m2",
+      direction: "inbound" as const,
+      channel: "Email",
+      subject: "Re: Quote #1042 - Spring Collection",
+      preview: "Looks good! Can we adjust the qty on the polo shirts to 150?",
+      timestamp: "2026-03-25T16:45:00Z",
+    },
+    {
+      id: "m3",
+      direction: "outbound" as const,
+      channel: "Email",
+      subject: "Invoice #2089",
+      preview: "Please find attached your invoice for the completed order...",
+      timestamp: "2026-03-20T09:00:00Z",
+    },
+    {
+      id: "m4",
+      direction: "inbound" as const,
+      channel: "Portal",
+      subject: "Artwork uploaded",
+      preview: "Customer uploaded new artwork file: event-tshirt-2026-v2.ai",
+      timestamp: "2026-03-18T11:20:00Z",
+    },
+  ];
 </script>
 
 <div class="space-y-3 pt-4">
