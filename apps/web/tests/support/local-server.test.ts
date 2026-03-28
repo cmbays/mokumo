@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseListeningPort } from "./local-server";
+import { ensureRustLogInfoForApi, parseListeningPort } from "./local-server";
 
 describe("parseListeningPort", () => {
   it("extracts port from plain tracing log line", () => {
@@ -53,5 +53,64 @@ describe("parseListeningPort", () => {
 
   it("returns null for partial match without port", () => {
     expect(parseListeningPort("Listening on 127.0.0.1:")).toBeNull();
+  });
+});
+
+describe("ensureRustLogInfoForApi", () => {
+  it("injects mokumo_api=info when RUST_LOG is unset", () => {
+    expect(ensureRustLogInfoForApi(undefined)).toBe("mokumo_api=info");
+  });
+
+  it("injects mokumo_api=info when RUST_LOG is empty", () => {
+    expect(ensureRustLogInfoForApi("")).toBe("mokumo_api=info");
+  });
+
+  it("replaces mokumo_api=warn with mokumo_api=info", () => {
+    expect(ensureRustLogInfoForApi("mokumo_api=warn")).toBe("mokumo_api=info");
+  });
+
+  it("replaces mokumo_api=error with mokumo_api=info", () => {
+    expect(ensureRustLogInfoForApi("mokumo_api=error,hyper=debug")).toBe(
+      "mokumo_api=info,hyper=debug",
+    );
+  });
+
+  it("replaces mokumo_api=off with mokumo_api=info", () => {
+    expect(ensureRustLogInfoForApi("mokumo_api=off")).toBe("mokumo_api=info");
+  });
+
+  it("preserves mokumo_api=debug unchanged", () => {
+    expect(ensureRustLogInfoForApi("mokumo_api=debug")).toBe("mokumo_api=debug");
+  });
+
+  it("preserves mokumo_api=trace unchanged", () => {
+    expect(ensureRustLogInfoForApi("mokumo_api=trace,hyper=warn")).toBe(
+      "mokumo_api=trace,hyper=warn",
+    );
+  });
+
+  it("preserves mokumo_api=info unchanged", () => {
+    expect(ensureRustLogInfoForApi("mokumo_api=info")).toBe("mokumo_api=info");
+  });
+
+  it("does not inject when bare global level covers INFO", () => {
+    expect(ensureRustLogInfoForApi("debug")).toBe("debug");
+    expect(ensureRustLogInfoForApi("trace")).toBe("trace");
+    expect(ensureRustLogInfoForApi("info")).toBe("info");
+  });
+
+  it("injects when bare global level is below INFO", () => {
+    expect(ensureRustLogInfoForApi("warn")).toBe("mokumo_api=info,warn");
+    expect(ensureRustLogInfoForApi("error")).toBe("mokumo_api=info,error");
+  });
+
+  it("preserves other directives when injecting", () => {
+    expect(ensureRustLogInfoForApi("hyper=debug,tower=trace")).toBe(
+      "mokumo_api=info,hyper=debug,tower=trace",
+    );
+  });
+
+  it("does not inject when global trace already covers it", () => {
+    expect(ensureRustLogInfoForApi("trace,hyper=warn")).toBe("trace,hyper=warn");
   });
 });

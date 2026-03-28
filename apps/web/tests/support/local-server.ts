@@ -38,6 +38,36 @@ export async function getAvailablePort(): Promise<number> {
 // oxlint-disable-next-line no-control-regex -- intentional: stripping ANSI escape sequences
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 
+const LEVELS_THAT_INCLUDE_INFO = new Set(["info", "debug", "trace"]);
+
+/**
+ * Build a RUST_LOG value that guarantees mokumo_api emits at INFO level,
+ * while preserving the caller's other directives and not downgrading
+ * debug/trace levels for mokumo_api.
+ *
+ * EnvFilter precedence: target-specific directives (mokumo_api=X) override
+ * bare global levels (trace, debug). We only inject mokumo_api=info when
+ * the effective level for that target would suppress INFO.
+ */
+export function ensureRustLogInfoForApi(envRustLog: string | undefined): string {
+  const directives = (envRustLog ?? "").split(",").filter(Boolean);
+  const mokumoDirective = directives.find((d) => d.startsWith("mokumo_api="));
+
+  if (mokumoDirective) {
+    const level = mokumoDirective.split("=")[1];
+    if (LEVELS_THAT_INCLUDE_INFO.has(level)) {
+      return directives.join(",");
+    }
+    return directives.map((d) => (d === mokumoDirective ? "mokumo_api=info" : d)).join(",");
+  }
+
+  const globalLevel = directives.find((d) => !d.includes("="));
+  if (globalLevel && LEVELS_THAT_INCLUDE_INFO.has(globalLevel)) {
+    return directives.join(",");
+  }
+  return ["mokumo_api=info", ...directives].join(",") || "mokumo_api=info";
+}
+
 /**
  * Parse the actual bound port from a tracing log line.
  * Matches: `Listening on <host>:<port>`
@@ -137,26 +167,9 @@ export async function startAxumServer(
 ): Promise<{ server: ChildProcess; url: string; port: number; setupToken: string | null }> {
   const binary = resolveAxumBinary(webRoot);
 
-  // Ensure the "Listening on" INFO line is always emitted. The test harness
-  // depends on it to discover the actual bound port. Only override mokumo_api
-  // directives that would suppress INFO (warn, error, off). Levels that are
-  // at least as verbose (info, debug, trace) already include it.
-  const LEVELS_THAT_SUPPRESS_INFO = new Set(["warn", "error", "off"]);
-  const baseRustLog = (process.env.RUST_LOG ?? "")
-    .split(",")
-    .filter((d) => {
-      if (!d.startsWith("mokumo_api=")) return true;
-      const level = d.split("=")[1];
-      return !LEVELS_THAT_SUPPRESS_INFO.has(level);
-    })
-    .join(",");
-  // Prepend mokumo_api=info only if no surviving directive already covers it
-  const hasMokumoDirective = baseRustLog.split(",").some((d) => d.startsWith("mokumo_api="));
-  const rustLog = hasMokumoDirective
-    ? baseRustLog
-    : baseRustLog
-      ? `mokumo_api=info,${baseRustLog}`
-      : "mokumo_api=info";
+  // Guarantee the "Listening on" INFO line is emitted so we can discover
+  // the actual bound port. See ensureRustLogInfoForApi() for precedence rules.
+  const rustLog = ensureRustLogInfoForApi(process.env.RUST_LOG);
 
   const server = spawn(
     binary,
