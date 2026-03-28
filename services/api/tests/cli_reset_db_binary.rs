@@ -55,7 +55,10 @@ fn parse_port_from_log(line: &str) -> Option<u16> {
 async fn wait_for_health(port: u16, timeout: Duration) -> Result<(), String> {
     let start = Instant::now();
     let url = format!("http://127.0.0.1:{port}/api/health");
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(2))
+        .build()
+        .unwrap();
 
     loop {
         if start.elapsed() > timeout {
@@ -166,6 +169,11 @@ async fn reset_db_blocked_by_running_server() {
     let root_db_path = data_dir.join("mokumo.db");
     std::fs::write(&root_db_path, b"").unwrap();
 
+    // Point reset-db at the temp dir for recovery files so it never touches
+    // the real Desktop or cwd, even if the flock guard regresses.
+    let recovery_dir = data_dir.join("recovery");
+    std::fs::create_dir_all(&recovery_dir).unwrap();
+
     // Now run reset-db against the same data directory — it should be blocked
     let reset_output = Command::new(binary)
         .args([
@@ -174,6 +182,7 @@ async fn reset_db_blocked_by_running_server() {
             "reset-db",
             "--force",
         ])
+        .env("MOKUMO_RECOVERY_DIR", &recovery_dir)
         .output()
         .expect("failed to spawn reset-db");
 
