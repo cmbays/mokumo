@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Post-recovery nudge toast after password reset via recovery code, with deep-link to regenerate codes
 - Slidev demo guide infrastructure (`docs/demo-guide/`) for interactive milestone walkthroughs
 - GitHub Pages deployment workflow for demo guide
+- Help icon with demo guide link in sidebar footer (popover with external link)
+- M0 demo walkthrough slides: 10 sections + 2 appendixes covering installation through LAN multi-client
+- `Checklist.vue` Slidev component for step-by-step checklists in slides
+- Getting Started section in README with download link and platform notes
 
 ### Changed
 
