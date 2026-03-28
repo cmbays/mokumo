@@ -148,30 +148,23 @@ export async function startAxumServer(
 
   // Capture setup token and actual bound port from stdout/stderr.
   // tracing_subscriber::fmt() writes to stderr by default, so watch both streams.
-  // Accumulate output to handle Buffer chunk splitting across line boundaries.
+  // The callback only accumulates output — port parsing happens in the polling
+  // loop below, which scans only *complete* lines (terminated by \n) to avoid
+  // accepting a truncated port from a mid-line chunk boundary.
   let setupToken: string | null = null;
   let actualPort: number | null = null;
   let capturedOutput = "";
-  const captureStartupInfo = (data: Buffer) => {
-    const chunk = data.toString();
-    capturedOutput += chunk;
-    if (!setupToken) {
-      const tokenMatch = chunk.match(/Setup required — token: ([\w-]+)/);
-      if (tokenMatch) setupToken = tokenMatch[1];
-    }
-    if (actualPort === null) {
-      actualPort = parseListeningPort(chunk);
-    }
+  const captureOutput = (data: Buffer) => {
+    capturedOutput += data.toString();
   };
-  server.stdout?.on("data", captureStartupInfo);
-  server.stderr?.on("data", captureStartupInfo);
+  server.stdout?.on("data", captureOutput);
+  server.stderr?.on("data", captureOutput);
 
   // Wait for the "Listening on" log line to discover the actual bound port.
   // This eliminates the TOCTOU race: we poll the port Axum actually bound,
   // not the port we requested.
   const startupDeadline = 30_000;
   const startTime = Date.now();
-  // oxlint-disable-next-line no-unmodified-loop-condition -- actualPort is mutated by the captureStartupInfo callback on data events
   while (actualPort === null && Date.now() - startTime < startupDeadline) {
     if (server.exitCode !== null || server.signalCode !== null) {
       throw new Error(
@@ -180,11 +173,12 @@ export async function startAxumServer(
           `Output:\n${capturedOutput}`,
       );
     }
-    // Re-scan accumulated output each tick to handle lines split across chunks.
-    // The callback parses each chunk independently, but if "Listening on HOST:PORT"
-    // spans two chunks, only the accumulated scan catches it.
-    for (const line of capturedOutput.split("\n")) {
-      actualPort = parseListeningPort(line);
+    // Parse only complete lines (all elements except the last, which may be
+    // an unterminated fragment). This prevents accepting a truncated port
+    // when a chunk boundary splits "Listening on 127.0.0.1:53" + "578\n".
+    const lines = capturedOutput.split("\n");
+    for (let i = 0; i < lines.length - 1; i++) {
+      actualPort = parseListeningPort(lines[i]);
       if (actualPort !== null) break;
     }
     if (actualPort === null) {
@@ -192,22 +186,19 @@ export async function startAxumServer(
     }
   }
 
+  // If no port was logged (e.g. RUST_LOG=warn suppresses the INFO line),
+  // fall back to the requested port. This preserves pre-fix behavior:
+  // startup works regardless of log verbosity, but loses TOCTOU protection.
   if (actualPort === null) {
-    server.kill("SIGTERM");
-    throw new Error(
-      `mokumo-api did not log a bound port within ${startupDeadline}ms. ` +
-        `Captured output:\n${capturedOutput}`,
-    );
+    actualPort = port;
   }
 
   const url = buildHttpUrl(TEST_SERVER_HOST, actualPort);
   await waitForServer(url, server, "mokumo-api", startupDeadline);
 
-  // Re-check full accumulated output for setup token split across chunks
-  if (!setupToken) {
-    const match = capturedOutput.match(/Setup required — token: ([\w-]+)/);
-    if (match) setupToken = match[1];
-  }
+  // Extract setup token from accumulated output
+  const tokenMatch = capturedOutput.match(/Setup required — token: ([\w-]+)/);
+  if (tokenMatch) setupToken = tokenMatch[1];
 
   return { server, url, port: actualPort, setupToken };
 }

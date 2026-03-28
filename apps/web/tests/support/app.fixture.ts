@@ -32,10 +32,10 @@ export type AxumHandle = {
 type WorkerFixtures = {
   appUrl: string;
   _axumServer: AxumHandle;
-  axumUrl: string;
 };
 
 type TestFixtures = {
+  axumUrl: string;
   lanTestState: {
     serverInfo: ServerInfoResponse | null;
   };
@@ -138,7 +138,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { auto: true, scope: "worker" },
   ],
 
-  // Worker-scoped Axum backend handle (internal — use axumUrl instead)
+  // Worker-scoped Axum backend handle (internal — use axumUrl for the current URL)
   _axumServer: [
     // oxlint-disable-next-line no-empty-pattern -- Playwright requires destructuring for fixture params
     async ({}, use) => {
@@ -169,13 +169,11 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: "worker" },
   ],
 
-  // Stable Axum URL (worker-scoped, port doesn't change across restarts)
-  axumUrl: [
-    async ({ _axumServer }, use) => {
-      await use(_axumServer.url);
-    },
-    { scope: "worker" },
-  ],
+  // Axum URL — test-scoped so it always reflects the current _axumServer.url
+  // (which freshBackend may update on respawn if the port changes)
+  axumUrl: async ({ _axumServer }, use) => {
+    await use(_axumServer.url);
+  },
 
   // Restart Axum with a fresh database + run setup wizard before each customer scenario
   freshBackend: async ({ _axumServer, page }, use) => {
