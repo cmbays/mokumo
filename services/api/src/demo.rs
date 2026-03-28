@@ -137,6 +137,19 @@ pub async fn demo_reset(State(state): State<SharedState>) -> Response {
         );
     }
 
+    // Write the restart sentinel BEFORE responding — if this fails, the server
+    // loop won't know to restart and the server would just die. Fail the request
+    // rather than returning success and leaving the user with a dead server.
+    let sentinel = state.data_dir.join(".restart");
+    if let Err(e) = std::fs::write(&sentinel, b"reset") {
+        tracing::error!("Demo reset: failed to write restart sentinel: {e}");
+        return error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ErrorCode::InternalError,
+            "Failed to prepare server restart after reset",
+        );
+    }
+
     // Respond before shutdown
     let response = (
         StatusCode::OK,
@@ -147,11 +160,6 @@ pub async fn demo_reset(State(state): State<SharedState>) -> Response {
     )
         .into_response();
 
-    // Write a restart sentinel so the server loop knows to restart (not exit)
-    let sentinel = state.data_dir.join(".restart");
-    if let Err(e) = std::fs::write(&sentinel, b"reset") {
-        tracing::warn!("Failed to write restart sentinel: {e}");
-    }
     let shutdown = state.shutdown.clone();
     tokio::spawn(async move {
         // Small delay to allow the response to be sent
