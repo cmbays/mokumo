@@ -68,7 +68,7 @@ tasks:
     - web:build
     inputs:
     - '@group(allRust)'
-    - crap4rs.toml
+    - /crap4rs.toml
     options:
       cache: false
       runFromWorkspaceRoot: true
