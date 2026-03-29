@@ -264,9 +264,7 @@ async fn main() {
         recovery_dir,
     };
 
-    // Acquire process-level flock — prevents concurrent server instances and
-    // signals to `reset-db` that this process is running. Held for the entire
-    // server lifetime; the OS releases it automatically on exit or crash.
+    // Create data directories (including demo/ and production/)
     if let Err(e) = ensure_data_dirs(&config.data_dir) {
         eprintln!(
             "Cannot create data directory {}: {e}",
@@ -279,6 +277,9 @@ async fn main() {
         std::process::exit(1);
     }
 
+    // Acquire process-level flock — prevents concurrent server instances and
+    // signals to `reset-db` that this process is running. Held for the entire
+    // server lifetime; the OS releases it automatically on exit or crash.
     let lock_path = lock_file_path(&config.data_dir);
     let lock_file = match std::fs::OpenOptions::new()
         .create(true)

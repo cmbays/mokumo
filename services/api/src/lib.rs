@@ -213,13 +213,10 @@ pub async fn prepare_database(
                 );
             }
             let other_url = format!("sqlite:{}?mode=rwc", other_db_path.display());
-            match mokumo_db::initialize_database(&other_url).await {
-                Ok(_) => {
-                    tracing::info!("Startup migrations applied to {other_profile} database")
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to run migrations on {other_profile} database: {e}")
-                }
+            if let Err(e) = mokumo_db::initialize_database(&other_url).await {
+                tracing::warn!("Failed to run migrations on {other_profile} database: {e}");
+            } else {
+                tracing::info!("Startup migrations applied to {other_profile} database");
             }
         }
         Ok(false) => {}
