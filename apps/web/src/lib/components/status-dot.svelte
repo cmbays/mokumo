@@ -23,7 +23,7 @@
 
   let dotClass = $derived(
     cn(
-      "inline-block size-2 shrink-0 rounded-full",
+      "relative inline-block size-2 shrink-0 rounded-full",
       statusColors[status],
       className,
     ),

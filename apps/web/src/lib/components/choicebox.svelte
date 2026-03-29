@@ -18,7 +18,7 @@
 
   let {
     options,
-    value = $bindable(),
+    value = $bindable(multiple ? [] : undefined),
     multiple = false,
     class: className,
     onchange,
@@ -45,7 +45,10 @@
   }
 </script>
 
-<div class={cn("flex flex-col gap-2", className)} role="radiogroup">
+<div
+  class={cn("flex flex-col gap-2", className)}
+  role={multiple ? "group" : "radiogroup"}
+>
   {#each options as option (option.value)}
     <button
       type="button"
