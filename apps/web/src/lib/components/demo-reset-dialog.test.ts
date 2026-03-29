@@ -29,7 +29,7 @@ describe("DemoResetDialog", () => {
       writable: true,
       value: { ...window.location, reload: vi.fn() },
     });
-    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response);
 
     render(DemoResetDialog, { open: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
@@ -49,7 +49,7 @@ describe("DemoResetDialog", () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       json: async () => ({ message: "DB locked" }),
-    } as Response);
+    } as unknown as Response);
 
     render(DemoResetDialog, { open: true });
     const user = userEvent.setup();
@@ -65,7 +65,7 @@ describe("DemoResetDialog", () => {
       json: async () => {
         throw new Error("not JSON");
       },
-    } as Response);
+    } as unknown as Response);
 
     render(DemoResetDialog, { open: true });
     const user = userEvent.setup();
