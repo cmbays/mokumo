@@ -33,3 +33,13 @@
     subtitle="Sign in to manage your print shop."
   />
 </Story>
+
+<Story name="With Submit Handler">
+  <LoginWithImage
+    onsubmit={(e) => {
+      e.preventDefault();
+      const data = new FormData(e.currentTarget);
+      console.log("email:", data.get("email"));
+    }}
+  />
+</Story>

@@ -1,12 +1,13 @@
 <script module>
   import { defineMeta } from "@storybook/addon-svelte-csf";
+  import HoverCardRoot from "./hover-card.svelte";
   import * as HoverCard from "./index.js";
   import * as Avatar from "$lib/components/ui/avatar/index.js";
   import Button from "$lib/components/ui/button/button.svelte";
 
   const { Story } = defineMeta({
     title: "UI/HoverCard",
-    component: HoverCard.Root,
+    component: HoverCardRoot,
     tags: ["autodocs"],
   });
 </script>
@@ -14,7 +15,9 @@
 <Story name="Default">
   <HoverCard.Root>
     <HoverCard.Trigger>
-      <Button variant="link">@mokumo</Button>
+      {#snippet child({ props })}
+        <Button {...props} variant="link">@mokumo</Button>
+      {/snippet}
     </HoverCard.Trigger>
     <HoverCard.Content class="w-80">
       <div class="flex justify-between space-x-4">
@@ -38,7 +41,9 @@
 <Story name="With Avatar">
   <HoverCard.Root>
     <HoverCard.Trigger>
-      <Button variant="link">Hover for profile</Button>
+      {#snippet child({ props })}
+        <Button {...props} variant="link">Hover for profile</Button>
+      {/snippet}
     </HoverCard.Trigger>
     <HoverCard.Content class="w-80">
       <div class="flex justify-between space-x-4">

@@ -30,7 +30,11 @@
   );
 </script>
 
-<span class="inline-flex items-center gap-1.5" role="status">
+<span
+  class="inline-flex items-center gap-1.5"
+  role="status"
+  aria-label={label ? undefined : `Status: ${status}`}
+>
   <span class={dotClass}>
     {#if pulseStatuses.has(status)}
       <span

@@ -54,6 +54,7 @@
       {/if}
       {#if dismissible}
         <button
+          type="button"
           onclick={dismiss}
           class="ml-2 rounded-sm p-0.5 opacity-70 hover:opacity-100"
           aria-label="Dismiss"

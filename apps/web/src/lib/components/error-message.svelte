@@ -27,7 +27,7 @@
   <CircleAlert class={cn("shrink-0 mt-0.5", sizeMap[size].icon)} />
   <span>
     {#if label}
-      <span class="font-medium">{label}</span>
+      <span class="mr-1 font-medium">{label}</span>
     {/if}
     {message}
   </span>

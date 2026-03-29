@@ -1,10 +1,11 @@
 <script module>
   import { defineMeta } from "@storybook/addon-svelte-csf";
+  import MenubarRoot from "./menubar.svelte";
   import * as Menubar from "./index.js";
 
   const { Story } = defineMeta({
     title: "UI/Menubar",
-    component: Menubar.Root,
+    component: MenubarRoot,
     tags: ["autodocs"],
   });
 </script>

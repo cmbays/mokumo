@@ -8,6 +8,8 @@
   interface Props {
     title?: string;
     subtitle?: string;
+    email?: string;
+    password?: string;
     imageSrc?: string;
     imageAlt?: string;
     onsubmit?: (e: SubmitEvent) => void;
@@ -18,6 +20,8 @@
   let {
     title = "Sign in",
     subtitle = "Enter your credentials to continue.",
+    email = $bindable(""),
+    password = $bindable(""),
     imageSrc,
     imageAlt = "Brand image",
     onsubmit,
@@ -39,10 +43,12 @@
           <Label for="login-email">Email</Label>
           <Input
             id="login-email"
+            name="email"
             type="email"
             placeholder="you@example.com"
             autocomplete="email"
             required
+            bind:value={email}
           />
         </div>
         <div class="space-y-2">
@@ -57,10 +63,12 @@
           </div>
           <Input
             id="login-password"
+            name="password"
             type="password"
             placeholder="Password"
             autocomplete="current-password"
             required
+            bind:value={password}
           />
         </div>
         <Button type="submit" class="w-full">Sign in</Button>

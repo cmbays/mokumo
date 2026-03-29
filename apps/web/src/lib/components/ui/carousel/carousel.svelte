@@ -57,10 +57,13 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "ArrowLeft") {
+    const isVertical = orientation === "vertical";
+    const prevKey = isVertical ? "ArrowUp" : "ArrowLeft";
+    const nextKey = isVertical ? "ArrowDown" : "ArrowRight";
+    if (e.key === prevKey) {
       e.preventDefault();
       scrollPrev();
-    } else if (e.key === "ArrowRight") {
+    } else if (e.key === nextKey) {
       e.preventDefault();
       scrollNext();
     }

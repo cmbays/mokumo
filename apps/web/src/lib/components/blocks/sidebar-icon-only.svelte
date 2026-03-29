@@ -35,6 +35,7 @@
             item.active && "bg-sidebar-accent text-sidebar-accent-foreground",
           )}
           aria-label={item.label}
+          aria-current={item.active ? "page" : undefined}
         >
           {@render item.icon()}
         </a>

@@ -55,3 +55,15 @@
     {/snippet}
   </SplitButton>
 </Story>
+
+<Story name="WithClickHandler">
+  <SplitButton
+    label="Save"
+    onclick={() => console.log("Primary action clicked")}
+  >
+    {#snippet items()}
+      <DropdownMenu.Item>Save as draft</DropdownMenu.Item>
+      <DropdownMenu.Item>Save and publish</DropdownMenu.Item>
+    {/snippet}
+  </SplitButton>
+</Story>

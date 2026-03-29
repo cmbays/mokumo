@@ -30,7 +30,7 @@
   <Button {variant} {disabled} {onclick} class="rounded-r-none">
     {label}
   </Button>
-  <DropdownMenu.Root>
+  <DropdownMenu.Root {disabled}>
     <DropdownMenu.Trigger>
       <Button
         {variant}

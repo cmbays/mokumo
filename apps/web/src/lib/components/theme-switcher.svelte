@@ -12,6 +12,7 @@
 </script>
 
 <button
+  type="button"
   onclick={toggleMode}
   class={cn(
     "inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors",
@@ -20,7 +21,7 @@
   )}
   aria-label="Toggle theme"
 >
-  {#if mode.current === "dark"}
+  {#if $mode === "dark"}
     <Moon class="size-4" />
   {:else}
     <Sun class="size-4" />
