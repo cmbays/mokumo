@@ -43,9 +43,9 @@ pub fn copy_sidecar_if_needed(data_dir: &Path) -> Result<bool, std::io::Error> {
 /// Force-copy the demo sidecar database to `data_dir/demo/mokumo.db`,
 /// replacing any existing file. Used by the reset endpoint.
 ///
-/// Uses atomic rename: copies to a temp file in the same directory, then
-/// renames over the destination. This avoids corrupting an in-use SQLite
-/// file if any connections are still draining during graceful shutdown.
+/// Strategy: copies to a temp file, then atomic-renames over the destination.
+/// On Windows (where rename fails with open handles), falls back to
+/// remove + rename. Callers should close the connection pool first.
 ///
 /// Returns an error if no sidecar can be found.
 pub fn force_copy_sidecar(data_dir: &Path) -> Result<(), std::io::Error> {
@@ -65,13 +65,39 @@ pub fn force_copy_sidecar(data_dir: &Path) -> Result<(), std::io::Error> {
     std::fs::copy(&src, &tmp)?;
 
     // Atomic rename replaces the destination without truncating the live file.
-    // Existing file descriptors (from draining connections) continue reading
-    // the old inode; new connections open the fresh copy.
-    std::fs::rename(&tmp, &dest)?;
+    // On Unix, existing file descriptors continue reading the old inode.
+    // On Windows, rename may fail if any handle is still open — fall back to
+    // remove + rename which works once the pool is closed by the caller.
+    if let Err(rename_err) = std::fs::rename(&tmp, &dest) {
+        tracing::warn!("Atomic rename failed ({rename_err}), trying remove + rename fallback");
+        // Remove the destination first (Windows requires this), then retry rename.
+        if let Err(remove_err) = std::fs::remove_file(&dest)
+            && remove_err.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!("Failed to remove old database: {remove_err}");
+        }
+        std::fs::rename(&tmp, &dest).map_err(|e| {
+            // Clean up the temp file on failure
+            let _ = std::fs::remove_file(&tmp);
+            std::io::Error::new(
+                e.kind(),
+                format!(
+                    "Failed to replace demo database (rename failed after fallback): {e}. \
+                     Ensure no other processes have the database open."
+                ),
+            )
+        })?;
+    }
 
-    // Remove WAL/SHM files after the rename — they belong to the old DB
-    let _ = std::fs::remove_file(demo_dir.join("mokumo.db-wal"));
-    let _ = std::fs::remove_file(demo_dir.join("mokumo.db-shm"));
+    // Remove WAL/SHM files — they belong to the old DB
+    for suffix in &["mokumo.db-wal", "mokumo.db-shm"] {
+        let path = demo_dir.join(suffix);
+        if let Err(e) = std::fs::remove_file(&path)
+            && e.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!("Failed to remove {}: {e}", path.display());
+        }
+    }
 
     tracing::info!(
         "Force-copied demo sidecar from {} to {}",
@@ -125,9 +151,12 @@ pub async fn demo_reset(State(state): State<SharedState>) -> Response {
         );
     }
 
+    // Close the database connection pool before replacing the file.
+    // This releases file handles that would block std::fs::rename on Windows.
+    // Other in-flight requests will get errors, but the server is about to shut down.
+    state.db.get_sqlite_connection_pool().close().await;
+
     // Force-copy fresh sidecar over the demo database.
-    // The existing connection pool still holds the old file descriptor — this is fine
-    // because the server is about to shut down and restart with the fresh copy.
     if let Err(e) = force_copy_sidecar(&state.data_dir) {
         tracing::error!("Demo reset: failed to copy sidecar: {e}");
         return error_response(
