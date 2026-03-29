@@ -3,7 +3,6 @@ use std::time::{Duration, SystemTime};
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use mokumo_core::user::traits::UserRepository;
 use mokumo_db::user::password;
@@ -11,9 +10,8 @@ use mokumo_db::user::repo::SeaOrmUserRepo;
 use mokumo_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use mokumo_types::error::ErrorCode;
 
+use crate::error::AppError;
 use crate::{PendingReset, SharedState};
-
-use super::error_response;
 
 const PIN_EXPIRY: Duration = Duration::from_secs(15 * 60);
 
@@ -67,11 +65,8 @@ pub async fn forgot_password(
             Ok(hash) => hash,
             Err(e) => {
                 tracing::error!("PIN hash failed: {e}");
-                return error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorCode::InternalError,
-                    "An internal error occurred",
-                );
+                return AppError::InternalError("An internal error occurred".into())
+                    .into_response();
             }
         };
 
@@ -100,16 +95,15 @@ pub async fn forgot_password(
 pub async fn reset_password(
     State(state): State<SharedState>,
     Json(req): Json<ResetPasswordRequest>,
-) -> Response {
+) -> Result<Json<serde_json::Value>, AppError> {
     let entry = state.reset_pins.get(&req.email);
     let (pin_hash, created_at) = match entry {
         Some(ref e) => (e.pin_hash.clone(), e.created_at),
         None => {
-            return error_response(
-                StatusCode::BAD_REQUEST,
+            return Err(AppError::BadRequest(
                 ErrorCode::ValidationError,
-                "No reset request found",
-            );
+                "No reset request found".into(),
+            ));
         }
     };
     drop(entry);
@@ -119,59 +113,50 @@ pub async fn reset_password(
         .unwrap_or(Duration::ZERO);
     if elapsed > PIN_EXPIRY {
         state.reset_pins.remove(&req.email);
-        return error_response(
-            StatusCode::BAD_REQUEST,
+        return Err(AppError::BadRequest(
             ErrorCode::ValidationError,
-            "PIN expired",
-        );
+            "PIN expired".into(),
+        ));
     }
 
     let valid = match password::verify_password(req.pin.clone(), pin_hash).await {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("PIN verify failed: {e}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "An internal error occurred",
-            );
+            return Err(AppError::InternalError("An internal error occurred".into()));
         }
     };
 
     if !valid {
-        return error_response(
-            StatusCode::BAD_REQUEST,
+        return Err(AppError::BadRequest(
             ErrorCode::ValidationError,
-            "Invalid PIN",
-        );
+            "Invalid PIN".into(),
+        ));
     }
 
     let repo = SeaOrmUserRepo::new(state.db.clone());
     let user = match repo.find_by_email(&req.email).await {
         Ok(Some(u)) => u,
         _ => {
-            return error_response(
-                StatusCode::BAD_REQUEST,
+            return Err(AppError::BadRequest(
                 ErrorCode::ValidationError,
-                "No reset request found",
-            );
+                "No reset request found".into(),
+            ));
         }
     };
 
     if let Err(e) = repo.update_password(&user.id, &req.new_password).await {
         tracing::error!("Failed to update password: {e}");
-        return error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ErrorCode::InternalError,
-            "Failed to update password",
-        );
+        return Err(AppError::InternalError("Failed to update password".into()));
     }
 
     state.reset_pins.remove(&req.email);
     let file_path = recovery_file_path_for_email(&state.recovery_dir, &req.email);
     let _ = std::fs::remove_file(file_path);
 
-    Json(serde_json::json!({"message": "Password reset successfully"})).into_response()
+    Ok(Json(
+        serde_json::json!({"message": "Password reset successfully"}),
+    ))
 }
 
 #[cfg(test)]

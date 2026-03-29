@@ -70,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Auth and demo handlers now use `AppError` for consistent error responses with `Cache-Control: no-store` and structured `ErrorBody` (#248)
 - Dashboard LAN URL now shows real server info from `/api/server-info` instead of `window.location.origin`
 - Setup wizard hides token field when pre-filled via URL parameter, reveals on error
 - Activity log entries now record the authenticated user's ID and type instead of hardcoded "system" for customer mutations
