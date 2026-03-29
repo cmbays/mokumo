@@ -102,20 +102,19 @@
   <Sidebar.SidebarHeader>
     <div
       class="flex items-center gap-2 px-1 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+      oncontextmenu={(e) => e.preventDefault()}
     >
       <img
         src="/mokumo-cloud.png"
         alt="Mokumo"
-        class="h-8 w-auto shrink-0 dark:invert group-data-[collapsible=icon]:h-6 pointer-events-none select-none"
+        class="h-8 w-auto shrink-0 dark:invert group-data-[collapsible=icon]:h-6 select-none"
         draggable="false"
-        oncontextmenu={(e) => e.preventDefault()}
       />
       <img
         src="/mokumo-name.png"
         alt="Mokumo Software"
-        class="h-6 w-auto dark:invert group-data-[collapsible=icon]:hidden pointer-events-none select-none"
+        class="h-6 w-auto dark:invert group-data-[collapsible=icon]:hidden select-none"
         draggable="false"
-        oncontextmenu={(e) => e.preventDefault()}
       />
     </div>
   </Sidebar.SidebarHeader>

@@ -8,7 +8,7 @@
       <img
         src="/mokumo-cloud.png"
         alt="Mokumo"
-        class="h-16 dark:invert pointer-events-none select-none"
+        class="h-16 dark:invert select-none"
         draggable="false"
         oncontextmenu={(e) => e.preventDefault()}
       />
