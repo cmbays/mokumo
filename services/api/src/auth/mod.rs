@@ -63,7 +63,7 @@ fn user_to_response(user: &mokumo_core::user::User) -> UserResponse {
     }
 }
 
-fn error_response(status: StatusCode, code: ErrorCode, message: &str) -> Response {
+pub(crate) fn error_response(status: StatusCode, code: ErrorCode, message: &str) -> Response {
     (
         status,
         Json(ErrorBody {
