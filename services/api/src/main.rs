@@ -45,6 +45,10 @@ enum Commands {
         /// Also delete pre-migration backup files
         #[arg(long)]
         include_backups: bool,
+        /// Reset the production profile instead of the default demo profile.
+        /// Requires an additional confirmation prompt.
+        #[arg(long)]
+        production: bool,
     },
 }
 
@@ -107,13 +111,32 @@ async fn main() {
         Some(Commands::ResetDb {
             force,
             include_backups,
+            production,
         }) => {
-            let db_path = data_dir.join("mokumo.db");
+            // Determine which profile to target.
+            // Default: demo (safe). Production requires explicit --production flag.
+            let profile_dir = if production {
+                data_dir.join("production")
+            } else {
+                data_dir.join("demo")
+            };
+            let db_path = profile_dir.join("mokumo.db");
 
-            // Early exit if no database exists (idempotent, exit 0)
+            // Early exit when neither profile database exists (idempotent, exit 0)
+            let demo_db = data_dir.join("demo").join("mokumo.db");
+            let production_db = data_dir.join("production").join("mokumo.db");
+            let any_db_exists = demo_db.try_exists().unwrap_or(false)
+                || production_db.try_exists().unwrap_or(false);
+
             match db_path.try_exists() {
-                Ok(false) => {
+                Ok(false) if !any_db_exists => {
                     println!("No database found at {}.", data_dir.display());
+                    return;
+                }
+                Ok(false) => {
+                    // The other profile has a DB but not the targeted one
+                    let profile_name = if production { "production" } else { "demo" };
+                    println!("No database found for the {profile_name} profile.");
                     return;
                 }
                 Err(e) => {
@@ -158,12 +181,12 @@ async fn main() {
             // File inventory preview
             let mut preview_files: Vec<PathBuf> = Vec::new();
             for suffix in DB_SIDECAR_SUFFIXES {
-                let path = data_dir.join(format!("mokumo.db{suffix}"));
+                let path = profile_dir.join(format!("mokumo.db{suffix}"));
                 if path.exists() {
                     preview_files.push(path);
                 }
             }
-            if include_backups && let Ok(entries) = std::fs::read_dir(&data_dir) {
+            if include_backups && let Ok(entries) = std::fs::read_dir(&profile_dir) {
                 for entry in entries.flatten() {
                     if let Some(name) = entry.file_name().to_str()
                         && name.starts_with("mokumo.db.backup-v")
@@ -191,22 +214,40 @@ async fn main() {
             }
             println!();
 
-            // Confirmation gate
+            // Confirmation gate.
+            // --production requires an additional explicit confirmation step
+            // because wiping production data is irreversible.
             if !force {
                 use std::io::Write;
-                print!("Type \"reset\" to confirm: ");
-                std::io::stdout().flush().unwrap_or(());
-                let mut input = String::new();
-                if std::io::stdin().read_line(&mut input).is_err() || input.trim() != "reset" {
-                    println!("Cancelled.");
-                    return;
+                if production {
+                    eprintln!(
+                        "WARNING: You are about to permanently delete the PRODUCTION database.\n\
+                         This cannot be undone. All production data will be lost.\n"
+                    );
+                    print!("Type \"reset production\" to confirm: ");
+                    std::io::stdout().flush().unwrap_or(());
+                    let mut input = String::new();
+                    if std::io::stdin().read_line(&mut input).is_err()
+                        || input.trim() != "reset production"
+                    {
+                        println!("Cancelled.");
+                        return;
+                    }
+                } else {
+                    print!("Type \"reset\" to confirm: ");
+                    std::io::stdout().flush().unwrap_or(());
+                    let mut input = String::new();
+                    if std::io::stdin().read_line(&mut input).is_err() || input.trim() != "reset" {
+                        println!("Cancelled.");
+                        return;
+                    }
                 }
             }
 
             // Execute the reset while flock is held. The flock is on a
             // separate sentinel file (not the db), so it does not interfere
             // with file deletion on any platform.
-            let report = match cli_reset_db(&data_dir, &recovery_dir, include_backups) {
+            let report = match cli_reset_db(&profile_dir, &recovery_dir, include_backups) {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("Reset failed: {e}");

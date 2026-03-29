@@ -599,10 +599,14 @@ pub enum ResetError {
 
 /// Delete database files, sidecars, and optionally backups + recovery files.
 ///
+/// `profile_dir` is the directory containing `mokumo.db` for the target profile
+/// (e.g. `data_dir/demo` or `data_dir/production`). The caller resolves this
+/// from the `--production` flag before calling.
+///
 /// This is a pure filesystem function with no stdin/stdout interaction.
 /// The caller (main.rs) handles confirmation prompts and result display.
 pub fn cli_reset_db(
-    data_dir: &Path,
+    profile_dir: &Path,
     recovery_dir: &Path,
     include_backups: bool,
 ) -> Result<ResetReport, ResetError> {
@@ -610,12 +614,12 @@ pub fn cli_reset_db(
 
     // 1. Database file + sidecars
     for suffix in DB_SIDECAR_SUFFIXES {
-        let path = data_dir.join(format!("mokumo.db{suffix}"));
+        let path = profile_dir.join(format!("mokumo.db{suffix}"));
         delete_file(&path, &mut report);
     }
 
     // 2. Backup files (opt-in)
-    if include_backups && let Ok(entries) = std::fs::read_dir(data_dir) {
+    if include_backups && let Ok(entries) = std::fs::read_dir(profile_dir) {
         for entry in entries.flatten() {
             let name = entry.file_name();
             if let Some(name_str) = name.to_str()
