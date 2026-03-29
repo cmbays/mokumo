@@ -30,8 +30,17 @@
     URL.revokeObjectURL(url);
   }
 
-  function printCodes() {
-    window.print();
+  async function printCodes() {
+    // In Tauri's WKWebView (macOS), window.print() is silently dropped
+    // because WKWebView requires a print delegate that Tauri doesn't configure
+    // by default. Delegate to the print_window Tauri command instead, which
+    // calls WebviewWindow::print() on the Rust side to trigger the native dialog.
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("print_window");
+    } else {
+      window.print();
+    }
   }
 </script>
 
