@@ -21,7 +21,7 @@
   )}
   aria-label="Toggle theme"
 >
-  {#if $mode === "dark"}
+  {#if mode.current === "dark"}
     <Moon class="size-4" />
   {:else}
     <Sun class="size-4" />

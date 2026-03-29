@@ -17,6 +17,8 @@
     class?: string;
   }
 
+  const uid = crypto.randomUUID().slice(0, 8);
+
   let {
     title = "Sign in",
     subtitle = "Enter your credentials to continue.",
@@ -40,9 +42,9 @@
 
       <form class="space-y-4" {onsubmit}>
         <div class="space-y-2">
-          <Label for="login-email">Email</Label>
+          <Label for="login-email-{uid}">Email</Label>
           <Input
-            id="login-email"
+            id="login-email-{uid}"
             name="email"
             type="email"
             placeholder="you@example.com"
@@ -53,7 +55,7 @@
         </div>
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <Label for="login-password">Password</Label>
+            <Label for="login-password-{uid}">Password</Label>
             <a
               href="/forgot-password"
               class="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
@@ -62,7 +64,7 @@
             </a>
           </div>
           <Input
-            id="login-password"
+            id="login-password-{uid}"
             name="password"
             type="password"
             placeholder="Password"

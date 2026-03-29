@@ -38,8 +38,7 @@
   <LoginWithImage
     onsubmit={(e) => {
       e.preventDefault();
-      const data = new FormData(e.currentTarget);
-      console.log("email:", data.get("email"));
+      console.log("Form submitted");
     }}
   />
 </Story>

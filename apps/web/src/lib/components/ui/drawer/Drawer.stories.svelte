@@ -1,13 +1,14 @@
 <script module>
   import { defineMeta } from "@storybook/addon-svelte-csf";
   import * as Drawer from "./index.js";
+  import DrawerRoot from "./drawer.svelte";
   import Button from "$lib/components/ui/button/button.svelte";
   import Input from "$lib/components/ui/input/input.svelte";
   import Label from "$lib/components/ui/label/label.svelte";
 
   const { Story } = defineMeta({
     title: "UI/Drawer",
-    component: Drawer.Root,
+    component: DrawerRoot,
     tags: ["autodocs"],
   });
 </script>
