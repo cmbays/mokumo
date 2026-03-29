@@ -54,42 +54,51 @@ pub async fn forgot_password(
 
     let user = repo.find_by_email(&req.email).await.ok().flatten();
 
-    if let Some(_user) = user {
-        let pin: String = {
-            use rand::Rng;
-            let mut rng = rand::rng();
-            format!("{:06}", rng.random_range(0..1_000_000u32))
-        };
-
-        let pin_hash = match password::hash_password(pin.clone()).await {
-            Ok(hash) => hash,
-            Err(e) => {
-                tracing::error!("PIN hash failed: {e}");
-                return AppError::InternalError("An internal error occurred".into())
-                    .into_response();
-            }
-        };
-
-        state.reset_pins.insert(
-            req.email.clone(),
-            PendingReset {
-                pin_hash,
-                created_at: SystemTime::now(),
-            },
-        );
-
-        let dir = &state.recovery_dir;
-        if let Err(e) = std::fs::create_dir_all(dir) {
-            tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
-        }
-        let file_path = recovery_file_path_for_email(dir, &req.email);
-        if let Err(e) = std::fs::write(&file_path, recovery_html(&pin)) {
-            tracing::error!("Failed to write recovery file: {e}");
-        }
+    if user.is_none() {
+        return AppError::BadRequest(
+            ErrorCode::ValidationError,
+            "No account found for that email address".into(),
+        )
+        .into_response();
     }
 
-    // Always return 200 to avoid leaking which emails exist
-    Json(serde_json::json!({"message": "Recovery file placed"})).into_response()
+    let pin: String = {
+        use rand::Rng;
+        let mut rng = rand::rng();
+        format!("{:06}", rng.random_range(0..1_000_000u32))
+    };
+
+    let pin_hash = match password::hash_password(pin.clone()).await {
+        Ok(hash) => hash,
+        Err(e) => {
+            tracing::error!("PIN hash failed: {e}");
+            return AppError::InternalError("An internal error occurred".into()).into_response();
+        }
+    };
+
+    state.reset_pins.insert(
+        req.email.clone(),
+        PendingReset {
+            pin_hash,
+            created_at: SystemTime::now(),
+        },
+    );
+
+    let dir = &state.recovery_dir;
+    if let Err(e) = std::fs::create_dir_all(dir) {
+        tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
+    }
+    let file_path = recovery_file_path_for_email(dir, &req.email);
+    if let Err(e) = std::fs::write(&file_path, recovery_html(&pin)) {
+        tracing::error!("Failed to write recovery file: {e}");
+    }
+
+    let path_str = file_path.to_string_lossy().into_owned();
+    Json(serde_json::json!({
+        "message": "Recovery file placed",
+        "recovery_file_path": path_str
+    }))
+    .into_response()
 }
 
 pub async fn reset_password(
