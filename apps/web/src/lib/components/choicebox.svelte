@@ -37,10 +37,18 @@
     return value === optionValue;
   }
 
-  function getTabIndex(optionValue: string, index: number): 0 | -1 {
+  function getTabIndex(
+    optionValue: string,
+    index: number,
+    disabled?: boolean,
+  ): 0 | -1 {
     if (multiple) return 0;
-    if (value === optionValue) return 0;
-    if (!value && index === 0) return 0;
+    if (value === optionValue && !disabled) return 0;
+    if (!value) {
+      // focus first enabled option when nothing is selected
+      const firstEnabled = options.findIndex((o) => !o.disabled);
+      if (index === firstEnabled) return 0;
+    }
     return -1;
   }
 
@@ -99,7 +107,7 @@
       type="button"
       role={multiple ? "checkbox" : "radio"}
       aria-checked={isSelected(option.value)}
-      tabindex={getTabIndex(option.value, i)}
+      tabindex={getTabIndex(option.value, i, option.disabled)}
       disabled={option.disabled}
       onclick={() => select(option.value)}
       onkeydown={(e) => handleKeyDown(e, i)}

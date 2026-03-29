@@ -79,6 +79,10 @@
   }
 
   $effect(() => {
+    carouselState.orientation = orientation;
+  });
+
+  $effect(() => {
     return () => {
       carouselState.api?.off("select", onSelect);
     };

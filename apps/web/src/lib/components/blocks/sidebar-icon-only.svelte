@@ -24,25 +24,31 @@
     className,
   )}
 >
-  {#each items as item (item.href)}
-    <Tooltip.Root>
-      <Tooltip.Trigger>
-        <a
-          href={item.href}
-          class={cn(
-            "flex size-10 items-center justify-center rounded-lg text-sidebar-foreground transition-colors",
-            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            item.active && "bg-sidebar-accent text-sidebar-accent-foreground",
-          )}
-          aria-label={item.label}
-          aria-current={item.active ? "page" : undefined}
-        >
-          {@render item.icon()}
-        </a>
-      </Tooltip.Trigger>
-      <Tooltip.Content side="right">
-        {item.label}
-      </Tooltip.Content>
-    </Tooltip.Root>
-  {/each}
+  <nav aria-label="Primary">
+    {#each items as item (item.href)}
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          {#snippet child({ props })}
+            <a
+              {...props}
+              href={item.href}
+              class={cn(
+                "flex size-10 items-center justify-center rounded-lg text-sidebar-foreground transition-colors",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                item.active &&
+                  "bg-sidebar-accent text-sidebar-accent-foreground",
+              )}
+              aria-label={item.label}
+              aria-current={item.active ? "page" : undefined}
+            >
+              {@render item.icon()}
+            </a>
+          {/snippet}
+        </Tooltip.Trigger>
+        <Tooltip.Content side="right">
+          {item.label}
+        </Tooltip.Content>
+      </Tooltip.Root>
+    {/each}
+  </nav>
 </aside>

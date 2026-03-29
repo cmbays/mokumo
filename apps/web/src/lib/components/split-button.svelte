@@ -36,7 +36,7 @@
         {variant}
         {disabled}
         size="icon"
-        class="h-9 w-8 rounded-l-none border-l border-background/20"
+        class="h-8 w-8 rounded-l-none border-l border-background/20"
         aria-label="More options"
       >
         <ChevronDown class="size-4" />
