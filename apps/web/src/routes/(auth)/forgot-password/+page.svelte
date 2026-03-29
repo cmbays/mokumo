@@ -55,16 +55,16 @@
       "data" in result ? (result.data.recovery_file_path ?? null) : null;
     phase = "reset";
 
-    if (
-      recoveryFilePath &&
-      typeof window !== "undefined" &&
-      "__TAURI_INTERNALS__" in window
-    ) {
+    if (recoveryFilePath && "__TAURI_INTERNALS__" in window) {
       try {
         const { openPath } = await import("@tauri-apps/plugin-opener");
         await openPath(recoveryFilePath);
-      } catch {
+      } catch (openErr) {
         // Non-fatal: user can still open the file manually from their Desktop
+        console.warn(
+          "[forgot-password] openPath failed, user must open file manually:",
+          openErr,
+        );
       }
     }
   }
