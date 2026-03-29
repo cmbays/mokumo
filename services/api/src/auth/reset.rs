@@ -76,6 +76,17 @@ pub async fn forgot_password(
         AppError::InternalError("An internal error occurred".into())
     })?;
 
+    let dir = &state.recovery_dir;
+    if let Err(e) = tokio::fs::create_dir_all(dir).await {
+        tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
+        return Err(AppError::InternalError("An internal error occurred".into()));
+    }
+    let file_path = recovery_file_path_for_email(dir, &req.email);
+    if let Err(e) = tokio::fs::write(&file_path, recovery_html(&pin)).await {
+        tracing::error!("Failed to write recovery file {}: {e}", file_path.display());
+        return Err(AppError::InternalError("An internal error occurred".into()));
+    }
+
     state.reset_pins.insert(
         req.email.clone(),
         PendingReset {
@@ -83,19 +94,6 @@ pub async fn forgot_password(
             created_at: SystemTime::now(),
         },
     );
-
-    let dir = &state.recovery_dir;
-    if let Err(e) = tokio::fs::create_dir_all(dir).await {
-        tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
-        state.reset_pins.remove(&req.email);
-        return Err(AppError::InternalError("An internal error occurred".into()));
-    }
-    let file_path = recovery_file_path_for_email(dir, &req.email);
-    if let Err(e) = tokio::fs::write(&file_path, recovery_html(&pin)).await {
-        tracing::error!("Failed to write recovery file {}: {e}", file_path.display());
-        state.reset_pins.remove(&req.email);
-        return Err(AppError::InternalError("An internal error occurred".into()));
-    }
 
     let path_str = file_path.to_string_lossy().into_owned();
     Ok(Json(serde_json::json!({
