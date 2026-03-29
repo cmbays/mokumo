@@ -135,7 +135,7 @@
           toast.success(`"${parsed.data.display_name}" updated`);
           open = false;
           onClose();
-          await invalidate((url) => url.pathname.startsWith("/api/customers"));
+          await invalidate("app:customers");
         } else {
           applyApiErrors(result.error);
         }
@@ -150,7 +150,7 @@
           toast.success(`"${parsed.data.display_name}" created`);
           open = false;
           onClose();
-          await invalidate((url) => url.pathname.startsWith("/api/customers"));
+          await invalidate("app:customers");
         } else {
           applyApiErrors(result.error);
         }
@@ -226,7 +226,11 @@
           type="tel"
           bind:value={formData.phone}
           disabled={submitting}
+          class={errorFor("phone") ? "border-destructive" : ""}
         />
+        {#if errorFor("phone")}
+          <p class="text-sm text-destructive">{errorFor("phone")}</p>
+        {/if}
       </div>
 
       <div class="space-y-2">
@@ -235,12 +239,20 @@
           placeholder="Street address"
           bind:value={formData.address_line1}
           disabled={submitting}
+          class={errorFor("address_line1") ? "border-destructive" : ""}
         />
+        {#if errorFor("address_line1")}
+          <p class="text-sm text-destructive">{errorFor("address_line1")}</p>
+        {/if}
         <Input
           placeholder="Apt, suite, etc."
           bind:value={formData.address_line2}
           disabled={submitting}
+          class={errorFor("address_line2") ? "border-destructive" : ""}
         />
+        {#if errorFor("address_line2")}
+          <p class="text-sm text-destructive">{errorFor("address_line2")}</p>
+        {/if}
         <div class="grid grid-cols-2 gap-2">
           <Input
             placeholder="City"
