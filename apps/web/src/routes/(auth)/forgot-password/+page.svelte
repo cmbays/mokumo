@@ -28,6 +28,7 @@
   let pin = $state("");
   let newPassword = $state("");
 
+  let isTauri = $derived("__TAURI_INTERNALS__" in window);
   let emailValid = $derived(email.length > 0);
   let resetValid = $derived(pin.length === 6 && newPassword.length >= 8);
 
@@ -98,9 +99,12 @@
     <CardDescription>
       {#if phase === "email"}
         Enter your email to receive a recovery file with a PIN.
-      {:else}
+      {:else if isTauri}
         A recovery file has been saved to your Desktop. Open it to find your
         6-digit PIN, then choose a new password.
+      {:else}
+        A recovery file has been saved on the computer running Mokumo. Open it
+        there to find your 6-digit PIN, then choose a new password.
       {/if}
     </CardDescription>
   </CardHeader>

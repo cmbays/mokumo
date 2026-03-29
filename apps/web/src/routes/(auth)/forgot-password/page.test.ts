@@ -82,14 +82,16 @@ describe("ForgotPasswordPage", () => {
       return user;
     }
 
-    it("step 2 description tells user the recovery file is on their Desktop", async () => {
+    it("step 2 description mentions Desktop when in Tauri context", async () => {
+      vi.stubGlobal("__TAURI_INTERNALS__", {});
       await advanceToResetPhase();
       expect(screen.getByText(/desktop/i)).toBeInTheDocument();
     });
 
-    it("step 2 description includes guidance to open the recovery file", async () => {
+    it("step 2 description mentions server machine when in browser context", async () => {
+      // __TAURI_INTERNALS__ is not set (unstubAllGlobals in beforeEach)
       await advanceToResetPhase();
-      expect(screen.getByText(/recovery file/i)).toBeInTheDocument();
+      expect(screen.getByText(/computer running mokumo/i)).toBeInTheDocument();
     });
 
     it("opens recovery file via Tauri opener when in Tauri context", async () => {
