@@ -18,10 +18,11 @@ use mokumo_db::user::repo::SeaOrmUserRepo;
 use mokumo_types::auth::{
     LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
 };
-use mokumo_types::error::{ErrorBody, ErrorCode};
+use mokumo_types::error::ErrorCode;
 use mokumo_types::user::UserResponse;
 
 use crate::SharedState;
+use crate::error::AppError;
 
 use backend::{Backend, Credentials};
 
@@ -63,23 +64,11 @@ fn user_to_response(user: &mokumo_core::user::User) -> UserResponse {
     }
 }
 
-pub(crate) fn error_response(status: StatusCode, code: ErrorCode, message: &str) -> Response {
-    (
-        status,
-        Json(ErrorBody {
-            code,
-            message: message.into(),
-            details: None,
-        }),
-    )
-        .into_response()
-}
-
 async fn login(
     State(state): State<SharedState>,
     mut auth_session: AuthSessionType,
     Json(req): Json<LoginRequest>,
-) -> Response {
+) -> Result<Json<UserResponse>, AppError> {
     let repo = SeaOrmUserRepo::new(state.db.clone());
     let creds = Credentials {
         email: req.email.clone(),
@@ -90,36 +79,27 @@ async fn login(
         Ok(Some(user)) => user,
         Ok(None) => {
             log_failed_login(&repo, &req.email).await;
-            return error_response(
-                StatusCode::UNAUTHORIZED,
+            return Err(AppError::Unauthorized(
                 ErrorCode::InvalidCredentials,
-                "Invalid email or password",
-            );
+                "Invalid email or password".into(),
+            ));
         }
         Err(e) => {
             tracing::error!("Authentication error: {e}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "An internal error occurred",
-            );
+            return Err(AppError::InternalError("An internal error occurred".into()));
         }
     };
 
     if let Err(e) = auth_session.login(&user).await {
         tracing::error!("Session login error: {e}");
-        return error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ErrorCode::InternalError,
-            "Failed to create session",
-        );
+        return Err(AppError::InternalError("Failed to create session".into()));
     }
 
     let _ = repo
         .log_auth_activity(&user.user, ActivityAction::LoginSuccess)
         .await;
 
-    Json(user_to_response(&user.user)).into_response()
+    Ok(Json(user_to_response(&user.user)))
 }
 
 async fn log_failed_login(repo: &SeaOrmUserRepo, email: &str) {
@@ -130,46 +110,39 @@ async fn log_failed_login(repo: &SeaOrmUserRepo, email: &str) {
     }
 }
 
-async fn logout(mut auth_session: AuthSessionType) -> Response {
+async fn logout(mut auth_session: AuthSessionType) -> Result<StatusCode, AppError> {
     match auth_session.logout().await {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => Ok(StatusCode::NO_CONTENT),
         Err(e) => {
             tracing::error!("Logout error: {e}");
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "Failed to destroy session",
-            )
+            Err(AppError::InternalError("Failed to destroy session".into()))
         }
     }
 }
 
-async fn me(State(state): State<SharedState>, auth_session: AuthSessionType) -> Response {
-    match auth_session.user {
-        Some(ref user) => {
-            let setup_complete = state.setup_completed.load(Ordering::Relaxed);
-            let repo = SeaOrmUserRepo::new(state.db.clone());
-            let recovery_codes_remaining = match repo.recovery_codes_remaining(&user.user.id).await
-            {
-                Ok(count) => count,
-                Err(e) => {
-                    tracing::warn!(user_id = %user.user.id, "Failed to read recovery code count: {e}");
-                    0
-                }
-            };
-            Json(MeResponse {
-                user: user_to_response(&user.user),
-                setup_complete,
-                recovery_codes_remaining,
-            })
-            .into_response()
+async fn me(
+    State(state): State<SharedState>,
+    auth_session: AuthSessionType,
+) -> Result<Json<MeResponse>, AppError> {
+    let user = auth_session.user.as_ref().ok_or_else(|| {
+        AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into())
+    })?;
+
+    let setup_complete = state.setup_completed.load(Ordering::Relaxed);
+    let repo = SeaOrmUserRepo::new(state.db.clone());
+    let recovery_codes_remaining = match repo.recovery_codes_remaining(&user.user.id).await {
+        Ok(count) => count,
+        Err(e) => {
+            tracing::warn!(user_id = %user.user.id, "Failed to read recovery code count: {e}");
+            0
         }
-        None => error_response(
-            StatusCode::UNAUTHORIZED,
-            ErrorCode::Unauthorized,
-            "Not authenticated",
-        ),
-    }
+    };
+
+    Ok(Json(MeResponse {
+        user: user_to_response(&user.user),
+        setup_complete,
+        recovery_codes_remaining,
+    }))
 }
 
 /// Regenerate recovery codes for the authenticated user.
@@ -180,28 +153,21 @@ pub async fn regenerate_recovery_codes(
     State(state): State<SharedState>,
     auth_session: AuthSessionType,
     Json(req): Json<RegenerateRecoveryCodesRequest>,
-) -> Response {
-    let user = match auth_session.user {
-        Some(ref u) => u.clone(),
-        None => {
-            return error_response(
-                StatusCode::UNAUTHORIZED,
-                ErrorCode::Unauthorized,
-                "Not authenticated",
-            );
-        }
-    };
+) -> Result<Json<SetupResponse>, AppError> {
+    let user = auth_session
+        .user
+        .as_ref()
+        .ok_or_else(|| AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into()))?
+        .clone();
 
     // Rate limit check
     if !state
         .regen_limiter
         .check_and_record(&user.user.id.to_string())
     {
-        return error_response(
-            StatusCode::TOO_MANY_REQUESTS,
-            ErrorCode::RateLimited,
-            "Too many regeneration attempts. Try again later.",
-        );
+        return Err(AppError::TooManyRequests(
+            "Too many regeneration attempts. Try again later.".into(),
+        ));
     }
 
     let repo = SeaOrmUserRepo::new(state.db.clone());
@@ -210,19 +176,11 @@ pub async fn regenerate_recovery_codes(
     let password_hash = match repo.find_by_id_with_hash(&user.user.id).await {
         Ok(Some((_, hash))) => hash,
         Ok(None) => {
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "User not found",
-            );
+            return Err(AppError::InternalError("User not found".into()));
         }
         Err(e) => {
             tracing::error!("Failed to fetch user for regen: {e}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "An internal error occurred",
-            );
+            return Err(AppError::InternalError("An internal error occurred".into()));
         }
     };
 
@@ -230,32 +188,25 @@ pub async fn regenerate_recovery_codes(
     match mokumo_db::user::password::verify_password(req.password, password_hash).await {
         Ok(true) => {}
         Ok(false) => {
-            return error_response(
-                StatusCode::UNAUTHORIZED,
+            return Err(AppError::Unauthorized(
                 ErrorCode::InvalidCredentials,
-                "Invalid password",
-            );
+                "Invalid password".into(),
+            ));
         }
         Err(e) => {
             tracing::error!("Password verification error: {e}");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "An internal error occurred",
-            );
+            return Err(AppError::InternalError("An internal error occurred".into()));
         }
     }
 
     // Regenerate codes
     match repo.regenerate_recovery_codes(&user.user.id).await {
-        Ok(recovery_codes) => Json(SetupResponse { recovery_codes }).into_response(),
+        Ok(recovery_codes) => Ok(Json(SetupResponse { recovery_codes })),
         Err(e) => {
             tracing::error!("Recovery code regeneration failed: {e}");
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorCode::InternalError,
-                "Failed to regenerate recovery codes",
-            )
+            Err(AppError::InternalError(
+                "Failed to regenerate recovery codes".into(),
+            ))
         }
     }
 }
@@ -264,15 +215,10 @@ async fn setup(
     State(state): State<SharedState>,
     mut auth_session: AuthSessionType,
     Json(req): Json<SetupRequest>,
-) -> Response {
-    if let Some(err) = validate_setup_request(&state, &req) {
-        return err;
-    }
+) -> Result<(StatusCode, Json<SetupResponse>), AppError> {
+    validate_setup_request(&state, &req)?;
 
-    let setup_guard = match SetupAttemptGuard::acquire(&state) {
-        Ok(guard) => guard,
-        Err(err) => return *err,
-    };
+    let setup_guard = SetupAttemptGuard::acquire(&state)?;
 
     let repo = SeaOrmUserRepo::new(state.db.clone());
     let (user, recovery_codes) = match repo
@@ -287,18 +233,18 @@ async fn setup(
         Ok(result) => result,
         Err(e) => {
             tracing::error!("Setup failed: {e}");
-            return error_response(
-                StatusCode::CONFLICT,
-                ErrorCode::SetupFailed,
-                "Setup failed — an admin account may already exist",
-            );
+            return Err(AppError::Domain(
+                mokumo_core::error::DomainError::Conflict {
+                    message: "Setup failed — an admin account may already exist".into(),
+                },
+            ));
         }
     };
 
     setup_guard.complete();
     auto_login(&repo, &user, &mut auth_session).await;
 
-    (StatusCode::CREATED, Json(SetupResponse { recovery_codes })).into_response()
+    Ok((StatusCode::CREATED, Json(SetupResponse { recovery_codes })))
 }
 
 struct SetupAttemptGuard {
@@ -307,13 +253,9 @@ struct SetupAttemptGuard {
 }
 
 impl SetupAttemptGuard {
-    fn acquire(state: &SharedState) -> Result<Self, Box<Response>> {
+    fn acquire(state: &SharedState) -> Result<Self, AppError> {
         if state.setup_completed.load(Ordering::Acquire) {
-            return Err(Box::new(error_response(
-                StatusCode::FORBIDDEN,
-                ErrorCode::Forbidden,
-                "Setup already completed",
-            )));
+            return Err(AppError::Forbidden("Setup already completed".into()));
         }
 
         if state
@@ -321,20 +263,16 @@ impl SetupAttemptGuard {
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
         {
-            return Err(Box::new(error_response(
-                StatusCode::CONFLICT,
-                ErrorCode::Conflict,
-                "Setup is already in progress",
-            )));
+            return Err(AppError::Domain(
+                mokumo_core::error::DomainError::Conflict {
+                    message: "Setup is already in progress".into(),
+                },
+            ));
         }
 
         if state.setup_completed.load(Ordering::Acquire) {
             state.setup_in_progress.store(false, Ordering::Release);
-            return Err(Box::new(error_response(
-                StatusCode::FORBIDDEN,
-                ErrorCode::Forbidden,
-                "Setup already completed",
-            )));
+            return Err(AppError::Forbidden("Setup already completed".into()));
         }
 
         Ok(Self {
@@ -358,13 +296,9 @@ impl Drop for SetupAttemptGuard {
     }
 }
 
-fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Option<Response> {
+fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Result<(), AppError> {
     if state.setup_completed.load(Ordering::Relaxed) {
-        return Some(error_response(
-            StatusCode::FORBIDDEN,
-            ErrorCode::Forbidden,
-            "Setup already completed",
-        ));
+        return Err(AppError::Forbidden("Setup already completed".into()));
     }
 
     let valid_token = state
@@ -372,10 +306,9 @@ fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Option<Res
         .as_ref()
         .is_some_and(|t| t == &req.setup_token);
     if !valid_token {
-        return Some(error_response(
-            StatusCode::UNAUTHORIZED,
+        return Err(AppError::Unauthorized(
             ErrorCode::InvalidToken,
-            "Invalid setup token",
+            "Invalid setup token".into(),
         ));
     }
 
@@ -384,14 +317,17 @@ fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Option<Res
         || req.admin_name.is_empty()
         || req.shop_name.is_empty()
     {
-        return Some(error_response(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            ErrorCode::ValidationError,
-            "All fields are required",
+        return Err(AppError::Domain(
+            mokumo_core::error::DomainError::Validation {
+                details: std::collections::HashMap::from([(
+                    "form".into(),
+                    vec!["All fields are required".into()],
+                )]),
+            },
         ));
     }
 
-    None
+    Ok(())
 }
 
 async fn auto_login(
@@ -444,30 +380,22 @@ pub async fn require_auth_with_demo_auto_login(
             }
             Ok(None) => {
                 tracing::warn!("Demo auto-login: admin@demo.local not found in database");
-                return error_response(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    ErrorCode::InternalError,
-                    "Demo admin account not found. The demo database may be corrupted — try resetting.",
-                );
+                return AppError::ServiceUnavailable(
+                    "Demo admin account not found. The demo database may be corrupted — try resetting.".into(),
+                ).into_response();
             }
             Err(e) => {
                 tracing::error!("Demo auto-login: failed to look up admin: {e}");
-                return error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorCode::InternalError,
-                    "An internal error occurred",
-                );
+                return AppError::InternalError("An internal error occurred".into())
+                    .into_response();
             }
         }
     }
 
     // Login-required check: reject if still not authenticated
     if auth_session.user.is_none() {
-        return error_response(
-            StatusCode::UNAUTHORIZED,
-            ErrorCode::Unauthorized,
-            "Not authenticated",
-        );
+        return AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into())
+            .into_response();
     }
 
     next.run(request).await

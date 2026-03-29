@@ -12,6 +12,19 @@ use mokumo_types::error::{ErrorBody, ErrorCode};
 pub enum AppError {
     Domain(DomainError),
     Database(sqlx::Error),
+    /// 401 — not authenticated or invalid credentials.
+    /// The `ErrorCode` distinguishes `Unauthorized` from `InvalidCredentials`.
+    Unauthorized(ErrorCode, String),
+    /// 403 — action not allowed (e.g. setup already completed).
+    Forbidden(String),
+    /// 400 — bad request with a specific error code (e.g. validation in recovery flows).
+    BadRequest(ErrorCode, String),
+    /// 429 — rate limit exceeded.
+    TooManyRequests(String),
+    /// 503 — service unavailable (e.g. demo admin not found).
+    ServiceUnavailable(String),
+    /// 500 — generic internal error. The real message is logged, not returned.
+    InternalError(String),
 }
 
 impl From<DomainError> for AppError {
@@ -66,6 +79,50 @@ impl IntoResponse for AppError {
                     (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
                 }
             },
+            Self::Unauthorized(code, msg) => (
+                StatusCode::UNAUTHORIZED,
+                ErrorBody {
+                    code,
+                    message: msg,
+                    details: None,
+                },
+            ),
+            Self::Forbidden(msg) => (
+                StatusCode::FORBIDDEN,
+                ErrorBody {
+                    code: ErrorCode::Forbidden,
+                    message: msg,
+                    details: None,
+                },
+            ),
+            Self::BadRequest(code, msg) => (
+                StatusCode::BAD_REQUEST,
+                ErrorBody {
+                    code,
+                    message: msg,
+                    details: None,
+                },
+            ),
+            Self::TooManyRequests(msg) => (
+                StatusCode::TOO_MANY_REQUESTS,
+                ErrorBody {
+                    code: ErrorCode::RateLimited,
+                    message: msg,
+                    details: None,
+                },
+            ),
+            Self::ServiceUnavailable(msg) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                ErrorBody {
+                    code: ErrorCode::InternalError,
+                    message: msg,
+                    details: None,
+                },
+            ),
+            Self::InternalError(msg) => {
+                tracing::error!("Internal error: {msg}");
+                (StatusCode::INTERNAL_SERVER_ERROR, redacted_internal())
+            }
             // Boundary safeguard: repo impls currently normalise DB errors into
             // DomainError before they reach here, so this arm fires only for raw
             // SQLx queries (e.g. future reporting endpoints) that bypass the repo layer.
@@ -330,5 +387,138 @@ mod tests {
             "sqlx error variant should not leak: {}",
             error_body.message
         );
+    }
+
+    // --- HTTP-semantic variants (#248) ---
+
+    #[test]
+    fn unauthorized_maps_to_401() {
+        let err = AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn unauthorized_preserves_error_code() {
+        let err = AppError::Unauthorized(
+            ErrorCode::InvalidCredentials,
+            "Invalid email or password".into(),
+        );
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::InvalidCredentials);
+        assert!(error_body.message.contains("Invalid email"));
+    }
+
+    #[test]
+    fn forbidden_maps_to_403() {
+        let err = AppError::Forbidden("Setup already completed".into());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn forbidden_response_body() {
+        let err = AppError::Forbidden("Setup already completed".into());
+        let response = err.into_response();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::Forbidden);
+        assert!(error_body.message.contains("Setup already completed"));
+    }
+
+    #[test]
+    fn bad_request_maps_to_400() {
+        let err = AppError::BadRequest(ErrorCode::ValidationError, "Invalid PIN".into());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn bad_request_preserves_error_code() {
+        let err = AppError::BadRequest(ErrorCode::ValidationError, "Invalid PIN".into());
+        let response = err.into_response();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::ValidationError);
+        assert!(error_body.message.contains("Invalid PIN"));
+    }
+
+    #[test]
+    fn too_many_requests_maps_to_429() {
+        let err = AppError::TooManyRequests("Try again later".into());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    #[tokio::test]
+    async fn too_many_requests_response_body() {
+        let err = AppError::TooManyRequests("Try again later".into());
+        let response = err.into_response();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::RateLimited);
+    }
+
+    #[test]
+    fn service_unavailable_maps_to_503() {
+        let err = AppError::ServiceUnavailable("Demo admin not found".into());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn internal_error_variant_maps_to_500() {
+        let err = AppError::InternalError("secret db string".into());
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[tokio::test]
+    async fn internal_error_variant_redacts_message() {
+        let err = AppError::InternalError("secret database connection string".into());
+        let response = err.into_response();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
+        assert_eq!(error_body.code, ErrorCode::InternalError);
+        assert!(
+            !error_body.message.contains("secret"),
+            "InternalError message was leaked: {}",
+            error_body.message
+        );
+    }
+
+    #[test]
+    fn unauthorized_has_cache_control_no_store() {
+        let err = AppError::Unauthorized(ErrorCode::Unauthorized, "test".into());
+        let response = err.into_response();
+        let cache_control = response
+            .headers()
+            .get(axum::http::header::CACHE_CONTROL)
+            .expect("Missing Cache-Control header");
+        assert_eq!(cache_control.to_str().unwrap(), "no-store");
+    }
+
+    #[test]
+    fn forbidden_has_cache_control_no_store() {
+        let err = AppError::Forbidden("test".into());
+        let response = err.into_response();
+        let cache_control = response
+            .headers()
+            .get(axum::http::header::CACHE_CONTROL)
+            .expect("Missing Cache-Control header");
+        assert_eq!(cache_control.to_str().unwrap(), "no-store");
     }
 }
