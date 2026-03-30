@@ -42,7 +42,7 @@
     if (isTauri) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("print_window");
+        await invoke("plugin:webview|print");
       } catch (e) {
         console.error("print_window invoke failed:", e);
         toast.error(

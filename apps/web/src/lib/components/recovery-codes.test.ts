@@ -64,7 +64,7 @@ describe("RecoveryCodes", () => {
       render(RecoveryCodes, { codes: MOCK_CODES });
       await userEvent.click(screen.getByRole("button", { name: /print/i }));
       expect(mockInvoke).toHaveBeenCalledOnce();
-      expect(mockInvoke).toHaveBeenCalledWith("print_window");
+      expect(mockInvoke).toHaveBeenCalledWith("plugin:webview|print");
     });
 
     it("does not call window.print() in Tauri context", async () => {

@@ -7,17 +7,6 @@ use tracing_subscriber::EnvFilter;
 use mokumo_api::discovery::MdnsHandle;
 use mokumo_api::{ServerConfig, build_app_with_shutdown, discovery, prepare_database, try_bind};
 
-/// Trigger the native print dialog for the invoking window.
-///
-/// `window.print()` is silently dropped by WKWebView on macOS unless the
-/// WKUIDelegate is configured — which Tauri does not do by default.
-/// This command delegates to Tauri's Rust-side `WebviewWindow::print()`,
-/// which properly routes the request to the platform print dialog.
-#[tauri::command]
-fn print_window(window: tauri::WebviewWindow) -> Result<(), String> {
-    window.print().map_err(|e| e.to_string())
-}
-
 const DEFAULT_PORT: u16 = 6565;
 const DEFAULT_HOST: &str = "0.0.0.0";
 
@@ -136,7 +125,7 @@ pub fn run() {
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![print_window])
+        .invoke_handler(tauri::generate_handler![])
         // Opens target="_blank" links in the system browser (webview blocks them by default)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
