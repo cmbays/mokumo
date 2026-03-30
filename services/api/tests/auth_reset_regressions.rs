@@ -292,6 +292,58 @@ async fn recovery_code_reset_rejects_short_passwords() {
     assert_eq!(body["message"], "Password must be at least 8 characters");
 }
 
+#[tokio::test]
+async fn forgot_password_returns_error_for_unknown_email() {
+    let server = RunningServer::start("forgot_unknown_email").await;
+
+    let response = server
+        .server
+        .post("/api/auth/forgot-password")
+        .json(&json!({ "email": "nobody@shop.local" }))
+        .await;
+
+    assert_eq!(response.status_code(), http::StatusCode::BAD_REQUEST);
+    let body: serde_json::Value = response.json();
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains("No account found"),
+        "expected 'No account found' in message, got: {:?}",
+        body
+    );
+}
+
+#[tokio::test]
+async fn forgot_password_success_returns_recovery_file_path() {
+    let server = RunningServer::start("forgot_returns_path").await;
+    let repo = SeaOrmUserRepo::new(server.db.clone());
+
+    repo.create_admin_with_setup("admin@shop.local", "Admin", "password123", "Test Shop")
+        .await
+        .unwrap();
+
+    let response = server
+        .server
+        .post("/api/auth/forgot-password")
+        .json(&json!({ "email": "admin@shop.local" }))
+        .await;
+
+    assert_eq!(response.status_code(), http::StatusCode::OK);
+    let body: serde_json::Value = response.json();
+    let path = body["recovery_file_path"]
+        .as_str()
+        .expect("response should include recovery_file_path");
+    assert!(
+        path.ends_with(".html"),
+        "recovery_file_path should end with .html, got: {path}"
+    );
+    assert!(
+        path.contains("mokumo-recovery-"),
+        "recovery_file_path should contain 'mokumo-recovery-', got: {path}"
+    );
+}
+
 /// Intentional behavior: recovery code regeneration does NOT invalidate existing
 /// sessions. Session invalidation on credential change is deferred to M1
 /// (per CAO + Ada review).

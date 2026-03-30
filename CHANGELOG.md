@@ -88,6 +88,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Forgot password step 2 now tells Desktop users where to find the recovery file; Desktop app auto-opens the file on submission (#260)
+- Forgot password now shows an error when the email address is not found, instead of silently advancing to step 2 (#260)
 - Demo guide slides now show real screenshots instead of invisible HTML comment placeholders (#228)
 - Demo reset shutdown delay increased from 100ms to 500ms to prevent truncated responses (#218)
 - `demo-smoke` CI job now gates PR merge via verdict check (was `continue-on-error`, now enforced) (#218)

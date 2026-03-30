@@ -19,6 +19,7 @@
   let phase = $state<"email" | "reset">("email");
   let error = $state<string | null>(null);
   let loading = $state(false);
+  let recoveryFilePath = $state<string | null>(null);
 
   // Phase 1
   let email = $state("");
@@ -27,6 +28,7 @@
   let pin = $state("");
   let newPassword = $state("");
 
+  let isTauri = $derived("__TAURI_INTERNALS__" in window);
   let emailValid = $derived(email.length > 0);
   let resetValid = $derived(pin.length === 6 && newPassword.length >= 8);
 
@@ -35,7 +37,10 @@
     error = null;
     loading = true;
 
-    const result = await apiFetch("/api/auth/forgot-password", {
+    const result = await apiFetch<{
+      message: string;
+      recovery_file_path?: string;
+    }>("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -47,7 +52,22 @@
       return;
     }
 
+    recoveryFilePath =
+      "data" in result ? (result.data.recovery_file_path ?? null) : null;
     phase = "reset";
+
+    if (recoveryFilePath && "__TAURI_INTERNALS__" in window) {
+      try {
+        const { openPath } = await import("@tauri-apps/plugin-opener");
+        await openPath(recoveryFilePath);
+      } catch (openErr) {
+        // Non-fatal: user can still open the file manually from their Desktop
+        console.warn(
+          "[forgot-password] openPath failed, user must open file manually:",
+          openErr,
+        );
+      }
+    }
   }
 
   async function handleReset(e: Event) {
@@ -79,8 +99,12 @@
     <CardDescription>
       {#if phase === "email"}
         Enter your email to receive a recovery file with a PIN.
+      {:else if isTauri}
+        A recovery file has been saved to your Desktop. Open it to find your
+        6-digit PIN, then choose a new password.
       {:else}
-        Enter the 6-digit PIN from your recovery file and choose a new password.
+        A recovery file has been saved on the computer running Mokumo. Open it
+        there to find your 6-digit PIN, then choose a new password.
       {/if}
     </CardDescription>
   </CardHeader>

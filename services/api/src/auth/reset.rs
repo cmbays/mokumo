@@ -3,7 +3,6 @@ use std::time::{Duration, SystemTime};
 
 use axum::Json;
 use axum::extract::State;
-use axum::response::{IntoResponse, Response};
 use mokumo_core::user::traits::UserRepository;
 use mokumo_db::user::password;
 use mokumo_db::user::repo::SeaOrmUserRepo;
@@ -49,63 +48,68 @@ fn recovery_html(pin: &str) -> String {
 pub async fn forgot_password(
     State(state): State<SharedState>,
     Json(req): Json<ForgotPasswordRequest>,
-) -> Response {
+) -> Result<Json<serde_json::Value>, AppError> {
     let repo = SeaOrmUserRepo::new(state.db.clone());
 
-    let user = repo.find_by_email(&req.email).await.ok().flatten();
-
-    if let Some(_user) = user {
-        let pin: String = {
-            use rand::Rng;
-            let mut rng = rand::rng();
-            format!("{:06}", rng.random_range(0..1_000_000u32))
-        };
-
-        let pin_hash = match password::hash_password(pin.clone()).await {
-            Ok(hash) => hash,
-            Err(e) => {
-                tracing::error!("PIN hash failed: {e}");
-                return AppError::InternalError("An internal error occurred".into())
-                    .into_response();
-            }
-        };
-
-        state.reset_pins.insert(
-            req.email.clone(),
-            PendingReset {
-                pin_hash,
-                created_at: SystemTime::now(),
-            },
-        );
-
-        let dir = &state.recovery_dir;
-        if let Err(e) = std::fs::create_dir_all(dir) {
-            tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
+    match repo.find_by_email(&req.email).await {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return Err(AppError::BadRequest(
+                ErrorCode::ValidationError,
+                "No account found for that email address".into(),
+            ));
         }
-        let file_path = recovery_file_path_for_email(dir, &req.email);
-        if let Err(e) = std::fs::write(&file_path, recovery_html(&pin)) {
-            tracing::error!("Failed to write recovery file: {e}");
+        Err(e) => {
+            tracing::error!("DB error during forgot-password lookup: {e}");
+            return Err(AppError::InternalError("An internal error occurred".into()));
         }
     }
 
-    // Always return 200 to avoid leaking which emails exist
-    Json(serde_json::json!({"message": "Recovery file placed"})).into_response()
+    let pin: String = {
+        use rand::Rng;
+        let mut rng = rand::rng();
+        format!("{:06}", rng.random_range(0..1_000_000u32))
+    };
+
+    let pin_hash = password::hash_password(pin.clone()).await.map_err(|e| {
+        tracing::error!("PIN hash failed: {e}");
+        AppError::InternalError("An internal error occurred".into())
+    })?;
+
+    let dir = &state.recovery_dir;
+    if let Err(e) = tokio::fs::create_dir_all(dir).await {
+        tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
+        return Err(AppError::InternalError("An internal error occurred".into()));
+    }
+    let file_path = recovery_file_path_for_email(dir, &req.email);
+    if let Err(e) = tokio::fs::write(&file_path, recovery_html(&pin)).await {
+        tracing::error!("Failed to write recovery file {}: {e}", file_path.display());
+        return Err(AppError::InternalError("An internal error occurred".into()));
+    }
+
+    state.reset_pins.insert(
+        req.email.clone(),
+        PendingReset {
+            pin_hash,
+            created_at: SystemTime::now(),
+        },
+    );
+
+    let path_str = file_path.to_string_lossy().into_owned();
+    Ok(Json(serde_json::json!({
+        "message": "Recovery file placed",
+        "recovery_file_path": path_str
+    })))
 }
 
 pub async fn reset_password(
     State(state): State<SharedState>,
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let entry = state.reset_pins.get(&req.email);
-    let (pin_hash, created_at) = match entry {
-        Some(ref e) => (e.pin_hash.clone(), e.created_at),
-        None => {
-            return Err(AppError::BadRequest(
-                ErrorCode::ValidationError,
-                "No reset request found".into(),
-            ));
-        }
-    };
+    let entry = state.reset_pins.get(&req.email).ok_or_else(|| {
+        AppError::BadRequest(ErrorCode::ValidationError, "No reset request found".into())
+    })?;
+    let (pin_hash, created_at) = (entry.pin_hash.clone(), entry.created_at);
     drop(entry);
 
     let elapsed = SystemTime::now()
@@ -119,13 +123,12 @@ pub async fn reset_password(
         ));
     }
 
-    let valid = match password::verify_password(req.pin.clone(), pin_hash).await {
-        Ok(v) => v,
-        Err(e) => {
+    let valid = password::verify_password(req.pin.clone(), pin_hash)
+        .await
+        .map_err(|e| {
             tracing::error!("PIN verify failed: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
-    };
+            AppError::InternalError("An internal error occurred".into())
+        })?;
 
     if !valid {
         return Err(AppError::BadRequest(
@@ -137,18 +140,24 @@ pub async fn reset_password(
     let repo = SeaOrmUserRepo::new(state.db.clone());
     let user = match repo.find_by_email(&req.email).await {
         Ok(Some(u)) => u,
-        _ => {
+        Ok(None) => {
             return Err(AppError::BadRequest(
                 ErrorCode::ValidationError,
                 "No reset request found".into(),
             ));
         }
+        Err(e) => {
+            tracing::error!("DB error during reset-password lookup: {e}");
+            return Err(AppError::InternalError("An internal error occurred".into()));
+        }
     };
 
-    if let Err(e) = repo.update_password(&user.id, &req.new_password).await {
-        tracing::error!("Failed to update password: {e}");
-        return Err(AppError::InternalError("Failed to update password".into()));
-    }
+    repo.update_password(&user.id, &req.new_password)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to update password: {e}");
+            AppError::InternalError("Failed to update password".into())
+        })?;
 
     state.reset_pins.remove(&req.email);
     let file_path = recovery_file_path_for_email(&state.recovery_dir, &req.email);
