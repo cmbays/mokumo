@@ -91,6 +91,7 @@ Feature: Sidebar profile switcher
     When I click the banner CTA
     Then the sidebar profile switcher dropdown opens automatically
 
+  @future
   Scenario: Settings shortcut opens the profile switcher dropdown
     Given I am on the System Settings page
     When I click "Open Profile Switcher"

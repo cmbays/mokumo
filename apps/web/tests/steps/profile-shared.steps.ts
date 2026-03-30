@@ -13,7 +13,7 @@ type ProfileTestState = {
   productionSetupComplete: boolean;
   shopName: string | null;
   urlBeforeClick: string | null;
-  switchRequests: Array<{ profile: string }>;
+  switchRequests: Array<unknown>;
 };
 
 const testState = new WeakMap<Page, ProfileTestState>();
@@ -38,8 +38,7 @@ async function interceptSwitchRoute(
   delayMs = 0,
 ): Promise<void> {
   await page.route(PROFILE_SWITCH_ROUTE, async (route) => {
-    const body = route.request().postDataJSON() as { profile: string } | null;
-    state.switchRequests.push({ profile: body?.profile ?? responseProfile });
+    state.switchRequests.push(route.request().postDataJSON() as unknown);
     if (delayMs > 0) await new Promise<void>((r) => setTimeout(r, delayMs));
     await route.fulfill({
       status: 200,
@@ -143,7 +142,7 @@ Given("the profile dropdown is open", async ({ page }) => {
   await expect(page.getByTestId("profile-dropdown")).toBeVisible();
 });
 
-Given("the sidebar is in collapsed/icon-only mode", async ({ page }) => {
+Given(/^the sidebar is in collapsed\/icon-only mode$/, async ({ page }) => {
   await navigateToApp(page);
   const trigger = page.getByRole("button", { name: /toggle sidebar/i });
   if (await trigger.isVisible()) {
@@ -191,6 +190,16 @@ When("I click the {string} production entry", async ({ page }, _label: string) =
 });
 
 When("I click the {string} demo entry", async ({ page }, _label: string) => {
+  const s = getState(page);
+  // Record any unexpected switch POST — clicking the active demo entry should not fire one
+  await page.route(PROFILE_SWITCH_ROUTE, async (route) => {
+    s.switchRequests.push(route.request().postDataJSON() as unknown);
+    await route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "unexpected" }),
+    });
+  });
   await page.getByTestId("profile-entry-demo").click();
 });
 
@@ -207,11 +216,6 @@ When("I click a profile entry", async ({ page }) => {
 });
 
 When("the switch completes successfully", async ({ page }) => {
-  await page.waitForLoadState("networkidle");
-});
-
-When("I navigate to the Customers page", async ({ page }) => {
-  await page.goto("/customers");
   await page.waitForLoadState("networkidle");
 });
 
@@ -338,7 +342,7 @@ Then("the production entry has no checkmark", async ({ page }) => {
 Then("a profile switch request is sent for the production profile", async ({ page }) => {
   const s = getState(page);
   expect(s.switchRequests).toHaveLength(1);
-  expect(s.switchRequests[0].profile).toBe("production");
+  expect((s.switchRequests[0] as { profile?: unknown })?.profile).toBe("production");
   await page.waitForURL((url) => url.pathname === "/", { timeout: 5000 });
 });
 

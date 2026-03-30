@@ -135,7 +135,11 @@
   let switching = $state(false);
 
   let activeProfileName = $derived(
-    setupMode === "demo" ? "Mokumo Software" : (shopName ?? "Set Up My Shop"),
+    setupMode === "demo"
+      ? "Mokumo Software"
+      : productionSetupComplete
+        ? (shopName ?? "Production")
+        : "Set Up My Shop",
   );
 
   // Open the dropdown when an external trigger sets the flag (banner CTA, settings)
@@ -179,6 +183,7 @@
       toast.error("Failed to switch profile. Please try again.");
       return;
     }
+    switching = false;
     switcherOpen = false;
     await goto("/");
   }
