@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { browser } from "$app/environment";
   import { apiFetch } from "$lib/api";
   import { toast } from "$lib/components/toast";
   import Spinner from "$lib/components/spinner.svelte";
@@ -21,6 +20,8 @@
 
   let pageState = $state<PageState>({ kind: "starting" });
   let switching = $state(false);
+  /** Guard against concurrent checkStatus invocations. */
+  let checking = false;
 
   async function fetchSetupStatus(): Promise<SetupStatusResponse | null> {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -28,29 +29,52 @@
       if (result.ok && "data" in result) {
         return result.data;
       }
+      const detail = result.ok
+        ? "unexpected ok with no data"
+        : `status=${result.status} code=${result.error.code} msg="${result.error.message}"`;
+      console.warn(
+        `[welcome] setup-status attempt ${attempt + 1}/${MAX_RETRIES} failed: ${detail}`,
+      );
       if (attempt < MAX_RETRIES - 1) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
       }
     }
+    console.error(
+      "[welcome] setup-status exhausted all retries — showing error state",
+    );
     return null;
   }
 
   async function checkStatus() {
-    pageState = { kind: "starting" };
-    const status = await fetchSetupStatus();
-    if (!status) {
-      pageState = { kind: "error" };
-      return;
+    if (checking) return;
+    checking = true;
+    try {
+      pageState = { kind: "starting" };
+      const status = await fetchSetupStatus();
+      if (!status) {
+        pageState = { kind: "error" };
+        return;
+      }
+      // Another session already completed onboarding — leave the welcome screen.
+      if (!status.is_first_launch) {
+        try {
+          await goto("/");
+        } catch (err) {
+          console.error(
+            "[welcome] goto('/') failed after is_first_launch=false:",
+            err,
+          );
+          pageState = { kind: "error" };
+        }
+        return;
+      }
+      pageState = {
+        kind: "ready",
+        productionSetupComplete: status.production_setup_complete,
+      };
+    } finally {
+      checking = false;
     }
-    // If another session already completed onboarding, leave the welcome screen.
-    if (!status.is_first_launch) {
-      goto("/");
-      return;
-    }
-    pageState = {
-      kind: "ready",
-      productionSetupComplete: status.production_setup_complete,
-    };
   }
 
   async function handleSwitch(target: ProfileSwitchRequest["profile"]) {
@@ -65,31 +89,56 @@
         } satisfies ProfileSwitchRequest),
       },
     );
-    switching = false;
 
     if (!result.ok) {
+      // Only reset switching on error so buttons stay disabled until navigation completes.
+      switching = false;
       if (result.status === 429) {
         toast.error("Too many attempts — please wait a moment.");
       } else if (result.status === 503) {
         // Production not yet set up — go to setup wizard.
-        goto("/setup");
+        try {
+          await goto("/setup");
+        } catch (err) {
+          console.error("[welcome] goto('/setup') failed after 503:", err);
+        }
       } else {
-        toast.error(result.error.message || "Could not switch profile.");
+        const msg =
+          result.error.code === "network_error"
+            ? "Could not reach the server. Check your connection and try again."
+            : result.error.code === "parse_error"
+              ? "Received an unexpected response from the server."
+              : result.error.message;
+        toast.error(msg);
       }
       return;
     }
 
-    goto("/");
+    // Keep switching=true — component will unmount on successful navigation.
+    try {
+      await goto("/");
+    } catch (err) {
+      switching = false;
+      console.error(
+        "[welcome] goto('/') failed after successful profile switch:",
+        err,
+      );
+      toast.error("Navigation failed. Please refresh the page.");
+    }
   }
 
   onMount(() => {
     checkStatus();
 
-    if (browser) {
-      const handler = () => checkStatus();
-      document.addEventListener("visibilitychange", handler);
-      return () => document.removeEventListener("visibilitychange", handler);
-    }
+    // Re-check setup-status when the tab becomes visible (stale-tab guard).
+    // Do not re-check while a switch is in flight to avoid racing with handleSwitch.
+    const handler = () => {
+      if (document.visibilityState === "visible" && !switching) {
+        checkStatus();
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
   });
 </script>
 
