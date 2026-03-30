@@ -30,6 +30,7 @@
   });
 
   async function handleConfirm() {
+    if (loading || !password) return;
     loading = true;
     error = null;
     try {
