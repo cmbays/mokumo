@@ -119,13 +119,25 @@ mod tests {
     fn profile_user_id_roundtrip() {
         use crate::auth::user::ProfileUserId;
 
-        for original in [
-            ProfileUserId(SetupMode::Demo, 1),
-            ProfileUserId(SetupMode::Production, 99),
-        ] {
+        let cases = [
+            (ProfileUserId(SetupMode::Demo, 1), r#"["demo",1]"#),
+            (
+                ProfileUserId(SetupMode::Production, 99),
+                r#"["production",99]"#,
+            ),
+        ];
+
+        for (original, expected_json) in cases {
             let json = serde_json::to_string(&original).unwrap();
-            let restored: ProfileUserId = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, original, "roundtrip failed for {original:?}");
+            assert_eq!(
+                json, expected_json,
+                "serialization format changed for {original:?}"
+            );
+            let restored: ProfileUserId = serde_json::from_str(expected_json).unwrap();
+            assert_eq!(
+                restored, original,
+                "deserialization failed for {expected_json}"
+            );
         }
     }
 }

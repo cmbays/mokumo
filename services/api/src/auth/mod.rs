@@ -70,7 +70,7 @@ async fn login(
     mut auth_session: AuthSessionType,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<UserResponse>, AppError> {
-    let repo = SeaOrmUserRepo::new(state.db_for(state.active_profile).clone());
+    let repo = SeaOrmUserRepo::new(state.db_for(*state.active_profile.read().unwrap()).clone());
     let creds = Credentials {
         email: req.email.clone(),
         password: req.password,
@@ -245,6 +245,16 @@ async fn setup(
     };
 
     setup_guard.complete();
+
+    // Persist active_profile = "production" and update in-memory so subsequent
+    // requests (including the auto-login below) use the production database.
+    use mokumo_core::setup::SetupMode;
+    let profile_path = state.data_dir.join("active_profile");
+    if let Err(e) = tokio::fs::write(&profile_path, "production").await {
+        tracing::warn!("Failed to persist active_profile after setup: {e}");
+    }
+    *state.active_profile.write().unwrap() = SetupMode::Production;
+
     auto_login(&repo, &user, &mut auth_session).await;
 
     Ok((StatusCode::CREATED, Json(SetupResponse { recovery_codes })))
@@ -373,7 +383,7 @@ pub async fn require_auth_with_demo_auto_login(
     // Demo mode auto-login: create a session for the demo admin if not authenticated.
     // Uses find_by_email_with_hash to resolve user + hash in a single DB query
     // (avoids the 2-query path through auto_login → find_by_id_with_hash).
-    if state.active_profile == SetupMode::Demo && auth_session.user.is_none() {
+    if *state.active_profile.read().unwrap() == SetupMode::Demo && auth_session.user.is_none() {
         let repo = SeaOrmUserRepo::new(state.demo_db.clone());
         match repo.find_by_email_with_hash("admin@demo.local").await {
             Ok(Some((user, hash))) => {

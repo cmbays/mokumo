@@ -58,13 +58,13 @@ pub struct AppState {
     pub demo_db: DatabaseConnection,
     /// Production profile database connection.
     pub production_db: DatabaseConnection,
-    /// The active profile at server startup. Controls `Backend::authenticate`
-    /// and the unauthenticated fallback in `ProfileDbMiddleware`.
+    /// The currently active profile. Controls the unauthenticated fallback in
+    /// `ProfileDbMiddleware` and demo auto-login detection.
     ///
-    /// Note: this field is intentionally non-mutable in Session 1. The
-    /// profile-switch handler (Session 2) will introduce interior mutability
-    /// (e.g., `Arc<AtomicBool>`) when live switching is added.
-    pub active_profile: SetupMode,
+    /// Wrapped in `RwLock` so the profile-switch handler (Session 2) can update
+    /// it in-process without a restart. Reads are always `read().unwrap()`;
+    /// writes happen only in the profile-switch handler after persisting to disk.
+    pub active_profile: std::sync::RwLock<SetupMode>,
     pub ws: Arc<ws::manager::ConnectionManager>,
     pub shutdown: CancellationToken,
     pub started_at: std::time::Instant,
@@ -514,7 +514,7 @@ fn build_app_inner(
     let state: SharedState = Arc::new(AppState {
         demo_db,
         production_db,
-        active_profile,
+        active_profile: std::sync::RwLock::new(active_profile),
         ws: Arc::new(ws::manager::ConnectionManager::new(64)),
         shutdown,
         started_at: std::time::Instant::now(),
@@ -803,7 +803,7 @@ async fn setup_status(State(state): State<SharedState>) -> impl IntoResponse {
         .load(std::sync::atomic::Ordering::Relaxed);
     Json(mokumo_types::setup::SetupStatusResponse {
         setup_complete,
-        setup_mode: Some(state.active_profile),
+        setup_mode: Some(*state.active_profile.read().unwrap()),
     })
 }
 
