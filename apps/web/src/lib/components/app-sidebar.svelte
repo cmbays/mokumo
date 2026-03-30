@@ -141,13 +141,25 @@
   // Open the dropdown when an external trigger sets the flag (banner CTA, settings)
   $effect(() => {
     if (profile.openProfileSwitcher) {
+      if (sidebar.isMobile) {
+        sidebar.setOpenMobile(true);
+      }
       switcherOpen = true;
       profile.openProfileSwitcher = false;
     }
   });
 
   async function handleProfileSwitch(target: "demo" | "production") {
-    if (target === setupMode || switching) return;
+    if (switching) return;
+    if (target === setupMode) {
+      switcherOpen = false;
+      return;
+    }
+    if (target === "production" && !productionSetupComplete) {
+      switcherOpen = false;
+      await goto("/setup");
+      return;
+    }
     if (profile.dirtyForms.size > 0) {
       // Session 5b: dirty-form guard opens confirmation dialog
       profile.switchTarget = target;
@@ -205,6 +217,7 @@
         <!-- Demo profile entry -->
         <DropdownMenu.Item
           onclick={() => handleProfileSwitch("demo")}
+          closeOnSelect={false}
           disabled={switching}
           class="gap-2 py-2"
           data-testid="profile-entry-demo"
@@ -230,6 +243,7 @@
         <!-- Production profile entry -->
         <DropdownMenu.Item
           onclick={() => handleProfileSwitch("production")}
+          closeOnSelect={false}
           disabled={switching}
           class="gap-2 py-2"
           data-testid="profile-entry-production"

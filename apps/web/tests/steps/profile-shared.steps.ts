@@ -13,6 +13,7 @@ type ProfileTestState = {
   productionSetupComplete: boolean;
   shopName: string | null;
   urlBeforeClick: string | null;
+  switchRequests: Array<{ profile: string }>;
 };
 
 const testState = new WeakMap<Page, ProfileTestState>();
@@ -24,9 +25,28 @@ function getState(page: Page): ProfileTestState {
       productionSetupComplete: false,
       shopName: null,
       urlBeforeClick: null,
+      switchRequests: [],
     });
   }
   return testState.get(page)!;
+}
+
+async function interceptSwitchRoute(
+  page: Page,
+  state: ProfileTestState,
+  responseProfile: "demo" | "production",
+  delayMs = 0,
+): Promise<void> {
+  await page.route(PROFILE_SWITCH_ROUTE, async (route) => {
+    const body = route.request().postDataJSON() as { profile: string } | null;
+    state.switchRequests.push({ profile: body?.profile ?? responseProfile });
+    if (delayMs > 0) await new Promise<void>((r) => setTimeout(r, delayMs));
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ profile: responseProfile }),
+    });
+  });
 }
 
 function makeSetupStatusBody(s: ProfileTestState): string {
@@ -128,28 +148,22 @@ Given("the sidebar is in collapsed/icon-only mode", async ({ page }) => {
   const trigger = page.getByRole("button", { name: /toggle sidebar/i });
   if (await trigger.isVisible()) {
     await trigger.click();
-    await page.waitForTimeout(300);
+    await expect(page.getByTestId("profile-switcher-text")).not.toBeVisible();
   }
 });
 
 Given("I triggered a profile switch from the dropdown", async ({ page }) => {
   const s = getState(page);
   s.setupMode = "demo";
+  s.productionSetupComplete = true;
   await applySetupStatusMock(page);
-  await page.route(PROFILE_SWITCH_ROUTE, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ profile: "production" }),
-    });
-  });
+  await interceptSwitchRoute(page, s, "production");
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await page.getByTestId("profile-switcher-trigger").click();
   await expect(page.getByTestId("profile-dropdown")).toBeVisible();
   // Click production entry to trigger switch
   s.setupMode = "production";
-  s.productionSetupComplete = true;
   await applySetupStatusMock(page);
   await page.getByTestId("profile-entry-production").click();
 });
@@ -167,15 +181,8 @@ When("I click the sidebar header trigger", async ({ page }) => {
 });
 
 When("I click the {string} production entry", async ({ page }, _label: string) => {
-  // Set up switch response and update mock for post-switch load
-  await page.route(PROFILE_SWITCH_ROUTE, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ profile: "production" }),
-    }),
-  );
   const s = getState(page);
+  await interceptSwitchRoute(page, s, "production");
   s.setupMode = "production";
   s.productionSetupComplete = true;
   s.shopName = s.shopName ?? "Gary's Printing Co";
@@ -191,15 +198,11 @@ When("I click a profile entry", async ({ page }) => {
   // Click the inactive profile entry and intercept the switch to observe spinner
   const s = getState(page);
   const targetId = s.setupMode === "demo" ? "profile-entry-production" : "profile-entry-demo";
-  await page.route(PROFILE_SWITCH_ROUTE, async (route) => {
-    // Delay to let spinner appear before resolving
-    await new Promise<void>((r) => setTimeout(r, 1000));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ profile: "production" }),
-    });
-  });
+  if (targetId === "profile-entry-production") {
+    s.productionSetupComplete = true;
+    await applySetupStatusMock(page);
+  }
+  await interceptSwitchRoute(page, s, "production", 1000);
   await page.getByTestId(targetId).click();
 });
 
@@ -333,16 +336,19 @@ Then("the production entry has no checkmark", async ({ page }) => {
 });
 
 Then("a profile switch request is sent for the production profile", async ({ page }) => {
-  await page.waitForURL(/\/$/, { timeout: 5000 });
+  const s = getState(page);
+  expect(s.switchRequests).toHaveLength(1);
+  expect(s.switchRequests[0].profile).toBe("production");
+  await page.waitForURL((url) => url.pathname === "/", { timeout: 5000 });
 });
 
 Then("the app reloads to {string}", async ({ page }, path: string) => {
-  await page.waitForURL(new RegExp(`${path.replace("/", "\\/")}$`), {
-    timeout: 5000,
-  });
+  await page.waitForURL((url) => url.pathname === path, { timeout: 5000 });
 });
 
 Then("no profile switch request is sent", async ({ page }) => {
+  const s = getState(page);
+  expect(s.switchRequests).toHaveLength(0);
   await expect(page.getByTestId("profile-dropdown")).not.toBeVisible();
 });
 
