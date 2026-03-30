@@ -27,7 +27,12 @@ tasks:
     options:
       runFromWorkspaceRoot: true
   dev:
-    command: cargo run --package mokumo-api
+    # Build first, then exec the binary directly so Moon holds the actual server PID.
+    # `cargo run` forks a child and doesn't forward signals — the binary becomes an
+    # orphan when the parent is killed. `exec` replaces the shell with the server process.
+    script: |
+      cargo build --package mokumo-api
+      exec target/debug/mokumo-api
     deps:
     - web:build
     options:
