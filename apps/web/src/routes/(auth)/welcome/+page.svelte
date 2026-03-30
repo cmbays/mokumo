@@ -49,7 +49,11 @@
     if (checking) return;
     checking = true;
     try {
-      pageState = { kind: "starting" };
+      // Only show the loading spinner on initial load, not on tab-focus re-checks
+      // to avoid flicker when the user is already seeing the ready state.
+      if (pageState.kind !== "ready") {
+        pageState = { kind: "starting" };
+      }
       const status = await fetchSetupStatus();
       if (!status) {
         pageState = { kind: "error" };
