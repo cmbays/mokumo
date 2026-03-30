@@ -351,9 +351,7 @@ pub async fn init_session_and_setup(
     session_db_path: &Path,
 ) -> Result<(SqliteStore, Arc<AtomicBool>, Option<String>), Box<dyn std::error::Error + Send + Sync>>
 {
-    let is_complete = mokumo_db::is_setup_complete(production_db)
-        .await
-        .unwrap_or(false);
+    let is_complete = mokumo_db::is_setup_complete(production_db).await?;
     let setup_completed = Arc::new(AtomicBool::new(is_complete));
     let setup_token = if is_complete {
         None
@@ -782,8 +780,9 @@ async fn health(
     ),
     error::AppError,
 > {
-    // Check the active profile database
-    mokumo_db::health_check(state.db_for(state.active_profile)).await?;
+    // Check both profile databases — either being unhealthy makes the whole instance unhealthy
+    mokumo_db::health_check(state.db_for(SetupMode::Demo)).await?;
+    mokumo_db::health_check(state.db_for(SetupMode::Production)).await?;
 
     let uptime_seconds = state.started_at.elapsed().as_secs();
 

@@ -9,10 +9,9 @@
 
 use axum::extract::FromRequestParts;
 use axum::extract::{Request, State};
-use axum::http::StatusCode;
 use axum::http::request::Parts;
 use axum::middleware::Next;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum_login::AuthSession;
 use axum_login::AuthUser;
 use mokumo_db::DatabaseConnection;
@@ -20,6 +19,7 @@ use mokumo_db::DatabaseConnection;
 use crate::SharedState;
 use crate::auth::backend::Backend;
 use crate::auth::user::ProfileUserId;
+use crate::error::AppError;
 
 /// Per-request database handle injected by `ProfileDbMiddleware`.
 ///
@@ -43,13 +43,13 @@ impl<S> FromRequestParts<S> for ProfileDb
 where
     S: Send + Sync,
 {
-    type Rejection = (StatusCode, &'static str);
+    type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        parts.extensions.get::<ProfileDb>().cloned().ok_or((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "ProfileDb not found in request extensions — ensure ProfileDbMiddleware is wired",
-        ))
+        parts.extensions.get::<ProfileDb>().cloned().ok_or_else(|| {
+            AppError::InternalError("ProfileDb not found in request extensions".into())
+                .into_response()
+        })
     }
 }
 
@@ -80,6 +80,8 @@ pub async fn profile_db_middleware(
 
 #[cfg(test)]
 mod tests {
+    use axum::http::StatusCode;
+
     use super::*;
 
     // ProfileDb is a thin wrapper. Verify it clones correctly.
@@ -94,7 +96,71 @@ mod tests {
 
         let result = ProfileDb::from_request_parts(&mut parts, &()).await;
         assert!(result.is_err());
-        let (status, _) = result.unwrap_err();
-        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            result.unwrap_err().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    /// Verify that from_request_parts returns the exact ProfileDb that was inserted,
+    /// and that two distinct databases inserted for demo vs production sessions are
+    /// correctly routed — the extracted handle queries the intended database.
+    #[tokio::test]
+    async fn routing_returns_correct_db_per_profile() {
+        use axum::http::Request;
+        use mokumo_db::DatabaseConnection;
+
+        async fn user_version(db: &DatabaseConnection) -> i64 {
+            let pool = db.get_sqlite_connection_pool();
+            sqlx::query_scalar::<_, i64>("PRAGMA user_version")
+                .fetch_one(pool)
+                .await
+                .expect("user_version query failed")
+        }
+
+        async fn set_user_version(db: &DatabaseConnection, v: i64) {
+            let pool = db.get_sqlite_connection_pool();
+            sqlx::query(&format!("PRAGMA user_version = {v}"))
+                .execute(pool)
+                .await
+                .expect("set user_version failed");
+        }
+
+        let demo_db = mokumo_db::initialize_database("sqlite::memory:?mode=rwc")
+            .await
+            .unwrap();
+        let prod_db = mokumo_db::initialize_database("sqlite::memory:?mode=rwc")
+            .await
+            .unwrap();
+
+        // Brand each DB with a distinct user_version so queries can tell them apart
+        set_user_version(&demo_db, 1).await;
+        set_user_version(&prod_db, 2).await;
+
+        // Demo session
+        let mut req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        req.extensions_mut().insert(ProfileDb(demo_db));
+        let (mut parts, _) = req.into_parts();
+        let ProfileDb(extracted) = ProfileDb::from_request_parts(&mut parts, &())
+            .await
+            .unwrap();
+        assert_eq!(
+            user_version(&extracted).await,
+            1,
+            "demo session should use the demo DB"
+        );
+
+        // Production session
+        let mut req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        req.extensions_mut().insert(ProfileDb(prod_db));
+        let (mut parts, _) = req.into_parts();
+        let ProfileDb(extracted) = ProfileDb::from_request_parts(&mut parts, &())
+            .await
+            .unwrap();
+        assert_eq!(
+            user_version(&extracted).await,
+            2,
+            "production session should use the production DB"
+        );
     }
 }

@@ -12,7 +12,14 @@ pub struct ProfileUserId(pub SetupMode, pub i64);
 
 impl std::fmt::Display for ProfileUserId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.0, self.1)
+        // Use explicit literals to lock the session wire format independent of
+        // SetupMode's Display impl. A change to SetupMode::Display must not
+        // silently invalidate stored sessions.
+        let profile = match self.0 {
+            SetupMode::Demo => "demo",
+            SetupMode::Production => "production",
+        };
+        write!(f, "{}:{}", profile, self.1)
     }
 }
 
@@ -77,6 +84,17 @@ mod tests {
         let auth_user =
             AuthenticatedUser::new(test_user(), "$argon2id$hash".into(), SetupMode::Production);
         assert_eq!(auth_user.id(), ProfileUserId(SetupMode::Production, 1_i64));
+    }
+
+    /// Lock the session wire format: "demo:1" and "production:1".
+    /// Any change to this output invalidates persisted sessions for live users.
+    #[test]
+    fn profile_user_id_display_format_is_locked() {
+        assert_eq!(ProfileUserId(SetupMode::Demo, 1).to_string(), "demo:1",);
+        assert_eq!(
+            ProfileUserId(SetupMode::Production, 42).to_string(),
+            "production:42",
+        );
     }
 
     #[test]

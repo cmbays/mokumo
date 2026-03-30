@@ -116,4 +116,21 @@ mod tests {
         assert_eq!(creds.email, "a@b.com");
         assert_eq!(creds.password, "secret");
     }
+
+    /// Lock the serde format of ProfileUserId so accidental format changes break CI.
+    /// axum_login serialises this value into the session store — changing it
+    /// invalidates all active sessions for live users.
+    #[test]
+    fn profile_user_id_roundtrip() {
+        use crate::auth::user::ProfileUserId;
+
+        for original in [
+            ProfileUserId(SetupMode::Demo, 1),
+            ProfileUserId(SetupMode::Production, 99),
+        ] {
+            let json = serde_json::to_string(&original).unwrap();
+            let restored: ProfileUserId = serde_json::from_str(&json).unwrap();
+            assert_eq!(restored, original, "roundtrip failed for {original:?}");
+        }
+    }
 }
