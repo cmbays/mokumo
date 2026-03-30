@@ -1,4 +1,4 @@
-import { redirect, error } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import type { MeResponse } from "$lib/types/MeResponse";
 import type { SetupStatusResponse } from "$lib/types/SetupStatusResponse";
 import type { LayoutLoad } from "./$types";
@@ -6,7 +6,9 @@ import type { LayoutLoad } from "./$types";
 export const load: LayoutLoad = async ({ fetch }) => {
   const statusRes = await fetch("/api/setup-status");
   if (!statusRes.ok) {
-    throw error(503, "Could not reach the server. Please refresh.");
+    // Server not ready yet (Tauri startup race) or unreachable. Route to /welcome so its
+    // retry loop can recover — this avoids a hard error screen before the server is up.
+    throw redirect(307, "/welcome");
   }
 
   const status = (await statusRes.json()) as SetupStatusResponse;

@@ -148,18 +148,46 @@ pub async fn profile_switch(
             AppError::InternalError("Failed to persist profile selection".into())
         })?;
 
-    // Step 7: Update in-memory active_profile.
-    *state.active_profile.write().unwrap() = target;
+    // Step 7: Update in-memory active_profile. Capture previous value for rollback if the session
+    // operations below fail.
+    let previous_profile = {
+        let mut guard = state.active_profile.write().unwrap();
+        let prev = *guard;
+        *guard = target;
+        prev
+    };
 
     // Step 8: Logout and login.
+    //
+    // On failure, roll back the in-memory active_profile and make a best-effort attempt to
+    // restore the disk file. We log rollback errors but do not propagate them — the original
+    // failure is what the caller needs to see.
     if let Err(e) = auth_session.logout().await {
-        tracing::error!(user_id = %current_user.user.id, "Profile switch: logout failed: {e}");
+        tracing::error!(
+            user_id = %current_user.user.id,
+            target = ?target,
+            "Profile switch: logout failed — rolling back active_profile: {e}"
+        );
+        *state.active_profile.write().unwrap() = previous_profile;
+        let path = profile_path.clone();
+        tokio::spawn(async move {
+            let _ = tokio::fs::write(&path, previous_profile.as_str()).await;
+        });
         return Err(AppError::InternalError(
             "Failed to invalidate current session".into(),
         ));
     }
     if let Err(e) = auth_session.login(&new_user).await {
-        tracing::error!("Profile switch: login failed: {e}");
+        tracing::error!(
+            user_id = %current_user.user.id,
+            target = ?target,
+            "Profile switch: login failed — rolling back active_profile: {e}"
+        );
+        *state.active_profile.write().unwrap() = previous_profile;
+        let path = profile_path.clone();
+        tokio::spawn(async move {
+            let _ = tokio::fs::write(&path, previous_profile.as_str()).await;
+        });
         return Err(AppError::InternalError(
             "Failed to create new session".into(),
         ));
