@@ -6,6 +6,7 @@ pub mod discovery;
 pub mod error;
 pub mod pagination;
 pub mod profile_db;
+pub mod profile_switch;
 pub mod rate_limit;
 pub mod server_info;
 pub mod ws;
@@ -82,6 +83,11 @@ pub struct AppState {
     pub recovery_limiter: rate_limit::RateLimiter,
     /// Rate limiter for recovery code regeneration attempts (3 per hour per user).
     pub regen_limiter: rate_limit::RateLimiter,
+    /// Rate limiter for profile switch attempts (3 per 15 min per user).
+    pub switch_limiter: rate_limit::RateLimiter,
+    /// True until the first profile switch completes (set false after active_profile is written).
+    /// Initialized at startup from whether the active_profile file is absent.
+    pub is_first_launch: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -130,7 +136,11 @@ pub fn resolve_active_profile(data_dir: &Path) -> mokumo_core::setup::SetupMode 
     let profile_path = data_dir.join("active_profile");
     match std::fs::read_to_string(&profile_path) {
         Ok(contents) => contents.trim().parse().unwrap_or(SetupMode::Demo),
-        Err(_) => SetupMode::Demo,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => SetupMode::Demo,
+        Err(e) => {
+            tracing::error!(path = %profile_path.display(), "Failed to read active_profile file: {e}; defaulting to demo");
+            SetupMode::Demo
+        }
     }
 }
 
@@ -511,6 +521,11 @@ fn build_app_inner(
     let backend = Backend::new(demo_db.clone(), production_db.clone());
     let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
 
+    // Fresh install: active_profile file absent → first launch. Checked here (after
+    // prepare_database has run migrate_flat_layout) so upgrades from flat layout are
+    // not mistakenly treated as first launches.
+    let first_launch = !config.data_dir.join("active_profile").exists();
+
     let state: SharedState = Arc::new(AppState {
         demo_db,
         production_db,
@@ -531,6 +546,8 @@ fn build_app_inner(
             rate_limit::DEFAULT_WINDOW,
         ),
         regen_limiter: rate_limit::RateLimiter::new(3, std::time::Duration::from_secs(3600)),
+        switch_limiter: rate_limit::RateLimiter::new(3, rate_limit::DEFAULT_WINDOW),
+        is_first_launch: Arc::new(AtomicBool::new(first_launch)),
     });
 
     // Background task: sweep expired reset PINs every 60s
@@ -569,6 +586,7 @@ fn build_app_inner(
             post(auth::regenerate_recovery_codes),
         )
         .route("/api/demo/reset", post(demo::demo_reset))
+        .route("/api/profile/switch", post(profile_switch::profile_switch))
         .route("/ws", get(ws::ws_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -797,14 +815,30 @@ async fn health(
     ))
 }
 
-async fn setup_status(State(state): State<SharedState>) -> impl IntoResponse {
+async fn setup_status(
+    State(state): State<SharedState>,
+) -> Result<Json<mokumo_types::setup::SetupStatusResponse>, crate::error::AppError> {
     let setup_complete = state
         .setup_completed
         .load(std::sync::atomic::Ordering::Relaxed);
-    Json(mokumo_types::setup::SetupStatusResponse {
+    let is_first_launch = state
+        .is_first_launch
+        .load(std::sync::atomic::Ordering::Relaxed);
+
+    let shop_name = mokumo_db::get_shop_name(&state.production_db)
+        .await
+        .map_err(|e| {
+            tracing::error!("setup_status: failed to fetch shop_name: {e}");
+            crate::error::AppError::InternalError("Failed to read shop configuration".into())
+        })?;
+
+    Ok(Json(mokumo_types::setup::SetupStatusResponse {
         setup_complete,
         setup_mode: Some(*state.active_profile.read().unwrap()),
-    })
+        is_first_launch,
+        production_setup_complete: setup_complete,
+        shop_name,
+    }))
 }
 
 type SpaResponse = (StatusCode, [(axum::http::HeaderName, String); 2], Vec<u8>);
