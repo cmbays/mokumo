@@ -30,6 +30,7 @@
   });
 
   async function handleConfirm() {
+    if (loading || !password) return;
     loading = true;
     error = null;
     try {
@@ -49,7 +50,13 @@
       <AlertDialog.Title>{title}</AlertDialog.Title>
       <AlertDialog.Description>{description}</AlertDialog.Description>
     </AlertDialog.Header>
-    <div class="space-y-2">
+    <form
+      onsubmit={(e) => {
+        e.preventDefault();
+        if (!loading && password) handleConfirm();
+      }}
+      class="space-y-2"
+    >
       <label for="regen-password" class="text-sm font-medium">
         Current Password
       </label>
@@ -61,7 +68,7 @@
         placeholder="Enter your current password"
         disabled={loading}
       />
-    </div>
+    </form>
     {#if error}
       <div
         class="rounded-md bg-error/10 border border-error px-3 py-2 text-sm text-foreground"
