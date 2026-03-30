@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
+  import { toast } from "$lib/components/toast";
   import Download from "@lucide/svelte/icons/download";
   import Printer from "@lucide/svelte/icons/printer";
 
@@ -30,8 +31,27 @@
     URL.revokeObjectURL(url);
   }
 
-  function printCodes() {
-    window.print();
+  const isTauri =
+    typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+  async function printCodes() {
+    // In Tauri's WKWebView (macOS), window.print() is silently dropped
+    // because WKWebView requires a print delegate that Tauri doesn't configure
+    // by default. Delegate to the print_window Tauri command instead, which
+    // calls WebviewWindow::print() on the Rust side to trigger the native dialog.
+    if (isTauri) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("plugin:webview|print");
+      } catch (e) {
+        console.error("print_window invoke failed:", e);
+        toast.error(
+          "Could not open the print dialog. Try downloading your codes instead.",
+        );
+      }
+    } else {
+      window.print();
+    }
   }
 </script>
 

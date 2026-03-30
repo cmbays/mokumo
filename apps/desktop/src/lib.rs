@@ -125,6 +125,7 @@ pub fn run() {
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![])
         // Opens target="_blank" links in the system browser (webview blocks them by default)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
