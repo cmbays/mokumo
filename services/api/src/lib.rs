@@ -818,9 +818,15 @@ async fn health(
 async fn setup_status(
     State(state): State<SharedState>,
 ) -> Result<Json<mokumo_types::setup::SetupStatusResponse>, crate::error::AppError> {
-    let setup_complete = state
-        .setup_completed
-        .load(std::sync::atomic::Ordering::Relaxed);
+    let active = *state.active_profile.read().unwrap();
+    // Demo is always pre-seeded — never needs the setup wizard.
+    // Production uses the AtomicBool that is set when the wizard completes.
+    let setup_complete = match active {
+        mokumo_core::setup::SetupMode::Demo => true,
+        mokumo_core::setup::SetupMode::Production => state
+            .setup_completed
+            .load(std::sync::atomic::Ordering::Relaxed),
+    };
     let is_first_launch = state
         .is_first_launch
         .load(std::sync::atomic::Ordering::Relaxed);
