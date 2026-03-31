@@ -61,10 +61,6 @@ Then('I see an "Open Profile Switcher" button', async ({ page }) => {
   await expect(page.getByTestId("open-profile-switcher-btn")).toBeVisible();
 });
 
-Then("the sidebar profile switcher dropdown opens", async ({ page }) => {
-  await expect(page.getByTestId("profile-dropdown")).toBeVisible();
-});
-
 Then("I remain on the System Settings page", async ({ page }) => {
   expect(page.url()).toContain(SYSTEM_SETTINGS_PATH);
 });

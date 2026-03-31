@@ -1,4 +1,3 @@
-@wip
 Feature: Profile switch shortcut in Settings
 
   The System Settings page contains a shortcut button that opens the
