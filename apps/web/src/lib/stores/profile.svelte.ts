@@ -21,5 +21,5 @@ export const profile = $state({
    * Whether the unsaved changes confirmation dialog is open.
    * Set to true when a profile switch is blocked by dirty forms.
    */
-  profileSwitchPending: false,
+  unsavedChangesDialogOpen: false,
 });

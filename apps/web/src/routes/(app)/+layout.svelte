@@ -31,15 +31,15 @@
   // Cancel any navigation that fires while the unsaved-changes dialog is open.
   // This prevents the dialog state from being torn down mid-confirmation.
   beforeNavigate(({ cancel }) => {
-    if (profile.profileSwitchPending) {
+    if (profile.unsavedChangesDialogOpen) {
       cancel();
     }
   });
 
   async function handleDirtyConfirm() {
     const target = profile.switchTarget;
-    profile.profileSwitchPending = false;
-    profile.dirtyForms = new SvelteSet();
+    profile.unsavedChangesDialogOpen = false;
+    profile.dirtyForms.clear();
     profile.switchTarget = null;
     if (!target) return;
     const result = await apiFetch("/api/profile/switch", {
@@ -55,7 +55,7 @@
   }
 
   function handleDirtyCancel() {
-    profile.profileSwitchPending = false;
+    profile.unsavedChangesDialogOpen = false;
     profile.switchTarget = null;
   }
 </script>
@@ -78,7 +78,7 @@
     </main>
   </SidebarInset>
   <UnsavedChangesDialog
-    open={profile.profileSwitchPending}
+    open={profile.unsavedChangesDialogOpen}
     onconfirm={handleDirtyConfirm}
     oncancel={handleDirtyCancel}
   />

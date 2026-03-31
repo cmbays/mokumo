@@ -166,7 +166,7 @@
     }
     if (profile.dirtyForms.size > 0) {
       profile.switchTarget = target;
-      profile.profileSwitchPending = true;
+      profile.unsavedChangesDialogOpen = true;
       return;
     }
     switching = true;
