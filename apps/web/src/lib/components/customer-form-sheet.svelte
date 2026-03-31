@@ -28,6 +28,7 @@
   } from "$lib/schemas/customer";
   import type { CustomerResponse } from "$lib/types/CustomerResponse";
   import type { ErrorBody } from "$lib/types/ErrorBody";
+  import { formDirty } from "$lib/actions/form-dirty";
   import { buildUpdatePayload } from "$lib/utils/update-payload";
   import Loader2 from "@lucide/svelte/icons/loader-circle";
 
@@ -178,6 +179,7 @@
 
     <form
       class="space-y-4 py-4"
+      use:formDirty
       onsubmit={(e) => {
         e.preventDefault();
         handleSubmit();

@@ -165,8 +165,8 @@
       return;
     }
     if (profile.dirtyForms.size > 0) {
-      // Session 5b: dirty-form guard opens confirmation dialog
       profile.switchTarget = target;
+      profile.profileSwitchPending = true;
       return;
     }
     switching = true;

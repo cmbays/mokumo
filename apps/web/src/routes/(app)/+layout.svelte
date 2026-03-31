@@ -1,10 +1,16 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { SvelteSet } from "svelte/reactivity";
+  import { beforeNavigate, goto } from "$app/navigation";
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import AppTopbar from "$lib/components/app-topbar.svelte";
   import DemoBanner from "$lib/components/demo-banner.svelte";
   import RecoveryCodeWarning from "$lib/components/recovery-code-warning.svelte";
+  import UnsavedChangesDialog from "$lib/components/unsaved-changes-dialog.svelte";
   import { SidebarInset, SidebarProvider } from "$lib/components/ui/sidebar";
+  import { apiFetch } from "$lib/api";
+  import { profile } from "$lib/stores/profile.svelte";
+  import { toast } from "$lib/components/toast";
   import type { LayoutData } from "./$types";
 
   let { children, data }: { children: Snippet; data: LayoutData } = $props();
@@ -20,6 +26,37 @@
   function handleOpenChange(open: boolean) {
     sidebarOpen = open;
     localStorage.setItem(STORAGE_KEY, String(open));
+  }
+
+  // Cancel any navigation that fires while the unsaved-changes dialog is open.
+  // This prevents the dialog state from being torn down mid-confirmation.
+  beforeNavigate(({ cancel }) => {
+    if (profile.profileSwitchPending) {
+      cancel();
+    }
+  });
+
+  async function handleDirtyConfirm() {
+    const target = profile.switchTarget;
+    profile.profileSwitchPending = false;
+    profile.dirtyForms = new SvelteSet();
+    profile.switchTarget = null;
+    if (!target) return;
+    const result = await apiFetch("/api/profile/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile: target }),
+    });
+    if (!result.ok) {
+      toast.error("Failed to switch profile. Please try again.");
+      return;
+    }
+    await goto("/");
+  }
+
+  function handleDirtyCancel() {
+    profile.profileSwitchPending = false;
+    profile.switchTarget = null;
   }
 </script>
 
@@ -40,4 +77,9 @@
       {@render children()}
     </main>
   </SidebarInset>
+  <UnsavedChangesDialog
+    open={profile.profileSwitchPending}
+    onconfirm={handleDirtyConfirm}
+    oncancel={handleDirtyCancel}
+  />
 </SidebarProvider>
