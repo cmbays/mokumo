@@ -27,12 +27,12 @@ Feature: Profile switch endpoint
     And my session now authenticates as the demo admin
     And the active_profile file contains "demo"
 
-  Scenario: Switching to the currently active profile is a no-op
+  Scenario: Switching to the currently active profile still refreshes the session
     Given I am logged in as the demo admin
     When I POST to "/api/profile/switch" with body {"profile": "demo"}
     Then the response status is 200
     And the response body includes "profile" as "demo"
-    And a new session cookie is issued
+    And a new session cookie is set
 
   # --- Authentication Guard ---
 
@@ -43,7 +43,7 @@ Feature: Profile switch endpoint
 
   # --- Input Validation ---
 
-  Scenario: Malformed profile value is rejected with 422
+  Scenario: Invalid profile value is rejected with 422
     Given I am logged in as the demo admin
     When I POST to "/api/profile/switch" with body {"profile": "staging"}
     Then the response status is 422
@@ -86,7 +86,7 @@ Feature: Profile switch endpoint
 
   Scenario: Request with Tauri origin is accepted
     Given I am logged in as the demo admin
-    When I POST to "/api/profile/switch" with Origin "tauri://localhost"
+    When I POST to "/api/profile/switch" with body {"profile": "demo"} and Origin "tauri://localhost"
     Then the response status is 200
 
   # --- Target User Lookup ---
@@ -136,4 +136,4 @@ Feature: Profile switch endpoint
     And the active_profile file write will fail
     When I POST to "/api/profile/switch" with body {"profile": "production"}
     Then the response status is 500
-    And the user's session remains valid
+    And the user's original session remains valid

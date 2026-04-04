@@ -33,7 +33,7 @@ Feature: First-launch detection via setup-status
   @wip
   Scenario: Setup wizard completion clears is_first_launch
     Given the server started with is_first_launch as true
-    When the setup wizard completes successfully
+    When I POST to "/api/setup/complete" with valid shop configuration
     And a client requests GET /api/setup-status
     Then the response includes "is_first_launch" as false
 
