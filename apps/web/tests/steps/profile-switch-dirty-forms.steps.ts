@@ -138,19 +138,16 @@ Given("I had unsaved changes and navigated away", async ({ page }) => {
 });
 
 Given("I have two open forms with unsaved changes", async ({ page }) => {
-  // The customer form sheet is a single form. Simulate a second dirty form
-  // by injecting a second ID directly — this tests that multiple dirty forms
-  // still produce exactly one dialog (not multiple).
+  // NOTE: This step simulates multiple pending changes by dispatching a second
+  // input event on the same form — so the same form-dirty-* ID is reused.
+  // This tests that the guard fires exactly once regardless of how many input
+  // events the form has received, not that two independent forms are both open.
+  // True multi-form coverage requires a second mounted form element and is tracked
+  // as a follow-up test gap.
   await interceptSwitchRoute(page);
   await navigateToCustomerForm(page);
   await typeInCustomerForm(page);
-  // Inject a second form-dirty ID to simulate two dirty forms
   await page.evaluate(() => {
-    // Access the profile store via window.__svelteStores if exposed,
-    // or dispatch a synthetic input event on a second element.
-    // Since we can't easily access the Svelte module store from outside,
-    // we fire a second input event on the existing form to ensure
-    // the store has entries (it's idempotent — same form, same ID).
     const form = document.querySelector("form");
     if (form) {
       form.dispatchEvent(new Event("input", { bubbles: true }));
@@ -179,7 +176,9 @@ When("I press the Escape key", async ({ page }) => {
 });
 
 When("I click outside the dialog", async ({ page }) => {
-  // Click the overlay — the dialog portal renders an overlay behind the content
+  // Click the overlay at top-left (outside the centered dialog content).
+  // The Bits UI dialog overlay covers the full viewport, so (10, 10) reliably
+  // lands on the overlay rather than the dialog content.
   await page.mouse.click(10, 10);
 });
 
@@ -188,17 +187,31 @@ When("I type in an input field without saving", async ({ page }) => {
 });
 
 When("I save the form", async ({ page }) => {
-  // The Display Name is required for form submission validation.
-  // Fill it in and submit.
+  // Mock the customer create endpoint to return success so the sheet closes.
+  // formDirty clears dirty state only on destroy() (form unmount), so the form
+  // must actually close — not just receive a submit event — to mark itself clean.
+  // This matches production behavior: a failed API call leaves the sheet open and
+  // dirty state intact; a successful save closes the sheet and clears dirty state.
+  await page.route("**/api/customers", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ id: 999, display_name: "Test Customer" }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
   const nameInput = page.getByLabel("Display Name");
-  const currentVal = await nameInput.inputValue();
-  if (!currentVal) {
+  if (!(await nameInput.inputValue())) {
     await nameInput.fill("Test Customer");
   }
   await page.getByRole("button", { name: /Create|Save Changes/i }).click();
-  // Wait for the submit event to fire (which marks the form clean)
-  // Even if the API call fails (no real backend), the submit event fires
-  await page.waitForTimeout(200);
+  // Wait for the sheet to close — this fires formDirty destroy(), clearing dirty state.
+  await expect(page.getByRole("dialog", { name: "Add Customer" })).not.toBeVisible({
+    timeout: 3000,
+  });
 });
 
 When("I return to that form", async ({ page }) => {
@@ -216,11 +229,11 @@ When("I initiate a profile switch", async ({ page }) => {
 
 When('I click "Open Profile Switcher" on the Settings page', async ({ page }) => {
   await mockSetupStatus(page, "demo");
-  await page.goto("/settings/shop");
+  await page.goto("/settings/system");
   await page.waitForLoadState("networkidle");
-  // The demo banner CTA triggers profile.openProfileSwitcher = true,
-  // which causes the sidebar to open the switcher dropdown.
-  await page.getByTestId("demo-banner-cta").click();
+  // The "Open Profile Switcher" button on the System settings page sets
+  // profile.openProfileSwitcher = true, which causes the sidebar dropdown to open.
+  await page.getByTestId("open-profile-switcher-btn").click();
 });
 
 When("I select a different profile", async ({ page }) => {

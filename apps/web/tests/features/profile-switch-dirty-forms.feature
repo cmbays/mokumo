@@ -71,7 +71,7 @@ Feature: Unsaved changes guard on profile switch
 
   # --- Edge cases ---
 
-  Scenario: Multiple dirty forms trigger the warning once
+  Scenario: Multiple pending changes on the same form trigger the dialog only once
     Given I have two open forms with unsaved changes
     When I initiate a profile switch
     Then the unsaved changes dialog appears once
