@@ -30,6 +30,13 @@ Feature: First-launch detection via setup-status
     Then the in-memory is_first_launch AtomicBool is updated to false
     And subsequent setup-status requests return is_first_launch as false
 
+  @wip
+  Scenario: Setup wizard completion clears is_first_launch
+    Given the server started with is_first_launch as true
+    When the setup wizard completes successfully
+    And a client requests GET /api/setup-status
+    Then the response includes "is_first_launch" as false
+
   # --- production_setup_complete field ---
 
   Scenario: Setup status includes production_setup_complete as false before setup
