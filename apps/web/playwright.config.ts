@@ -24,6 +24,7 @@ const storybookTestDir = defineBddConfig({
 		'!tests/steps/customer-*.steps.ts',
 		'!tests/steps/logout.steps.ts',
 		'!tests/steps/profile-shared.steps.ts',
+		'!tests/steps/settings-profile-switch.steps.ts',
 		'tests/support/storybook.fixture.ts',
 		'tests/support/storybook.helpers.ts',
 	],
@@ -34,6 +35,7 @@ const appTestDir = defineBddConfig({
 	outputDir: '.features-gen/app',
 	features: [
 		'tests/features/settings/**/*.feature',
+		'!tests/features/settings/settings-profile-switch.feature',
 		'tests/features/customers/**/*.feature',
 		'tests/features/help-popover/**/*.feature',
 		'tests/features/logout/**/*.feature',
@@ -56,10 +58,12 @@ const profileTestDir = defineBddConfig({
 	features: [
 		'tests/features/demo-banner.feature',
 		'tests/features/profile-switcher.feature',
+		'tests/features/settings/settings-profile-switch.feature',
 	],
 	steps: [
 		'tests/steps/profile-shared.steps.ts',
 		'tests/steps/customer-shared.steps.ts',
+		'tests/steps/settings-profile-switch.steps.ts',
 		'tests/support/app.fixture.ts',
 	],
 	importTestFrom: 'tests/support/app.fixture.ts',
