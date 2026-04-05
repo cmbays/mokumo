@@ -27,11 +27,12 @@ Feature: Profile switch endpoint
     And my session now authenticates as the demo admin
     And the active_profile file contains "demo"
 
-  Scenario: Switching to the currently active profile is a no-op
+  Scenario: Switching to the currently active profile still refreshes the session
     Given I am logged in as the demo admin
     When I POST to "/api/profile/switch" with body {"profile": "demo"}
     Then the response status is 200
     And the response body includes "profile" as "demo"
+    And a new session cookie is set
 
   # --- Authentication Guard ---
 
@@ -39,6 +40,13 @@ Feature: Profile switch endpoint
     Given I am not logged in
     When I POST to "/api/profile/switch" with body {"profile": "production"}
     Then the response status is 401
+
+  # --- Input Validation ---
+
+  Scenario: Invalid profile value is rejected with 422
+    Given I am logged in as the demo admin
+    When I POST to "/api/profile/switch" with body {"profile": "staging"}
+    Then the response status is 422
 
   # --- Rate Limiting ---
 
@@ -76,6 +84,11 @@ Feature: Profile switch endpoint
     When I POST to "/api/profile/switch" with a valid Origin header
     Then the response status is 200
 
+  Scenario: Request with Tauri origin is accepted
+    Given I am logged in as the demo admin
+    When I POST to "/api/profile/switch" with body {"profile": "demo"} and Origin "tauri://localhost"
+    Then the response status is 200
+
   # --- Target User Lookup ---
 
   Scenario: Production switch looks up user by email in production database
@@ -96,6 +109,13 @@ Feature: Profile switch endpoint
     Then the response status is 503
     And the response body includes a message about no account found
 
+  Scenario: Demo switch returns 503 when admin@demo.local is absent from demo database
+    Given I am logged in as a production user
+    And the demo database has no admin@demo.local account
+    When I POST to "/api/profile/switch" with body {"profile": "demo"}
+    Then the response status is 503
+    And the response body includes a message about no account found
+
   # --- Session Integrity ---
 
   Scenario: Old session cookie is invalidated after switch
@@ -110,3 +130,10 @@ Feature: Profile switch endpoint
     When a profile switch completes successfully
     Then the active_profile file contains only "demo" or "production"
     And no partial write state is observable
+
+  Scenario: Active profile file write failure returns 500 with session intact
+    Given I am logged in as the demo admin
+    And the active_profile file write will fail
+    When I POST to "/api/profile/switch" with body {"profile": "production"}
+    Then the response status is 500
+    And the user's original session remains valid
