@@ -4,7 +4,7 @@
 #   - apps/desktop/**    — Tauri entry point, no unit test surface
 #   - **/tests/**        — Test helpers have 0% coverage by definition
 
-threshold = 8
+preset = "strict"
 
 exclude = [
   "services/api/src/**",
