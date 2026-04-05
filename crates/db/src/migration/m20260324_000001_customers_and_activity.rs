@@ -128,8 +128,8 @@ mod tests {
         .unwrap();
         assert_eq!(activity.0, 1, "activity_log table should exist after up");
 
-        // Roll back 3 migrations: users_and_roles → customers_deleted_at_index → customers_and_activity
-        crate::migration::Migrator::down(&db, Some(3))
+        // Roll back 4 migrations: set_pragmas → users_and_roles → customers_deleted_at_index → customers_and_activity
+        crate::migration::Migrator::down(&db, Some(4))
             .await
             .unwrap();
 
