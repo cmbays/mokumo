@@ -69,6 +69,27 @@ pub enum DatabaseSetupError {
     Rusqlite(#[from] rusqlite::Error),
 }
 
+impl DatabaseSetupError {
+    /// Construct a [`SchemaIncompatible`][Self::SchemaIncompatible] error.
+    ///
+    /// # Panics (debug builds only)
+    /// Panics if `unknown_migrations` is empty — an incompatibility without any
+    /// unknown migrations is a bug in the caller.
+    pub(crate) fn schema_incompatible(
+        path: std::path::PathBuf,
+        unknown_migrations: Vec<String>,
+    ) -> Self {
+        debug_assert!(
+            !unknown_migrations.is_empty(),
+            "SchemaIncompatible requires at least one unknown migration"
+        );
+        Self::SchemaIncompatible {
+            path,
+            unknown_migrations,
+        }
+    }
+}
+
 /// Convert a sqlx error into a DomainError::Internal.
 /// Shared across all repository implementations.
 pub(crate) fn db_err(e: sqlx::Error) -> DomainError {
@@ -112,10 +133,16 @@ pub async fn initialize_database(
         Err(sea_orm::DbErr::Custom(ref msg)) if msg.contains(DBERRCOMPAT_PATTERN) => {
             // SeaORM detected a downgrade: the DB has a migration the binary doesn't know.
             // Re-surface as SchemaIncompatible so callers can produce a human-readable message.
-            return Err(DatabaseSetupError::SchemaIncompatible {
-                path: std::path::PathBuf::from(database_url),
-                unknown_migrations: vec![msg.clone()],
-            });
+            // Strip "sqlite:" prefix and "?..." query suffix to recover the actual file path.
+            let path = {
+                let stripped = database_url.strip_prefix("sqlite:").unwrap_or(database_url);
+                let path_str = stripped.split('?').next().unwrap_or(stripped);
+                std::path::PathBuf::from(path_str)
+            };
+            return Err(DatabaseSetupError::schema_incompatible(
+                path,
+                vec![msg.clone()],
+            ));
         }
         Err(e) => return Err(DatabaseSetupError::Migration(e)),
     }
@@ -125,10 +152,10 @@ pub async fn initialize_database(
         use sqlx::Row;
         let pool = db.get_sqlite_connection_pool();
         match sqlx::query("PRAGMA user_version").fetch_one(pool).await {
-            Ok(row) => {
-                let uv: i64 = row.try_get(0).unwrap_or(0);
-                tracing::info!("DB schema stamp: user_version={uv}");
-            }
+            Ok(row) => match row.try_get::<i64, _>(0) {
+                Ok(uv) => tracing::info!("DB schema stamp: user_version={uv}"),
+                Err(e) => tracing::warn!("Could not decode user_version: {e}"),
+            },
             Err(e) => tracing::warn!("Could not read user_version: {e}"),
         }
     }
@@ -261,7 +288,7 @@ pub async fn pre_migration_backup(
 ///
 /// Valid states:
 /// - `0` — not yet stamped (existing installs before `m20260404_000000_set_pragmas` runs); valid.
-/// - `0x4D4B4D4F` (1296255567, "MKMO") — stamped correctly; valid.
+/// - `0x4D4B4D4F` (1296780623, "MKMO") — stamped correctly; valid.
 /// - any other non-zero — not a Mokumo database; returns `DatabaseSetupError::NotMokumoDatabase`.
 ///
 /// Uses a raw `rusqlite::Connection` (pre-pool) so pool resources are never allocated
@@ -343,10 +370,10 @@ pub fn check_schema_compatibility(db_path: &std::path::Path) -> Result<(), Datab
     if unknown.is_empty() {
         Ok(())
     } else {
-        Err(DatabaseSetupError::SchemaIncompatible {
-            path: db_path.to_path_buf(),
-            unknown_migrations: unknown,
-        })
+        Err(DatabaseSetupError::schema_incompatible(
+            db_path.to_path_buf(),
+            unknown,
+        ))
     }
 }
 

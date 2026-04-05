@@ -180,6 +180,7 @@ pub fn migrate_flat_layout(data_dir: &Path) -> Result<(), std::io::Error> {
     if flat_exists {
         std::fs::remove_file(&flat_db)?;
         tracing::info!("Removed flat database after migration");
+        // WAL and SHM files may not exist — silently ignore NotFound
         let _ = std::fs::remove_file(data_dir.join("mokumo.db-wal"));
         let _ = std::fs::remove_file(data_dir.join("mokumo.db-shm"));
     }
@@ -215,7 +216,10 @@ pub async fn prepare_database(
     migrate_flat_layout(data_dir)?;
 
     if let Err(e) = demo::copy_sidecar_if_needed(data_dir) {
-        tracing::warn!("Failed to copy demo sidecar: {e}");
+        tracing::warn!(
+            "Failed to copy demo sidecar: {e}; \
+             demo will start with empty database (no pre-seeded data)"
+        );
     }
 
     let profile = resolve_active_profile(data_dir);
@@ -229,7 +233,7 @@ pub async fn prepare_database(
 
     let active_db = setup_profile_db(&active_db_path, profile == SetupMode::Production, data_dir)
         .await
-        .map_err(|e| format!("Failed to initialize {profile} database: {e}"))?;
+        .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     tracing::info!(
         "Active database ({profile}) ready at {}",
         active_db_path.display()
@@ -241,7 +245,7 @@ pub async fn prepare_database(
         data_dir,
     )
     .await
-    .map_err(|e| format!("Failed to initialize {other_profile} database: {e}"))?;
+    .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     tracing::info!(
         "Non-active database ({other_profile}) ready at {}",
         other_db_path.display()
@@ -299,7 +303,10 @@ async fn setup_profile_db(
         // Guard 3: reject databases from newer Mokumo versions
         match mokumo_db::check_schema_compatibility(db_path) {
             Ok(()) => {}
-            Err(DatabaseSetupError::SchemaIncompatible { ref path, .. }) => {
+            Err(DatabaseSetupError::SchemaIncompatible {
+                ref path,
+                ref unknown_migrations,
+            }) => {
                 if is_production {
                     return Err(format!(
                         "The production database at {} was created by a newer version of Mokumo. \
@@ -309,13 +316,39 @@ async fn setup_profile_db(
                     ));
                 }
                 // Demo profile: silent recreate from sidecar (ephemeral data)
-                tracing::info!(
-                    "Demo database was created by a newer version of Mokumo; \
+                tracing::warn!(
+                    ?unknown_migrations,
+                    "Demo database has unknown migrations from newer Mokumo version; \
                      resetting to fresh demo data."
                 );
                 demo::force_copy_sidecar(data_dir)
                     .map_err(|e| format!("Failed to reset demo database: {e}"))?;
-                // Fresh sidecar — initialize directly (no guards needed)
+                // Re-run guards on the fresh sidecar before initializing.
+                // The bundled sidecar could theoretically be malformed or from a future version.
+                if db_path.exists() {
+                    mokumo_db::check_application_id(db_path).map_err(|e| match e {
+                        DatabaseSetupError::NotMokumoDatabase { ref path } => format!(
+                            "The bundled demo database is not a valid Mokumo database: {}. \
+                             Please reinstall Mokumo.",
+                            path.display()
+                        ),
+                        _ => format!(
+                            "application_id check failed for demo database after reset: {e}"
+                        ),
+                    })?;
+                    mokumo_db::pre_migration_backup(db_path)
+                        .await
+                        .map_err(|e| {
+                            format!(
+                                "Pre-migration backup failed for demo database after reset: {e}"
+                            )
+                        })?;
+                    if let Err(e) = mokumo_db::check_schema_compatibility(db_path) {
+                        return Err(format!(
+                            "Demo database failed compatibility check after reset: {e}"
+                        ));
+                    }
+                }
                 let url = format!("sqlite:{}?mode=rwc", db_path.display());
                 return mokumo_db::initialize_database(&url)
                     .await
@@ -351,9 +384,8 @@ fn format_db_setup_error(e: mokumo_db::DatabaseSetupError, db_path: &Path) -> St
             db_path.display()
         ),
         DatabaseSetupError::SchemaIncompatible { ref path, .. } => format!(
-            "The production database at {} was created by a newer version of Mokumo. \
-             Please upgrade Mokumo to the latest version, or restore from a backup. \
-             Do not delete the database — your production data is there.",
+            "The database at {} was created by a newer version of Mokumo. \
+             Please upgrade Mokumo to the latest version, or restore from a backup.",
             path.display()
         ),
         DatabaseSetupError::NotMokumoDatabase { ref path } => format!(
@@ -361,8 +393,19 @@ fn format_db_setup_error(e: mokumo_db::DatabaseSetupError, db_path: &Path) -> St
              Check your --data-dir setting.",
             path.display()
         ),
-        _ => format!(
-            "Failed to initialize database at {}: {e}",
+        DatabaseSetupError::Pool(_) => format!(
+            "Failed to open database connection pool at {}. \
+             Check disk space and file permissions.",
+            db_path.display()
+        ),
+        DatabaseSetupError::Query(_) => format!(
+            "A database query failed during initialization of {}. \
+             Your data was not modified.",
+            db_path.display()
+        ),
+        DatabaseSetupError::Rusqlite(_) => format!(
+            "A low-level database error occurred while checking {}. \
+             Check disk space and file permissions.",
             db_path.display()
         ),
     }

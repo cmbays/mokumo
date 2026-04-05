@@ -124,6 +124,26 @@ async fn init_server(
     })
 }
 
+/// Map a human-readable startup error string to the appropriate [`ServerStartupError`] variant.
+///
+/// [`prepare_database`] formats errors as strings before returning them, so the desktop
+/// layer must classify by inspecting the message rather than matching on error types.
+fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
+    if message.contains("newer version of Mokumo") {
+        ServerStartupError::SchemaIncompatible {
+            path,
+            unknown_migrations: vec![],
+        }
+    } else if message.contains("not a Mokumo database") {
+        ServerStartupError::NotMokumoDatabase { path }
+    } else {
+        ServerStartupError::MigrationFailed {
+            path,
+            message: message.to_owned(),
+        }
+    }
+}
+
 pub fn run() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
         if std::env::var_os("RUST_LOG").is_some() {
@@ -279,15 +299,8 @@ pub fn run() {
                         Err(e) => {
                             tracing::error!("Failed to reinitialize server after reset: {e}");
                             // Emit a typed event so the frontend can show a recovery UI.
-                            app_handle_for_server
-                                .emit(
-                                    "server-error",
-                                    ServerStartupError::MigrationFailed {
-                                        path: data_dir.display().to_string(),
-                                        message: e.to_string(),
-                                    },
-                                )
-                                .ok();
+                            let error = classify_startup_error(&e, data_dir.display().to_string());
+                            app_handle_for_server.emit("server-error", error).ok();
                             break;
                         }
                     }
