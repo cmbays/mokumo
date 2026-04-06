@@ -980,7 +980,7 @@ async fn setup_status(
 
     Ok(Json(mokumo_types::setup::SetupStatusResponse {
         setup_complete,
-        setup_mode: Some(*state.active_profile.read().unwrap()),
+        setup_mode: if setup_complete { Some(active) } else { None },
         is_first_launch,
         production_setup_complete,
         shop_name,
