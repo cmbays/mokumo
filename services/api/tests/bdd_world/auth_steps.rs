@@ -929,23 +929,14 @@ async fn admin_used_all_codes(w: &mut ApiWorld) {
         .expect("admin creation should succeed");
     w.recovery_codes = codes;
 
-    // Use all 10 codes
-    for (i, code) in w.recovery_codes.clone().iter().enumerate() {
-        let resp = w
-            .server
-            .post("/api/auth/recover")
-            .json(&serde_json::json!({
-                "email": "admin@shop.local",
-                "recovery_code": code,
-                "new_password": format!("pass{i}!")
-            }))
-            .await;
-        assert_eq!(
-            resp.status_code(),
-            200,
-            "Code #{i} should be accepted, got {}",
-            resp.status_code()
-        );
+    // Use all 10 codes directly via the repository to bypass the HTTP rate limiter.
+    // This is a Given step — we are setting up preconditions, not testing the recover endpoint.
+    for (i, code) in w.recovery_codes.iter().enumerate() {
+        let ok = repo
+            .verify_and_use_recovery_code("admin@shop.local", code, "correctpassword")
+            .await
+            .unwrap_or_else(|e| panic!("Code #{i} repo verification failed: {e}"));
+        assert!(ok, "Code #{i} should be accepted by the repository");
     }
 }
 

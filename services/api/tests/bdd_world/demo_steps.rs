@@ -452,13 +452,24 @@ async fn reset_completes(w: &mut ApiWorld) {
 
 #[then("the demo database matches the original sidecar")]
 async fn demo_db_matches_sidecar(w: &mut ApiWorld) {
-    // The test_marker we inserted before reset should be absent in the fresh sidecar
-    let pool = w.db.get_sqlite_connection_pool();
+    // After demo_reset the connection pool is closed — open a fresh read-only connection
+    // to the replaced database file rather than going through the closed pool.
+    let data_dir = find_data_dir(w);
+    let db_path = data_dir.join("demo").join("mokumo.db");
+    let fresh_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(&db_path)
+                .read_only(true),
+        )
+        .await
+        .expect("failed to reopen demo database after reset");
     let row: Option<(String,)> =
         sqlx::query_as("SELECT value FROM settings WHERE key = 'test_marker'")
-            .fetch_optional(pool)
+            .fetch_optional(&fresh_pool)
             .await
             .expect("failed to query settings");
+    fresh_pool.close().await;
     assert!(
         row.is_none(),
         "test_marker should be absent after reset — sidecar was not restored"
