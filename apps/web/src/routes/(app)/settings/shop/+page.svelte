@@ -65,6 +65,8 @@
       error = result.error.message;
     } else if ("data" in result) {
       serverInfo = result.data;
+    } else {
+      error = "Unexpected response from server. Please reload.";
     }
     loading = false;
   });

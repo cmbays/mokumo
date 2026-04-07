@@ -21,3 +21,22 @@ Feature: Settings page headers reflect actual page content
     Given the server-info API returns LAN status
     When I navigate to the Shop settings page
     Then I see the "Shop Name" card
+
+  Scenario: Shop name card shows name and mDNS slug when shop name is set
+    Given the server-info API returns LAN status
+    And the shop name is "Stitch & Screen"
+    When I navigate to the Shop settings page
+    Then I see "Stitch & Screen"
+    And I see "stitch-screen.local"
+
+  Scenario: Shop name card shows placeholder when no shop name is configured
+    Given the server-info API returns LAN status
+    And no shop name is configured
+    When I navigate to the Shop settings page
+    Then I see "No shop name set yet."
+    And I see a "Switch to My Shop" button
+
+  Scenario: Shop settings LAN card shows error when server-info API fails
+    Given the server-info API returns an error
+    When I navigate to the Shop settings page
+    Then I see "Unable to fetch server info"

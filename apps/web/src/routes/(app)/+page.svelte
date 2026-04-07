@@ -94,42 +94,36 @@
     </Card.Card>
   {/if}
 
-  {#if page.data.setup_mode === "demo"}
-    <Card.Card>
-      <Card.CardHeader>
-        <Card.CardTitle>Getting Started</Card.CardTitle>
-        <Card.CardDescription>Explore what Mokumo can do</Card.CardDescription>
-      </Card.CardHeader>
-      <Card.CardContent>
-        {#if page.data.production_setup_complete}
-          <p class="text-sm text-muted-foreground">
-            You're exploring demo data.
-          </p>
-          <Button
-            variant="outline"
-            class="mt-3"
-            onclick={() => (profile.openProfileSwitcher = true)}
-          >
-            Switch to My Shop
-          </Button>
+  <Card.Card>
+    <Card.CardHeader>
+      <Card.CardTitle>Getting Started</Card.CardTitle>
+      <Card.CardDescription>
+        {#if page.data.setup_mode === "demo"}
+          Explore what Mokumo can do
         {:else}
-          <a href="/customers" class="text-sm text-primary hover:underline">
-            Explore sample customers &rarr;
-          </a>
+          Start building your shop
         {/if}
-      </Card.CardContent>
-    </Card.Card>
-  {:else}
-    <Card.Card>
-      <Card.CardHeader>
-        <Card.CardTitle>Getting Started</Card.CardTitle>
-        <Card.CardDescription>Start building your shop</Card.CardDescription>
-      </Card.CardHeader>
-      <Card.CardContent>
+      </Card.CardDescription>
+    </Card.CardHeader>
+    <Card.CardContent>
+      {#if page.data.setup_mode === "demo" && page.data.production_setup_complete}
+        <p class="text-sm text-muted-foreground">You're exploring demo data.</p>
+        <Button
+          variant="outline"
+          class="mt-3"
+          onclick={() => (profile.openProfileSwitcher = true)}
+        >
+          Switch to My Shop
+        </Button>
+      {:else if page.data.setup_mode === "demo"}
+        <a href="/customers" class="text-sm text-primary hover:underline">
+          Explore sample customers &rarr;
+        </a>
+      {:else}
         <a href="/customers" class="text-sm text-primary hover:underline">
           Create your first customer &rarr;
         </a>
-      </Card.CardContent>
-    </Card.Card>
-  {/if}
+      {/if}
+    </Card.CardContent>
+  </Card.Card>
 </div>

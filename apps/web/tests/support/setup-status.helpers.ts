@@ -21,6 +21,7 @@ export async function mockSetupStatus(
   overrides: Partial<SetupStatusResponse> = {},
 ): Promise<void> {
   const status = buildSetupStatus(overrides);
+  await page.unroute(SETUP_STATUS_ROUTE).catch(() => {});
   await page.route(SETUP_STATUS_ROUTE, async (route) => {
     await route.fulfill({
       status: 200,

@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 import type { ServerInfoResponse } from "../../src/lib/types/ServerInfoResponse";
 import { Given, Then, When } from "../support/app.fixture";
+import { mockSetupStatus } from "../support/setup-status.helpers";
 import { buildHttpUrl, TEST_SERVER_HOST } from "../support/local-server";
 
 const SHOP_SETTINGS_PATH = "/settings/shop";
@@ -89,6 +90,28 @@ Given("the server-info API returns LAN status", async ({ lanTestState, page }) =
   await mockServerInfo(page, ACTIVE_SERVER_INFO);
 });
 
+Given("the server-info API returns an error", async ({ page }) => {
+  await page.route(SERVER_INFO_ROUTE, async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: "server_error",
+        message: "Unable to fetch server info",
+        details: null,
+      }),
+    });
+  });
+});
+
+Given("the shop name is {string}", async ({ page }, shopName: string) => {
+  await mockSetupStatus(page, { shop_name: shopName });
+});
+
+Given("no shop name is configured", async ({ page }) => {
+  await mockSetupStatus(page, { shop_name: null });
+});
+
 Given("the server-info API returns mDNS inactive", async ({ lanTestState, page }) => {
   lanTestState.serverInfo = UNAVAILABLE_SERVER_INFO;
   await mockServerInfo(page, UNAVAILABLE_SERVER_INFO);
@@ -138,6 +161,10 @@ Then("I see {string}", async ({ page }, text: string) => {
 
 Then("I do not see {string}", async ({ page }, text: string) => {
   await expect(page.getByText(text)).not.toBeVisible();
+});
+
+Then("I see a {string} button", async ({ page }, text: string) => {
+  await expect(page.getByRole("button", { name: text })).toBeVisible();
 });
 
 Then("I see an {string} status badge", async ({ page }, status: string) => {
