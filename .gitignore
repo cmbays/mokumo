@@ -92,3 +92,4 @@ tests/api/envs/*.env
 
 # Bruno collection (local exploration scratchpad — .hurl files are the committed contract)
 tests/api/bruno/
+.workflow/
