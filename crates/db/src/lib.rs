@@ -208,14 +208,14 @@ async fn collect_existing_backups(
         .ok_or("Invalid database path")?
         .to_str()
         .ok_or("Non-UTF8 database path")?;
-    let prefix = format!("{}.", file_name);
+    let backup_prefix = format!("{}.backup-v", file_name);
 
     let mut backups: Vec<std::path::PathBuf> = Vec::new();
     let mut entries = tokio::fs::read_dir(parent).await?;
     while let Some(entry) = entries.next_entry().await? {
         let entry_name = entry.file_name();
         let name = entry_name.to_str().unwrap_or("");
-        if name.starts_with(&prefix) && name.contains("backup-v") {
+        if name.starts_with(&backup_prefix) {
             backups.push(entry.path());
         }
     }
@@ -761,5 +761,100 @@ mod tests {
         assert!(tmp.path().join("backup_b").exists());
         assert!(tmp.path().join("backup_c").exists());
         assert!(tmp.path().join("backup_d").exists());
+    }
+
+    // ── collect_existing_backups over-match guard ─────────────────────────
+
+    #[tokio::test]
+    async fn collect_existing_backups_excludes_over_matched_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = tmp.path().join("mokumo.db");
+        // Matching backup
+        tokio::fs::write(tmp.path().join("mokumo.db.backup-vm20260322_a"), b"ok")
+            .await
+            .unwrap();
+        // Over-match candidates that must be excluded:
+        // Has right prefix but "backup-v" only appears mid-name
+        tokio::fs::write(
+            tmp.path().join("mokumo.db.foo.backup-vm20260322"),
+            b"no",
+        )
+        .await
+        .unwrap();
+        let backups = collect_existing_backups(&db_path).await.unwrap();
+        assert_eq!(backups.len(), 1, "only exact-prefix backup should match: {backups:?}");
+        assert!(
+            backups[0]
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .starts_with("mokumo.db.backup-v"),
+        );
+    }
+
+    // ── check_schema_compatibility ─────────────────────────────────────────
+
+    #[test]
+    fn check_schema_compatibility_returns_ok_for_nonexistent_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("no-such.db");
+        // Path does not exist — fresh install, always compatible
+        assert!(check_schema_compatibility(&path).is_ok());
+    }
+
+    #[test]
+    fn check_schema_compatibility_returns_ok_when_no_migration_table() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("bare.db");
+        {
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.execute_batch("CREATE TABLE foo (id INTEGER)").unwrap();
+        }
+        // No seaql_migrations table — treated as compatible
+        assert!(check_schema_compatibility(&path).is_ok());
+    }
+
+    #[test]
+    fn check_schema_compatibility_returns_ok_when_all_migrations_known() {
+        use sea_orm_migration::MigratorTrait;
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("known.db");
+        {
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE seaql_migrations (version TEXT NOT NULL, applied_at BIGINT NOT NULL)",
+            )
+            .unwrap();
+            // Insert all migrations that the binary knows about
+            let mut stmt = conn
+                .prepare("INSERT INTO seaql_migrations (version, applied_at) VALUES (?1, 0)")
+                .unwrap();
+            for m in migration::Migrator::migrations() {
+                stmt.execute(rusqlite::params![m.name()]).unwrap();
+            }
+        }
+        assert!(check_schema_compatibility(&path).is_ok());
+    }
+
+    #[test]
+    fn check_schema_compatibility_returns_err_for_unknown_migration() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("future.db");
+        {
+            let conn = rusqlite::Connection::open(&path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE seaql_migrations (version TEXT NOT NULL, applied_at BIGINT NOT NULL);\
+                 INSERT INTO seaql_migrations (version, applied_at) VALUES ('m99991231_999999_future', 0)",
+            )
+            .unwrap();
+        }
+        let result = check_schema_compatibility(&path);
+        assert!(result.is_err(), "unknown migration should be rejected");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("m99991231_999999_future"),
+            "error should name the unknown migration: {err}"
+        );
     }
 }
