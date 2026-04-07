@@ -214,9 +214,13 @@ async fn collect_existing_backups(
     let mut entries = tokio::fs::read_dir(parent).await?;
     while let Some(entry) = entries.next_entry().await? {
         let entry_name = entry.file_name();
-        let name = entry_name.to_str().unwrap_or("");
-        if name.starts_with(&backup_prefix) {
-            backups.push(entry.path());
+        match entry_name.to_str() {
+            Some(name) if name.starts_with(&backup_prefix) => backups.push(entry.path()),
+            None => tracing::warn!(
+                "Skipping backup candidate with non-UTF8 filename: {:?}",
+                entry.path()
+            ),
+            _ => {}
         }
     }
 
@@ -237,18 +241,24 @@ async fn collect_existing_backups(
 ///
 /// `backups` must be sorted oldest-first (as returned by `collect_existing_backups`).
 /// Deletion failures are logged as warnings and do not propagate as errors.
-async fn rotate_backups(backups: Vec<std::path::PathBuf>, keep: usize) {
+/// Returns the number of files that failed to delete.
+async fn rotate_backups(backups: Vec<std::path::PathBuf>, keep: usize) -> usize {
     let to_delete = backups.len().saturating_sub(keep);
+    let mut failed = 0usize;
     for path in backups.into_iter().take(to_delete) {
         match tokio::fs::remove_file(&path).await {
             Ok(()) => tracing::info!("Removed old backup {:?}", path),
-            Err(e) => tracing::warn!(
-                "Failed to remove old backup {:?}: {}. Manual cleanup may be needed.",
-                path,
-                e
-            ),
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to remove old backup {:?}: {}. Manual cleanup may be needed.",
+                    path,
+                    e
+                );
+                failed += 1;
+            }
         }
     }
+    failed
 }
 
 /// Create a backup of the database file before running migrations.
@@ -312,8 +322,25 @@ pub async fn pre_migration_backup(
     .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })??;
     tracing::info!("Created database backup at {:?}", backup_path);
 
-    let backups = collect_existing_backups(db_path).await?;
-    rotate_backups(backups, 3).await;
+    // Rotation is best-effort: a scan or deletion failure must not obscure
+    // the successful backup above.
+    match collect_existing_backups(db_path).await {
+        Ok(backups) => {
+            let failed = rotate_backups(backups, 3).await;
+            if failed > 0 {
+                tracing::warn!(
+                    "{failed} old backup(s) could not be removed from {:?}. Manual cleanup may be needed.",
+                    db_path.parent().unwrap_or(db_path)
+                );
+            }
+        }
+        Err(e) => tracing::warn!(
+            "Could not scan for old backups in {:?}: {}. Backup at {:?} was created successfully.",
+            db_path.parent().unwrap_or(db_path),
+            e,
+            backup_path
+        ),
+    }
 
     Ok(())
 }
