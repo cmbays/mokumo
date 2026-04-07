@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import { Given, Then, When } from "../support/app.fixture";
 import { buildHttpUrl } from "../support/local-server";
 import { buildServerInfo, mockHealth, mockServerInfo } from "../support/server-info.helpers";
+import { mockSetupStatus } from "../support/setup-status.helpers";
 
 Given(
   "the server has mDNS active with hostname {string} on port {int}",
@@ -51,12 +52,47 @@ Given("the server is healthy", async ({ page }) => {
 
 Given("I am on the dashboard", async ({ page, appUrl }) => {
   await page.goto(new URL("/", appUrl).toString());
-  await expect(page.getByRole("heading", { name: "Your Shop" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 When("I navigate to the dashboard", async ({ page, appUrl }) => {
   await page.goto(new URL("/", appUrl).toString());
-  await expect(page.getByRole("heading", { name: "Your Shop" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});
+
+Given("the app is running in demo mode with production setup incomplete", async ({ page }) => {
+  await mockSetupStatus(page, {
+    setup_mode: "demo",
+    production_setup_complete: false,
+    shop_name: null,
+  });
+});
+
+Given("the app is running in demo mode with production setup complete", async ({ page }) => {
+  await mockSetupStatus(page, {
+    setup_mode: "demo",
+    production_setup_complete: true,
+    shop_name: null,
+  });
+});
+
+Given(
+  "the app is running in production mode with shop name {string}",
+  async ({ page }, shopName: string) => {
+    await mockSetupStatus(page, {
+      setup_mode: "production",
+      production_setup_complete: true,
+      shop_name: shopName,
+    });
+  },
+);
+
+Given("the app is running in production mode with no shop name", async ({ page }) => {
+  await mockSetupStatus(page, {
+    setup_mode: "production",
+    production_setup_complete: true,
+    shop_name: null,
+  });
 });
 
 Then("I see the {string} card", async ({ page }, cardTitle: string) => {
@@ -77,4 +113,12 @@ Then("the clipboard contains {string}", async ({ page }, expected: string) => {
 
 Then("I see the server status as {string}", async ({ page }, status: string) => {
   await expect(page.getByText(status)).toBeVisible();
+});
+
+Then("I see the heading {string}", async ({ page }, text: string) => {
+  await expect(page.getByRole("heading", { name: text, level: 1 })).toBeVisible();
+});
+
+Then("I see a {string} button", async ({ page }, text: string) => {
+  await expect(page.getByRole("button", { name: text })).toBeVisible();
 });

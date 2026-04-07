@@ -123,8 +123,21 @@ When("I navigate to the Shop settings page", async ({ page, appUrl }) => {
   await expect(page.getByText("LAN Access")).toBeVisible();
 });
 
+When("I navigate to the System settings page", async ({ page, appUrl }) => {
+  await page.goto(new URL("/settings/system", appUrl).toString());
+  await page.waitForLoadState("networkidle");
+});
+
 Then("I see the {string} card", async ({ page }, cardTitle: string) => {
   await expect(page.getByText(cardTitle)).toBeVisible();
+});
+
+Then("I see {string}", async ({ page }, text: string) => {
+  await expect(page.getByText(text)).toBeVisible();
+});
+
+Then("I do not see {string}", async ({ page }, text: string) => {
+  await expect(page.getByText(text)).not.toBeVisible();
 });
 
 Then("I see an {string} status badge", async ({ page }, status: string) => {

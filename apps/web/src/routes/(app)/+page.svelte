@@ -5,6 +5,9 @@
   import type { ServerInfoResponse } from "$lib/types/ServerInfoResponse";
   import * as Card from "$lib/components/ui/card";
   import CopyableUrl from "$lib/components/copyable-url.svelte";
+  import { page } from "$app/state";
+  import { profile } from "$lib/stores/profile.svelte";
+  import { Button } from "$lib/components/ui/button";
 
   let healthy = $state<boolean | null>(null);
   let version = $state("");
@@ -35,7 +38,7 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-bold">Your Shop</h1>
+    <h1 class="text-2xl font-bold">{page.data.shop_name ?? "Your Shop"}</h1>
     <p class="text-sm text-muted-foreground">Powered by Mokumo</p>
   </div>
 
@@ -91,15 +94,42 @@
     </Card.Card>
   {/if}
 
-  <Card.Card>
-    <Card.CardHeader>
-      <Card.CardTitle>Getting Started</Card.CardTitle>
-      <Card.CardDescription>Start building your shop</Card.CardDescription>
-    </Card.CardHeader>
-    <Card.CardContent>
-      <a href="/customers" class="text-sm text-primary hover:underline">
-        Create your first customer &rarr;
-      </a>
-    </Card.CardContent>
-  </Card.Card>
+  {#if page.data.setup_mode === "demo"}
+    <Card.Card>
+      <Card.CardHeader>
+        <Card.CardTitle>Getting Started</Card.CardTitle>
+        <Card.CardDescription>Explore what Mokumo can do</Card.CardDescription>
+      </Card.CardHeader>
+      <Card.CardContent>
+        {#if page.data.production_setup_complete}
+          <p class="text-sm text-muted-foreground">
+            You're exploring demo data.
+          </p>
+          <Button
+            variant="outline"
+            class="mt-3"
+            onclick={() => (profile.openProfileSwitcher = true)}
+          >
+            Switch to My Shop
+          </Button>
+        {:else}
+          <a href="/customers" class="text-sm text-primary hover:underline">
+            Explore sample customers &rarr;
+          </a>
+        {/if}
+      </Card.CardContent>
+    </Card.Card>
+  {:else}
+    <Card.Card>
+      <Card.CardHeader>
+        <Card.CardTitle>Getting Started</Card.CardTitle>
+        <Card.CardDescription>Start building your shop</Card.CardDescription>
+      </Card.CardHeader>
+      <Card.CardContent>
+        <a href="/customers" class="text-sm text-primary hover:underline">
+          Create your first customer &rarr;
+        </a>
+      </Card.CardContent>
+    </Card.Card>
+  {/if}
 </div>

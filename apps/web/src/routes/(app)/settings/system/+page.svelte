@@ -1,12 +1,10 @@
 <script lang="ts">
   import { page } from "$app/state";
   import DemoResetDialog from "$lib/components/demo-reset-dialog.svelte";
-  import EmptyState from "$lib/components/empty-state.svelte";
   import { Button } from "$lib/components/ui/button";
   import Badge from "$lib/components/ui/badge/badge.svelte";
   import ArrowLeftRight from "@lucide/svelte/icons/arrow-left-right";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
-  import Server from "@lucide/svelte/icons/server";
   import { profile } from "$lib/stores/profile.svelte";
 
   let resetDialogOpen = $state(false);
@@ -15,11 +13,12 @@
 </script>
 
 <div class="space-y-6">
-  <EmptyState
-    icon={Server}
-    title="System Settings"
-    subtitle="Server configuration, backups, and system maintenance."
-  />
+  <div>
+    <h1 class="text-2xl font-bold">System Settings</h1>
+    <p class="text-sm text-muted-foreground">
+      Demo mode and profile switching.
+    </p>
+  </div>
 
   {#if isDemo}
     <div

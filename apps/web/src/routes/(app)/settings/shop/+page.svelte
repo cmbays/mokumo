@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { page } from "$app/state";
+  import { apiFetch } from "$lib/api";
   import type { ServerInfoResponse } from "$lib/types/ServerInfoResponse";
+  import { profile } from "$lib/stores/profile.svelte";
   import * as Card from "$lib/components/ui/card";
   import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
@@ -57,15 +60,13 @@
   });
 
   onMount(async () => {
-    try {
-      const res = await fetch("/api/server-info");
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      serverInfo = await res.json();
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load";
-    } finally {
-      loading = false;
+    const result = await apiFetch<ServerInfoResponse>("/api/server-info");
+    if (!result.ok) {
+      error = result.error.message;
+    } else if ("data" in result) {
+      serverInfo = result.data;
     }
+    loading = false;
   });
 
   async function copyUrl(url: string) {
@@ -78,9 +79,34 @@
   <div>
     <h1 class="text-2xl font-bold">Shop Settings</h1>
     <p class="text-sm text-muted-foreground">
-      Configure your shop name, address, and branding.
+      Your shop details and network access.
     </p>
   </div>
+
+  <Card.Card>
+    <Card.CardHeader>
+      <Card.CardTitle>Shop Name</Card.CardTitle>
+    </Card.CardHeader>
+    <Card.CardContent>
+      {#if page.data.shop_name}
+        {@const slug = page.data.shop_name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")}
+        <p class="text-sm font-medium">{page.data.shop_name}</p>
+        <p class="text-sm text-muted-foreground font-mono">{slug}.local</p>
+      {:else}
+        <p class="text-sm text-muted-foreground">No shop name set yet.</p>
+        <Button
+          variant="outline"
+          class="mt-3"
+          onclick={() => (profile.openProfileSwitcher = true)}
+        >
+          Switch to My Shop
+        </Button>
+      {/if}
+    </Card.CardContent>
+  </Card.Card>
 
   <Card.Card>
     <Card.CardHeader>
