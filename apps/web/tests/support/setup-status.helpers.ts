@@ -10,7 +10,7 @@ export function buildSetupStatus(
     setup_complete: true,
     setup_mode: "production",
     is_first_launch: false,
-    production_setup_complete: true,
+    production_setup_complete: false,
     shop_name: null,
     ...overrides,
   };
