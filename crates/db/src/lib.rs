@@ -187,6 +187,70 @@ pub async fn health_check(db: &DatabaseConnection) -> Result<(), DomainError> {
         .map_err(sea_err)
 }
 
+/// Build the backup file path for a database backup.
+///
+/// Returns `{db_dir}/{db_filename}.backup-v{version}`, or `None` if the path
+/// has no filename or is not valid UTF-8.
+fn build_backup_path(db_path: &std::path::Path, version: &str) -> Option<std::path::PathBuf> {
+    let file_name = db_path.file_name()?.to_str()?;
+    Some(db_path.with_file_name(format!("{file_name}.backup-v{version}")))
+}
+
+/// Collect existing backup files for a database, sorted oldest-first by version suffix.
+///
+/// Scans the parent directory for files matching `{db_filename}.backup-v*`.
+async fn collect_existing_backups(
+    db_path: &std::path::Path,
+) -> Result<Vec<std::path::PathBuf>, Box<dyn std::error::Error>> {
+    let parent = db_path.parent().ok_or("Invalid database path")?;
+    let file_name = db_path
+        .file_name()
+        .ok_or("Invalid database path")?
+        .to_str()
+        .ok_or("Non-UTF8 database path")?;
+    let prefix = format!("{}.", file_name);
+
+    let mut backups: Vec<std::path::PathBuf> = Vec::new();
+    let mut entries = tokio::fs::read_dir(parent).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let entry_name = entry.file_name();
+        let name = entry_name.to_str().unwrap_or("");
+        if name.starts_with(&prefix) && name.contains("backup-v") {
+            backups.push(entry.path());
+        }
+    }
+
+    // Sort lexicographically by version suffix — migration names are
+    // timestamp-prefixed (e.g. "m20260326_...") so lexicographic = chronological.
+    backups.sort_by_key(|p| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .and_then(|n| n.rsplit_once("backup-v").map(|(_, ver)| ver))
+            .unwrap_or("")
+            .to_string()
+    });
+
+    Ok(backups)
+}
+
+/// Delete the oldest backups, keeping only the `keep` most recent.
+///
+/// `backups` must be sorted oldest-first (as returned by `collect_existing_backups`).
+/// Deletion failures are logged as warnings and do not propagate as errors.
+async fn rotate_backups(backups: Vec<std::path::PathBuf>, keep: usize) {
+    let to_delete = backups.len().saturating_sub(keep);
+    for path in backups.into_iter().take(to_delete) {
+        match tokio::fs::remove_file(&path).await {
+            Ok(()) => tracing::info!("Removed old backup {:?}", path),
+            Err(e) => tracing::warn!(
+                "Failed to remove old backup {:?}: {}. Manual cleanup may be needed.",
+                path,
+                e
+            ),
+        }
+    }
+}
+
 /// Create a backup of the database file before running migrations.
 ///
 /// The backup is named `{db_path}.backup-v{version}` where `version` is the
@@ -231,14 +295,8 @@ pub async fn pre_migration_backup(
         // conn dropped here
     };
 
-    // Build the backup filename as {original_name}.backup-v{version}
-    let file_name = db_path
-        .file_name()
-        .ok_or("Invalid database path")?
-        .to_str()
-        .ok_or("Non-UTF8 database path")?;
-    let backup_name = format!("{}.backup-v{}", file_name, version);
-    let backup_path = db_path.with_file_name(&backup_name);
+    let backup_path =
+        build_backup_path(db_path, &version).ok_or("Invalid or non-UTF8 database path")?;
 
     // Use SQLite's backup API for WAL-safe copies
     let backup_path_clone = backup_path.clone();
@@ -254,45 +312,8 @@ pub async fn pre_migration_backup(
     .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })??;
     tracing::info!("Created database backup at {:?}", backup_path);
 
-    // Rotate: keep only the last 3 backups
-    let parent = db_path.parent().ok_or("Invalid database path")?;
-    let prefix = format!("{}.", file_name);
-
-    let mut backups: Vec<std::path::PathBuf> = Vec::new();
-    let mut entries = tokio::fs::read_dir(parent).await?;
-    while let Some(entry) = entries.next_entry().await? {
-        let entry_name = entry.file_name();
-        let name = entry_name.to_str().unwrap_or("");
-        if name.starts_with(&prefix) && name.contains("backup-v") {
-            backups.push(entry.path());
-        }
-    }
-
-    // Sort lexicographically by version suffix — migration names are
-    // timestamp-prefixed (e.g. "m20260326_...") so lexicographic = chronological.
-    backups.sort_by(|a, b| {
-        let version = |p: &std::path::PathBuf| {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .and_then(|n| n.rsplit("backup-v").next())
-                .unwrap_or("")
-                .to_string()
-        };
-        version(a).cmp(&version(b))
-    });
-    if backups.len() > 3 {
-        let to_delete = backups.len() - 3;
-        for path in backups.into_iter().take(to_delete) {
-            match tokio::fs::remove_file(&path).await {
-                Ok(()) => tracing::info!("Removed old backup {:?}", path),
-                Err(e) => tracing::warn!(
-                    "Failed to remove old backup {:?}: {}. Manual cleanup may be needed.",
-                    path,
-                    e
-                ),
-            }
-        }
-    }
+    let backups = collect_existing_backups(db_path).await?;
+    rotate_backups(backups, 3).await;
 
     Ok(())
 }
