@@ -90,7 +90,7 @@ tauri-plugin-dialog = "2"
 
 # Testing
 serial_test = "3"
-axum-test = { version = "17", features = ["ws"] }
+axum-test = { version = "20", features = ["ws"] }
 
 # Async utilities
 futures-util = "0.3"
