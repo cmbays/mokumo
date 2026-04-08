@@ -7,10 +7,9 @@
   import * as Card from "$lib/components/ui/card";
   import { Badge, type BadgeVariant } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
-  import { toast } from "$lib/components/toast";
+  import CopyableUrl from "$lib/components/copyable-url.svelte";
   import Wifi from "@lucide/svelte/icons/wifi";
   import WifiOff from "@lucide/svelte/icons/wifi-off";
-  import Copy from "@lucide/svelte/icons/copy";
 
   let serverInfo = $state<ServerInfoResponse | null>(null);
   let loading = $state(true);
@@ -70,11 +69,6 @@
     }
     loading = false;
   });
-
-  async function copyUrl(url: string) {
-    await navigator.clipboard.writeText(url);
-    toast.success("URL copied to clipboard");
-  }
 </script>
 
 <div class="space-y-6">
@@ -152,40 +146,22 @@
         {#if serverInfo.lan_url}
           <div class="space-y-1">
             <p class="text-sm font-medium">LAN URL</p>
-            <div class="flex items-center gap-2">
-              <code class="rounded bg-muted px-2 py-1 text-sm font-mono">
-                {serverInfo.lan_url}
-              </code>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Copy LAN URL to clipboard"
-                data-testid="copy-lan-url"
-                onclick={() => copyUrl(serverInfo!.lan_url!)}
-              >
-                <Copy class="size-4" />
-              </Button>
-            </div>
+            <CopyableUrl
+              url={serverInfo.lan_url}
+              label="Copy LAN URL to clipboard"
+              testId="copy-lan-url"
+            />
           </div>
         {/if}
 
         {#if serverInfo.ip_url}
           <div class="space-y-1">
             <p class="text-sm font-medium">IP Address</p>
-            <div class="flex items-center gap-2">
-              <code class="rounded bg-muted px-2 py-1 text-sm font-mono">
-                {serverInfo.ip_url}
-              </code>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Copy IP address URL to clipboard"
-                data-testid="copy-ip-url"
-                onclick={() => copyUrl(serverInfo!.ip_url!)}
-              >
-                <Copy class="size-4" />
-              </Button>
-            </div>
+            <CopyableUrl
+              url={serverInfo.ip_url}
+              label="Copy IP address URL to clipboard"
+              testId="copy-ip-url"
+            />
           </div>
 
           <p class="text-sm text-muted-foreground">

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Settings Shop page** LAN URL and IP address display now use the shared `CopyableUrl` component, removing duplicated inline copy logic. (#162)
 - **Dashboard heading** now shows the configured shop name (falls back to "Your Shop" if none set). (#331)
 - **Dashboard Getting Started card** now differentiates demo vs. production mode: demo users see a contextual CTA to explore sample data or switch to their production shop. (#331)
 - **Shop Settings** subtitle updated to "Your shop details and network access." and now includes a read-only Shop Name card showing the mDNS slug. (#331)
