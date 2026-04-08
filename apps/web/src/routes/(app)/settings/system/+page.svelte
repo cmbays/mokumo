@@ -20,7 +20,7 @@
     </p>
   </div>
 
-  {#if !isDemo}
+  {#if page.data.setup_mode === "production"}
     <div
       class="mx-auto max-w-md space-y-4 rounded-lg border p-6"
       data-testid="production-mode-section"
