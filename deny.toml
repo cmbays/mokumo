@@ -13,19 +13,15 @@ exclude = ["mokumo-desktop"]
 # Advisories — deny crates with known vulnerabilities
 # ──────────────────────────────────────────────────────────────────────
 [advisories]
-# Fail on any crate with a known advisory in the RustSec database.
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
+# Check workspace crates for unmaintained advisories (vulnerabilities are
+# always denied by default in cargo-deny 0.16+).
+unmaintained = "workspace"
+ignore = []
 
 # ──────────────────────────────────────────────────────────────────────
 # Licenses — BSL-1.1 project; only permissive deps allowed
 # ──────────────────────────────────────────────────────────────────────
 [licenses]
-unlicensed = "deny"
-default = "deny"
-
 allow = [
     "MIT",
     "Apache-2.0",
@@ -40,6 +36,15 @@ allow = [
     "BSL-1.0",          # Boost — permissive, not Business Source License
     "OpenSSL",
     "MPL-2.0",          # Weak copyleft — compatible with BSL-1.1 binary distribution
+]
+
+# Our workspace crates are BUSL-1.1 — allow them explicitly without
+# adding BUSL-1.1 to the global allow list.
+exceptions = [
+    { allow = ["BUSL-1.1"], crate = "mokumo-api" },
+    { allow = ["BUSL-1.1"], crate = "mokumo-core" },
+    { allow = ["BUSL-1.1"], crate = "mokumo-db" },
+    { allow = ["BUSL-1.1"], crate = "mokumo-types" },
 ]
 
 [[licenses.clarify]]
