@@ -151,20 +151,8 @@ When("I navigate to the System settings page", async ({ page, appUrl }) => {
   await page.waitForLoadState("networkidle");
 });
 
-Then("I see the {string} card", async ({ page }, cardTitle: string) => {
-  await expect(page.getByText(cardTitle)).toBeVisible();
-});
-
-Then("I see {string}", async ({ page }, text: string) => {
-  await expect(page.getByText(text)).toBeVisible();
-});
-
 Then("I do not see {string}", async ({ page }, text: string) => {
   await expect(page.getByText(text)).not.toBeVisible();
-});
-
-Then("I see a {string} button", async ({ page }, text: string) => {
-  await expect(page.getByRole("button", { name: text })).toBeVisible();
 });
 
 Then("I see an {string} status badge", async ({ page }, status: string) => {

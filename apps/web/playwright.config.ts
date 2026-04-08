@@ -17,6 +17,7 @@ const storybookTestDir = defineBddConfig({
 	],
 	steps: [
 		'tests/steps/*.ts',
+		'!tests/steps/shared-steps.ts',
 		'!tests/steps/settings-lan.steps.ts',
 		'!tests/steps/shared-lan.steps.ts',
 		'!tests/steps/dashboard.steps.ts',
@@ -43,6 +44,7 @@ const appTestDir = defineBddConfig({
 		'tests/features/logout/**/*.feature',
 	],
 	steps: [
+		'tests/steps/shared-steps.ts',
 		'tests/steps/settings-lan.steps.ts',
 		'tests/steps/shared-lan.steps.ts',
 		'tests/steps/customer-*.steps.ts',
@@ -82,6 +84,7 @@ const onboardingTestDir = defineBddConfig({
 		'tests/features/setup-wizard.feature',
 	],
 	steps: [
+		'tests/steps/shared-steps.ts',
 		'tests/steps/dashboard.steps.ts',
 		'tests/steps/setup-wizard.steps.ts',
 		'tests/steps/shared-lan.steps.ts',
