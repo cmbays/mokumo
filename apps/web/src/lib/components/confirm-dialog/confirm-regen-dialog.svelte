@@ -18,6 +18,8 @@
     onConfirm,
   }: Props = $props();
 
+  const formId = `regen-form-${Math.random().toString(36).slice(2, 8)}`;
+
   let password = $state("");
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -51,9 +53,10 @@
       <AlertDialog.Description>{description}</AlertDialog.Description>
     </AlertDialog.Header>
     <form
+      id={formId}
       onsubmit={(e) => {
         e.preventDefault();
-        if (!loading && password) handleConfirm();
+        handleConfirm();
       }}
       class="space-y-2"
     >
@@ -80,9 +83,10 @@
       <AlertDialog.Cancel disabled={loading}>Cancel</AlertDialog.Cancel>
       <button
         data-slot="alert-dialog-action"
+        form={formId}
+        type="submit"
         class={cn(buttonVariants({ variant: "destructive" }), "gap-2")}
         disabled={loading || !password}
-        onclick={handleConfirm}
       >
         {#if loading}
           <Loader2 class="h-4 w-4 animate-spin" />
