@@ -2,7 +2,7 @@
 
 import { render, screen, waitFor } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, type Mock } from "vitest";
 import ConfirmRegenDialog from "./confirm-dialog/confirm-regen-dialog.svelte";
 
 const DEFAULT_PROPS = {
@@ -12,10 +12,10 @@ const DEFAULT_PROPS = {
 };
 
 describe("ConfirmRegenDialog", () => {
-  let onConfirm: ReturnType<typeof vi.fn>;
+  let onConfirm: Mock<(password: string) => Promise<void>>;
 
   beforeEach(() => {
-    onConfirm = vi.fn().mockResolvedValue(undefined);
+    onConfirm = vi.fn<(password: string) => Promise<void>>().mockResolvedValue(undefined);
   });
 
   it("pressing Enter in the password field submits the form", async () => {
