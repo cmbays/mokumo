@@ -994,9 +994,7 @@ async fn setup_status(
     }))
 }
 
-type SpaResponse = (StatusCode, [(axum::http::HeaderName, String); 2], Vec<u8>);
-
-fn spa_response(status: StatusCode, content_type: &str, cache: &str, body: Vec<u8>) -> SpaResponse {
+fn spa_response(status: StatusCode, content_type: &str, cache: &str, body: Vec<u8>) -> Response {
     (
         status,
         [
@@ -1005,6 +1003,7 @@ fn spa_response(status: StatusCode, content_type: &str, cache: &str, body: Vec<u
         ],
         body,
     )
+        .into_response()
 }
 
 async fn serve_spa(uri: axum::http::Uri) -> Response {
@@ -1017,12 +1016,12 @@ async fn serve_spa(uri: axum::http::Uri) -> Response {
             message: "No API route matches this path".into(),
             details: None,
         };
-        let mut response = (StatusCode::NOT_FOUND, Json(body)).into_response();
-        response.headers_mut().insert(
-            axum::http::header::CACHE_CONTROL,
-            "no-store".parse().unwrap(),
-        );
-        return response;
+        return (
+            StatusCode::NOT_FOUND,
+            [(axum::http::header::CACHE_CONTROL, "no-store")],
+            Json(body),
+        )
+            .into_response();
     }
 
     if let Some(file) = SpaAssets::get(path) {
@@ -1037,7 +1036,6 @@ async fn serve_spa(uri: axum::http::Uri) -> Response {
             cache,
             file.data.to_vec(),
         )
-        .into_response()
     } else if let Some(index) = SpaAssets::get("index.html") {
         spa_response(
             StatusCode::OK,
@@ -1045,7 +1043,6 @@ async fn serve_spa(uri: axum::http::Uri) -> Response {
             "no-cache",
             index.data.to_vec(),
         )
-        .into_response()
     } else {
         tracing::warn!("SPA assets not found — run: moon run web:build");
         spa_response(
@@ -1054,7 +1051,6 @@ async fn serve_spa(uri: axum::http::Uri) -> Response {
             "no-store",
             b"SPA not built. Run: moon run web:build".to_vec(),
         )
-        .into_response()
     }
 }
 
@@ -1066,8 +1062,13 @@ mod tests {
     #[tokio::test]
     async fn serve_spa_api_path_returns_not_found_code() {
         let uri: axum::http::Uri = "/api/nonexistent".parse().unwrap();
-        let response = serve_spa(uri).await.into_response();
+        let response = serve_spa(uri).await;
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let cc = response
+            .headers()
+            .get(axum::http::header::CACHE_CONTROL)
+            .unwrap();
+        assert_eq!(cc.to_str().unwrap(), "no-store");
         let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap();
