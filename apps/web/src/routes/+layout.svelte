@@ -37,10 +37,18 @@
 
   function formatStartupError(err: ServerStartupError): string {
     switch (err.code) {
-      case "migration_failed":
-        return `Migration failed (${err.path}): ${err.message}`;
-      case "schema_incompatible":
-        return `Database is newer than this version of Mokumo (${err.path}). Upgrade Mokumo or restore from backup.`;
+      case "migration_failed": {
+        const backupNote = err.backup_path
+          ? ` Your data is backed up at: ${err.backup_path}`
+          : "";
+        return `Migration failed (${err.path}): ${err.message}${backupNote}`;
+      }
+      case "schema_incompatible": {
+        const backupNote = err.backup_path
+          ? ` Backup at: ${err.backup_path}`
+          : "";
+        return `Database is newer than this version of Mokumo (${err.path}). Upgrade Mokumo or restore from backup.${backupNote}`;
+      }
       case "not_mokumo_database":
         return `File at ${err.path} is not a Mokumo database. Check your data directory.`;
       default: {

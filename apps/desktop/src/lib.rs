@@ -139,6 +139,9 @@ fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
         ServerStartupError::SchemaIncompatible {
             path,
             unknown_migrations: vec![],
+            // backup_path threading is a follow-up (#351): requires ProfileDbError
+            // to propagate through init_server instead of being stringified.
+            backup_path: None,
         }
     } else if message.contains("not a Mokumo database")
         || message.contains("not a valid Mokumo database")
@@ -151,6 +154,9 @@ fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
         ServerStartupError::MigrationFailed {
             path,
             message: message.to_owned(),
+            // backup_path threading is a follow-up (#351): requires ProfileDbError
+            // to propagate through init_server instead of being stringified.
+            backup_path: None,
         }
     }
 }
@@ -228,9 +234,13 @@ pub fn run() {
                 tracing::error!("Server initialization failed: {e}");
                 // Show a native OS error dialog before Tauri propagates the error and
                 // exits. This fires before the webview opens, so blocking_show() is safe.
+                let dialog_msg = match &e.backup_path {
+                    Some(p) => format!("{}. Your data is backed up at: {}", e.message, p.display()),
+                    None => e.message.clone(),
+                };
                 dialog_handle
                     .dialog()
-                    .message(format!("{e}"))
+                    .message(dialog_msg)
                     .title("Mokumo — Startup Error")
                     .kind(MessageDialogKind::Error)
                     .blocking_show();

@@ -29,6 +29,7 @@ futures-util = { workspace = true }
 mdns-sd = { workspace = true }
 local-ip-address = { workspace = true }
 time = { workspace = true }
+chrono = { workspace = true }
 rand = { workspace = true }
 dirs = { workspace = true }
 rusqlite = { workspace = true }

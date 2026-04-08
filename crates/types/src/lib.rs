@@ -16,19 +16,55 @@ pub use mokumo_core::setup::SetupMode;
 /// fails to start in the restart loop (after the initial setup phase).
 ///
 /// The `code` tag allows the frontend to branch on the specific failure kind.
+/// `backup_path` (when `Some`) points to the pre-migration backup that was taken
+/// before the failure — the shop owner can use it to restore their data.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(tag = "code", rename_all = "snake_case")]
 pub enum ServerStartupError {
     /// A database migration could not be applied.
-    MigrationFailed { path: String, message: String },
+    MigrationFailed {
+        path: String,
+        message: String,
+        backup_path: Option<String>,
+    },
     /// The database was created by a newer version of Mokumo.
     SchemaIncompatible {
         path: String,
         unknown_migrations: Vec<String>,
+        backup_path: Option<String>,
     },
     /// The database file is not a Mokumo database (wrong application_id).
+    /// Guard 1 fires before Guard 2, so no backup exists at this point.
     NotMokumoDatabase { path: String },
+}
+
+/// A single pre-migration backup entry for a database profile.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct BackupEntry {
+    /// Absolute path to the backup file on disk.
+    pub path: String,
+    /// Migration version string the backup was taken at (e.g. `"m20260404_000000_set_pragmas"`).
+    pub version: String,
+    /// RFC 3339 timestamp from the backup file's mtime (best-effort).
+    pub backed_up_at: String,
+}
+
+/// All backup entries for a single database profile (production or demo).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ProfileBackups {
+    /// Newest backup first.
+    pub backups: Vec<BackupEntry>,
+}
+
+/// Response from `GET /api/backup-status`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct BackupStatusResponse {
+    pub production: ProfileBackups,
+    pub demo: ProfileBackups,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -63,6 +99,10 @@ mod tests {
         HealthResponse::export_all().expect("Failed to export TypeScript bindings");
         ServerInfoResponse::export_all()
             .expect("Failed to export ServerInfoResponse TypeScript bindings");
+        BackupEntry::export_all().expect("Failed to export BackupEntry TypeScript bindings");
+        ProfileBackups::export_all().expect("Failed to export ProfileBackups TypeScript bindings");
+        BackupStatusResponse::export_all()
+            .expect("Failed to export BackupStatusResponse TypeScript bindings");
         setup::SetupStatusResponse::export_all()
             .expect("Failed to export SetupStatusResponse TypeScript bindings");
         setup::DemoResetResponse::export_all()
