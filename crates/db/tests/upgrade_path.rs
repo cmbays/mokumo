@@ -196,7 +196,9 @@ async fn upgrade_path_preserves_data() {
     // len()-1 keeps the test correct as new migrations are added.
     let total_migrations = Migrator::migrations().len();
     let db = sea_orm::Database::connect(&url).await.unwrap();
-    Migrator::up(&db, Some(total_migrations - 1)).await.unwrap();
+    Migrator::up(&db, Some((total_migrations - 1) as u32))
+        .await
+        .unwrap();
     drop(db);
 
     // Step 2: Seed shop data via rusqlite.
