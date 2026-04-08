@@ -105,7 +105,7 @@ regex = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 dashmap = "6"
 rpassword = "7"
-cucumber = "0.21"
+cucumber = "0.22"
 proptest = "1"
 insta = { version = "1", features = ["json", "redactions"] }
 
