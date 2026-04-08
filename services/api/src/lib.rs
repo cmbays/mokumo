@@ -124,7 +124,6 @@ struct SpaAssets;
 ///
 /// Returns an error with the path included in the message on failure.
 pub fn ensure_data_dirs(data_dir: &Path) -> Result<(), std::io::Error> {
-    use mokumo_core::setup::SetupMode;
     for dir in [
         data_dir.to_path_buf(),
         data_dir.join(SetupMode::Demo.as_dir_name()),
@@ -170,7 +169,6 @@ pub fn resolve_active_profile(data_dir: &Path) -> mokumo_core::setup::SetupMode 
 ///    (existing users who had a flat layout are production users)
 /// 3. If BOTH `production/mokumo.db` AND flat `mokumo.db` exist: remove flat
 pub fn migrate_flat_layout(data_dir: &Path) -> Result<(), std::io::Error> {
-    use mokumo_core::setup::SetupMode;
     let flat_db = data_dir.join("mokumo.db");
     let production_db = data_dir
         .join(SetupMode::Production.as_dir_name())
