@@ -199,9 +199,10 @@ fn build_backup_path(db_path: &std::path::Path, version: &str) -> Option<std::pa
 /// Collect existing backup files for a database, sorted oldest-first by version suffix.
 ///
 /// Scans the parent directory for files matching `{db_filename}.backup-v*`.
-async fn collect_existing_backups(
+/// Returns `(path, mtime)` pairs; mtime falls back to `UNIX_EPOCH` on metadata errors.
+pub async fn collect_existing_backups(
     db_path: &std::path::Path,
-) -> Result<Vec<std::path::PathBuf>, Box<dyn std::error::Error>> {
+) -> Result<Vec<(std::path::PathBuf, std::time::SystemTime)>, Box<dyn std::error::Error>> {
     let parent = db_path.parent().ok_or("Invalid database path")?;
     let file_name = db_path
         .file_name()
@@ -210,12 +211,19 @@ async fn collect_existing_backups(
         .ok_or("Non-UTF8 database path")?;
     let backup_prefix = format!("{}.backup-v", file_name);
 
-    let mut backups: Vec<std::path::PathBuf> = Vec::new();
+    let mut backups: Vec<(std::path::PathBuf, std::time::SystemTime)> = Vec::new();
     let mut entries = tokio::fs::read_dir(parent).await?;
     while let Some(entry) = entries.next_entry().await? {
         let entry_name = entry.file_name();
         match entry_name.to_str() {
-            Some(name) if name.starts_with(&backup_prefix) => backups.push(entry.path()),
+            Some(name) if name.starts_with(&backup_prefix) => {
+                let mtime = entry
+                    .metadata()
+                    .await
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                backups.push((entry.path(), mtime));
+            }
             None => tracing::warn!(
                 "Skipping backup candidate with non-UTF8 filename: {:?}",
                 entry.path()
@@ -226,7 +234,7 @@ async fn collect_existing_backups(
 
     // Sort lexicographically by version suffix — migration names are
     // timestamp-prefixed (e.g. "m20260326_...") so lexicographic = chronological.
-    backups.sort_by_key(|p| {
+    backups.sort_by_key(|(p, _)| {
         p.file_name()
             .and_then(|n| n.to_str())
             .and_then(|n| n.rsplit_once("backup-v").map(|(_, ver)| ver))
@@ -275,12 +283,12 @@ async fn rotate_backups(backups: Vec<std::path::PathBuf>, keep: usize) -> usize 
 /// Call this BEFORE opening any SQLx pool to the same database.
 pub async fn pre_migration_backup(
     db_path: &std::path::Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<Option<std::path::PathBuf>, Box<dyn std::error::Error>> {
     match tokio::fs::metadata(db_path).await {
         Ok(_) => {}
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             tracing::info!("No existing database at {:?}, skipping backup", db_path);
-            return Ok(());
+            return Ok(None);
         }
         Err(e) => return Err(e.into()),
     }
@@ -296,7 +304,7 @@ pub async fn pre_migration_backup(
         )?;
         if !table_exists {
             tracing::info!("No seaql_migrations table found, skipping backup");
-            return Ok(());
+            return Ok(None);
         }
         let v: String = conn.query_row("SELECT MAX(version) FROM seaql_migrations", [], |row| {
             row.get(0)
@@ -326,7 +334,8 @@ pub async fn pre_migration_backup(
     // the successful backup above.
     match collect_existing_backups(db_path).await {
         Ok(backups) => {
-            let failed = rotate_backups(backups, 3).await;
+            let paths: Vec<std::path::PathBuf> = backups.into_iter().map(|(p, _)| p).collect();
+            let failed = rotate_backups(paths, 3).await;
             if failed > 0 {
                 tracing::warn!(
                     "{failed} old backup(s) could not be removed from {:?}. Manual cleanup may be needed.",
@@ -342,7 +351,7 @@ pub async fn pre_migration_backup(
         ),
     }
 
-    Ok(())
+    Ok(Some(backup_path))
 }
 
 /// Check whether the database file belongs to Mokumo by reading PRAGMA application_id.
@@ -742,7 +751,7 @@ mod tests {
         assert_eq!(backups.len(), 3);
         let names: Vec<String> = backups
             .iter()
-            .map(|p: &std::path::PathBuf| p.file_name().unwrap().to_str().unwrap().to_string())
+            .map(|(p, _)| p.file_name().unwrap().to_str().unwrap().to_string())
             .collect();
         assert!(names[0].contains("20260322_a"), "oldest first: {names:?}");
         assert!(names[1].contains("20260324_m"), "middle: {names:?}");
@@ -813,6 +822,7 @@ mod tests {
         );
         assert!(
             backups[0]
+                .0
                 .file_name()
                 .unwrap()
                 .to_str()

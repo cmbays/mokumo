@@ -118,7 +118,7 @@ async fn roundtrip_backup_restores_intact() {
     seed_data(&db_path);
 
     // Step 3: Create backup.
-    pre_migration_backup(&db_path)
+    let _backup_path = pre_migration_backup(&db_path)
         .await
         .expect("pre_migration_backup should succeed on a fully-migrated database");
 
@@ -203,7 +203,7 @@ async fn upgrade_path_preserves_data() {
     seed_data(&db_path);
 
     // Step 3: Create pre-upgrade backup.
-    pre_migration_backup(&db_path)
+    let _backup_path = pre_migration_backup(&db_path)
         .await
         .expect("pre_migration_backup should succeed on a database with seaql_migrations table");
 

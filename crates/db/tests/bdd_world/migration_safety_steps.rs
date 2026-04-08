@@ -130,7 +130,7 @@ async fn when_schema_upgrade_to_version(w: &mut DbWorld, version: u32) {
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
 
     // Guard 2: backup before migration
-    mokumo_db::pre_migration_backup(&db_path)
+    let _backup = mokumo_db::pre_migration_backup(&db_path)
         .await
         .expect("pre_migration_backup should succeed");
 
@@ -159,10 +159,14 @@ async fn when_schema_upgrade_to_version(w: &mut DbWorld, version: u32) {
 #[when("the database is initialized for the first time")]
 async fn when_initialized_for_first_time(w: &mut DbWorld) {
     let db_path = w.ms_db_path.as_ref().unwrap().clone();
-    // pre_migration_backup should return Ok(()) silently when no file exists
-    mokumo_db::pre_migration_backup(&db_path)
+    // pre_migration_backup returns Ok(None) silently when no file exists
+    let result = mokumo_db::pre_migration_backup(&db_path)
         .await
         .expect("pre_migration_backup should succeed (skip) when DB does not exist");
+    assert!(
+        result.is_none(),
+        "Expected Ok(None) when database does not exist"
+    );
 }
 
 // ── Scenario 4: When — bad migration ──────────────────────────────────────────────────────────
