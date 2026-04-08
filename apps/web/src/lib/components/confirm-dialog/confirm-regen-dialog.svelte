@@ -51,9 +51,10 @@
       <AlertDialog.Description>{description}</AlertDialog.Description>
     </AlertDialog.Header>
     <form
+      id="regen-form"
       onsubmit={(e) => {
         e.preventDefault();
-        if (!loading && password) handleConfirm();
+        handleConfirm();
       }}
       class="space-y-2"
     >
@@ -80,9 +81,10 @@
       <AlertDialog.Cancel disabled={loading}>Cancel</AlertDialog.Cancel>
       <button
         data-slot="alert-dialog-action"
+        form="regen-form"
+        type="submit"
         class={cn(buttonVariants({ variant: "destructive" }), "gap-2")}
         disabled={loading || !password}
-        onclick={handleConfirm}
       >
         {#if loading}
           <Loader2 class="h-4 w-4 animate-spin" />

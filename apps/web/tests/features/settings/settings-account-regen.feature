@@ -56,3 +56,11 @@ Feature: Recovery code regeneration from Settings
     When the admin clicks "Done"
     Then the page returns to the default view
     And the recovery code count shows 10 of 10
+
+  # --- Keyboard interaction ---
+
+  Scenario: Pressing Enter in the password field submits the dialog
+    Given the confirmation dialog is open
+    When the admin types the correct password and presses Enter
+    Then the dialog closes
+    And the page displays 10 new recovery codes
