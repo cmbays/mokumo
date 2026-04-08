@@ -53,3 +53,34 @@ Feature: Dashboard displays LAN connection information
     Given the server is healthy
     When I navigate to the dashboard
     Then I see the server status as "Online"
+
+  # --- Shop name heading ---
+
+  Scenario: Production mode shows shop name in dashboard heading
+    Given the app is running in production mode with shop name "Stitch & Screen"
+    And the server has mDNS active with hostname "mokumo.local" on port 3000
+    When I navigate to the dashboard
+    Then I see the heading "Stitch & Screen"
+
+  Scenario: Dashboard shows fallback heading when shop name is not set
+    Given the app is running in production mode with no shop name
+    And the server has mDNS active with hostname "mokumo.local" on port 3000
+    When I navigate to the dashboard
+    Then I see the heading "Your Shop"
+
+  # --- Demo Getting Started card ---
+
+  Scenario: Demo mode without production setup shows "Explore sample customers" link
+    Given the app is running in demo mode with production setup incomplete
+    And the server has mDNS active with hostname "mokumo.local" on port 3000
+    When I navigate to the dashboard
+    Then I see the heading "Your Shop"
+    And I see "Explore sample customers →"
+
+  Scenario: Demo mode with production setup complete shows "Switch to My Shop" button
+    Given the app is running in demo mode with production setup complete
+    And the server has mDNS active with hostname "mokumo.local" on port 3000
+    When I navigate to the dashboard
+    Then I see the heading "Your Shop"
+    And I see "You're exploring demo data."
+    And I see a "Switch to My Shop" button

@@ -73,7 +73,13 @@ async function mockAuthenticatedAppShell(page: Page): Promise<void> {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ setup_complete: true }),
+      body: JSON.stringify({
+        setup_complete: true,
+        setup_mode: "production",
+        is_first_launch: false,
+        production_setup_complete: false,
+        shop_name: null,
+      }),
     });
   });
 

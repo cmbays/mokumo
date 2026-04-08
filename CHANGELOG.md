@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Dashboard heading** now shows the configured shop name (falls back to "Your Shop" if none set). (#331)
+- **Dashboard Getting Started card** now differentiates demo vs. production mode: demo users see a contextual CTA to explore sample data or switch to their production shop. (#331)
+- **Shop Settings** subtitle updated to "Your shop details and network access." and now includes a read-only Shop Name card showing the mDNS slug. (#331)
+- **System Settings** replaces the placeholder EmptyState with a plain h1 + subtitle: "Demo mode and profile switching." (#331)
 - **Session invalidation on deploy**: `AuthUser::Id` changed from `i64` to `ProfileUserId(SetupMode, i64)` (compound user ID for dual-DB routing). Any sessions created before this deploy are invalidated on first request. Pre-release with no active users — one-time logout only. (#276)
 
 ### Fixed
