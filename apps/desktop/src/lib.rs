@@ -139,6 +139,9 @@ fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
         ServerStartupError::SchemaIncompatible {
             path,
             unknown_migrations: vec![],
+            // backup_path threading is a follow-up (#351): requires ProfileDbError
+            // to propagate through init_server instead of being stringified.
+            backup_path: None,
         }
     } else if message.contains("not a Mokumo database")
         || message.contains("not a valid Mokumo database")
@@ -151,6 +154,9 @@ fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
         ServerStartupError::MigrationFailed {
             path,
             message: message.to_owned(),
+            // backup_path threading is a follow-up (#351): requires ProfileDbError
+            // to propagate through init_server instead of being stringified.
+            backup_path: None,
         }
     }
 }

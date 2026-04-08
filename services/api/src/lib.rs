@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod auth;
+pub mod backup_status;
 pub mod customer;
 pub mod demo;
 pub mod discovery;
@@ -36,6 +37,33 @@ use tower_sessions_sqlx_store::SqliteStore;
 
 use auth::backend::Backend;
 use mokumo_types::HealthResponse;
+
+/// Error returned by `setup_profile_db` and `prepare_database`.
+///
+/// Carries the human-readable error message and the path to the pre-migration backup
+/// (if one was created before the failure). The backup path lets callers surface the
+/// restore location to the shop owner in error dialogs and startup events.
+#[derive(Debug)]
+pub struct ProfileDbError {
+    pub message: String,
+    pub backup_path: Option<std::path::PathBuf>,
+}
+
+impl std::fmt::Display for ProfileDbError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.backup_path {
+            Some(path) => write!(
+                f,
+                "{}. Your data is backed up at: {}",
+                self.message,
+                path.display()
+            ),
+            None => write!(f, "{}", self.message),
+        }
+    }
+}
+
+impl std::error::Error for ProfileDbError {}
 
 /// A pending file-drop password reset entry.
 pub struct PendingReset {
@@ -235,12 +263,18 @@ pub async fn prepare_database(
         DatabaseConnection,
         mokumo_core::setup::SetupMode,
     ),
-    Box<dyn std::error::Error>,
+    ProfileDbError,
 > {
     use mokumo_core::setup::SetupMode;
 
-    ensure_data_dirs(data_dir)?;
-    migrate_flat_layout(data_dir)?;
+    ensure_data_dirs(data_dir).map_err(|e| ProfileDbError {
+        message: format!("Failed to create data directories: {e}"),
+        backup_path: None,
+    })?;
+    migrate_flat_layout(data_dir).map_err(|e| ProfileDbError {
+        message: format!("Failed to migrate flat layout: {e}"),
+        backup_path: None,
+    })?;
 
     if let Err(e) = demo::copy_sidecar_if_needed(data_dir) {
         tracing::warn!(
@@ -258,9 +292,8 @@ pub async fn prepare_database(
     let active_db_path = data_dir.join(profile.as_str()).join("mokumo.db");
     let other_db_path = data_dir.join(other_profile.as_str()).join("mokumo.db");
 
-    let active_db = setup_profile_db(&active_db_path, profile == SetupMode::Production, data_dir)
-        .await
-        .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    let active_db =
+        setup_profile_db(&active_db_path, profile == SetupMode::Production, data_dir).await?;
     tracing::info!(
         "Active database ({profile}) ready at {}",
         active_db_path.display()
@@ -271,8 +304,7 @@ pub async fn prepare_database(
         other_profile == SetupMode::Production,
         data_dir,
     )
-    .await
-    .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    .await?;
     tracing::info!(
         "Non-active database ({other_profile}) ready at {}",
         other_db_path.display()
@@ -301,34 +333,43 @@ async fn setup_profile_db(
     db_path: &Path,
     is_production: bool,
     data_dir: &Path,
-) -> Result<DatabaseConnection, String> {
+) -> Result<DatabaseConnection, ProfileDbError> {
     use mokumo_db::DatabaseSetupError;
 
     // Pre-migration backup only runs when the DB file already exists.
     // Track this so format_db_setup_error can omit the backup claim for fresh installs.
     let backup_taken = db_path.exists();
+    // Capture the backup path from Guard 2 so all subsequent guard failures can include it.
+    let mut backup_path: Option<std::path::PathBuf> = None;
 
     if backup_taken {
         // Guard 1: confirm this file belongs to Mokumo
         mokumo_db::check_application_id(db_path).map_err(|e| match e {
-            DatabaseSetupError::NotMokumoDatabase { ref path } => format!(
-                "The database at {} is not a Mokumo database. \
-                 Check your --data-dir setting.",
-                path.display()
-            ),
-            _ => format!("application_id check failed for {}: {e}", db_path.display()),
+            DatabaseSetupError::NotMokumoDatabase { ref path } => ProfileDbError {
+                message: format!(
+                    "The database at {} is not a Mokumo database. \
+                     Check your --data-dir setting.",
+                    path.display()
+                ),
+                backup_path: None, // Guard 1 fires before Guard 2; no backup yet.
+            },
+            _ => ProfileDbError {
+                message: format!("application_id check failed for {}: {e}", db_path.display()),
+                backup_path: None,
+            },
         })?;
 
         // Guard 2: backup before any migration runs
-        mokumo_db::pre_migration_backup(db_path)
+        backup_path = mokumo_db::pre_migration_backup(db_path)
             .await
-            .map_err(|e| {
-                format!(
+            .map_err(|e| ProfileDbError {
+                message: format!(
                     "Pre-migration backup failed for {}: {e}. \
                      Refusing to run migrations without a backup. \
                      Check disk space and permissions.",
                     db_path.display()
-                )
+                ),
+                backup_path: None,
             })?;
 
         // Guard 3: reject databases from newer Mokumo versions
@@ -339,12 +380,15 @@ async fn setup_profile_db(
                 ref unknown_migrations,
             }) => {
                 if is_production {
-                    return Err(format!(
-                        "The production database at {} was created by a newer version of Mokumo. \
-                         Please upgrade Mokumo to the latest version, or restore from a backup. \
-                         Do not delete the database — your production data is there.",
-                        path.display()
-                    ));
+                    return Err(ProfileDbError {
+                        message: format!(
+                            "The production database at {} was created by a newer version of Mokumo. \
+                             Please upgrade Mokumo to the latest version, or restore from a backup. \
+                             Do not delete the database — your production data is there.",
+                            path.display()
+                        ),
+                        backup_path: backup_path.clone(),
+                    });
                 }
                 // Demo profile: silent recreate from sidecar (ephemeral data)
                 tracing::warn!(
@@ -352,45 +396,65 @@ async fn setup_profile_db(
                     "Demo database has unknown migrations from newer Mokumo version; \
                      resetting to fresh demo data."
                 );
-                demo::force_copy_sidecar(data_dir)
-                    .map_err(|e| format!("Failed to reset demo database: {e}"))?;
+                demo::force_copy_sidecar(data_dir).map_err(|e| ProfileDbError {
+                    message: format!("Failed to reset demo database: {e}"),
+                    backup_path: backup_path.clone(),
+                })?;
                 // Re-run guards on the fresh sidecar before initializing.
                 // The bundled sidecar could theoretically be malformed or from a future version.
+                // The sidecar's own pre_migration_backup result is discarded — the original
+                // backup_path (from the user's old demo data) is not relevant here.
                 if db_path.exists() {
                     mokumo_db::check_application_id(db_path).map_err(|e| match e {
-                        DatabaseSetupError::NotMokumoDatabase { ref path } => format!(
-                            "The bundled demo database is not a valid Mokumo database: {}. \
-                             Please reinstall Mokumo.",
-                            path.display()
-                        ),
-                        _ => format!(
-                            "application_id check failed for demo database after reset: {e}"
-                        ),
+                        DatabaseSetupError::NotMokumoDatabase { ref path } => ProfileDbError {
+                            message: format!(
+                                "The bundled demo database is not a valid Mokumo database: {}. \
+                                 Please reinstall Mokumo.",
+                                path.display()
+                            ),
+                            backup_path: None,
+                        },
+                        _ => ProfileDbError {
+                            message: format!(
+                                "application_id check failed for demo database after reset: {e}"
+                            ),
+                            backup_path: None,
+                        },
                     })?;
-                    mokumo_db::pre_migration_backup(db_path)
-                        .await
-                        .map_err(|e| {
-                            format!(
-                                "Pre-migration backup failed for demo database after reset: {e}"
-                            )
-                        })?;
+                    let _sidecar_backup =
+                        mokumo_db::pre_migration_backup(db_path)
+                            .await
+                            .map_err(|e| ProfileDbError {
+                                message: format!(
+                                    "Pre-migration backup failed for demo database after reset: {e}"
+                                ),
+                                backup_path: None,
+                            })?;
                     if let Err(e) = mokumo_db::check_schema_compatibility(db_path) {
-                        return Err(format!(
-                            "Demo database failed compatibility check after reset: {e}"
-                        ));
+                        return Err(ProfileDbError {
+                            message: format!(
+                                "Demo database failed compatibility check after reset: {e}"
+                            ),
+                            backup_path: None,
+                        });
                     }
                 }
                 let url = format!("sqlite:{}?mode=rwc", db_path.display());
-                // Backup was taken on the fresh sidecar (re-run guards ran pre_migration_backup above).
                 return mokumo_db::initialize_database(&url)
                     .await
-                    .map_err(|e| format_db_setup_error(e, db_path, true));
+                    .map_err(|e| ProfileDbError {
+                        message: format_db_setup_error(e, db_path, true),
+                        backup_path: None,
+                    });
             }
             Err(e) => {
-                return Err(format!(
-                    "Schema compatibility check failed for {}: {e}",
-                    db_path.display()
-                ));
+                return Err(ProfileDbError {
+                    message: format!(
+                        "Schema compatibility check failed for {}: {e}",
+                        db_path.display()
+                    ),
+                    backup_path: backup_path.clone(),
+                });
             }
         }
     }
@@ -399,7 +463,10 @@ async fn setup_profile_db(
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
     mokumo_db::initialize_database(&url)
         .await
-        .map_err(|e| format_db_setup_error(e, db_path, backup_taken))
+        .map_err(|e| ProfileDbError {
+            message: format_db_setup_error(e, db_path, backup_taken),
+            backup_path: backup_path.clone(),
+        })
 }
 
 /// Format a `DatabaseSetupError` into a human-readable message for the operator.
@@ -744,6 +811,7 @@ fn build_app_inner(
         .route("/api/health", get(health))
         .route("/api/server-info", get(server_info::handler))
         .route("/api/setup-status", get(setup_status))
+        .route("/api/backup-status", get(backup_status::handler))
         .nest("/api/auth", auth::auth_router())
         .nest("/api/setup", auth::setup_router())
         .merge(protected_routes);
