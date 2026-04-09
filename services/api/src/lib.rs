@@ -962,6 +962,48 @@ pub fn cli_reset_db(
     Ok(report)
 }
 
+/// Create a manual backup of the database using the SQLite Online Backup API.
+///
+/// Resolves the output path: if `output` is provided, uses it directly; otherwise
+/// generates a timestamped filename in the database's directory.
+///
+/// This is safe to run while the server is running — the Online Backup API
+/// handles WAL mode and concurrent access correctly.
+pub fn cli_backup(
+    db_path: &Path,
+    output: Option<&Path>,
+) -> Result<mokumo_db::backup::BackupResult, String> {
+    let output_path = match output {
+        Some(p) => p.to_path_buf(),
+        None => {
+            let dir = db_path.parent().unwrap_or(Path::new("."));
+            dir.join(mokumo_db::backup::build_timestamped_name())
+        }
+    };
+
+    let result =
+        mokumo_db::backup::create_backup(db_path, &output_path).map_err(|e| format!("{e}"))?;
+
+    mokumo_db::backup::verify_integrity(&output_path)
+        .map_err(|e| format!("Backup created but integrity check failed: {e}"))?;
+
+    Ok(result)
+}
+
+/// Restore the database from a backup file.
+///
+/// Verifies the backup's integrity, creates a safety backup of the current
+/// database, then overwrites it with the backup contents.
+///
+/// The caller must hold the process lock (server must not be running).
+pub fn cli_restore(
+    db_path: &Path,
+    backup_path: &Path,
+) -> Result<mokumo_db::backup::RestoreResult, String> {
+    mokumo_db::backup::restore_from_backup(db_path, backup_path, DB_SIDECAR_SUFFIXES)
+        .map_err(|e| format!("{e}"))
+}
+
 fn delete_file(path: &Path, report: &mut ResetReport) {
     match std::fs::remove_file(path) {
         Ok(()) => report.deleted.push(path.to_path_buf()),

@@ -5,9 +5,9 @@ use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
 use mokumo_api::{
-    DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_reset_db, cli_reset_password,
-    discovery, ensure_data_dirs, lock_file_path, prepare_database, resolve_active_profile,
-    try_bind,
+    DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_backup, cli_reset_db,
+    cli_reset_password, cli_restore, discovery, ensure_data_dirs, lock_file_path, prepare_database,
+    resolve_active_profile, try_bind,
 };
 use mokumo_core::setup::SetupMode;
 
@@ -55,6 +55,23 @@ enum Commands {
         include_backups: bool,
         /// Reset the production profile instead of the default demo profile.
         /// Requires typing "reset production" to confirm (irreversible).
+        #[arg(long)]
+        production: bool,
+    },
+    /// Create a manual backup of the database
+    Backup {
+        /// Write the backup to this path instead of the default timestamped name
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Back up the production profile instead of the default demo profile
+        #[arg(long)]
+        production: bool,
+    },
+    /// Restore the database from a backup file
+    Restore {
+        /// Path to the backup file to restore from
+        path: PathBuf,
+        /// Restore to the production profile instead of the default demo profile
         #[arg(long)]
         production: bool,
     },
@@ -383,6 +400,99 @@ async fn main() {
                     );
                 }
                 std::process::exit(1);
+            }
+            return;
+        }
+        Some(Commands::Backup { output, production }) => {
+            let profile = if production {
+                SetupMode::Production
+            } else {
+                resolve_active_profile(&data_dir)
+            };
+            let db_path = data_dir.join(profile.as_dir_name()).join("mokumo.db");
+
+            match db_path.try_exists() {
+                Ok(false) => {
+                    eprintln!("No database found at {}", db_path.display());
+                    std::process::exit(1);
+                }
+                Err(e) => {
+                    eprintln!("Cannot access database path {}: {e}", db_path.display());
+                    std::process::exit(1);
+                }
+                Ok(true) => {}
+            }
+
+            match cli_backup(&db_path, output.as_deref()) {
+                Ok(result) => {
+                    println!("Backup created: {}", result.path.display());
+                    println!("Size: {} bytes", result.size);
+                }
+                Err(e) => {
+                    eprintln!("Backup failed: {e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        Some(Commands::Restore { path, production }) => {
+            let profile = if production {
+                SetupMode::Production
+            } else {
+                resolve_active_profile(&data_dir)
+            };
+            let db_path = data_dir.join(profile.as_dir_name()).join("mokumo.db");
+
+            if let Err(e) = ensure_data_dirs(&data_dir) {
+                eprintln!("Cannot create data directory {}: {e}", data_dir.display());
+                std::process::exit(1);
+            }
+
+            // Acquire process lock — refuse to restore while server is running
+            let lock_path = lock_file_path(&data_dir);
+            let mut flock = match std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .read(true)
+                .write(true)
+                .open(&lock_path)
+            {
+                Ok(f) => fd_lock::RwLock::new(f),
+                Err(e) => {
+                    eprintln!("Cannot open lock file {}: {e}", lock_path.display());
+                    std::process::exit(1);
+                }
+            };
+            let _lock_guard = match flock.try_write() {
+                Ok(guard) => guard,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    eprintln!(
+                        "The database appears to be in use by a running server.\n\
+                         Stop the server first, then try again."
+                    );
+                    std::process::exit(1);
+                }
+                Err(e) => {
+                    eprintln!("Cannot acquire process lock: {e}");
+                    std::process::exit(1);
+                }
+            };
+
+            match cli_restore(&db_path, &path) {
+                Ok(result) => {
+                    println!("Restored from: {}", result.restored_from.display());
+                    if let Some(ref safety_path) = result.safety_backup_path {
+                        println!(
+                            "Safety backup of previous database: {}",
+                            safety_path.display()
+                        );
+                    }
+                    println!("Restore complete.");
+                }
+                Err(e) => {
+                    eprintln!("Restore failed: {e}");
+                    std::process::exit(1);
+                }
             }
             return;
         }
