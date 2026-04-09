@@ -538,7 +538,10 @@ pub async fn try_bind(
     }
     Err(std::io::Error::new(
         std::io::ErrorKind::AddrInUse,
-        format!("Could not bind to any port in range {port}..={end_port} on host {host}"),
+        format!(
+            "All ports {port}-{end_port} are occupied. \
+             Use --port to specify a different port, or close conflicting applications."
+        ),
     ))
 }
 
