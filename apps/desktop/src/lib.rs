@@ -1,3 +1,5 @@
+pub mod lifecycle;
+
 use std::path::PathBuf;
 
 use tauri::Manager;
