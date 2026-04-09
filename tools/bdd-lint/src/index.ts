@@ -54,9 +54,9 @@ console.log(output);
 // This tolerates known false positives from matcher limitations (unsupported regex
 // patterns, unparseable Cucumber expressions) while preventing regressions.
 const rawMaxDeadSpecs = values["max-dead-specs"];
-const maxDeadSpecs = rawMaxDeadSpecs ? parseInt(rawMaxDeadSpecs, 10) : 0;
-if (rawMaxDeadSpecs && Number.isNaN(maxDeadSpecs)) {
-  console.error(`\nFAIL: --max-dead-specs must be a number, got "${rawMaxDeadSpecs}"`);
+const maxDeadSpecs = rawMaxDeadSpecs ? Number(rawMaxDeadSpecs) : 0;
+if (rawMaxDeadSpecs && (!Number.isInteger(maxDeadSpecs) || maxDeadSpecs < 0)) {
+  console.error(`\nFAIL: --max-dead-specs must be a non-negative integer, got "${rawMaxDeadSpecs}"`);
   process.exit(1);
 }
 const hasErrors = result.deadSpecs.length > maxDeadSpecs;
