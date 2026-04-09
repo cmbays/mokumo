@@ -4,8 +4,7 @@
   "description": "Tauri desktop E2E tests via WebDriverIO + tauri-driver",
   "type": "module",
   "scripts": {
-    "test": "wdio run wdio.conf.ts",
-    "test:headed": "HEADLESS=false wdio run wdio.conf.ts"
+    "test": "wdio run wdio.conf.ts"
   },
   "devDependencies": {
     "@wdio/cli": "^9.0.0",

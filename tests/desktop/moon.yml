@@ -1,7 +1,7 @@
 language: typescript
-type: tool
-env:
-  CARGO_TERM_COLOR: always
+stack: frontend
+tags:
+  - testing
 
 fileGroups:
   sources:
