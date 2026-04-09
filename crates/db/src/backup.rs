@@ -110,12 +110,55 @@ pub fn verify_integrity(path: &Path) -> Result<(), BackupError> {
     }
 }
 
+/// Create a safety backup of the current database, choosing a path that
+/// won't collide with the restore source.
+fn create_safety_backup(
+    db_path: &Path,
+    restore_source: &Path,
+) -> Result<Option<PathBuf>, BackupError> {
+    if !db_path.exists() {
+        return Ok(None);
+    }
+
+    let mut path = db_path.with_extension("db.pre-restore-backup");
+    if path == restore_source {
+        let now = chrono::Local::now();
+        path = db_path.with_extension(format!(
+            "db.pre-restore-backup.{}",
+            now.format("%Y%m%d-%H%M%S")
+        ));
+    }
+    create_backup(db_path, &path)?;
+    Ok(Some(path))
+}
+
+/// Remove WAL/SHM/journal sidecars that are incompatible with the backup's
+/// page state. Skips empty suffixes (the main file).
+fn remove_sidecars(db_path: &Path, suffixes: &[&str]) -> Result<(), BackupError> {
+    let base = db_path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    for suffix in suffixes {
+        if suffix.is_empty() {
+            continue;
+        }
+        let sidecar = db_path.with_file_name(format!("{base}{suffix}"));
+        if sidecar.exists() {
+            std::fs::remove_file(&sidecar)?;
+        }
+    }
+    Ok(())
+}
+
 /// Restore a database from a backup file.
 ///
 /// 1. Verifies the backup file's integrity.
 /// 2. Creates a safety backup of the current database (if it exists).
-/// 3. Uses the SQLite Online Backup API to copy from backup → db_path.
-/// 4. Removes WAL/SHM sidecars left by the previous database.
+/// 3. Removes WAL/SHM sidecars left by the previous database.
+/// 4. Uses the SQLite Online Backup API to copy from backup → db_path.
 ///
 /// The caller must ensure the server is not running (process lock acquired).
 pub fn restore_from_backup(
@@ -129,43 +172,10 @@ pub fn restore_from_backup(
         });
     }
 
-    // 1. Verify backup integrity before touching anything
     verify_integrity(backup_path)?;
+    let safety_backup_path = create_safety_backup(db_path, backup_path)?;
+    remove_sidecars(db_path, sidecar_suffixes)?;
 
-    // 2. Safety backup of the current database (if it exists)
-    let safety_backup_path = if db_path.exists() {
-        let mut path = db_path.with_extension("db.pre-restore-backup");
-        // Guard against overwriting the restore source with the safety backup
-        if path == backup_path {
-            let now = chrono::Local::now();
-            path = db_path.with_extension(format!(
-                "db.pre-restore-backup.{}",
-                now.format("%Y%m%d-%H%M%S")
-            ));
-        }
-        create_backup(db_path, &path)?;
-        Some(path)
-    } else {
-        None
-    };
-
-    // 3. Remove WAL/SHM sidecars from the current database (they're incompatible
-    //    with the backup's page state). Skip the empty suffix — that's the main file.
-    for suffix in sidecar_suffixes {
-        if suffix.is_empty() {
-            continue;
-        }
-        let sidecar = db_path.with_file_name(format!(
-            "{}{}",
-            db_path.file_name().unwrap_or_default().to_string_lossy(),
-            suffix
-        ));
-        if sidecar.exists() {
-            std::fs::remove_file(&sidecar)?;
-        }
-    }
-
-    // 4. Use Backup API to copy from backup file → db_path
     let src = rusqlite::Connection::open_with_flags(
         backup_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
