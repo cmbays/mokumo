@@ -13,7 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Routing contract tests** verify unknown `/api/*` paths return JSON 404 and wrong HTTP methods return JSON 405 instead of silently serving SPA HTML. (#384)
 - **Method-not-allowed fallback** returns structured JSON 405 responses for wrong HTTP methods on all API endpoints. (#384)
 
+### Fixed
+
+- **bdd-lint exit code** now fails when dead specs exceed a configurable threshold (`--max-dead-specs`), enabling it to function as a blocking CI gate. Previously always exited 0 regardless of findings. (#385)
+
 ### Changed
+
+- **CI quality gates** `bdd-lint` and `test-storybook` promoted from advisory to blocking — failures now prevent PR merge. `mutation-ts` remains advisory pending baseline stabilization. (#385)
 
 - **Settings Shop page** LAN URL and IP address display now use the shared `CopyableUrl` component, removing duplicated inline copy logic. (#162)
 - **Dashboard heading** now shows the configured shop name (falls back to "Your Shop" if none set). (#331)
