@@ -3,6 +3,8 @@ pub mod lifecycle;
 use std::path::PathBuf;
 
 use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
@@ -161,6 +163,17 @@ fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
             backup_path: None,
         }
     }
+}
+
+/// Show and focus the main window, restoring the dock icon on macOS.
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Regular);
 }
 
 pub fn run() {
@@ -360,7 +373,57 @@ pub fn run() {
             .inner_size(1200.0, 800.0)
             .build()?;
 
+            // System tray: right-click menu + left-click to reopen window
+            let reopen = MenuItemBuilder::with_id("reopen", "Reopen Desktop App").build(app)?;
+            let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit Mokumo").build(app)?;
+            let tray_menu = MenuBuilder::new(app)
+                .items(&[&reopen, &separator, &quit])
+                .build()?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Mokumo")
+                .menu(&tray_menu)
+                .on_menu_event(|app, event| match event.id().as_ref() {
+                    "reopen" => {
+                        show_main_window(app);
+                    }
+                    "quit" => {
+                        // Triggers ExitRequested, which handles mDNS deregister + drain
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main_window(tray.app_handle());
+                    }
+                })
+                .build(app)?;
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // Close-to-tray: intercept the window close button and hide instead of quitting.
+            // The server keeps running in the background; the user can reopen from the tray
+            // or quit via the tray menu (which triggers ExitRequested for clean shutdown).
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+
+                // macOS: hide the dock icon when the window is hidden
+                #[cfg(target_os = "macos")]
+                {
+                    let app = window.app_handle();
+                    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                }
+            }
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
