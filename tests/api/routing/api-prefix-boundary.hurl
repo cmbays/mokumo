@@ -15,6 +15,8 @@ HTTP 404
 [Asserts]
 header "Content-Type" contains "application/json"
 jsonpath "$.code" == "not_found"
+jsonpath "$.message" exists
+jsonpath "$.details" == null
 
 # /api/ with trailing slash returns 404 JSON
 GET http://{{host}}/api/
@@ -22,6 +24,8 @@ HTTP 404
 [Asserts]
 header "Content-Type" contains "application/json"
 jsonpath "$.code" == "not_found"
+jsonpath "$.message" exists
+jsonpath "$.details" == null
 
 # Deeply nested unknown API path returns 404 JSON
 GET http://{{host}}/api/v2/customers/list
@@ -29,6 +33,8 @@ HTTP 404
 [Asserts]
 header "Content-Type" contains "application/json"
 jsonpath "$.code" == "not_found"
+jsonpath "$.message" exists
+jsonpath "$.details" == null
 
 # Known API path returns JSON (positive control)
 GET http://{{host}}/api/health

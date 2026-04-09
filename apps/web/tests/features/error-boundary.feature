@@ -1,6 +1,6 @@
 Feature: Error boundary
 
-  The branded error page (+error.svelte) renders for invalid routes and API errors.
+  The branded error page (+error.svelte) renders for invalid routes.
   Displays the Mokumo logo, status code, human-readable title, and navigation options.
 
   Scenario: Unknown route shows branded 404 error page
