@@ -1,0 +1,21 @@
+language: typescript
+type: tool
+env:
+  CARGO_TERM_COLOR: always
+
+fileGroups:
+  sources:
+    - specs/**/*
+    - wdio.conf.ts
+    - tsconfig.json
+
+tasks:
+  test:
+    command: pnpm --filter @mokumo/desktop-tests test
+    deps:
+      - web:build
+    inputs:
+      - '@group(sources)'
+    options:
+      cache: false
+      outputStyle: stream

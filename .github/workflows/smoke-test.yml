@@ -1,0 +1,215 @@
+name: Desktop Smoke Test
+
+on:
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/web/**'
+      - 'services/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/web/**'
+      - 'services/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+# Bitwarden smoke-test pattern: build the app, launch it, wait 30s, verify
+# the process is still alive. Catches packaging failures, missing deps,
+# startup panics, linking errors, and configuration problems.
+#
+# GH Actions budget: Linux 1x, Windows 2x, macOS 10x multiplier.
+# macOS only runs on push to main to conserve minutes.
+
+jobs:
+  smoke-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-latest
+            os: Linux
+          - platform: macos-latest
+            os: macOS
+          - platform: windows-latest
+            os: Windows
+
+    runs-on: ${{ matrix.platform }}
+
+    # Skip macOS on PRs to conserve GH Actions minutes (10x multiplier)
+    if: ${{ matrix.os != 'macOS' || github.event_name == 'push' }}
+
+    env:
+      CARGO_TARGET_DIR: target
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: pnpm
+
+      - uses: moonrepo/setup-toolchain@v0
+      - uses: moonrepo/setup-rust@v1
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: smoke-${{ matrix.platform }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # Linux: WebKitGTK + GTK3 + Xvfb (Tauri runtime deps + virtual display)
+      - name: Install Linux dependencies
+        if: matrix.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xvfb
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build SvelteKit frontend
+        run: moon run web:build
+
+      # Debug build via cargo (not `moon run desktop:build` which does release)
+      - name: Build Tauri app (debug)
+        run: cargo build -p mokumo-desktop
+
+      # --- Smoke tests: launch, wait, check alive ---
+
+      - name: Smoke test (Linux)
+        if: matrix.os == 'Linux'
+        run: |
+          set -euo pipefail
+
+          echo "::group::Launch app under Xvfb"
+          xvfb-run --auto-servernum ./target/debug/mokumo-desktop &
+          APP_PID=$!
+          echo "Started mokumo-desktop (PID: $APP_PID)"
+          echo "::endgroup::"
+
+          echo "::group::Wait for startup (5s)"
+          sleep 5
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "::error::App crashed during startup"
+            exit 1
+          fi
+          echo "App alive after 5s"
+          echo "::endgroup::"
+
+          echo "::group::Wait for initialization (30s total)"
+          sleep 25
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "::error::App crashed after initialization"
+            exit 1
+          fi
+          echo "PASS: mokumo-desktop survived 30s"
+          echo "::endgroup::"
+
+          kill "$APP_PID" 2>/dev/null || true
+
+      - name: Smoke test (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          set -euo pipefail
+
+          echo "::group::Launch app"
+          ./target/debug/mokumo-desktop &
+          APP_PID=$!
+          echo "Started mokumo-desktop (PID: $APP_PID)"
+          echo "::endgroup::"
+
+          echo "::group::Wait for startup (5s)"
+          sleep 5
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "::error::App crashed during startup"
+            exit 1
+          fi
+          echo "App alive after 5s"
+          echo "::endgroup::"
+
+          echo "::group::Wait for initialization (30s total)"
+          sleep 25
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "::error::App crashed after initialization"
+            exit 1
+          fi
+          echo "PASS: mokumo-desktop survived 30s"
+          echo "::endgroup::"
+
+          kill "$APP_PID" 2>/dev/null || true
+
+      - name: Smoke test (Windows)
+        if: matrix.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "::group::Launch app"
+          $proc = Start-Process -FilePath ".\target\debug\mokumo-desktop.exe" -PassThru
+          Write-Host "Started mokumo-desktop.exe (PID: $($proc.Id))"
+          Write-Host "::endgroup::"
+
+          Write-Host "::group::Wait for startup (5s)"
+          Start-Sleep -Seconds 5
+          if ($proc.HasExited) {
+            Write-Host "::error::App crashed during startup (exit code: $($proc.ExitCode))"
+            exit 1
+          }
+          Write-Host "App alive after 5s"
+          Write-Host "::endgroup::"
+
+          Write-Host "::group::Wait for initialization (30s total)"
+          Start-Sleep -Seconds 25
+          if ($proc.HasExited) {
+            Write-Host "::error::App crashed after initialization (exit code: $($proc.ExitCode))"
+            exit 1
+          }
+          Write-Host "PASS: mokumo-desktop.exe survived 30s"
+          Write-Host "::endgroup::"
+
+          Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+
+      # Capture crash diagnostics on failure
+      - name: Collect crash logs (Linux)
+        if: failure() && matrix.os == 'Linux'
+        run: |
+          echo "--- dmesg (last 20 lines) ---"
+          dmesg | tail -20 || true
+          echo "--- core dumps ---"
+          ls -la /tmp/core* 2>/dev/null || echo "No core dumps found"
+
+      - name: Collect crash logs (macOS)
+        if: failure() && matrix.os == 'macOS'
+        run: |
+          echo "--- Recent crash reports ---"
+          ls -lt ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -5 || true
+          LATEST=$(ls -t ~/Library/Logs/DiagnosticReports/*.ips 2>/dev/null | head -1)
+          if [ -n "$LATEST" ]; then
+            echo "--- $LATEST ---"
+            head -100 "$LATEST"
+          fi
