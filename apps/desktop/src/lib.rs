@@ -101,7 +101,7 @@ async fn init_server(
 
     // Record the bound port and bind host so /api/server-info always knows them
     {
-        let mut s = mdns_status.write().expect("MdnsStatus lock poisoned");
+        let mut s = mdns_status.write();
         s.port = actual_port;
         s.bind_host = config.host.to_owned();
     }

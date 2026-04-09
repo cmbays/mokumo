@@ -62,6 +62,7 @@ jobs:
 
   smoke-test:
     needs: matrix-setup
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-setup.outputs.matrix) }}
@@ -88,7 +89,7 @@ jobs:
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: smoke-${{ matrix.platform }}
+          shared-key: mokumo-rust
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Linux: WebKitGTK + GTK3 + Xvfb (Tauri runtime deps + virtual display)
@@ -112,11 +113,16 @@ jobs:
 
       # demo.db is bundled as a Tauri resource but not checked into git.
       # Create a placeholder so the build script doesn't fail.
+      # Uses Python's sqlite3 module (available on all GH runners) to avoid
+      # platform-specific CLI availability issues.
       - name: Create demo.db placeholder
-        shell: bash
+        shell: python
         run: |
-          mkdir -p apps/web/scripts
-          sqlite3 apps/web/scripts/demo.db "SELECT 1;" 2>/dev/null || touch apps/web/scripts/demo.db
+          import os, sqlite3
+          os.makedirs("apps/web/scripts", exist_ok=True)
+          conn = sqlite3.connect("apps/web/scripts/demo.db")
+          conn.execute("SELECT 1")
+          conn.close()
 
       - name: Build Tauri app (debug)
         run: moon run desktop:build-debug
@@ -286,3 +292,15 @@ jobs:
             echo "--- $LATEST ---"
             head -100 "$LATEST"
           fi
+
+      - name: Collect crash logs (Windows)
+        if: failure() && matrix.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "--- Recent Application error events ---"
+          try {
+            Get-WinEvent -FilterHashtable @{LogName='Application'; Level=2} -MaxEvents 10 -ErrorAction Stop |
+              ForEach-Object { "$($_.TimeCreated): $($_.Message)" }
+          } catch {
+            Write-Host "No Application error events found or access denied"
+          }
