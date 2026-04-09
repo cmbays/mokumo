@@ -1,5 +1,9 @@
 import { expect } from "@playwright/test";
-import { Then } from "../support/app.fixture";
+import { When, Then } from "../support/app.fixture";
+
+When("I navigate to {string}", async ({ page, appUrl }, path: string) => {
+  await page.goto(`${appUrl}${path}`);
+});
 
 Then("I see the branded error page", async ({ page }) => {
   await expect(page.locator("img[alt='Mokumo']")).toBeVisible();
