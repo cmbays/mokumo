@@ -178,7 +178,6 @@ jobs:
     needs: [changes]
     if: github.event_name == 'pull_request' && needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -227,7 +226,6 @@ jobs:
     needs: [changes]
     if: github.event_name == 'pull_request' && (needs.changes.outputs.rust == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.tooling == 'true')
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -447,7 +445,7 @@ jobs:
   verdict:
     if: always()
     runs-on: ubuntu-latest
-    needs: [changes, lint-rust, test-rust, quality-ts, seam-check, demo-smoke, crap-rust, api-smoke, security]
+    needs: [changes, lint-rust, test-rust, quality-ts, seam-check, demo-smoke, crap-rust, api-smoke, security, bdd-lint, test-storybook]
     steps:
       - name: Check upstream results
         env:
@@ -459,9 +457,11 @@ jobs:
           CRAP_RUST: ${{ needs.crap-rust.result }}
           API_SMOKE: ${{ needs.api-smoke.result }}
           SECURITY: ${{ needs.security.result }}
+          BDD_LINT: ${{ needs.bdd-lint.result }}
+          TEST_STORYBOOK: ${{ needs.test-storybook.result }}
         run: |
           # Jobs that were skipped due to path filtering are fine
-          for job in LINT_RUST TEST_RUST QUALITY_TS SEAM_CHECK DEMO_SMOKE CRAP_RUST API_SMOKE SECURITY; do
+          for job in LINT_RUST TEST_RUST QUALITY_TS SEAM_CHECK DEMO_SMOKE CRAP_RUST API_SMOKE SECURITY BDD_LINT TEST_STORYBOOK; do
             result=$(eval echo "\$$job")
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "Job $job failed with result: $result"
