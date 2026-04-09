@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **Graceful shutdown with drain timeout**: Server now exits within 10 seconds of receiving a shutdown signal, even with in-flight requests. CLI handles both SIGINT (Ctrl+C) and SIGTERM on Unix. Desktop wraps server drain with a 10-second timeout. (#312)
+- **Process lock with port info**: Lock file stores the bound port so conflict messages show the URL and suggest checking the system tray. `reset-db` conflict message includes the port. (#311)
+- **mDNS retry with backoff**: When LAN discovery fails at startup, automatic retries at 60s/120s/300s intervals until registration succeeds or the server shuts down. (#314)
+- **WebSocket shutdown broadcast**: Connected clients receive a `server_shutting_down` event before the close frame, enabling frontend disconnect banners.
 - **Branded error page** shows the Mokumo logo, status code, and human-readable message for 400/401/403/404/5xx errors with navigation back to the dashboard.
 
 ### Changed

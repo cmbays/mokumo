@@ -1,4 +1,3 @@
-@wip
 Feature: mDNS retry with backoff
 
   When mDNS registration fails (common on ~20-30% of small business

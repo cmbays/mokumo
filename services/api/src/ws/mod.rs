@@ -143,6 +143,16 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
                     }
                 }
                 () = sender_shutdown.cancelled() => {
+                    // Send server_shutting_down event before the close frame
+                    // so clients know the server is going away intentionally.
+                    let event = mokumo_types::ws::BroadcastEvent::new(
+                        "server_shutting_down",
+                        serde_json::json!({}),
+                    );
+                    let json = serde_json::to_string(&event)
+                        .expect("BroadcastEvent serialization cannot fail");
+                    let _ = ws_sender.send(Message::Text(json.into())).await;
+
                     let close = Message::Close(Some(axum::extract::ws::CloseFrame {
                         code: 1001,
                         reason: "server shutting down".into(),

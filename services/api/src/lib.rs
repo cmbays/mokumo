@@ -873,6 +873,54 @@ pub fn lock_file_path(data_dir: &Path) -> PathBuf {
     data_dir.join("mokumo.lock")
 }
 
+/// Write port info to the lock file so conflict messages can report the port.
+///
+/// Writes `port=NNNN\n` at the start of the file, truncating any previous content.
+pub fn write_lock_info(file: &std::fs::File, port: u16) -> std::io::Result<()> {
+    use std::io::{Seek, Write};
+    let mut f = file;
+    f.seek(std::io::SeekFrom::Start(0))?;
+    f.set_len(0)?;
+    writeln!(f, "port={port}")
+}
+
+/// Read port info from a lock file. Returns `None` if the file can't be read or parsed.
+pub fn read_lock_info(path: &Path) -> Option<u16> {
+    let content = std::fs::read_to_string(path).ok()?;
+    for line in content.lines() {
+        if let Some(val) = line.strip_prefix("port=") {
+            return val.trim().parse().ok();
+        }
+    }
+    None
+}
+
+/// Format a conflict message when another server is already running.
+pub fn format_lock_conflict_message(port: Option<u16>) -> String {
+    match port {
+        Some(p) => format!(
+            "Another Mokumo server is already running on port {p}.\n\
+             Check your system tray, or open http://localhost:{p}"
+        ),
+        None => "Another Mokumo server appears to be running.\n\
+                 Stop the other instance first."
+            .to_string(),
+    }
+}
+
+/// Format a conflict message when reset-db is blocked by a running server.
+pub fn format_reset_db_conflict_message(port: Option<u16>) -> String {
+    match port {
+        Some(p) => format!(
+            "Cannot reset database while the server is running on port {p}.\n\
+             Stop the server first, then try again."
+        ),
+        None => "Cannot reset database while the server is running.\n\
+                 Stop the server first, then try again."
+            .to_string(),
+    }
+}
+
 /// SQLite sidecar suffixes deleted alongside the main database file.
 pub const DB_SIDECAR_SUFFIXES: &[&str] = &["", "-wal", "-shm", "-journal"];
 
@@ -1116,6 +1164,96 @@ async fn serve_spa(uri: axum::http::Uri) -> Response {
 mod tests {
     use super::*;
     use mokumo_types::error::{ErrorBody, ErrorCode};
+
+    #[test]
+    fn write_lock_info_writes_port_format() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mokumo.lock");
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .unwrap();
+        write_lock_info(&file, 6565).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(content, "port=6565\n");
+    }
+
+    #[test]
+    fn write_lock_info_overwrites_previous() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mokumo.lock");
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .unwrap();
+        write_lock_info(&file, 6565).unwrap();
+        write_lock_info(&file, 6570).unwrap();
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(content, "port=6570\n");
+    }
+
+    #[test]
+    fn read_lock_info_parses_port() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mokumo.lock");
+        std::fs::write(&path, "port=6567\n").unwrap();
+        assert_eq!(read_lock_info(&path), Some(6567));
+    }
+
+    #[test]
+    fn read_lock_info_returns_none_for_empty_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mokumo.lock");
+        std::fs::write(&path, "").unwrap();
+        assert_eq!(read_lock_info(&path), None);
+    }
+
+    #[test]
+    fn read_lock_info_returns_none_for_missing_file() {
+        let path = std::path::Path::new("/tmp/nonexistent-lock-file-test");
+        assert_eq!(read_lock_info(path), None);
+    }
+
+    #[test]
+    fn read_lock_info_returns_none_for_garbage() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mokumo.lock");
+        std::fs::write(&path, "not a port line\n").unwrap();
+        assert_eq!(read_lock_info(&path), None);
+    }
+
+    #[test]
+    fn format_lock_conflict_with_port() {
+        let msg = format_lock_conflict_message(Some(6565));
+        assert!(msg.contains("already running on port 6565"));
+        assert!(msg.contains("system tray"));
+        assert!(msg.contains("http://localhost:6565"));
+    }
+
+    #[test]
+    fn format_lock_conflict_without_port() {
+        let msg = format_lock_conflict_message(None);
+        assert!(msg.contains("appears to be running"));
+    }
+
+    #[test]
+    fn format_reset_db_conflict_with_port() {
+        let msg = format_reset_db_conflict_message(Some(6565));
+        assert!(msg.contains("Cannot reset database"));
+        assert!(msg.contains("port 6565"));
+        assert!(msg.contains("Stop the server first"));
+    }
+
+    #[test]
+    fn format_reset_db_conflict_without_port() {
+        let msg = format_reset_db_conflict_message(None);
+        assert!(msg.contains("Cannot reset database"));
+        assert!(msg.contains("Stop the server first"));
+    }
 
     #[tokio::test]
     async fn serve_spa_api_path_returns_not_found_code() {

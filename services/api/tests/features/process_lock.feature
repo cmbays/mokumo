@@ -1,4 +1,3 @@
-@wip
 Feature: Single-instance process lock
 
   Mokumo uses a file lock to prevent two server instances from running
