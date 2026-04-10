@@ -14,7 +14,7 @@ use mokumo_api::discovery;
 #[given("mDNS registration fails")]
 async fn mdns_registration_fails(w: &mut ApiWorld) {
     // Simulate initial mDNS failure by setting status to inactive
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = false;
     s.hostname = None;
 }
@@ -69,7 +69,7 @@ async fn next_retry_after(_w: &mut ApiWorld, expected_delay: u64) {
 #[given("mDNS registration has failed multiple times")]
 async fn mdns_failed_multiple(w: &mut ApiWorld) {
     w.ensure_auth().await;
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = false;
 }
 
@@ -95,7 +95,7 @@ async fn retries_remain_at(_w: &mut ApiWorld, interval: u64) {
 #[given("mDNS registration has failed and retries are active")]
 async fn mdns_failed_retries_active(w: &mut ApiWorld) {
     w.ensure_auth().await;
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = false;
     s.hostname = None;
 }
@@ -104,7 +104,7 @@ async fn mdns_failed_retries_active(w: &mut ApiWorld) {
 async fn retry_succeeds(w: &mut ApiWorld) {
     // Simulate successful retry by updating status
     let port = w.server.server_address().unwrap().port().unwrap();
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = true;
     s.hostname = Some("mokumo.local".to_string());
     s.port = port;
@@ -118,7 +118,7 @@ async fn retry_loop_cancelled(_w: &mut ApiWorld) {
 
 #[then("the server status changes to mDNS active")]
 async fn status_changes_to_active(w: &mut ApiWorld) {
-    let s = w.mdns_status.read().expect("lock");
+    let s = w.mdns_status.read();
     assert!(s.active, "mDNS should be active after successful retry");
 }
 
@@ -142,7 +142,7 @@ async fn no_further_retries(_w: &mut ApiWorld) {
 #[given("mDNS registration failed at startup")]
 async fn mdns_failed_at_startup(w: &mut ApiWorld) {
     w.ensure_auth().await;
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = false;
     s.hostname = None;
 }
@@ -178,7 +178,7 @@ async fn lan_url_available(w: &mut ApiWorld) {
 #[given("mDNS registration has failed and a retry is in-flight")]
 async fn mdns_retry_in_flight(w: &mut ApiWorld) {
     w.ensure_auth().await;
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = false;
     s.hostname = None;
 }

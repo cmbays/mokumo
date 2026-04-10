@@ -140,7 +140,7 @@ async fn all_clients_receive_message_with_type(
 async fn cli_server_with_mdns(w: &mut ApiWorld) {
     w.ensure_auth().await;
     let port = w.server.server_address().unwrap().port().unwrap();
-    let mut s = w.mdns_status.write().expect("lock");
+    let mut s = w.mdns_status.write();
     s.active = true;
     s.hostname = Some("mokumo.local".to_string());
     s.port = port;
@@ -152,14 +152,14 @@ async fn restart_via_sentinel(w: &mut ApiWorld) {
     // In production, main.rs deregisters after the server stops, then the
     // loop continues with a fresh register_mdns call.
     {
-        let mut s = w.mdns_status.write().expect("lock");
+        let mut s = w.mdns_status.write();
         s.active = false;
         s.hostname = None;
     }
     // Simulate re-registration after restart
     let port = w.server.server_address().unwrap().port().unwrap();
     {
-        let mut s = w.mdns_status.write().expect("lock");
+        let mut s = w.mdns_status.write();
         s.active = true;
         s.hostname = Some("mokumo.local".to_string());
         s.port = port;
@@ -170,13 +170,13 @@ async fn restart_via_sentinel(w: &mut ApiWorld) {
 async fn mdns_deregistered_before_reinit(w: &mut ApiWorld) {
     // Verified by the restart sequence above: mDNS was deactivated then reactivated.
     // In production, deregister_mdns runs before the loop continues.
-    let s = w.mdns_status.read().expect("lock");
+    let s = w.mdns_status.read();
     assert!(s.active, "mDNS should be re-registered after restart");
 }
 
 #[then("mDNS is re-registered with the new server port")]
 async fn mdns_reregistered_with_port(w: &mut ApiWorld) {
-    let s = w.mdns_status.read().expect("lock");
+    let s = w.mdns_status.read();
     assert!(s.active);
     assert!(
         s.port > 0,

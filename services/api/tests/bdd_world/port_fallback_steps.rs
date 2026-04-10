@@ -94,7 +94,7 @@ async fn mdns_registered_on_port(w: &mut ApiWorld, _port: u16) {
     // via RecordingDiscovery. This step verifies the mDNS status structure
     // has a port set (by build_app_with_shutdown via the mdns_status write).
     let actual_port = w.server.server_address().unwrap().port().unwrap();
-    let s = w.mdns_status.read().expect("lock");
+    let s = w.mdns_status.read();
     // Port in mDNS status is set by main.rs (not build_app_with_shutdown),
     // so in tests it defaults to 0. The actual mDNS registration test is in
     // lan_discovery.feature. Here we just verify the server is reachable.
