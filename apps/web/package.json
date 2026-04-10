@@ -71,6 +71,5 @@
     "svelte-sonner": "^1.1.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.1.0"
-  },
-  "packageManager": "pnpm@10.6.5"
+  }
 }
