@@ -12,7 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Process lock with port info**: Lock file stores the bound port so conflict messages show the URL and suggest checking the system tray. `reset-db` conflict message includes the port. (#311)
 - **mDNS retry with backoff**: When LAN discovery fails at startup, automatic retries at 60s/120s/300s intervals until registration succeeds or the server shuts down. (#314)
 - **WebSocket shutdown broadcast**: Connected clients receive a `server_shutting_down` event before the close frame, enabling frontend disconnect banners.
-- **System tray**: Closing the window hides to tray instead of quitting. Server keeps running in the background. Left-click or "Reopen Desktop App" menu item restores the window. "Quit Mokumo" triggers clean shutdown. macOS dock icon hides/restores automatically. (#408)
+- **System tray**: Closing the window hides to tray instead of quitting. Server keeps running in the background. Left-click or "Reopen Desktop App" menu item restores the window. "Quit Mokumo" triggers clean shutdown with confirmation dialog showing connected client count. macOS dock icon hides/restores automatically. (#408)
+- **Tray status and info**: Dynamic tray icon (green/yellow/red) reflects mDNS status. Tray menu shows port, IP, mDNS hostname. "Open in Browser" menu item. Tooltip shows server URL and connected client count. (#408)
+- **Quit flow**: Quit from tray menu or Cmd+Q/Alt+F4 shows confirmation dialog with client count. When window is hidden, sends OS notification instead. Linux no-tray degradation: close button triggers quit confirmation. (#408)
 - **Connect Your Team card**: QR code and connection URLs on the dashboard with mDNS status indicator, troubleshooting guidance, and first-run nudge for new installs.
 - **WebSocket disconnect banner**: Employees see a status banner when the server disconnects, with reconnection indicator and brief "Reconnected" confirmation.
 - **Branded error page** shows the Mokumo logo, status code, and human-readable message for 400/401/403/404/5xx errors with navigation back to the dashboard.
