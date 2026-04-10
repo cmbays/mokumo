@@ -31,12 +31,13 @@
   // 1. If confirmed replay (user clicked "Leave anyway") → allow through.
   // 2. If dirty forms and no dialog open → cancel, store destination, show dialog.
   // 3. If dialog already open → cancel (race guard).
-  beforeNavigate(({ cancel, to, willUnload }) => {
+  beforeNavigate((navigation) => {
+    const { cancel, to, willUnload, type } = navigation;
     if (willUnload) return; // beforeunload handles tab close / external nav
 
     if (
       profile.pendingNavigation &&
-      to?.url.href === profile.pendingNavigation
+      to?.url.href === profile.pendingNavigation.href
     ) {
       profile.pendingNavigation = null;
       return; // confirmed replay — allow
@@ -44,7 +45,13 @@
 
     if (profile.dirtyForms.size > 0 && !profile.unsavedChangesDialogOpen) {
       cancel();
-      profile.pendingNavigation = to?.url.href ?? null;
+      const delta =
+        type === "popstate" && "delta" in navigation
+          ? (navigation.delta as number)
+          : undefined;
+      profile.pendingNavigation = to?.url.href
+        ? { href: to.url.href, delta }
+        : null;
       profile.unsavedChangesDialogOpen = true;
       return;
     }
@@ -98,17 +105,22 @@
       return;
     }
 
-    // Navigation context
-    const dest = profile.pendingNavigation;
+    // Navigation context — replay with history.go() for back/forward,
+    // goto() for link clicks, to preserve browser history semantics.
+    const pending = profile.pendingNavigation;
     profile.unsavedChangesDialogOpen = false;
     profile.dirtyForms.clear();
     profile.pendingNavigation = null;
-    if (dest) {
+    if (pending) {
       try {
-        await goto(dest);
+        if (pending.delta !== undefined) {
+          history.go(pending.delta);
+        } else {
+          await goto(pending.href);
+        }
       } catch (error) {
         console.error("Navigation replay failed:", error);
-        window.location.assign(dest);
+        window.location.assign(pending.href);
       }
     }
   }
