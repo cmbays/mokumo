@@ -2,6 +2,7 @@ pub mod activity;
 pub mod backup;
 pub mod customer;
 pub mod migration;
+pub mod restore;
 pub mod role;
 pub mod sequence;
 pub mod user;
@@ -119,7 +120,7 @@ pub(crate) fn sea_err(e: sea_orm::DbErr) -> DomainError {
 /// Valid states at startup: `0` (not-yet-stamped, legacy installs before
 /// `m20260404_000000_set_pragmas` ran) or this value.
 /// Any other non-zero value → `check_application_id` returns `NotMokumoDatabase`.
-pub(crate) const MOKUMO_APPLICATION_ID: i64 = 0x4D4B4D4F;
+pub const MOKUMO_APPLICATION_ID: i64 = 0x4D4B4D4F;
 
 /// SeaORM emits this message when a DB has migrations the binary doesn't know about
 /// (downgrade scenario). Intercepted as defense-in-depth after `check_schema_compatibility`.

@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Open Existing Shop**: welcome screen now includes a third button to restore a production shop from an existing `.db` backup file. The file is validated (application ID, integrity, schema compatibility), copied to the production slot, and the server restarts. Users then log in with their existing credentials. (#282)
+
 - **Graceful shutdown with drain timeout**: Server now exits within 10 seconds of receiving a shutdown signal, even with in-flight requests. CLI handles both SIGINT (Ctrl+C) and SIGTERM on Unix. Desktop wraps server drain with a 10-second timeout. (#312)
 - **Process lock with port info**: Lock file stores the bound port so conflict messages show the URL and suggest checking the system tray. `reset-db` conflict message includes the port. (#311)
 - **mDNS retry with backoff**: When LAN discovery fails at startup, automatic retries at 60s/120s/300s intervals until registration succeeds or the server shuts down. (#314)
@@ -32,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Restore flow robustness**: rollback failures during restore now propagate as 500 errors with clear messages instead of silently leaving the filesystem in an inconsistent state. Sentinel write and rollback file deletions are now fully async (`tokio::fs`). Large file restores no longer time out (backup now completes in a single step). SQLite errors during integrity and schema checks now surface as `DatabaseCorrupt` (422) rather than generic 500. (#476)
 - **bdd-lint exit code** now fails when dead specs exceed a configurable threshold (`--max-dead-specs`), enabling it to function as a blocking CI gate. Previously always exited 0 regardless of findings. (#385)
 
 ### CI

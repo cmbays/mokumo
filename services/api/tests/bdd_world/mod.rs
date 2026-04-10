@@ -8,6 +8,7 @@ pub mod lock_steps;
 pub mod mdns_retry_steps;
 pub mod port_fallback_steps;
 pub mod regen_steps;
+pub mod restore_steps;
 pub mod shutdown_steps;
 
 use std::collections::HashMap;
@@ -53,6 +54,10 @@ pub struct ApiWorld {
     pub last_pin: Option<String>,
     // Hold the tempdir alive for the lifetime of the world
     pub _tmp: tempfile::TempDir,
+    // Restore step state
+    pub restore_data_dir: Option<PathBuf>,
+    pub restore_file_tmp: Option<tempfile::TempDir>,
+    pub restore_in_progress_simulated: bool,
 }
 
 impl ApiWorld {
@@ -140,6 +145,9 @@ impl ApiWorld {
             recovery_dir,
             last_pin: None,
             _tmp: tmp,
+            restore_data_dir: None,
+            restore_file_tmp: None,
+            restore_in_progress_simulated: false,
         }
     }
 

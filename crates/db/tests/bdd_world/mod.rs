@@ -11,6 +11,7 @@ use std::collections::HashSet;
 
 mod customer_steps;
 mod migration_safety_steps;
+mod restore_steps;
 
 #[derive(Debug, World)]
 #[world(init = Self::new)]
@@ -35,6 +36,13 @@ pub struct DbWorld {
     ms_backup_seaql_before_upgrade: Option<i64>,
     ms_migration_failed: bool,
     ms_table_count_before: Option<i64>,
+    // Restore step state
+    pub restore_tmp: Option<tempfile::TempDir>,
+    pub restore_candidate_path: Option<std::path::PathBuf>,
+    pub restore_validate_result:
+        Option<Result<mokumo_db::restore::CandidateInfo, mokumo_db::restore::RestoreError>>,
+    pub restore_copy_result: Option<Result<(), mokumo_db::restore::RestoreError>>,
+    pub restore_production_dir: Option<std::path::PathBuf>,
 }
 
 impl DbWorld {
@@ -66,6 +74,11 @@ impl DbWorld {
             ms_backup_seaql_before_upgrade: None,
             ms_migration_failed: false,
             ms_table_count_before: None,
+            restore_tmp: None,
+            restore_candidate_path: None,
+            restore_validate_result: None,
+            restore_copy_result: None,
+            restore_production_dir: None,
         }
     }
 }

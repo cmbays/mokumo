@@ -214,6 +214,16 @@
           Explore Demo
         {/if}
       </Button>
+
+      <Button
+        variant="outline"
+        class="w-full"
+        disabled={switching}
+        onclick={() => goto("/welcome/restore")}
+        data-testid="open-existing-shop-button"
+      >
+        Open Existing Shop
+      </Button>
     </div>
   </div>
 {/if}
