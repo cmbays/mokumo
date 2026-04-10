@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { apiFetch } from "$lib/api";
   import { Button } from "$lib/components/ui/button";
   import {
@@ -13,6 +14,9 @@
   import { Label } from "$lib/components/ui/label";
   import { Alert, AlertDescription } from "$lib/components/ui/alert";
   import CircleAlert from "@lucide/svelte/icons/circle-alert";
+  import CheckCircle from "@lucide/svelte/icons/check-circle";
+
+  let restored = $derived(page.url.searchParams.get("restored") === "true");
 
   let email = $state("");
   let password = $state("");
@@ -50,6 +54,15 @@
     >
   </CardHeader>
   <CardContent>
+    {#if restored}
+      <Alert class="mb-4">
+        <CheckCircle class="h-4 w-4" />
+        <AlertDescription>
+          Your shop data has been imported. Sign in with your existing credentials.
+        </AlertDescription>
+      </Alert>
+    {/if}
+
     {#if error}
       <Alert variant="destructive" class="mb-4">
         <CircleAlert class="h-4 w-4" />
