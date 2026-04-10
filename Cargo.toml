@@ -20,7 +20,7 @@ repository = "https://github.com/breezy-bays-labs/mokumo"
 tokio = { version = "1", features = ["full"] }
 
 # Web framework
-axum = { version = "0.8", features = ["macros", "ws"] }
+axum = { version = "0.8", features = ["macros", "multipart", "ws"] }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
 
 # Auth

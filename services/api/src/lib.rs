@@ -9,6 +9,7 @@ pub mod pagination;
 pub mod profile_db;
 pub mod profile_switch;
 pub mod rate_limit;
+pub mod restore;
 pub mod security_headers;
 pub mod server_info;
 pub mod ws;
@@ -102,6 +103,10 @@ pub struct AppState {
     /// True until the first profile switch completes (set false after active_profile is written).
     /// Initialized at startup from whether the active_profile file is absent.
     pub is_first_launch: Arc<AtomicBool>,
+    /// Prevents concurrent restore operations. Set to true while a restore is in-flight.
+    pub restore_in_progress: Arc<AtomicBool>,
+    /// Rate limiter for restore attempts (5 per hour, shared across validate + restore).
+    pub restore_limiter: rate_limit::RateLimiter,
 }
 
 impl AppState {
@@ -748,6 +753,8 @@ fn build_app_inner(
         regen_limiter: rate_limit::RateLimiter::new(3, std::time::Duration::from_secs(3600)),
         switch_limiter: rate_limit::RateLimiter::new(3, rate_limit::DEFAULT_WINDOW),
         is_first_launch: Arc::new(AtomicBool::new(first_launch)),
+        restore_in_progress: Arc::new(AtomicBool::new(false)),
+        restore_limiter: rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(3600)),
     });
 
     // Background task: sweep expired reset PINs every 60s
@@ -793,6 +800,15 @@ fn build_app_inner(
             auth::require_auth_with_demo_auto_login,
         ));
 
+    // Restore routes: unauthenticated, 500 MB body limit for file uploads.
+    let restore_routes = Router::new()
+        .route(
+            "/api/shop/restore/validate",
+            post(restore::validate_handler),
+        )
+        .route("/api/shop/restore", post(restore::restore_handler))
+        .layer(axum::extract::DefaultBodyLimit::max(500 * 1024 * 1024));
+
     let mut router = Router::new()
         .route("/api/health", get(health))
         .route("/api/server-info", get(server_info::handler))
@@ -800,6 +816,7 @@ fn build_app_inner(
         .route("/api/backup-status", get(backup_status::handler))
         .nest("/api/auth", auth::auth_router())
         .nest("/api/setup", auth::setup_router())
+        .merge(restore_routes)
         .merge(protected_routes);
 
     #[cfg(debug_assertions)]
