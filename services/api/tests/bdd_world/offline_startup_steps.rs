@@ -45,6 +45,6 @@ async fn diagnostics_mdns_inactive(w: &mut ApiWorld) {
         .expect("runtime.mdns_active should be a boolean");
     assert!(
         !mdns_active,
-        "Expected runtime.mdns_active to be false, got true"
+        "Expected runtime.mdns_active to be false, but it was true"
     );
 }
