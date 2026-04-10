@@ -609,7 +609,7 @@ pub async fn build_app(
     let (session_store, setup_completed, setup_token) =
         init_session_and_setup(&production_db, &session_db_path).await?;
 
-    let router = build_app_inner(
+    let (router, _ws) = build_app_inner(
         config,
         demo_db,
         production_db,
@@ -637,7 +637,10 @@ pub async fn build_app_with_shutdown(
     active_profile: SetupMode,
     shutdown: CancellationToken,
     mdns_status: discovery::SharedMdnsStatus,
-) -> Result<(Router, Option<String>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<
+    (Router, Option<String>, Arc<ws::manager::ConnectionManager>),
+    Box<dyn std::error::Error + Send + Sync>,
+> {
     let initial_ip = local_ip_address::local_ip().ok();
     let (local_ip_tx, local_ip_rx) = tokio::sync::watch::channel(initial_ip);
 
@@ -682,7 +685,7 @@ pub async fn build_app_with_shutdown(
         tracing::info!("Setup required — token: {token}");
     }
 
-    let router = build_app_inner(
+    let (router, ws) = build_app_inner(
         config,
         demo_db,
         production_db,
@@ -694,7 +697,7 @@ pub async fn build_app_with_shutdown(
         setup_completed,
         setup_token.clone(),
     );
-    Ok((router, setup_token))
+    Ok((router, setup_token, ws))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -710,7 +713,7 @@ fn build_app_inner(
     session_store: SqliteStore,
     setup_completed: Arc<AtomicBool>,
     setup_token: Option<String>,
-) -> Router {
+) -> (Router, Arc<ws::manager::ConnectionManager>) {
     // Session layer: SameSite=Lax, HttpOnly, no Secure for M0 (LAN HTTP)
     // Lax (not Strict) so bookmarks and mDNS links preserve the session.
     let session_layer = SessionManagerLayer::new(session_store)
@@ -728,11 +731,13 @@ fn build_app_inner(
     // not mistakenly treated as first launches.
     let first_launch = !config.data_dir.join("active_profile").exists();
 
+    let ws_handle = Arc::new(ws::manager::ConnectionManager::new(64));
+
     let state: SharedState = Arc::new(AppState {
         demo_db,
         production_db,
         active_profile: std::sync::RwLock::new(active_profile),
-        ws: Arc::new(ws::manager::ConnectionManager::new(64)),
+        ws: ws_handle.clone(),
         shutdown,
         started_at: std::time::Instant::now(),
         mdns_status,
@@ -813,7 +818,7 @@ fn build_app_inner(
             .route("/api/debug/recovery-dir", get(debug_recovery_dir));
     }
 
-    router
+    let app = router
         .fallback(serve_spa)
         // ProfileDbMiddleware: innermost — runs after auth session is populated.
         // Injects ProfileDb into request extensions for all routes.
@@ -823,7 +828,8 @@ fn build_app_inner(
         ))
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state);
+    (app, ws_handle)
 }
 
 /// Reset a user's password directly via SQLite (no server required).
