@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import AppTopbar from "$lib/components/app-topbar.svelte";
   import DemoBanner from "$lib/components/demo-banner.svelte";
+  import DisconnectBanner from "$lib/components/disconnect-banner.svelte";
   import RecoveryCodeWarning from "$lib/components/recovery-code-warning.svelte";
   import UnsavedChangesDialog from "$lib/components/unsaved-changes-dialog.svelte";
   import { SidebarInset, SidebarProvider } from "$lib/components/ui/sidebar";
@@ -13,6 +15,12 @@
     replayNavigation,
   } from "$lib/navigation-guard";
   import { profile } from "$lib/stores/profile.svelte";
+  import {
+    markConnected,
+    markDisconnected,
+    markShutdown,
+  } from "$lib/stores/ws-status.svelte";
+  import { createWebSocketConnection } from "$lib/ws";
   import { toast } from "$lib/components/toast";
   import type { LayoutData } from "./$types";
 
@@ -32,6 +40,26 @@
   }
 
   installNavigationGuard();
+
+  onMount(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = createWebSocketConnection(wsUrl, {
+      onMessage: () => {},
+      onReconnect: markConnected,
+      onDisconnect: markDisconnected,
+      onShutdown: markShutdown,
+    });
+
+    // Expose store helpers for Playwright BDD tests
+    (window as any).__wsStatusTestHelpers = {
+      markConnected,
+      markDisconnected,
+      markShutdown,
+    };
+
+    return () => ws.close();
+  });
 
   let confirmSwitching = $state(false);
 
@@ -101,6 +129,7 @@
   />
   <SidebarInset>
     <AppTopbar />
+    <DisconnectBanner />
     <DemoBanner
       setupMode={data.setup_mode}
       hasProductionShop={data.production_setup_complete}

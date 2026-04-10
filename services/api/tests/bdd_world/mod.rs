@@ -4,7 +4,11 @@ pub mod customer_steps;
 pub mod demo_steps;
 pub mod discovery_steps;
 pub mod health_steps;
+pub mod lock_steps;
+pub mod mdns_retry_steps;
+pub mod port_fallback_steps;
 pub mod regen_steps;
+pub mod shutdown_steps;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -84,7 +88,7 @@ impl ApiWorld {
 
         let shutdown_token = CancellationToken::new();
         let mdns_status = MdnsStatus::shared();
-        let (app, setup_token) = build_app_with_shutdown(
+        let (app, setup_token, _ws) = build_app_with_shutdown(
             &config,
             db.clone(),
             db.clone(),

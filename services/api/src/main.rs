@@ -5,8 +5,9 @@ use tokio_util::sync::CancellationToken;
 
 use mokumo_api::{
     DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_backup, cli_reset_db,
-    cli_reset_password, cli_restore, discovery, ensure_data_dirs, lock_file_path,
-    logging::init_tracing, prepare_database, resolve_active_profile, try_bind,
+    cli_reset_password, cli_restore, discovery, ensure_data_dirs, format_lock_conflict_message,
+    format_reset_db_conflict_message, lock_file_path, logging::init_tracing, prepare_database,
+    read_lock_info, resolve_active_profile, try_bind, write_lock_info,
 };
 use mokumo_core::setup::SetupMode;
 
@@ -455,10 +456,9 @@ async fn main() {
             let _lock_guard = match flock.try_write() {
                 Ok(guard) => guard,
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    eprintln!(
-                        "The database appears to be in use by a running server.\n\
-                         Stop the server first, then try again."
-                    );
+                    let port = read_lock_info(&lock_path);
+                    let msg = format_reset_db_conflict_message(port);
+                    eprintln!("{msg}");
                     std::process::exit(1);
                 }
                 Err(e) => {
@@ -747,11 +747,9 @@ async fn main() {
     let _server_lock = match flock.try_write() {
         Ok(guard) => guard,
         Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-            eprintln!(
-                "Another Mokumo server appears to be running (lock held on {}).\n\
-                 Stop the other instance first.",
-                lock_path.display()
-            );
+            let port = read_lock_info(&lock_path);
+            let msg = format_lock_conflict_message(port);
+            eprintln!("{msg}");
             tracing::error!("Process lock already held — another server is running");
             std::process::exit(1);
         }
@@ -762,8 +760,8 @@ async fn main() {
         }
     };
 
-    // Master shutdown token — Ctrl+C cancels this once. Each loop iteration creates
-    // a child token so individual restarts don't tear down the master signal.
+    // Master shutdown token — signal handler cancels this once. Each loop iteration
+    // creates a child token so individual restarts don't tear down the master signal.
     let master_shutdown = CancellationToken::new();
 
     // Server loop: runs once normally, restarts on demo reset.
@@ -771,18 +769,57 @@ async fn main() {
     {
         let token = master_shutdown.clone();
         tokio::spawn(async move {
-            match tokio::signal::ctrl_c().await {
-                Ok(()) => {
-                    tracing::info!("Shutdown signal received, draining connections...");
-                    token.cancel();
+            let shutdown_signal = async {
+                #[cfg(unix)]
+                {
+                    let mut sigterm =
+                        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                            .expect("failed to install SIGTERM handler");
+
+                    tokio::select! {
+                        result = tokio::signal::ctrl_c() => {
+                            if let Err(e) = result {
+                                tracing::error!(
+                                    "Failed to listen for ctrl+c: {e}. \
+                                     Server will continue running but graceful shutdown via Ctrl+C is unavailable."
+                                );
+                                // ctrl_c failed but SIGTERM may still work — wait for it
+                                sigterm.recv().await;
+                            }
+                        }
+                        _ = sigterm.recv() => {}
+                    }
                 }
-                Err(e) => {
-                    tracing::error!(
-                        "Failed to listen for ctrl+c: {e}. \
-                         Server will continue running but graceful shutdown via Ctrl+C is unavailable."
-                    );
+
+                #[cfg(not(unix))]
+                {
+                    if let Err(e) = tokio::signal::ctrl_c().await {
+                        tracing::error!(
+                            "Failed to listen for ctrl+c: {e}. \
+                             Server will continue running but graceful shutdown via Ctrl+C is unavailable."
+                        );
+                        std::future::pending::<()>().await;
+                    }
                 }
-            }
+            };
+
+            shutdown_signal.await;
+            tracing::info!("Shutdown signal received, draining connections...");
+            token.cancel();
+
+            // Hard-stop timer: if drain takes longer than 10 seconds, force exit.
+            // This starts AFTER the shutdown signal fires, not around the serve future.
+            tokio::spawn(async {
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    mokumo_api::DRAIN_TIMEOUT_SECS,
+                ))
+                .await;
+                tracing::warn!(
+                    "Drain timeout elapsed ({}s), forcing shutdown",
+                    mokumo_api::DRAIN_TIMEOUT_SECS
+                );
+                std::process::exit(0);
+            });
         });
     }
 
@@ -802,7 +839,7 @@ async fn main() {
         let shutdown_token = master_shutdown.child_token();
         let mdns_status = discovery::MdnsStatus::shared();
 
-        let (app, _setup_token) = match build_app_with_shutdown(
+        let (app, _setup_token, _ws) = match build_app_with_shutdown(
             &config,
             demo_db,
             production_db,
@@ -831,6 +868,19 @@ async fn main() {
         };
         bound_port = Some(actual_port);
 
+        // Write port info to lock file so conflict messages are actionable.
+        // Open a separate handle — the flock doesn't block same-process writes.
+        match std::fs::OpenOptions::new().write(true).open(&lock_path) {
+            Ok(f) => {
+                if let Err(e) = write_lock_info(&f, actual_port) {
+                    tracing::warn!("Failed to write port info to lock file: {e}");
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to open lock file for port info: {e}");
+            }
+        }
+
         if actual_port != config.port {
             tracing::warn!(
                 "Requested port {} was unavailable, using port {} instead",
@@ -852,6 +902,20 @@ async fn main() {
             &discovery::RealDiscovery,
         );
 
+        // If initial mDNS registration failed and we're on a LAN-facing address,
+        // start background retry with backoff (60s, 120s, 300s cap).
+        let mdns_retry = if mdns_handle.is_none() && !discovery::is_loopback(&config.host) {
+            Some(discovery::spawn_mdns_retry(
+                config.host.clone(),
+                actual_port,
+                mdns_status.clone(),
+                std::sync::Arc::new(discovery::RealDiscovery),
+                shutdown_token.clone(),
+            ))
+        } else {
+            None
+        };
+
         if let Err(e) = axum::serve(listener, app)
             .with_graceful_shutdown(async move {
                 shutdown_token.cancelled().await;
@@ -862,7 +926,12 @@ async fn main() {
             std::process::exit(1);
         }
 
-        // Deregister mDNS after server stops (both Ctrl+C and restart paths)
+        // Cancel mDNS retry task if running — if it succeeded, deregister its handle too.
+        if let Some(retry) = mdns_retry
+            && let Some(retry_handle) = retry.cancel().await
+        {
+            discovery::deregister_mdns(retry_handle, &mdns_status);
+        }
         if let Some(handle) = mdns_handle {
             discovery::deregister_mdns(handle, &mdns_status);
         }

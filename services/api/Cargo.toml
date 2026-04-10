@@ -56,7 +56,7 @@ http = "1"
 serde_json = { workspace = true }
 axum-test = { workspace = true }
 cucumber = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 password-auth = { workspace = true }
 futures-util = { workspace = true }
 uuid = { workspace = true }
