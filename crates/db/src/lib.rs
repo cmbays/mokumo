@@ -1,6 +1,7 @@
 pub mod activity;
 pub mod customer;
 pub mod migration;
+pub mod restore;
 pub mod role;
 pub mod sequence;
 pub mod user;
