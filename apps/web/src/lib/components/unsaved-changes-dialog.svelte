@@ -1,8 +1,5 @@
 <script lang="ts">
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
-  import { buttonVariants } from "$lib/components/ui/button";
-  import { cn } from "$lib/utils.js";
-
   interface Props {
     open: boolean;
     description?: string;
@@ -38,14 +35,13 @@
       >
         Cancel
       </AlertDialog.Cancel>
-      <button
-        data-slot="alert-dialog-action"
-        class={cn(buttonVariants({ variant: "destructive" }))}
+      <AlertDialog.Action
+        variant="destructive"
         onclick={onconfirm}
         data-testid="unsaved-changes-confirm-btn"
       >
         Leave anyway
-      </button>
+      </AlertDialog.Action>
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>
