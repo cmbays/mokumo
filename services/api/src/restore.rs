@@ -34,13 +34,16 @@ impl RestoreGuard {
     /// Then re-checks `is_first_launch` after acquiring the flag to close the
     /// TOCTOU window between checks (a) and (c).
     fn acquire(state: &SharedState) -> Result<Self, AppError> {
+        // (a) Endpoint is only available during first-launch (welcome screen active).
+        //     `is_first_launch` becomes false once a profile is selected — use 403
+        //     so the client knows the route is permanently unavailable, not in conflict.
         if !state.is_first_launch.load(Ordering::Acquire) {
-            return Err(AppError::StateConflict(
-                ErrorCode::ProductionDbExists,
-                "Restore is only available before a production database has been created.".into(),
+            return Err(AppError::Forbidden(
+                "Restore is only available on first launch.".into(),
             ));
         }
 
+        // (b) Production DB must not already exist on disk.
         let prod_path = state.data_dir.join("production").join("mokumo.db");
         if prod_path.exists() {
             return Err(AppError::StateConflict(
@@ -49,6 +52,7 @@ impl RestoreGuard {
             ));
         }
 
+        // (c) At most one restore in flight at a time.
         if state
             .restore_in_progress
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -60,12 +64,11 @@ impl RestoreGuard {
             ));
         }
 
-        // Double-check after acquiring the flag (TOCTOU mitigation).
+        // Double-check after acquiring the flag (TOCTOU mitigation for (a)).
         if !state.is_first_launch.load(Ordering::Acquire) {
             state.restore_in_progress.store(false, Ordering::Release);
-            return Err(AppError::StateConflict(
-                ErrorCode::ProductionDbExists,
-                "A production database already exists.".into(),
+            return Err(AppError::Forbidden(
+                "Restore is only available on first launch.".into(),
             ));
         }
 
@@ -473,7 +476,7 @@ mod tests {
     // ── RestoreGuard tests ─────────────────────────────────────────────────────
 
     #[tokio::test]
-    async fn validate_returns_409_production_db_exists_when_not_first_launch() {
+    async fn validate_returns_403_forbidden_when_not_first_launch() {
         let ctx = non_first_launch_server().await;
         let response = ctx
             .server
@@ -482,13 +485,13 @@ mod tests {
             .json(&json!({"path": "/some/path.db"}))
             .await;
 
-        assert_eq!(response.status_code(), 409);
+        assert_eq!(response.status_code(), 403);
         let body: ErrorBody = response.json();
-        assert_eq!(body.code, ErrorCode::ProductionDbExists);
+        assert_eq!(body.code, ErrorCode::Forbidden);
     }
 
     #[tokio::test]
-    async fn restore_returns_409_production_db_exists_when_not_first_launch() {
+    async fn restore_returns_403_forbidden_when_not_first_launch() {
         let ctx = non_first_launch_server().await;
         let response = ctx
             .server
@@ -497,9 +500,9 @@ mod tests {
             .json(&json!({"path": "/some/path.db"}))
             .await;
 
-        assert_eq!(response.status_code(), 409);
+        assert_eq!(response.status_code(), 403);
         let body: ErrorBody = response.json();
-        assert_eq!(body.code, ErrorCode::ProductionDbExists);
+        assert_eq!(body.code, ErrorCode::Forbidden);
     }
 
     #[tokio::test]

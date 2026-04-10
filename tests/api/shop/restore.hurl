@@ -13,14 +13,14 @@ jsonpath "$.details" == null
 
 ---
 
-# Non-first-launch server returns 409 production_db_exists
+# Non-first-launch server returns 403 forbidden
 POST http://{{host}}/api/shop/restore
 Content-Type: application/json
 {"path": "/tmp/nonexistent.db"}
 
-HTTP 409
+HTTP 403
 [Asserts]
 header "Content-Type" contains "application/json"
-jsonpath "$.code" == "production_db_exists"
+jsonpath "$.code" == "forbidden"
 jsonpath "$.message" isString
 jsonpath "$.details" == null

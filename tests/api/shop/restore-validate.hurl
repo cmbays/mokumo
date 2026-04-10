@@ -1,7 +1,7 @@
 # POST /api/shop/restore/validate — smoke tests
-# NOTE: These run against a running server that has a production DB
-# (non-first-launch), so all requests should return 409 production_db_exists
-# unless the test environment is first-launch.
+# NOTE: These run against a running server that has completed setup
+# (non-first-launch). All non-parse requests should return 403 forbidden
+# because the endpoint is only available during first launch.
 
 # No body → 400 parse_error
 POST http://{{host}}/api/shop/restore/validate
@@ -16,14 +16,14 @@ jsonpath "$.details" == null
 
 ---
 
-# Non-first-launch server returns 409 production_db_exists
+# Non-first-launch server returns 403 forbidden
 POST http://{{host}}/api/shop/restore/validate
 Content-Type: application/json
 {"path": "/tmp/nonexistent.db"}
 
-HTTP 409
+HTTP 403
 [Asserts]
 header "Content-Type" contains "application/json"
-jsonpath "$.code" == "production_db_exists"
+jsonpath "$.code" == "forbidden"
 jsonpath "$.message" isString
 jsonpath "$.details" == null

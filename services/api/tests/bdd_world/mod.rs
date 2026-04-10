@@ -5,6 +5,7 @@ pub mod demo_steps;
 pub mod discovery_steps;
 pub mod health_steps;
 pub mod regen_steps;
+pub mod restore_steps;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -49,6 +50,10 @@ pub struct ApiWorld {
     pub last_pin: Option<String>,
     // Hold the tempdir alive for the lifetime of the world
     pub _tmp: tempfile::TempDir,
+    // Restore step state
+    pub restore_data_dir: Option<PathBuf>,
+    pub restore_file_tmp: Option<tempfile::TempDir>,
+    pub restore_in_progress_simulated: bool,
 }
 
 impl ApiWorld {
@@ -136,6 +141,9 @@ impl ApiWorld {
             recovery_dir,
             last_pin: None,
             _tmp: tmp,
+            restore_data_dir: None,
+            restore_file_tmp: None,
+            restore_in_progress_simulated: false,
         }
     }
 
