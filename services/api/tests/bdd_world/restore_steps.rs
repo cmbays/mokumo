@@ -303,7 +303,12 @@ async fn active_profile_read_only(w: &mut ApiWorld) {
     }
     #[cfg(not(unix))]
     {
-        // PermissionsExt is not available on non-Unix platforms — skip.
+        // `PermissionsExt` is Unix-only, and Windows `set_readonly()` does not
+        // prevent rename/delete on the parent directory — so there is no
+        // portable way to reproduce this failure mode on non-Unix platforms.
+        // Scenarios that rely on `active_profile_read_only` will pass trivially
+        // on Windows; treat them as Unix-only until a portable alternative
+        // exists.
         let _ = w;
     }
 }
