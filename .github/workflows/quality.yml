@@ -458,9 +458,10 @@ jobs:
     needs: [changes]
     if: needs.changes.outputs.desktop == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     continue-on-error: true  # New — not blocking verdict until stabilized
     env:
-      CARGO_TARGET_DIR: target
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
       - uses: actions/checkout@v4
         with:
@@ -477,7 +478,7 @@ jobs:
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "mokumo-rust"
+          shared-key: mokumo-rust
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install Linux display + WebKitGTK deps
         run: |
@@ -495,9 +496,15 @@ jobs:
       - name: Build SvelteKit frontend
         run: moon run web:build
       - name: Create demo.db placeholder
-        run: sqlite3 apps/web/scripts/demo.db "SELECT 1;" || touch apps/web/scripts/demo.db
+        shell: python
+        run: |
+          import os, sqlite3
+          os.makedirs("apps/web/scripts", exist_ok=True)
+          conn = sqlite3.connect("apps/web/scripts/demo.db")
+          conn.execute("SELECT 1")
+          conn.close()
       - name: Build Tauri app (debug)
-        run: cargo build -p mokumo-desktop
+        run: moon run desktop:build-debug
       - name: Run desktop E2E tests
         run: xvfb-run --auto-servernum moon run desktop-tests:test
 
