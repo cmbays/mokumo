@@ -22,6 +22,7 @@
     "core:default",
     "core:webview:allow-print",
     "core:tray:default",
-    "opener:default"
+    "opener:default",
+    "notification:default"
   ]
 }

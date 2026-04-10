@@ -494,7 +494,7 @@ async fn main() {
         let shutdown_token = master_shutdown.child_token();
         let mdns_status = discovery::MdnsStatus::shared();
 
-        let (app, _setup_token) = match build_app_with_shutdown(
+        let (app, _setup_token, _ws) = match build_app_with_shutdown(
             &config,
             demo_db,
             production_db,

@@ -121,6 +121,44 @@ pub fn format_port_exhaustion_message(start_port: u16, end_port: u16) -> String 
     )
 }
 
+/// Format the tray tooltip text showing server status.
+pub fn format_tray_tooltip(
+    ip: Option<std::net::IpAddr>,
+    port: u16,
+    mdns_hostname: Option<&str>,
+    client_count: usize,
+) -> String {
+    let url = match ip {
+        Some(ip) => format!("http://{ip}:{port}"),
+        None => format!("http://127.0.0.1:{port}"),
+    };
+    let clients = match client_count {
+        0 => "No clients connected".to_string(),
+        1 => "1 client connected".to_string(),
+        n => format!("{n} clients connected"),
+    };
+    match mdns_hostname {
+        Some(h) => format!("Mokumo — {url} ({h}.local) — {clients}"),
+        None => format!("Mokumo — {url} — {clients}"),
+    }
+}
+
+/// Format the mDNS display text for the tray menu info item.
+pub fn format_tray_menu_mdns(hostname: Option<&str>) -> String {
+    match hostname {
+        Some(h) => format!("mDNS: {h}.local"),
+        None => "mDNS: unavailable".to_string(),
+    }
+}
+
+/// Format the IP display text for the tray menu info item.
+pub fn format_tray_menu_ip(ip: Option<std::net::IpAddr>) -> String {
+    match ip {
+        Some(ip) => format!("IP: {ip}"),
+        None => "IP: detecting...".to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,5 +306,68 @@ mod tests {
     #[test]
     fn first_run_nudge_hidden_when_employees_exist() {
         assert!(!should_show_first_run_nudge(true));
+    }
+
+    // -- Tray tooltip tests --
+
+    #[test]
+    fn tray_tooltip_with_ip_and_mdns_and_clients() {
+        let ip = Some(std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+            192, 168, 1, 50,
+        )));
+        let tooltip = format_tray_tooltip(ip, 6565, Some("mokumo"), 3);
+        assert!(tooltip.contains("http://192.168.1.50:6565"));
+        assert!(tooltip.contains("mokumo.local"));
+        assert!(tooltip.contains("3 clients connected"));
+    }
+
+    #[test]
+    fn tray_tooltip_no_mdns_no_clients() {
+        let ip = Some(std::net::IpAddr::V4(std::net::Ipv4Addr::new(10, 0, 0, 1)));
+        let tooltip = format_tray_tooltip(ip, 6567, None, 0);
+        assert!(tooltip.contains("http://10.0.0.1:6567"));
+        assert!(!tooltip.contains(".local"));
+        assert!(tooltip.contains("No clients connected"));
+    }
+
+    #[test]
+    fn tray_tooltip_one_client_singular() {
+        let ip = Some(std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+            192, 168, 1, 50,
+        )));
+        let tooltip = format_tray_tooltip(ip, 6565, None, 1);
+        assert!(tooltip.contains("1 client connected"));
+        assert!(!tooltip.contains("clients"));
+    }
+
+    #[test]
+    fn tray_tooltip_no_ip_falls_back_to_loopback() {
+        let tooltip = format_tray_tooltip(None, 6565, None, 0);
+        assert!(tooltip.contains("http://127.0.0.1:6565"));
+    }
+
+    // -- Tray menu info tests --
+
+    #[test]
+    fn tray_menu_mdns_active() {
+        assert_eq!(format_tray_menu_mdns(Some("mokumo")), "mDNS: mokumo.local");
+    }
+
+    #[test]
+    fn tray_menu_mdns_inactive() {
+        assert_eq!(format_tray_menu_mdns(None), "mDNS: unavailable");
+    }
+
+    #[test]
+    fn tray_menu_ip_with_address() {
+        let ip = Some(std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+            192, 168, 1, 50,
+        )));
+        assert_eq!(format_tray_menu_ip(ip), "IP: 192.168.1.50");
+    }
+
+    #[test]
+    fn tray_menu_ip_detecting() {
+        assert_eq!(format_tray_menu_ip(None), "IP: detecting...");
     }
 }

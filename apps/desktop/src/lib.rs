@@ -2,9 +2,9 @@ pub mod lifecycle;
 
 use std::path::PathBuf;
 
-use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
@@ -37,6 +37,7 @@ struct ServerInit {
     setup_token: Option<String>,
     mdns_handle: Option<MdnsHandle>,
     mdns_status: discovery::SharedMdnsStatus,
+    ws: std::sync::Arc<mokumo_api::ws::manager::ConnectionManager>,
 }
 
 /// Map the bind host to a routable address for the webview.
@@ -82,7 +83,7 @@ async fn init_server(
     // Pre-allocate mDNS status (will be populated after mDNS registration)
     let mdns_status = discovery::MdnsStatus::shared();
 
-    let (router, setup_token) = build_app_with_shutdown(
+    let (router, setup_token, ws) = build_app_with_shutdown(
         &config,
         demo_db,
         production_db,
@@ -90,7 +91,8 @@ async fn init_server(
         shutdown,
         mdns_status.clone(),
     )
-    .await?;
+    .await
+    .map_err(|e| -> Box<dyn std::error::Error> { e })?;
 
     // Bind to port (with fallback)
     let (listener, actual_port) = try_bind(&config.host, config.port).await?;
@@ -103,14 +105,12 @@ async fn init_server(
         );
     }
 
-    // Record the bound port and bind host so /api/server-info always knows them
     {
         let mut s = mdns_status.write().expect("MdnsStatus lock poisoned");
         s.port = actual_port;
         s.bind_host = config.host.to_owned();
     }
 
-    // Register mDNS (skipped if bound to loopback, active on 0.0.0.0)
     let mdns_handle = discovery::register_mdns(
         &config.host,
         actual_port,
@@ -125,6 +125,7 @@ async fn init_server(
         setup_token,
         mdns_handle,
         mdns_status,
+        ws,
     })
 }
 
@@ -165,6 +166,54 @@ fn classify_startup_error(message: &str, path: String) -> ServerStartupError {
     }
 }
 
+/// Build a tray menu with info items and action items.
+fn build_tray_menu(
+    app: &tauri::AppHandle,
+    port_text: &str,
+    ip_text: &str,
+    mdns_text: &str,
+) -> Result<tauri::menu::Menu<tauri::Wry>, tauri::Error> {
+    let port_item = MenuItemBuilder::with_id("info-port", port_text)
+        .enabled(false)
+        .build(app)?;
+    let ip_item = MenuItemBuilder::with_id("info-ip", ip_text)
+        .enabled(false)
+        .build(app)?;
+    let mdns_item = MenuItemBuilder::with_id("info-mdns", mdns_text)
+        .enabled(false)
+        .build(app)?;
+    let sep1 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let open_browser = MenuItemBuilder::with_id("open-browser", "Open in Browser").build(app)?;
+    let reopen = MenuItemBuilder::with_id("reopen", "Reopen Desktop App").build(app)?;
+    let sep2 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let quit = MenuItemBuilder::with_id("quit", "Quit Mokumo").build(app)?;
+
+    MenuBuilder::new(app)
+        .items(&[
+            &port_item,
+            &ip_item,
+            &mdns_item,
+            &sep1,
+            &open_browser,
+            &reopen,
+            &sep2,
+            &quit,
+        ])
+        .build()
+}
+
+/// Load the tray icon PNG for the given status variant.
+fn load_tray_icon(variant: lifecycle::TrayIconVariant) -> tauri::image::Image<'static> {
+    let bytes: &[u8] = match variant {
+        lifecycle::TrayIconVariant::Green => include_bytes!("../icons/tray-green@2x.png"),
+        lifecycle::TrayIconVariant::Yellow => include_bytes!("../icons/tray-yellow@2x.png"),
+        lifecycle::TrayIconVariant::Red => include_bytes!("../icons/tray-red@2x.png"),
+    };
+    tauri::image::Image::from_bytes(bytes)
+        .expect("embedded tray icon is valid PNG")
+        .to_owned()
+}
+
 /// Show and focus the main window, restoring the dock icon on macOS.
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -174,6 +223,52 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
     #[cfg(target_os = "macos")]
     app.set_activation_policy(tauri::ActivationPolicy::Regular);
+}
+
+/// Handle quit request: show confirmation dialog or send notification based on window visibility.
+fn handle_quit(app: &tauri::AppHandle) {
+    let window_visible = app
+        .get_webview_window("main")
+        .and_then(|w| w.is_visible().ok())
+        .unwrap_or(false);
+
+    let client_count = app
+        .try_state::<std::sync::Arc<mokumo_api::ws::manager::ConnectionManager>>()
+        .map(|h| h.connection_count())
+        .unwrap_or(0);
+
+    match lifecycle::on_quit_requested(window_visible) {
+        lifecycle::QuitBehavior::ShowDialog => {
+            let message = lifecycle::format_quit_message(client_count);
+            let app_clone = app.clone();
+            app.dialog()
+                .message(message)
+                .title("Quit Mokumo")
+                .buttons(tauri_plugin_dialog::MessageDialogButtons::OkCancelCustom(
+                    "Yes".into(),
+                    "No".into(),
+                ))
+                .show(move |confirmed| {
+                    if confirmed {
+                        app_clone.exit(0);
+                    }
+                });
+        }
+        lifecycle::QuitBehavior::NotifyAndShutdown => {
+            // Best-effort OS notification when quitting from hidden window
+            use tauri_plugin_notification::NotificationExt;
+            let _ = app
+                .notification()
+                .builder()
+                .title("Mokumo")
+                .body("Mokumo is shutting down")
+                .show();
+            app.exit(0);
+        }
+        lifecycle::QuitBehavior::ShutdownDirect => {
+            app.exit(0);
+        }
+    }
 }
 
 pub fn run() {
@@ -191,6 +286,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         // Native OS dialogs — used to show startup errors before the webview opens
         .plugin(tauri_plugin_dialog::init())
+        // OS notifications — used for best-effort shutdown notification from hidden window
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the existing window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
@@ -239,6 +336,7 @@ pub fn run() {
                 setup_token,
                 mdns_handle,
                 mdns_status,
+                ws,
             } = tauri::async_runtime::block_on(init_server(
                 data_dir,
                 DEFAULT_PORT,
@@ -247,15 +345,9 @@ pub fn run() {
             ))
             .map_err(|e| {
                 tracing::error!("Server initialization failed: {e}");
-                // Show a native OS error dialog before Tauri propagates the error and
-                // exits. This fires before the webview opens, so blocking_show() is safe.
-                let dialog_msg = match &e.backup_path {
-                    Some(p) => format!("{}. Your data is backed up at: {}", e.message, p.display()),
-                    None => e.message.clone(),
-                };
                 dialog_handle
                     .dialog()
-                    .message(dialog_msg)
+                    .message(e.to_string())
                     .title("Mokumo — Startup Error")
                     .kind(MessageDialogKind::Error)
                     .blocking_show();
@@ -351,10 +443,12 @@ pub fn run() {
 
             // Store handles so ExitRequested can deregister mDNS and await server drain
             app.manage(ServerHandle(std::sync::Mutex::new(Some(server_handle))));
-            app.manage(MdnsState {
+            let mdns_state = MdnsState {
                 handle: std::sync::Mutex::new(mdns_handle),
-                status: mdns_status,
-            });
+                status: mdns_status.clone(),
+            };
+            app.manage(mdns_state);
+            app.manage(ws.clone());
 
             let url = initial_webview_url(DEFAULT_HOST, actual_port, setup_token.as_deref());
             let log_url = initial_webview_url(
@@ -373,29 +467,48 @@ pub fn run() {
             .inner_size(1200.0, 800.0)
             .build()?;
 
-            // System tray: right-click menu + left-click to reopen window
-            let reopen = MenuItemBuilder::with_id("reopen", "Reopen Desktop App").build(app)?;
-            let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
-            let quit = MenuItemBuilder::with_id("quit", "Quit Mokumo").build(app)?;
-            let tray_menu = MenuBuilder::new(app)
-                .items(&[&reopen, &separator, &quit])
-                .build()?;
+            let port_text = lifecycle::format_tray_menu_port(actual_port, DEFAULT_PORT);
+            let ip = local_ip_address::local_ip().ok();
+            let ip_text = lifecycle::format_tray_menu_ip(ip);
+            let mdns_text = {
+                let s = mdns_status.read().expect("MdnsStatus lock poisoned");
+                lifecycle::format_tray_menu_mdns(s.hostname.as_deref())
+            };
 
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Mokumo")
+            let tray_menu = build_tray_menu(app.handle(), &port_text, &ip_text, &mdns_text)?;
+
+            let tooltip = lifecycle::format_tray_tooltip(ip, actual_port, None, 0);
+
+            let initial_mdns_active = mdns_status.read().map(|s| s.active).unwrap_or(false);
+            let initial_variant = lifecycle::tray_icon_for_status(initial_mdns_active, true);
+            let initial_icon = load_tray_icon(initial_variant);
+
+            let server_port = actual_port;
+            let tray = TrayIconBuilder::with_id("main-tray")
+                .icon(initial_icon)
+                .tooltip(&tooltip)
                 .menu(&tray_menu)
-                .on_menu_event(|app, event| match event.id().as_ref() {
-                    "reopen" => {
-                        show_main_window(app);
-                    }
-                    "quit" => {
-                        // Triggers ExitRequested, which handles mDNS deregister + drain
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
+                .on_menu_event(
+                    move |app: &tauri::AppHandle, event: tauri::menu::MenuEvent| match event
+                        .id()
+                        .as_ref()
+                    {
+                        "open-browser" => {
+                            let url = format!("http://127.0.0.1:{server_port}");
+                            if let Err(e) = tauri_plugin_opener::open_url(&url, None::<&str>) {
+                                tracing::warn!("Failed to open browser: {e}");
+                            }
+                        }
+                        "reopen" => {
+                            show_main_window(app);
+                        }
+                        "quit" => {
+                            handle_quit(app);
+                        }
+                        _ => {}
+                    },
+                )
+                .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event: TrayIconEvent| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
@@ -407,21 +520,79 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            let poll_mdns = mdns_status.clone();
+            let poll_ws = ws;
+            let poll_shutdown = shutdown_token.clone();
+            let poll_tray = tray.clone();
+            let poll_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut prev_variant = initial_variant;
+                let mut prev_tooltip = tooltip;
+                let mut prev_ip_text = ip_text;
+                let mut prev_mdns_text = mdns_text;
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {}
+                        _ = poll_shutdown.cancelled() => break,
+                    }
+
+                    let (mdns_active, hostname) = {
+                        let s = poll_mdns.read().expect("MdnsStatus lock poisoned");
+                        (s.active, s.hostname.clone())
+                    };
+                    let client_count = poll_ws.connection_count();
+                    let ip = local_ip_address::local_ip().ok();
+
+                    let new_tooltip = lifecycle::format_tray_tooltip(
+                        ip,
+                        actual_port,
+                        hostname.as_deref(),
+                        client_count,
+                    );
+                    if new_tooltip != prev_tooltip {
+                        let _ = poll_tray.set_tooltip(Some(&new_tooltip));
+                        prev_tooltip = new_tooltip;
+                    }
+
+                    let variant = lifecycle::tray_icon_for_status(mdns_active, true);
+                    if variant != prev_variant {
+                        let _ = poll_tray.set_icon(Some(load_tray_icon(variant)));
+                        prev_variant = variant;
+                    }
+
+                    let new_ip_text = lifecycle::format_tray_menu_ip(ip);
+                    let new_mdns_text = lifecycle::format_tray_menu_mdns(hostname.as_deref());
+                    if new_ip_text != prev_ip_text || new_mdns_text != prev_mdns_text {
+                        if let Ok(menu) =
+                            build_tray_menu(&poll_app, &port_text, &new_ip_text, &new_mdns_text)
+                        {
+                            let _ = poll_tray.set_menu(Some(menu));
+                        }
+                        prev_ip_text = new_ip_text;
+                        prev_mdns_text = new_mdns_text;
+                    }
+                }
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Close-to-tray: intercept the window close button and hide instead of quitting.
-            // The server keeps running in the background; the user can reopen from the tray
-            // or quit via the tray menu (which triggers ExitRequested for clean shutdown).
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
-
-                // macOS: hide the dock icon when the window is hidden
-                #[cfg(target_os = "macos")]
-                {
-                    let app = window.app_handle();
-                    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                let app = window.app_handle();
+                // Check tray availability by trying to get the tray icon
+                let tray_available = app.tray_by_id("main-tray").is_some();
+                match lifecycle::on_close_requested(tray_available) {
+                    lifecycle::CloseAction::HideToTray => {
+                        api.prevent_close();
+                        let _ = window.hide();
+                        #[cfg(target_os = "macos")]
+                        app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                    }
+                    lifecycle::CloseAction::ShowQuitConfirmation => {
+                        api.prevent_close();
+                        handle_quit(app);
+                    }
                 }
             }
         })
