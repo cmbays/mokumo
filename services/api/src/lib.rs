@@ -973,6 +973,9 @@ pub fn format_reset_db_conflict_message(port: Option<u16>) -> String {
     }
 }
 
+/// Maximum seconds to wait for in-flight requests to drain before forcing shutdown.
+pub const DRAIN_TIMEOUT_SECS: u64 = 10;
+
 /// SQLite sidecar suffixes deleted alongside the main database file.
 pub const DB_SIDECAR_SUFFIXES: &[&str] = &["", "-wal", "-shm", "-journal"];
 

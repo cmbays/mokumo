@@ -624,7 +624,11 @@ pub fn run() {
 
                     let app_handle = app.clone();
                     tauri::async_runtime::spawn(async move {
-                        match tokio::time::timeout(std::time::Duration::from_secs(10), handle).await
+                        match tokio::time::timeout(
+                            std::time::Duration::from_secs(mokumo_api::DRAIN_TIMEOUT_SECS),
+                            handle,
+                        )
+                        .await
                         {
                             Ok(_) => tracing::info!("Server drained, exiting"),
                             Err(_) => tracing::warn!("Drain timeout elapsed (10s), forcing exit"),

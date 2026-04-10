@@ -810,8 +810,14 @@ async fn main() {
             // Hard-stop timer: if drain takes longer than 10 seconds, force exit.
             // This starts AFTER the shutdown signal fires, not around the serve future.
             tokio::spawn(async {
-                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-                tracing::warn!("Drain timeout elapsed (10s), forcing shutdown");
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    mokumo_api::DRAIN_TIMEOUT_SECS,
+                ))
+                .await;
+                tracing::warn!(
+                    "Drain timeout elapsed ({}s), forcing shutdown",
+                    mokumo_api::DRAIN_TIMEOUT_SECS
+                );
                 std::process::exit(0);
             });
         });
