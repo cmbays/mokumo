@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { goto } from "$app/navigation";
   import { apiFetch } from "$lib/api";
   import { Button } from "$lib/components/ui/button";
@@ -19,7 +19,7 @@
   type RestoreState =
     | { kind: "picking" }
     | { kind: "validating"; fileName: string }
-    | { kind: "valid"; fileName: string; fileSize: bigint; schemaVersion: string | null }
+    | { kind: "valid"; fileName: string; fileSize: number; schemaVersion: string | null }
     | { kind: "invalid"; fileName: string; errorCode: string; message: string }
     | { kind: "importing" }
     | { kind: "import-failed"; message: string }
@@ -30,6 +30,9 @@
   let pendingSource = $state<Source | null>(null);
   /** Hidden file input for browser (non-Tauri) environments. */
   let fileInput: HTMLInputElement | undefined = $state();
+  /** Timer handles stored so they can be cancelled in onDestroy. */
+  let redirectTimer: ReturnType<typeof setTimeout> | undefined;
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
 
   const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -52,11 +55,10 @@
     }
   }
 
-  function formatFileSize(bytes: bigint): string {
-    const n = Number(bytes);
-    if (n < 1024) return `${n} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   async function validate(source: Source): Promise<void> {
@@ -140,12 +142,12 @@
     restoreState = { kind: "restarting", timedOut: false };
 
     // Redirect after brief delay for the server to shut down and restart.
-    setTimeout(() => {
+    redirectTimer = setTimeout(() => {
       window.location.href = "/login?restored=true";
     }, RESTART_REDIRECT_MS);
 
     // Show manual-restart message if the server takes too long.
-    setTimeout(() => {
+    timeoutTimer = setTimeout(() => {
       if (restoreState.kind === "restarting") {
         restoreState = { kind: "restarting", timedOut: true };
       }
@@ -159,11 +161,11 @@
         multiple: false,
         filters: [{ name: "Mokumo Database", extensions: ["db"] }],
       });
-      if (!selected) {
+      if (typeof selected !== "string") {
         goto("/welcome");
         return;
       }
-      await validate({ kind: "path", path: selected as string });
+      await validate({ kind: "path", path: selected });
     } else {
       fileInput?.click();
     }
@@ -188,6 +190,11 @@
 
   onMount(() => {
     openPicker();
+  });
+
+  onDestroy(() => {
+    clearTimeout(redirectTimer);
+    clearTimeout(timeoutTimer);
   });
 </script>
 

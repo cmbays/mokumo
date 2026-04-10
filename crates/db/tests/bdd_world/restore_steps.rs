@@ -192,10 +192,22 @@ async fn given_db_without_migrations_table(w: &mut DbWorld) {
 }
 
 #[given(expr = "a valid Mokumo database file of {int}KB")]
-async fn given_valid_mokumo_db_of_size(w: &mut DbWorld, _size_kb: i32) {
+async fn given_valid_mokumo_db_of_size(w: &mut DbWorld, size_kb: i32) {
     let dir = ensure_tmp(w);
     let path = dir.join("sized.db");
     make_mokumo_db_with_all_migrations(&path);
+    // Pad the database to (at least) the requested size by inserting a blob.
+    if size_kb > 0 {
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute_batch("CREATE TABLE _padding (data BLOB NOT NULL);")
+            .unwrap();
+        let padding = vec![0u8; (size_kb as usize) * 1024];
+        conn.execute(
+            "INSERT INTO _padding (data) VALUES (?1)",
+            rusqlite::params![padding],
+        )
+        .unwrap();
+    }
     w.restore_candidate_path = Some(path);
 }
 
@@ -339,7 +351,7 @@ async fn then_info_has_file_size(w: &mut DbWorld) {
     let info = validate_result(w)
         .as_ref()
         .expect("validation should have succeeded");
-    assert!(info.file_size > 0, "Expected file_size > 0");
+    assert!(info.file_size.get() > 0, "Expected file_size > 0");
 }
 
 #[then("the candidate info contains the schema version")]

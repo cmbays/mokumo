@@ -290,13 +290,21 @@ async fn restore_in_progress(w: &mut ApiWorld) {
 async fn active_profile_read_only(w: &mut ApiWorld) {
     // Make the data_dir read-only so active_profile cannot be written.
     // We instead write a read-only active_profile file.
-    if let Some(ref data_dir) = w.restore_data_dir {
-        let profile_path = data_dir.join("active_profile");
-        std::fs::write(&profile_path, "").unwrap();
-        let mut perms = std::fs::metadata(&profile_path).unwrap().permissions();
+    #[cfg(unix)]
+    {
         use std::os::unix::fs::PermissionsExt;
-        perms.set_mode(0o444); // read-only
-        std::fs::set_permissions(&profile_path, perms).unwrap();
+        if let Some(ref data_dir) = w.restore_data_dir {
+            let profile_path = data_dir.join("active_profile");
+            std::fs::write(&profile_path, "").unwrap();
+            let mut perms = std::fs::metadata(&profile_path).unwrap().permissions();
+            perms.set_mode(0o444); // read-only
+            std::fs::set_permissions(&profile_path, perms).unwrap();
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        // PermissionsExt is not available on non-Unix platforms — skip.
+        let _ = w;
     }
 }
 
@@ -649,8 +657,18 @@ async fn response_contains_schema_version(w: &mut ApiWorld) {
 #[then("the response indicates the file is valid")]
 async fn response_indicates_valid(w: &mut ApiWorld) {
     let resp = w.response.as_ref().expect("no response captured");
+    assert_eq!(
+        resp.status_code(),
+        200,
+        "Expected 200 for valid file, got {}: {}",
+        resp.status_code(),
+        resp.text()
+    );
     let body: serde_json::Value = resp.json();
-    assert_eq!(body["valid"], true, "Expected valid=true, got: {body}");
+    assert!(
+        body["file_name"].as_str().is_some(),
+        "Expected file_name in validation response: {body}"
+    );
 }
 
 #[then("no file is copied to the production slot")]

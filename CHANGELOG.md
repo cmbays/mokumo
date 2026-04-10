@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Restore flow robustness**: rollback failures during restore now propagate as 500 errors with clear messages instead of silently leaving the filesystem in an inconsistent state. Sentinel write and rollback file deletions are now fully async (`tokio::fs`). Large file restores no longer time out (backup now completes in a single step). SQLite errors during integrity and schema checks now surface as `DatabaseCorrupt` (422) rather than generic 500. (#476)
 - **bdd-lint exit code** now fails when dead specs exceed a configurable threshold (`--max-dead-specs`), enabling it to function as a blocking CI gate. Previously always exited 0 regardless of findings. (#385)
 
 ### CI

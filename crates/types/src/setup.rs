@@ -36,8 +36,8 @@ pub struct ProfileSwitchResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct RestoreValidateResponse {
-    pub valid: bool,
     pub file_name: String,
+    #[ts(type = "number")]
     pub file_size: u64,
     pub schema_version: Option<String>,
 }

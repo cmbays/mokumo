@@ -119,30 +119,39 @@ async fn extract_candidate(
             )
         })?;
 
-        while let Some(field) = mp.next_field().await.map_err(|e| {
+        while let Some(mut field) = mp.next_field().await.map_err(|e| {
             AppError::BadRequest(ErrorCode::ParseError, format!("Multipart read error: {e}"))
         })? {
             if field.name() != Some("file") {
                 continue;
             }
 
-            let bytes = field.bytes().await.map_err(|e| {
-                AppError::BadRequest(
-                    ErrorCode::ParseError,
-                    format!("Failed to read file field: {e}"),
-                )
-            })?;
-
-            let mut temp = tempfile::NamedTempFile::new_in(data_dir).map_err(|e| {
+            // Create the temp file first, then stream chunks into it to avoid
+            // loading the entire upload (potentially hundreds of MB) into RAM.
+            let temp = tempfile::NamedTempFile::new_in(data_dir).map_err(|e| {
                 tracing::error!("restore: failed to create temp file: {e}");
                 AppError::InternalError("Failed to save uploaded file".into())
             })?;
-
-            use std::io::Write as _;
-            temp.write_all(&bytes).map_err(|e| {
-                tracing::error!("restore: failed to write temp file: {e}");
+            let std_file = temp.as_file().try_clone().map_err(|e| {
+                tracing::error!("restore: failed to clone temp file handle: {e}");
                 AppError::InternalError("Failed to save uploaded file".into())
             })?;
+            let mut async_file = tokio::fs::File::from_std(std_file);
+
+            use tokio::io::AsyncWriteExt as _;
+            while let Some(chunk) = field.chunk().await.map_err(|e| {
+                AppError::BadRequest(ErrorCode::ParseError, format!("Multipart read error: {e}"))
+            })? {
+                async_file.write_all(&chunk).await.map_err(|e| {
+                    tracing::error!("restore: failed to write chunk to temp file: {e}");
+                    AppError::InternalError("Failed to save uploaded file".into())
+                })?;
+            }
+            async_file.flush().await.map_err(|e| {
+                tracing::error!("restore: failed to flush temp file: {e}");
+                AppError::InternalError("Failed to save uploaded file".into())
+            })?;
+            drop(async_file);
 
             let path = temp.path().to_owned();
             return Ok(CandidatePath {
@@ -251,9 +260,8 @@ pub async fn validate_handler(
     // _guard and candidate (+ temp file) dropped here.
 
     Ok(Json(RestoreValidateResponse {
-        valid: true,
         file_name,
-        file_size: info.file_size,
+        file_size: info.file_size.get(),
         schema_version: info.schema_version,
     }))
 }
@@ -306,17 +314,33 @@ pub async fn restore_handler(
     let profile_path = state.data_dir.join("active_profile");
     let profile_tmp = state.data_dir.join("active_profile.tmp");
     if let Err(e) = tokio::fs::write(&profile_tmp, "production").await {
-        // Rollback: delete the just-copied production DB.
         tracing::error!("restore: failed to write active_profile.tmp: {e}; rolling back");
-        let _ = tokio::fs::remove_file(production_dir.join("mokumo.db")).await;
+        if let Err(rb) = tokio::fs::remove_file(production_dir.join("mokumo.db")).await {
+            tracing::error!(
+                "restore: CRITICAL — rollback failed, production DB may be orphaned: {rb}"
+            );
+            return Err(AppError::InternalError(
+                "Restore failed and rollback incomplete — manual cleanup may be required".into(),
+            ));
+        }
         return Err(AppError::InternalError(
             "Failed to persist profile selection".into(),
         ));
     }
     if let Err(e) = tokio::fs::rename(&profile_tmp, &profile_path).await {
         tracing::error!("restore: failed to rename active_profile: {e}; rolling back");
-        let _ = tokio::fs::remove_file(production_dir.join("mokumo.db")).await;
-        let _ = tokio::fs::remove_file(&profile_tmp).await;
+        if let Err(rb) = tokio::fs::remove_file(production_dir.join("mokumo.db")).await {
+            tracing::error!(
+                "restore: CRITICAL — rollback failed, production DB may be orphaned: {rb}"
+            );
+            return Err(AppError::InternalError(
+                "Restore failed and rollback incomplete — manual cleanup may be required".into(),
+            ));
+        }
+        if let Err(rb) = tokio::fs::remove_file(&profile_tmp).await {
+            // Stale .tmp file is not a data-loss risk — log but continue.
+            tracing::error!("restore: rollback could not remove active_profile.tmp: {rb}");
+        }
         return Err(AppError::InternalError(
             "Failed to persist profile selection".into(),
         ));
@@ -324,10 +348,24 @@ pub async fn restore_handler(
 
     // Step 3: Write restart sentinel.
     let sentinel = state.data_dir.join(".restart");
-    if let Err(e) = std::fs::write(&sentinel, b"restore") {
+    if let Err(e) = tokio::fs::write(&sentinel, b"restore").await {
         tracing::error!("restore: failed to write restart sentinel: {e}; rolling back");
-        let _ = std::fs::remove_file(production_dir.join("mokumo.db"));
-        let _ = std::fs::remove_file(&profile_path);
+        if let Err(rb) = tokio::fs::remove_file(production_dir.join("mokumo.db")).await {
+            tracing::error!(
+                "restore: CRITICAL — rollback failed, production DB may be orphaned: {rb}"
+            );
+            return Err(AppError::InternalError(
+                "Restore failed and rollback incomplete — manual cleanup may be required".into(),
+            ));
+        }
+        if let Err(rb) = tokio::fs::remove_file(&profile_path).await {
+            tracing::error!(
+                "restore: CRITICAL — rollback failed, active_profile may be orphaned: {rb}"
+            );
+            return Err(AppError::InternalError(
+                "Restore failed and rollback incomplete — manual cleanup may be required".into(),
+            ));
+        }
         return Err(AppError::InternalError(
             "Failed to prepare server restart".into(),
         ));
@@ -589,7 +627,6 @@ mod tests {
 
         assert_eq!(response.status_code(), 200);
         let body: serde_json::Value = response.json();
-        assert_eq!(body["valid"], true);
         assert!(body["file_name"].is_string());
         assert!(body["file_size"].as_u64().unwrap() > 0);
     }

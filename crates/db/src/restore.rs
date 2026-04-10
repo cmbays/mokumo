@@ -36,8 +36,9 @@ pub enum RestoreError {
 /// Information extracted from a validated restore candidate.
 #[derive(Debug)]
 pub struct CandidateInfo {
-    /// Size of the source file in bytes.
-    pub file_size: u64,
+    /// Size of the source file in bytes. Always non-zero (empty files are
+    /// rejected during identity validation).
+    pub file_size: std::num::NonZeroU64,
     /// The latest applied migration version string, or `None` if the
     /// `seaql_migrations` table is absent (fresh / pre-migration database).
     pub schema_version: Option<String>,
@@ -67,7 +68,9 @@ pub fn validate_candidate(source: &Path) -> Result<CandidateInfo, RestoreError> 
 ///
 /// Opens the file read-only and checks `PRAGMA application_id`. Returns the
 /// opened connection (for subsequent steps) and the file size in bytes.
-fn open_and_verify_identity(source: &Path) -> Result<(rusqlite::Connection, u64), RestoreError> {
+fn open_and_verify_identity(
+    source: &Path,
+) -> Result<(rusqlite::Connection, std::num::NonZeroU64), RestoreError> {
     // Fail fast on empty or unreadable files.
     // An empty file opens as a valid SQLite database with application_id=0,
     // so we must reject it before attempting to open it.
@@ -82,6 +85,8 @@ fn open_and_verify_identity(source: &Path) -> Result<(rusqlite::Connection, u64)
             path: source.to_path_buf(),
         });
     }
+    // SAFETY: guarded by the zero-check above.
+    let file_size = std::num::NonZeroU64::new(file_size).expect("file_size is non-zero");
 
     let conn = rusqlite::Connection::open_with_flags(
         source,
@@ -112,9 +117,12 @@ fn open_and_verify_identity(source: &Path) -> Result<(rusqlite::Connection, u64)
 
 /// Step 2 — Integrity: `PRAGMA integrity_check` must return exactly `"ok"`.
 fn verify_integrity(conn: &rusqlite::Connection, source: &Path) -> Result<(), RestoreError> {
+    let corrupt = || RestoreError::DatabaseCorrupt {
+        path: source.to_path_buf(),
+    };
     let integrity: String = conn
         .query_row("PRAGMA integrity_check", [], |row| row.get(0))
-        .map_err(RestoreError::Sqlite)?;
+        .map_err(|_| corrupt())?;
 
     if integrity != "ok" {
         return Err(RestoreError::DatabaseCorrupt {
@@ -133,20 +141,30 @@ fn verify_schema_compatibility(
     conn: &rusqlite::Connection,
     source: &Path,
 ) -> Result<Option<String>, RestoreError> {
-    let table_exists: bool = conn.query_row(
-        "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='seaql_migrations'",
-        [],
-        |row| row.get(0),
-    )?;
+    let corrupt = || RestoreError::DatabaseCorrupt {
+        path: source.to_path_buf(),
+    };
+
+    let table_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='seaql_migrations'",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|_| corrupt())?;
 
     if !table_exists {
         return Ok(None);
     }
 
     let applied: Vec<String> = {
-        let mut stmt = conn.prepare("SELECT version FROM seaql_migrations")?;
-        stmt.query_map([], |row| row.get(0))?
-            .collect::<Result<Vec<_>, _>>()?
+        let mut stmt = conn
+            .prepare("SELECT version FROM seaql_migrations")
+            .map_err(|_| corrupt())?;
+        stmt.query_map([], |row| row.get(0))
+            .map_err(|_| corrupt())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| corrupt())?
     };
 
     let known: std::collections::HashSet<String> = migration::Migrator::migrations()
@@ -196,7 +214,7 @@ pub fn copy_to_production(source: &Path, production_dir: &Path) -> Result<(), Re
 
     // Remove any stale temp file from a previous failed attempt
     if temp_path.exists() {
-        let _ = std::fs::remove_file(&temp_path);
+        std::fs::remove_file(&temp_path)?;
     }
 
     // Perform backup using SQLite Online Backup API (WAL-safe)
@@ -208,7 +226,10 @@ pub fn copy_to_production(source: &Path, production_dir: &Path) -> Result<(), Re
         let mut dst = rusqlite::Connection::open(&temp_path)?;
 
         let backup = rusqlite::backup::Backup::new(&src, &mut dst)?;
-        backup.run_to_completion(5, Duration::from_millis(250), None)?;
+        // Use i32::MAX pages per step so the backup completes in a single step
+        // with no inter-step sleep. This prevents large databases (hundreds of
+        // MB) from timing out at 5 pages / 250 ms (which would take hours).
+        backup.run_to_completion(i32::MAX, Duration::from_millis(250), None)?;
 
         drop(backup);
         drop(dst);
@@ -429,7 +450,7 @@ mod tests {
         let path = make_mokumo_db(&dir);
         let actual_size = std::fs::metadata(&path).unwrap().len();
         let info = validate_candidate(&path).unwrap();
-        assert_eq!(info.file_size, actual_size);
+        assert_eq!(info.file_size.get(), actual_size);
     }
 
     #[test]
