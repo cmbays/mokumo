@@ -12,6 +12,7 @@
   let copied = $state(false);
 
   let requestId = 0;
+  let copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
   async function load() {
     const currentRequest = ++requestId;
@@ -102,7 +103,11 @@
     try {
       await navigator.clipboard.writeText(toMarkdown(diagnostics));
       copied = true;
-      setTimeout(() => (copied = false), 2000);
+      if (copyResetTimeout !== null) clearTimeout(copyResetTimeout);
+      copyResetTimeout = setTimeout(() => {
+        copied = false;
+        copyResetTimeout = null;
+      }, 2000);
     } catch {
       // clipboard denied; no-op — user can still read the values in the card
     }
@@ -156,7 +161,9 @@
         <dd data-testid="diag-prod-db">
           schema v{diagnostics.database.production.schema_version} ·
           {formatBytes(diagnostics.database.production.file_size_bytes)}
-          {#if !diagnostics.database.production.wal_mode}
+          {#if diagnostics.database.production.wal_mode}
+            <span> · WAL on</span>
+          {:else}
             <span class="text-destructive"> · WAL off</span>
           {/if}
         </dd>
@@ -165,6 +172,11 @@
         <dd data-testid="diag-demo-db">
           schema v{diagnostics.database.demo.schema_version} ·
           {formatBytes(diagnostics.database.demo.file_size_bytes)}
+          {#if diagnostics.database.demo.wal_mode}
+            <span> · WAL on</span>
+          {:else}
+            <span class="text-destructive"> · WAL off</span>
+          {/if}
         </dd>
 
         <dt class="text-muted-foreground">OS</dt>
