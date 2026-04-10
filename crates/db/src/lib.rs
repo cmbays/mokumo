@@ -1,4 +1,5 @@
 pub mod activity;
+pub mod backup;
 pub mod customer;
 pub mod migration;
 pub mod role;
