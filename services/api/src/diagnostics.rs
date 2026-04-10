@@ -5,14 +5,21 @@ use mokumo_core::setup::SetupMode;
 use mokumo_db::DatabaseConnection;
 use mokumo_types::diagnostics::{
     AppDiagnostics, DatabaseDiagnostics, DiagnosticsResponse, OsDiagnostics, ProfileDbDiagnostics,
-    RuntimeDiagnostics,
+    RuntimeDiagnostics, SystemDiagnostics,
 };
+use sysinfo::{Disks, System};
 
 use crate::{SharedState, error::AppError};
 
 pub async fn handler(
     State(state): State<SharedState>,
 ) -> Result<Json<DiagnosticsResponse>, AppError> {
+    Ok(Json(collect(&state).await?))
+}
+
+/// Collect the full diagnostics snapshot. Called by both the diagnostics handler
+/// and the bundle export handler so sysinfo is only queried in one place.
+pub async fn collect(state: &SharedState) -> Result<DiagnosticsResponse, AppError> {
     let production_db_path = profile_db_path(&state.data_dir, SetupMode::Production);
     let demo_db_path = profile_db_path(&state.data_dir, SetupMode::Demo);
 
@@ -45,10 +52,14 @@ pub async fn handler(
         port: mdns.port,
     };
 
-    Ok(Json(DiagnosticsResponse {
+    // System facts — sysinfo refresh (blocking I/O, acceptable in handler context)
+    let system = collect_system_diagnostics(&state.data_dir);
+
+    Ok(DiagnosticsResponse {
         app: AppDiagnostics {
             name: env!("CARGO_PKG_NAME").into(),
             version: env!("CARGO_PKG_VERSION").into(),
+            build_commit: option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").into(),
         },
         database: DatabaseDiagnostics { production, demo },
         runtime,
@@ -56,7 +67,32 @@ pub async fn handler(
             family: std::env::consts::OS.into(),
             arch: std::env::consts::ARCH.into(),
         },
-    }))
+        system,
+    })
+}
+
+fn collect_system_diagnostics(data_dir: &Path) -> SystemDiagnostics {
+    let mut sys = System::new();
+    sys.refresh_memory();
+
+    let hostname = System::host_name();
+
+    // Find the disk volume that contains data_dir; fall back to zeros if not found.
+    let disks = Disks::new_with_refreshed_list();
+    let (disk_total_bytes, disk_free_bytes) = disks
+        .iter()
+        .filter(|d| data_dir.starts_with(d.mount_point()))
+        .max_by_key(|d| d.mount_point().as_os_str().len())
+        .map(|d| (d.total_space(), d.available_space()))
+        .unwrap_or((0, 0));
+
+    SystemDiagnostics {
+        hostname,
+        total_memory_bytes: sys.total_memory(),
+        used_memory_bytes: sys.used_memory(),
+        disk_total_bytes,
+        disk_free_bytes,
+    }
 }
 
 fn profile_db_path(data_dir: &Path, mode: SetupMode) -> std::path::PathBuf {

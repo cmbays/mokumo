@@ -8,6 +8,7 @@ pub struct DiagnosticsResponse {
     pub database: DatabaseDiagnostics,
     pub runtime: RuntimeDiagnostics,
     pub os: OsDiagnostics,
+    pub system: SystemDiagnostics,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -15,6 +16,21 @@ pub struct DiagnosticsResponse {
 pub struct AppDiagnostics {
     pub name: String,
     pub version: String,
+    pub build_commit: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct SystemDiagnostics {
+    pub hostname: Option<String>,
+    #[ts(type = "number")]
+    pub total_memory_bytes: u64,
+    #[ts(type = "number")]
+    pub used_memory_bytes: u64,
+    #[ts(type = "number")]
+    pub disk_total_bytes: u64,
+    #[ts(type = "number")]
+    pub disk_free_bytes: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
