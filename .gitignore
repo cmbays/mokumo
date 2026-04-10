@@ -7,88 +7,65 @@ node_modules/
 .svelte-kit/
 apps/web/build/
 .pnpm-store/
-
 # Environment
 .env
 .env.*
 !.env.example
 .envrc
-
 # SQLite
 *.db
 *.db-wal
 *.db-shm
-
 # Moon
 .moon/cache/
-
 # Claude Code
 .claude/*
 !.claude/rules/
 !.claude/rules/**
-
 # OS
 .DS_Store
 Thumbs.db
-
 # Claude Code session focus (ephemeral)
 .claude/focus.md
-
 # Pipeline state (ephemeral)
 .workflow/
-
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-
 # Build artifacts
 tmp/
 dist/
-
 # Test coverage
 coverage/
 coverage.json
 lcov.info
-
 # Storybook
 apps/web/storybook-static/
 apps/web/.features-gen/
-
 # Playwright
 test-results/
 apps/web/test-results/
 apps/web/playwright-report/
-
 # Lefthook personal overrides
 lefthook-local.yml
-
 # Pipeline state (transient, per-session)
-.workflow/
-
 # ts-rs default output (canonical path is apps/web/src/lib/types/ via Moon)
 **/bindings/
-
 # SQLx offline cache (.sqlx/) — commit after running: moon run api:db-prepare
 mutants.out/
 mutants.out.old/
-
 # ts-rs export artifacts in crate dirs
 crates/types/apps/
-
 # Vitest coverage
 apps/web/coverage/
-
 # Stryker mutation testing
 **/reports/mutation/
 **/.stryker-tmp/
-
 # Firecrawl research cache
 .firecrawl/
-
 # Hurl env files (contain credentials) — commit *.env.example, not *.env
 tests/api/envs/*.env
-
 # Bruno collection (local exploration scratchpad — .hurl files are the committed contract)
 tests/api/bruno/
