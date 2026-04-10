@@ -20,6 +20,7 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
       tooling: ${{ steps.filter.outputs.tooling }}
       smoke: ${{ steps.filter.outputs.smoke }}
+      desktop: ${{ steps.filter.outputs.desktop }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -44,6 +45,17 @@ jobs:
               - '.oxfmtrc.json'
             tooling:
               - 'tools/**'
+            desktop:
+              - 'apps/desktop/**'
+              - 'tests/desktop/**'
+              - 'apps/web/**'
+              - 'crates/**'
+              - 'services/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.cargo/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
 
   lint-rust:
     needs: [changes]
@@ -441,6 +453,61 @@ jobs:
         run: moon run api:bindings-check
       - name: Verify entity-schema alignment
         run: moon run api:entity-check
+
+  desktop-e2e:
+    needs: [changes]
+    if: needs.changes.outputs.desktop == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true  # New — not blocking verdict until stabilized
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Moon needs git history for VCS-based change detection
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: pnpm
+      - uses: moonrepo/setup-toolchain@v0
+      - uses: moonrepo/setup-rust@v1
+        with:
+          bins: tauri-driver
+          cache: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mokumo-rust
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install Linux display + WebKitGTK deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            webkit2gtk-driver \
+            libgtk-3-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xvfb \
+            at-spi2-core
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build SvelteKit frontend
+        run: moon run web:build
+      - name: Create demo.db placeholder
+        shell: python
+        run: |
+          import os, sqlite3
+          os.makedirs("apps/web/scripts", exist_ok=True)
+          conn = sqlite3.connect("apps/web/scripts/demo.db")
+          conn.execute("SELECT 1")
+          conn.close()
+      - name: Build Tauri app (debug)
+        run: moon run desktop:build-debug
+      - name: Run desktop E2E tests
+        run: xvfb-run --auto-servernum moon run desktop-tests:test
 
   verdict:
     if: always()
