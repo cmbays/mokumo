@@ -35,8 +35,8 @@ Underlying tools: `cargo` (Rust), `pnpm` (SvelteKit). Use directly only when dia
 
 ## Session Startup
 
-- Code-modifying sessions use `claude --worktree` for automatic isolation
-- If not launched with `--worktree`, use the `EnterWorktree` tool to create one before making changes
+- **Host sessions**: code-modifying work uses `claude --worktree` for automatic isolation. If not launched with `--worktree`, use the `EnterWorktree` tool to create one before making changes.
+- **Container sessions (cmux/Docker)**: the container **is** the worktree — do NOT run `claude --worktree`, `EnterWorktree`, or `git worktree add` inside `/workspace`. Git writes the new worktree's metadata with container-only paths (e.g. `gitdir: /workspace/...`) into the bind-mounted `.git/worktrees/`, the host sees those entries as `prunable`, and any host `git worktree prune` wipes them — silently breaking every git-backed tool (`moon`, `lefthook`, `gh`) in whichever container was using that metadata. Parallelism inside a container uses sub-agents that share the same `/workspace`; for a genuinely separate workspace, stop and spin up a second host-created worktree in its own container.
 - **Never push to main directly** — always branch + PR
 - **Commit+push after every logical chunk** — never leave work local-only
 - **Update CHANGELOG.md** — add user-facing changes (`feat`, `fix`, `perf`) to the `## Unreleased` section in each PR
