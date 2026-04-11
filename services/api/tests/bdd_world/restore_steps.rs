@@ -39,6 +39,8 @@ async fn rebuild_as_first_launch(w: &mut ApiWorld) {
         host: "0.0.0.0".into(),
         data_dir: data_dir.clone(),
         recovery_dir: recovery_dir.clone(),
+        #[cfg(debug_assertions)]
+        ws_ping_ms: None,
     };
 
     let shutdown_token = CancellationToken::new();
@@ -109,6 +111,8 @@ async fn rebuild_as_non_first_launch(w: &mut ApiWorld) {
         host: "0.0.0.0".into(),
         data_dir: data_dir.clone(),
         recovery_dir: recovery_dir.clone(),
+        #[cfg(debug_assertions)]
+        ws_ping_ms: None,
     };
 
     let shutdown_token = CancellationToken::new();

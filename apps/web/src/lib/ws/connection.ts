@@ -15,6 +15,10 @@ export interface ConnectionOptions {
   onClose?: () => void;
   onDisconnect?: () => void;
   onShutdown?: () => void;
+  /** Milliseconds of silence before the client force-closes and reconnects.
+   * Defaults to 75 000 ms (2.5 × the 30 s server heartbeat interval).
+   * Set to 0 to disable the liveness timer. */
+  livenessTimeoutMs?: number;
 }
 
 interface BackoffOptions {
@@ -51,10 +55,29 @@ export function createWebSocketConnection(
   url: string,
   options: ConnectionOptions,
 ): { close(): void } {
+  const livenessMs = options.livenessTimeoutMs ?? 75_000;
   let attempt = 0;
   let intentionallyClosed = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let livenessTimer: ReturnType<typeof setTimeout> | null = null;
   let currentWs: WebSocket | null = null;
+
+  function resetLiveness(ws: WebSocket): void {
+    if (livenessMs <= 0 || intentionallyClosed) return;
+    stopLiveness();
+    livenessTimer = setTimeout(() => {
+      // No message received within the liveness window — force-close so the
+      // reconnect loop fires and the disconnect banner appears.
+      ws.close();
+    }, livenessMs);
+  }
+
+  function stopLiveness(): void {
+    if (livenessTimer !== null) {
+      clearTimeout(livenessTimer);
+      livenessTimer = null;
+    }
+  }
 
   function connect(): void {
     const ws = new WebSocket(url);
@@ -63,6 +86,7 @@ export function createWebSocketConnection(
     ws.onopen = () => {
       const isReconnect = attempt > 0;
       attempt = 0;
+      resetLiveness(ws);
 
       if (isReconnect) {
         options.onReconnect?.();
@@ -77,6 +101,10 @@ export function createWebSocketConnection(
         // Silently ignore malformed JSON — don't propagate parse failures
         return;
       }
+
+      // Reset liveness only on a successfully parsed message so that a stream
+      // of malformed frames cannot defeat the liveness-timeout force-close.
+      resetLiveness(ws);
       if (data.type === "server_shutting_down") {
         options.onShutdown?.();
       }
@@ -86,9 +114,11 @@ export function createWebSocketConnection(
     ws.onerror = () => {
       // Connection failures (TLS, DNS, refused) are surfaced here.
       // onclose will fire next and trigger reconnection.
+      stopLiveness();
     };
 
     ws.onclose = () => {
+      stopLiveness();
       if (intentionallyClosed) {
         options.onClose?.();
         return;
@@ -108,6 +138,7 @@ export function createWebSocketConnection(
   return {
     close() {
       intentionallyClosed = true;
+      stopLiveness();
       if (reconnectTimer !== null) {
         clearTimeout(reconnectTimer);
       }

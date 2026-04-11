@@ -433,6 +433,8 @@ mod tests {
             host: "127.0.0.1".into(),
             data_dir: data_dir.clone(),
             recovery_dir,
+            #[cfg(debug_assertions)]
+            ws_ping_ms: None,
         };
 
         // No active_profile file → is_first_launch = true.
@@ -474,6 +476,8 @@ mod tests {
             host: "127.0.0.1".into(),
             data_dir: data_dir.clone(),
             recovery_dir,
+            #[cfg(debug_assertions)]
+            ws_ping_ms: None,
         };
 
         let (app, _): (axum::Router, Option<String>) =
