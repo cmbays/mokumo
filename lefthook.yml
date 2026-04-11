@@ -37,4 +37,8 @@ pre-push:
   commands:
     rust-clippy:
       glob: "*.rs"
+      # RUSTC_WRAPPER="" disables sccache so the hook works when the sccache
+      # server (Redis-backed) is not reachable — common in dev containers.
+      env:
+        RUSTC_WRAPPER: ""
       run: moon run api:lint
