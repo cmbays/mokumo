@@ -224,7 +224,7 @@ mod tests {
         // Construct directly: just need len > MAX_BYTES
         let big = vec![137u8, 80, 78, 71, 13, 10, 26, 10]
             .into_iter()
-            .chain(std::iter::repeat(0u8).take(MAX_BYTES))
+            .chain(std::iter::repeat_n(0u8, MAX_BYTES))
             .collect::<Vec<u8>>();
         assert!(big.len() > MAX_BYTES);
         let result = LogoValidator::validate(big);

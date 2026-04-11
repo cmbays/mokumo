@@ -1141,21 +1141,21 @@ pub fn cli_backup(
     // Bundle the shop logo as a sibling file alongside the backup DB.
     // Failure is non-fatal — log a warning and continue.
     let production_dir = db_path.parent().unwrap_or(Path::new("."));
-    if let Ok(conn) = rusqlite::Connection::open(db_path) {
-        if let Ok(ext) = conn.query_row(
+    if let Ok(conn) = rusqlite::Connection::open(db_path)
+        && let Ok(ext) = conn.query_row(
             "SELECT logo_extension FROM shop_settings WHERE id = 1 AND logo_extension IS NOT NULL",
             [],
             |row| row.get::<_, String>(0),
-        ) {
-            let logo_src = production_dir.join(format!("logo.{ext}"));
-            let logo_dst = output_path.with_extension(format!("logo.{ext}"));
-            if let Err(e) = std::fs::copy(&logo_src, &logo_dst) {
-                tracing::warn!(
-                    "cli_backup: could not copy logo file {:?} → {:?}: {e}",
-                    logo_src,
-                    logo_dst
-                );
-            }
+        )
+    {
+        let logo_src = production_dir.join(format!("logo.{ext}"));
+        let logo_dst = output_path.with_extension(format!("logo.{ext}"));
+        if let Err(e) = std::fs::copy(&logo_src, &logo_dst) {
+            tracing::warn!(
+                "cli_backup: could not copy logo file {:?} → {:?}: {e}",
+                logo_src,
+                logo_dst
+            );
         }
     }
 
@@ -1178,22 +1178,22 @@ pub fn cli_restore(
     // Restore the shop logo from its sibling file, if present.
     // Failure is non-fatal — log a warning and continue.
     let production_dir = db_path.parent().unwrap_or(Path::new("."));
-    if let Ok(conn) = rusqlite::Connection::open(backup_path) {
-        if let Ok(ext) = conn.query_row(
+    if let Ok(conn) = rusqlite::Connection::open(backup_path)
+        && let Ok(ext) = conn.query_row(
             "SELECT logo_extension FROM shop_settings WHERE id = 1 AND logo_extension IS NOT NULL",
             [],
             |row| row.get::<_, String>(0),
-        ) {
-            let sibling = backup_path.with_extension(format!("logo.{ext}"));
-            if sibling.exists() {
-                let logo_dst = production_dir.join(format!("logo.{ext}"));
-                if let Err(e) = std::fs::copy(&sibling, &logo_dst) {
-                    tracing::warn!(
-                        "cli_restore: could not restore logo file {:?} → {:?}: {e}",
-                        sibling,
-                        logo_dst
-                    );
-                }
+        )
+    {
+        let sibling = backup_path.with_extension(format!("logo.{ext}"));
+        if sibling.exists() {
+            let logo_dst = production_dir.join(format!("logo.{ext}"));
+            if let Err(e) = std::fs::copy(&sibling, &logo_dst) {
+                tracing::warn!(
+                    "cli_restore: could not restore logo file {:?} → {:?}: {e}",
+                    sibling,
+                    logo_dst
+                );
             }
         }
     }

@@ -62,10 +62,10 @@ pub async fn delete_logo(
         .join("production")
         .join(format!("logo.{ext}"));
 
-    if let Err(e) = fs::remove_file(&path).await {
-        if e.kind() != std::io::ErrorKind::NotFound {
-            tracing::warn!("delete_logo: failed to remove logo file {:?}: {e}", path);
-        }
+    if let Err(e) = fs::remove_file(&path).await
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        tracing::warn!("delete_logo: failed to remove logo file {:?}: {e}", path);
     }
 
     Ok(StatusCode::NO_CONTENT)

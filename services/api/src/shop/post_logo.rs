@@ -123,14 +123,14 @@ pub async fn post_logo(
     })?;
 
     // 7. Orphan sweep: delete old file if extension changed
-    if let Some(ref old) = old_ext {
-        if old != &new_ext {
-            let old_path = production_dir.join(format!("logo.{old}"));
-            if let Err(e) = fs::remove_file(&old_path).await {
-                if e.kind() != std::io::ErrorKind::NotFound {
-                    tracing::warn!("failed to remove old logo file {:?}: {e}", old_path);
-                }
-            }
+    if let Some(ref old) = old_ext
+        && old != &new_ext
+    {
+        let old_path = production_dir.join(format!("logo.{old}"));
+        if let Err(e) = fs::remove_file(&old_path).await
+            && e.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!("failed to remove old logo file {:?}: {e}", old_path);
         }
     }
 
