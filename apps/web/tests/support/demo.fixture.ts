@@ -54,7 +54,7 @@ export const test = base.extend<object, DemoWorkerFixtures>({
 
       await use(handle);
 
-      harness.kill();
+      await harness.stop();
       harness.cleanup();
     },
     { scope: "worker", timeout: 60_000 },

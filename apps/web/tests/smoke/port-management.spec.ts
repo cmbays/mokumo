@@ -19,7 +19,7 @@ test("[SMOKE-05] port conflict — second server on an occupied port fails to st
   }
 });
 
-test("[SMOKE-06] port fallback — server auto-selects a different port when requested port is occupied", async () => {
+test("[SMOKE-06] harness port selection — BackendHarness picks a free port when none is specified", async () => {
   const h1 = new BackendHarness(webRoot);
   await h1.start();
   const occupiedPort = h1.port;
@@ -42,5 +42,5 @@ test.fixme("[SMOKE-07] port exhaustion — server emits a clear error when no po
   // Port exhaustion simulation is impractical in CI: binding thousands of
   // sockets is slow, resource-limited, and unreliable across platforms.
   // Filed as follow-up issue to track a lightweight mock approach.
-  // See: https://github.com/cmbays/mokumo/issues (follow-up from PR)
+  // See: https://github.com/breezy-bays-labs/mokumo/issues/480
 });

@@ -43,6 +43,9 @@ test.describe.serial("[SMOKE-01/03/04] server lifecycle", () => {
       timeout: BANNER_TIMEOUT,
     });
 
+    // Wait for the OS to fully release the port before restarting on it.
+    await freshLanBackend.waitForExit();
+
     // Restart the server on the same port so the browser's reconnect loop
     // can reach it at the original URL. page.reload() re-initialises the WS.
     await freshLanBackend.start(port);

@@ -2,13 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  buildHttpUrl,
-  getAvailablePort,
-  resolveWebRoot,
-  startAxumServer,
-  TEST_SERVER_HOST,
-} from "./local-server";
+import { getAvailablePort, resolveWebRoot, startAxumServer } from "./local-server";
 
 const STOP_DRAIN_TIMEOUT_MS = 12_000;
 
@@ -85,9 +79,12 @@ export class BackendHarness {
       new Promise<void>((resolve) => setTimeout(resolve, STOP_DRAIN_TIMEOUT_MS)),
     ]);
 
-    // Ceiling exceeded — force kill if still alive
-    if (proc.exitCode === null) {
+    // Ceiling exceeded — force kill if still alive, then wait for it to land
+    if (proc.exitCode === null && proc.signalCode === null) {
       proc.kill("SIGKILL");
+      await new Promise<void>((resolve) => {
+        proc.once("exit", resolve);
+      });
     }
   }
 
@@ -95,8 +92,9 @@ export class BackendHarness {
    * Send SIGTERM without waiting. For use when you don't need to observe the exit.
    */
   kill(): void {
-    if (this._process?.exitCode === null) {
-      this._process.kill("SIGTERM");
+    const proc = this._process;
+    if (proc && proc.exitCode === null && proc.signalCode === null) {
+      proc.kill("SIGTERM");
     }
   }
 
@@ -105,9 +103,22 @@ export class BackendHarness {
    * Use for kill-observe specs (SMOKE-02, SMOKE-03).
    */
   killHard(): void {
-    if (this._process?.exitCode === null) {
-      this._process.kill("SIGKILL");
+    const proc = this._process;
+    if (proc && proc.exitCode === null && proc.signalCode === null) {
+      proc.kill("SIGKILL");
     }
+  }
+
+  /**
+   * Wait for the process to exit. Resolves immediately if already exited or not started.
+   * Call after killHard() before start() to ensure the OS has released the port.
+   */
+  async waitForExit(): Promise<void> {
+    const proc = this._process;
+    if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
+    await new Promise<void>((resolve) => {
+      proc.once("exit", resolve);
+    });
   }
 
   /** Base URL of the running server (e.g. `http://127.0.0.1:12345`). */
@@ -160,9 +171,4 @@ export class BackendHarness {
 /** Resolve the webRoot path from an import.meta.url (same convention as local-server.ts). */
 export function resolveHarnessWebRoot(importMetaUrl: string): string {
   return resolveWebRoot(importMetaUrl);
-}
-
-/** Build an HTTP URL for the given host and port. */
-export function buildHarnessUrl(port: number): string {
-  return buildHttpUrl(TEST_SERVER_HOST, port);
 }

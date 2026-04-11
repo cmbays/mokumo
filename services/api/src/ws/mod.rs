@@ -181,8 +181,12 @@ async fn handle_socket(socket: WebSocket, state: SharedState, ping_ms: Option<u6
                 // Heartbeat: JS-observable application-level ping + protocol-level Ping.
                 // OptionFuture is a no-op (never fires) when ping_interval is None.
                 _ = OptionFuture::from(ping_interval.as_mut().map(|i| i.tick())) => {
-                    let hb = serde_json::to_string(&serde_json::json!({"type": "heartbeat"}))
-                        .expect("heartbeat serialize cannot fail");
+                    let Ok(hb) = serde_json::to_string(
+                        &serde_json::json!({"type": "heartbeat"})
+                    ) else {
+                        tracing::error!(conn_id = %sender_conn_id, "heartbeat serialize failed — closing connection");
+                        break;
+                    };
                     if ws_sender.send(Message::Text(hb.into())).await.is_err() {
                         break;
                     }

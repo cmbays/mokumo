@@ -64,7 +64,7 @@ export function createWebSocketConnection(
 
   function resetLiveness(ws: WebSocket): void {
     if (livenessMs <= 0 || intentionallyClosed) return;
-    clearTimeout(livenessTimer!);
+    stopLiveness();
     livenessTimer = setTimeout(() => {
       // No message received within the liveness window — force-close so the
       // reconnect loop fires and the disconnect banner appears.
@@ -94,9 +94,6 @@ export function createWebSocketConnection(
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      // Any message resets the liveness timer (including heartbeat frames).
-      resetLiveness(ws);
-
       let data: BroadcastEvent;
       try {
         data = JSON.parse(event.data as string) as BroadcastEvent;
@@ -104,6 +101,10 @@ export function createWebSocketConnection(
         // Silently ignore malformed JSON — don't propagate parse failures
         return;
       }
+
+      // Reset liveness only on a successfully parsed message so that a stream
+      // of malformed frames cannot defeat the liveness-timeout force-close.
+      resetLiveness(ws);
       if (data.type === "server_shutting_down") {
         options.onShutdown?.();
       }

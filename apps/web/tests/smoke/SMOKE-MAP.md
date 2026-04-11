@@ -19,8 +19,8 @@
 | SMOKE-03  | restart→reconnect                         | tests/smoke/lifecycle.spec.ts             | automated          | describe.serial; same-port restart + page.reload()                                      |
 | SMOKE-04  | stop() 12 s, no zombie                    | tests/smoke/lifecycle.spec.ts             | automated          | test-scoped harness                                                                     |
 | SMOKE-05  | port conflict                             | tests/smoke/port-management.spec.ts       | automated          |                                                                                         |
-| SMOKE-06  | port fallback                             | tests/smoke/port-management.spec.ts       | automated          |                                                                                         |
-| SMOKE-07  | port exhaustion                           | tests/smoke/port-management.spec.ts       | automated          | test.fixme — see follow-up issue                                                        |
+| SMOKE-06  | harness port selection                    | tests/smoke/port-management.spec.ts       | automated          | Tests BackendHarness free-port selection; Rust bind_with_fallback is a follow-up        |
+| SMOKE-07  | port exhaustion                           | tests/smoke/port-management.spec.ts       | automated          | test.fixme — see #480 (lightweight mock approach for bind_with_fallback)                |
 | SMOKE-08  | mDNS retry                                | tests/manual/MANUAL_SMOKE.md#SMOKE-08     | manual             | D8 deferred; clock injection needed in Rust                                             |
 | SMOKE-09a | tray quit decision                        | crates/core/src/tray/                     | covered-by-unit    | Decision logic in crates/core unit tests                                                |
 | SMOKE-09b | tray quit wiring                          | tests/manual/MANUAL_SMOKE.md#SMOKE-09b    | needs-computer-use | M1-gated AC (see MANUAL_SMOKE.md)                                                       |
