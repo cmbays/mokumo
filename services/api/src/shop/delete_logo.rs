@@ -68,5 +68,5 @@ pub async fn delete_logo(
         }
     }
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }

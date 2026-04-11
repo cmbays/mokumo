@@ -147,5 +147,5 @@ pub async fn post_logo(
             AppError::InternalError("Failed to save logo metadata".into())
         })?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
