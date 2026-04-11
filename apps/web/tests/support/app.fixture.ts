@@ -1,7 +1,4 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import type { CustomerResponse } from "../../src/lib/types/CustomerResponse";
@@ -184,9 +181,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   freshBackend: async ({ _axumServer, page }, use) => {
     await _axumServer.harness.stop();
 
-    // New tmpdir for a clean database (harness.start() creates it when no dataDir given)
-    const newTmpDir = mkdtempSync(join(tmpdir(), "mokumo-test-"));
-    await _axumServer.harness.start(_axumServer.port, newTmpDir);
+    // Let the harness allocate and track the fresh tmpdir — callers must not
+    // pass a manually-created dir here or it will escape harness.cleanup().
+    await _axumServer.harness.start(_axumServer.port);
 
     // Getters on AxumHandle now return updated values from the restarted harness.
     const { url, setupToken } = _axumServer;

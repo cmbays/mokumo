@@ -34,10 +34,13 @@ pub async fn ws_handler(
         }
     }
 
+    // Debug builds: use the --ws-ping-ms flag value (allows fast test cycles).
+    // Release builds: always send heartbeats at 30 s so the client liveness
+    // timer (75 s = 2.5 × 30 s) fires only on genuine server death.
     #[cfg(debug_assertions)]
     let ping_ms = state.ws_ping_ms;
     #[cfg(not(debug_assertions))]
-    let ping_ms: Option<u64> = None;
+    let ping_ms: Option<u64> = Some(30_000);
 
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, state, ping_ms)))
 }
@@ -182,7 +185,10 @@ async fn handle_socket(socket: WebSocket, state: SharedState, ping_ms: Option<u6
                 // OptionFuture is a no-op (never fires) when ping_interval is None.
                 _ = OptionFuture::from(ping_interval.as_mut().map(|i| i.tick())) => {
                     let Ok(hb) = serde_json::to_string(
-                        &serde_json::json!({"type": "heartbeat"})
+                        &mokumo_types::ws::BroadcastEvent::new(
+                            "heartbeat",
+                            serde_json::json!({}),
+                        )
                     ) else {
                         tracing::error!(conn_id = %sender_conn_id, "heartbeat serialize failed — closing connection");
                         break;

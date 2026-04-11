@@ -38,6 +38,10 @@ export class BackendHarness {
    * Safe to call again after stop() — reuses the same harness instance.
    */
   async start(port?: number, dataDir?: string): Promise<void> {
+    if (this._process && this._process.exitCode === null && this._process.signalCode === null) {
+      throw new Error("BackendHarness: start() called while a backend is already running");
+    }
+
     const resolvedPort = port ?? (await getAvailablePort());
 
     let resolvedDataDir: string;
@@ -68,7 +72,7 @@ export class BackendHarness {
    */
   async stop(): Promise<void> {
     const proc = this._process;
-    if (!proc || proc.exitCode !== null) return;
+    if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
 
     proc.kill("SIGTERM");
 
