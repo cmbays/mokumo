@@ -140,10 +140,7 @@ async fn database_unavailable(w: &mut ApiWorld) {
     let serve = axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(async move { shutdown_clone.cancelled().await });
 
-    let server = axum_test::TestServer::builder()
-        .save_cookies()
-        .build(serve)
-        .expect("failed to create test server");
+    let server = axum_test::TestServer::builder().save_cookies().build(serve);
 
     w.server = server;
     w.shutdown_token = shutdown;

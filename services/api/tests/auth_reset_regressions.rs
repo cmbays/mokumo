@@ -52,9 +52,9 @@ impl RunningServer {
             .await
             .unwrap();
         let server = if save_cookies {
-            TestServer::builder().save_cookies().build(app).unwrap()
+            TestServer::builder().save_cookies().build(app)
         } else {
-            TestServer::new(app).unwrap()
+            TestServer::new(app)
         };
 
         Self {
@@ -429,7 +429,7 @@ async fn file_drop_recovery_works_with_spaces_in_recovery_dir() {
         .await
         .unwrap();
 
-    let server = TestServer::new(app).unwrap();
+    let server = TestServer::new(app);
     let response = server
         .post("/api/auth/forgot-password")
         .json(&json!({ "email": "admin@shop.local" }))
