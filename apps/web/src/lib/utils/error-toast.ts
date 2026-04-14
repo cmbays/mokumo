@@ -12,6 +12,7 @@ import { toast } from "$lib/components/toast";
  * intentional: unknown codes are treated as security-sensitive until
  * explicitly allow-listed here.
  */
+// Stryker disable StringLiteral: entries are ErrorCode constants, already compiler-checked against the ErrorCode union — mutating individual strings adds no value
 const USER_VISIBLE_CODES: Set<ErrorCode> = new Set([
   "rate_limited",
   "invalid_credentials",
@@ -33,6 +34,7 @@ const USER_VISIBLE_CODES: Set<ErrorCode> = new Set([
   "logo_malformed",
   "shop_logo_not_found",
 ]);
+// Stryker restore StringLiteral
 
 /**
  * Show an error toast for an API error response.

@@ -9,6 +9,16 @@ import type { ErrorBody } from "$lib/types/ErrorBody";
 describe("toastApiError", () => {
   beforeEach(() => mockError.mockClear());
 
+  it("uses fallback when error is null (network failure, no structured response)", () => {
+    toastApiError(null, "Something went wrong.");
+    expect(mockError).toHaveBeenCalledWith("Something went wrong.");
+  });
+
+  it("uses fallback when error is undefined", () => {
+    toastApiError(undefined, "Something went wrong.");
+    expect(mockError).toHaveBeenCalledWith("Something went wrong.");
+  });
+
   it("surfaces server message for an allow-listed code (rate_limited)", () => {
     const error: ErrorBody = {
       code: "rate_limited",
