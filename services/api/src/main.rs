@@ -731,15 +731,21 @@ async fn main() {
         Some(Commands::Migrate {
             action: MigrateCommands::Status { production },
         }) => {
-            let profile_dir = profile_dir(&data_dir, production);
-            let db_path = profile_dir.join("mokumo.db");
+            // -v/-q flags are accepted (global = true) but have no effect here:
+            // output is plain println!/eprintln!, not tracing. init_tracing is
+            // only called for the server startup path below.
+            let profile = if production {
+                SetupMode::Production
+            } else {
+                resolve_active_profile(&data_dir)
+            };
+            let db_path = data_dir.join(profile.as_dir_name()).join("mokumo.db");
 
             match db_path.try_exists() {
                 Ok(true) => {}
                 Ok(false) => {
-                    let mode = if production { "production" } else { "demo" };
                     eprintln!(
-                        "No database found for the {mode} profile at {}",
+                        "No database found at {}",
                         db_path.display()
                     );
                     std::process::exit(1);
@@ -762,6 +768,18 @@ async fn main() {
                         report.applied.len()
                     );
                     println!();
+
+                    if !report.unknown.is_empty() {
+                        eprintln!(
+                            "WARNING: {} migration(s) in DB not recognized by this binary \
+                             (binary downgrade?)",
+                            report.unknown.len()
+                        );
+                        for name in &report.unknown {
+                            eprintln!("  [?] {name}");
+                        }
+                        eprintln!();
+                    }
 
                     if !report.applied.is_empty() {
                         println!("Applied migrations:");

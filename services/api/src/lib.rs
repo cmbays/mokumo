@@ -1224,6 +1224,9 @@ pub struct MigrateStatusReport {
     pub current_version: Option<String>,
     pub applied: Vec<MigrationRecord>,
     pub pending: Vec<String>,
+    /// Migrations recorded in the DB but not known to this binary.
+    /// Non-empty only on binary downgrade — the schema is ahead of the binary.
+    pub unknown: Vec<String>,
 }
 
 /// Query the migration state of a database file.
@@ -1254,6 +1257,7 @@ pub fn cli_migrate_status(db_path: &Path) -> Result<MigrateStatusReport, String>
             current_version: None,
             applied: vec![],
             pending: known,
+            unknown: vec![],
         });
     }
 
@@ -1277,10 +1281,19 @@ pub fn cli_migrate_status(db_path: &Path) -> Result<MigrateStatusReport, String>
         .collect::<Result<_, _>>()
         .map_err(|e: rusqlite::Error| format!("Failed to read migration row: {e}"))?;
 
+    let known = mokumo_db::known_migration_names();
+    let known_set: std::collections::HashSet<&str> =
+        known.iter().map(|n| n.as_str()).collect();
+
+    let unknown: Vec<String> = applied
+        .iter()
+        .filter(|r| !known_set.contains(r.name.as_str()))
+        .map(|r| r.name.clone())
+        .collect();
+
     let applied_names: std::collections::HashSet<&str> =
         applied.iter().map(|r| r.name.as_str()).collect();
 
-    let known = mokumo_db::known_migration_names();
     let pending: Vec<String> = known
         .into_iter()
         .filter(|n| !applied_names.contains(n.as_str()))
@@ -1292,6 +1305,7 @@ pub fn cli_migrate_status(db_path: &Path) -> Result<MigrateStatusReport, String>
         current_version,
         applied,
         pending,
+        unknown,
     })
 }
 
