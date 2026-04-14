@@ -209,6 +209,35 @@ pub async fn health_check(db: &DatabaseConnection) -> Result<(), DomainError> {
         .map_err(sea_err)
 }
 
+/// Check whether the database has a fully-seeded demo admin account.
+///
+/// Returns `true` when `admin@demo.local` exists, is active, is not soft-deleted,
+/// and has a non-empty `password_hash`. Returns `false` on any DB error (logged at
+/// error level) or when the predicate is not met.
+///
+/// This is a plain database predicate — it does not inspect the active profile.
+/// Callers are responsible for only invoking this check on the demo database.
+pub async fn validate_installation(db: &DatabaseConnection) -> bool {
+    use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter};
+    use user::entity::{Column, Entity as UserEntity};
+
+    let result = UserEntity::find()
+        .filter(Column::Email.eq("admin@demo.local"))
+        .filter(Column::PasswordHash.ne(""))
+        .filter(Column::IsActive.eq(true))
+        .filter(Column::DeletedAt.is_null())
+        .count(db)
+        .await;
+
+    match result {
+        Ok(count) => count > 0,
+        Err(e) => {
+            tracing::error!("validate_installation failed — defaulting to false: {e}");
+            false
+        }
+    }
+}
+
 /// Lightweight runtime diagnostics for a single profile database connection.
 ///
 /// Reads `PRAGMA user_version` and `PRAGMA journal_mode` via the underlying
