@@ -10,7 +10,10 @@
   let renderError = $state(false);
 
   $effect(() => {
-    if (!canvasEl || !value) return;
+    if (!canvasEl || !value) {
+      renderError = false;
+      return;
+    }
 
     // Read reactive dependencies synchronously before the async call —
     // values read inside a Promise callback are invisible to Svelte's tracker.

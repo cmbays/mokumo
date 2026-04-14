@@ -7,8 +7,10 @@ import { toast } from "$lib/components/toast";
  * Security-sensitive codes (unauthorized, internal_error, etc.) fall through
  * to the caller-supplied fallback to avoid leaking implementation details.
  *
- * Typed as Set<ErrorCode> so the compiler catches invalid entries and flags
- * missing codes when ErrorCode grows.
+ * Typed as Set<ErrorCode> so the compiler catches invalid entries (typos are
+ * a compile error). New error codes default to the caller-supplied fallback —
+ * intentional: unknown codes are treated as security-sensitive until
+ * explicitly allow-listed here.
  */
 const USER_VISIBLE_CODES: Set<ErrorCode> = new Set([
   "rate_limited",
@@ -39,7 +41,11 @@ const USER_VISIBLE_CODES: Set<ErrorCode> = new Set([
  * All other codes (internal_error, unauthorized, parse_error, etc.) show
  * the caller-supplied fallback to avoid leaking implementation details.
  */
-export function toastApiError(error: ErrorBody, fallback: string): void {
+export function toastApiError(error: ErrorBody | null | undefined, fallback: string): void {
+  if (!error) {
+    toast.error(fallback);
+    return;
+  }
   const message = USER_VISIBLE_CODES.has(error.code) ? error.message : fallback;
   toast.error(message);
 }

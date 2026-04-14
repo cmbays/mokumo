@@ -60,6 +60,42 @@ describe("QrCode", () => {
     expect(screen.getByTestId("qr-code")).toHaveClass("hidden");
   });
 
+  it("transitions from placeholder to canvas when value changes from null to valid", async () => {
+    const { rerender } = render(QrCode, { value: null });
+    expect(screen.getByTestId("qr-code-placeholder")).toBeVisible();
+    expect(mockToCanvas).not.toHaveBeenCalled();
+
+    await rerender({ value: "http://192.168.1.50:6565" });
+
+    await waitFor(() => {
+      expect(mockToCanvas).toHaveBeenCalledWith(
+        expect.any(HTMLCanvasElement),
+        "http://192.168.1.50:6565",
+        expect.objectContaining({ width: 200, margin: 1 }),
+      );
+    });
+
+    expect(screen.getByTestId("qr-code")).not.toHaveClass("hidden");
+    expect(screen.queryByTestId("qr-code-placeholder")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("qr-code-error")).not.toBeInTheDocument();
+  });
+
+  it("shows placeholder (not error) when value transitions back to null after a render failure", async () => {
+    mockToCanvas.mockRejectedValue(new Error("render failed"));
+    const { rerender } = render(QrCode, { value: "http://192.168.1.50:6565" });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-code-error")).toBeVisible();
+    });
+
+    await rerender({ value: null });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-code-placeholder")).toBeVisible();
+    });
+    expect(screen.queryByTestId("qr-code-error")).not.toBeInTheDocument();
+  });
+
   it("hides placeholder and error divs when value is valid and render succeeds", async () => {
     render(QrCode, { value: "http://192.168.1.50:6565" });
 
