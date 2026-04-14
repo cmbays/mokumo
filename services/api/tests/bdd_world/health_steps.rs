@@ -232,7 +232,14 @@ async fn response_status_not(w: &mut ApiWorld, status: u16) {
 
 #[then(expr = "a subsequent GET {string} returns install_ok as true")]
 async fn subsequent_get_install_ok_true(w: &mut ApiWorld, path: String) {
-    let resp = w.server.get(&path).await;
+    w.response = Some(w.server.get(&path).await);
+    let resp = w.response.as_ref().expect("no response captured");
+    assert_eq!(
+        resp.status_code().as_u16(),
+        200,
+        "Expected 200 from {path}, got {}",
+        resp.status_code().as_u16()
+    );
     let body: serde_json::Value = resp.json();
     let install_ok = body["install_ok"].as_bool().unwrap_or(false);
     assert!(

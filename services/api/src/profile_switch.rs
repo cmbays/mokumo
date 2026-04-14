@@ -169,7 +169,12 @@ pub async fn profile_switch(
             "Profile switch: logout failed — rolling back active_profile: {e}"
         );
         *state.active_profile.write() = previous_profile;
-        if let Err(re) = tokio::fs::write(&profile_path, previous_profile.as_str()).await {
+        if let Err(re) = async {
+            tokio::fs::write(&profile_tmp, previous_profile.as_str()).await?;
+            tokio::fs::rename(&profile_tmp, &profile_path).await
+        }
+        .await
+        {
             tracing::error!(
                 path = %profile_path.display(),
                 "Profile switch: rollback disk write failed — on-disk profile may be inconsistent: {re}"
@@ -186,7 +191,12 @@ pub async fn profile_switch(
             "Profile switch: login failed — rolling back active_profile: {e}"
         );
         *state.active_profile.write() = previous_profile;
-        if let Err(re) = tokio::fs::write(&profile_path, previous_profile.as_str()).await {
+        if let Err(re) = async {
+            tokio::fs::write(&profile_tmp, previous_profile.as_str()).await?;
+            tokio::fs::rename(&profile_tmp, &profile_path).await
+        }
+        .await
+        {
             tracing::error!(
                 path = %profile_path.display(),
                 "Profile switch: rollback disk write failed — on-disk profile may be inconsistent: {re}"

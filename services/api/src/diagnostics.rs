@@ -7,7 +7,6 @@ use mokumo_types::diagnostics::{
     AppDiagnostics, DatabaseDiagnostics, DiagnosticsResponse, OsDiagnostics, ProfileDbDiagnostics,
     RuntimeDiagnostics, SystemDiagnostics,
 };
-use rusqlite;
 use sysinfo::{Disks, System};
 
 use crate::{SharedState, error::AppError};

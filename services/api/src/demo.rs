@@ -63,9 +63,14 @@ pub async fn demo_reset(
             // The connection pool is already closed and the file has been replaced.
             // The server cannot serve demo-profile requests in this state. Schedule
             // a restart so the process recovers, then return an error to the caller.
+            // If the sentinel write fails, do NOT schedule shutdown — stopping the
+            // server without restarting it would leave the shop with no running server.
             let sentinel = state.data_dir.join(".restart");
             if let Err(se) = std::fs::write(&sentinel, b"reset") {
                 tracing::error!("Demo reset: also failed to write restart sentinel: {se}");
+                return Err(AppError::InternalError(
+                    "Failed to schedule automatic restart after demo reset; please restart Mokumo manually.".into(),
+                ));
             }
             let shutdown = state.shutdown.clone();
             tokio::spawn(async move {
