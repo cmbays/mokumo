@@ -40,7 +40,7 @@ impl RunningServer {
         let (app, setup_token) = build_app(&config, db.clone(), db.clone(), SetupMode::Production)
             .await
             .unwrap();
-        let server = TestServer::new(app).unwrap();
+        let server = TestServer::new(app);
 
         Self {
             server,
