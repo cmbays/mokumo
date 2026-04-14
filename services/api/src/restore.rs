@@ -444,7 +444,7 @@ mod tests {
             build_app(&config, demo_db, prod_db, SetupMode::Demo)
                 .await
                 .unwrap();
-        let server = TestServer::new(app).unwrap();
+        let server = TestServer::new(app);
 
         RestoreTestServer {
             server,
@@ -486,7 +486,7 @@ mod tests {
             build_app(&config, demo_db, prod_db, SetupMode::Demo)
                 .await
                 .unwrap();
-        let server = TestServer::new(app).unwrap();
+        let server = TestServer::new(app);
 
         RestoreTestServer {
             server,
