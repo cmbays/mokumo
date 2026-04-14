@@ -1385,9 +1385,17 @@ async fn health(
     mokumo_db::health_check(state.db_for(SetupMode::Demo)).await?;
     mokumo_db::health_check(state.db_for(SetupMode::Production)).await?;
 
-    let install_ok = state
-        .demo_install_ok
-        .load(std::sync::atomic::Ordering::Acquire);
+    // install_ok is only meaningful in Demo profile. In Production the flag is
+    // permanently true (set at boot by resolve_demo_install_ok), but we re-derive
+    // it from the active profile here so that a cold-start server which later runs
+    // setup (switching from Demo→Production) reports install_ok=true immediately.
+    let install_ok = if *state.active_profile.read() == SetupMode::Production {
+        true
+    } else {
+        state
+            .demo_install_ok
+            .load(std::sync::atomic::Ordering::Acquire)
+    };
     let uptime_seconds = state.started_at.elapsed().as_secs();
     let status = if install_ok { "ok" } else { "degraded" };
 

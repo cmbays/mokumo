@@ -56,4 +56,4 @@ Feature: Demo installation guard
     Given the server started with a demo database that has no admin account
     And the demo sidecar contains a correctly seeded database
     When a client sends a demo reset request
-    Then after the server restarts the health endpoint returns "install_ok" as true
+    Then after the server restarts the health endpoint reports install_ok as true

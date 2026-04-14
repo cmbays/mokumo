@@ -801,10 +801,7 @@ async fn rebuild_as_demo_no_admin(w: &mut ApiWorld) {
         shutdown.cancelled().await;
     });
 
-    let server = axum_test::TestServer::builder()
-        .save_cookies()
-        .build(serve)
-        .expect("failed to create test server");
+    let server = axum_test::TestServer::builder().save_cookies().build(serve);
 
     w.server = server;
     w.shutdown_token = shutdown_token;
@@ -901,7 +898,7 @@ async fn sidecar_seeded(w: &mut ApiWorld) {
     create_test_sidecar(std::path::Path::new(&sidecar_path)).await;
 }
 
-#[then("after the server restarts the health endpoint returns \"install_ok\" as true")]
+#[then("after the server restarts the health endpoint reports install_ok as true")]
 async fn health_reports_install_ok_after_restart(w: &mut ApiWorld) {
     // Simulate server restart: rebuild the world from the current data directory,
     // which now holds the freshly-reset (seeded) demo database.
@@ -944,10 +941,7 @@ async fn health_reports_install_ok_after_restart(w: &mut ApiWorld) {
         shutdown.cancelled().await;
     });
 
-    let server = axum_test::TestServer::builder()
-        .save_cookies()
-        .build(serve)
-        .expect("failed to create test server");
+    let server = axum_test::TestServer::builder().save_cookies().build(serve);
 
     let db_pool = db.get_sqlite_connection_pool().clone();
     w.server = server;
