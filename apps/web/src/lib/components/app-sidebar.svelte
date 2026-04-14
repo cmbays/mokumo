@@ -191,7 +191,12 @@
     }
     switching = false;
     switcherOpen = false;
-    await goto("/");
+    try {
+      await goto("/");
+    } catch (error) {
+      console.error("Profile switch navigation failed:", error);
+      window.location.assign("/");
+    }
   }
 </script>
 
