@@ -120,10 +120,7 @@ impl ApiWorld {
                 shutdown.cancelled().await;
             });
 
-        let server = TestServer::builder()
-            .save_cookies()
-            .build(serve)
-            ;
+        let server = TestServer::builder().save_cookies().build(serve);
 
         Self {
             server,

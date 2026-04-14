@@ -80,10 +80,7 @@ async fn rebuild_world(w: &mut ApiWorld, cfg: &WorldConfig) {
         shutdown.cancelled().await;
     });
 
-    let server = axum_test::TestServer::builder()
-        .save_cookies()
-        .build(serve)
-        ;
+    let server = axum_test::TestServer::builder().save_cookies().build(serve);
 
     w.server = server;
     w.shutdown_token = shutdown_token;
