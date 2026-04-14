@@ -12,4 +12,9 @@ export type SystemDiagnostics = {
    * `None` when no disk volume contains the data directory.
    */
   disk_free_bytes: number | null;
+  /**
+   * True when available disk space is below the warning threshold
+   * (`MOKUMO_DISK_WARNING_THRESHOLD_BYTES`, default 500 MB).
+   */
+  disk_warning: boolean;
 };
