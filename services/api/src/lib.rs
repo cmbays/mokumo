@@ -648,6 +648,28 @@ pub async fn init_session_and_setup(
 
 /// Build the Axum router with health check, SPA fallback, and tracing.
 ///
+/// Resolve the `demo_install_ok` flag at startup.
+///
+/// Runs `validate_installation` against the demo DB when the active profile is Demo;
+/// always returns `true` for Production (an empty production DB is valid — setup is
+/// pending, not broken). Logs the result at `info` level for observability.
+async fn resolve_demo_install_ok(
+    demo_db: &DatabaseConnection,
+    active_profile: SetupMode,
+) -> Arc<AtomicBool> {
+    let ok = if active_profile == SetupMode::Demo {
+        let ok = mokumo_db::validate_installation(demo_db).await;
+        tracing::info!(
+            demo_install_ok = ok,
+            "demo installation validation complete"
+        );
+        ok
+    } else {
+        true
+    };
+    Arc::new(AtomicBool::new(ok))
+}
+
 /// Test-only convenience wrapper. Does NOT spawn the background IP refresh
 /// task — the local IP is computed once and never updated. Use
 /// `build_app_with_shutdown` in production for graceful lifecycle control.
@@ -665,16 +687,7 @@ pub async fn build_app(
     let (session_store, setup_completed, setup_token) =
         init_session_and_setup(&production_db, &session_db_path).await?;
 
-    let demo_install_ok = Arc::new(AtomicBool::new(if active_profile == SetupMode::Demo {
-        let ok = mokumo_db::validate_installation(&demo_db).await;
-        tracing::info!(
-            demo_install_ok = ok,
-            "demo installation validation complete"
-        );
-        ok
-    } else {
-        true
-    }));
+    let demo_install_ok = resolve_demo_install_ok(&demo_db, active_profile).await;
 
     let (router, _ws) = build_app_inner(
         config,
@@ -753,16 +766,7 @@ pub async fn build_app_with_shutdown(
         tracing::info!("Setup required — token: {token}");
     }
 
-    let demo_install_ok = Arc::new(AtomicBool::new(if active_profile == SetupMode::Demo {
-        let ok = mokumo_db::validate_installation(&demo_db).await;
-        tracing::info!(
-            demo_install_ok = ok,
-            "demo installation validation complete"
-        );
-        ok
-    } else {
-        true
-    }));
+    let demo_install_ok = resolve_demo_install_ok(&demo_db, active_profile).await;
 
     let (router, ws) = build_app_inner(
         config,

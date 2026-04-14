@@ -33,7 +33,8 @@ pub enum AppError {
     StateConflict(ErrorCode, String),
     /// 500 — generic internal error. The real message is logged, not returned.
     InternalError(String),
-    /// 423 — demo installation is incomplete (admin account missing or has no password hash).
+    /// 423 — demo installation is incomplete or corrupted (admin account missing,
+    /// inactive, soft-deleted, or has no password hash).
     DemoSetupRequired,
 }
 
@@ -153,7 +154,7 @@ impl IntoResponse for AppError {
                 StatusCode::LOCKED,
                 ErrorBody {
                     code: ErrorCode::DemoSetupRequired,
-                    message: "Demo installation is incomplete \u{2014} admin account missing. Reset demo data to restore access.".into(),
+                    message: "Demo installation is incomplete or corrupted. Reset demo data to restore access.".into(),
                     details: None,
                 },
             ),
@@ -612,7 +613,7 @@ mod tests {
             .unwrap();
         let error_body: ErrorBody = serde_json::from_slice(&body).unwrap();
         assert_eq!(error_body.code, ErrorCode::DemoSetupRequired);
-        assert!(error_body.message.contains("admin account missing"));
+        assert!(error_body.message.contains("incomplete or corrupted"));
         assert!(error_body.details.is_none());
     }
 

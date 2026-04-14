@@ -209,12 +209,14 @@ pub async fn health_check(db: &DatabaseConnection) -> Result<(), DomainError> {
         .map_err(sea_err)
 }
 
-/// Check whether the demo database has a fully-seeded admin account.
+/// Check whether the database has a fully-seeded demo admin account.
 ///
 /// Returns `true` when `admin@demo.local` exists, is active, is not soft-deleted,
 /// and has a non-empty `password_hash`. Returns `false` on any DB error (logged at
-/// error level) or when the predicate is not met. Always returns `true` for
-/// Production — callers should only invoke this for Demo.
+/// error level) or when the predicate is not met.
+///
+/// This is a plain database predicate — it does not inspect the active profile.
+/// Callers are responsible for only invoking this check on the demo database.
 pub async fn validate_installation(db: &DatabaseConnection) -> bool {
     use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter};
     use user::entity::{Column, Entity as UserEntity};
