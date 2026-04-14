@@ -123,7 +123,7 @@ impl ApiWorld {
         let server = TestServer::builder()
             .save_cookies()
             .build(serve)
-            .expect("failed to create test server");
+            ;
 
         Self {
             server,
