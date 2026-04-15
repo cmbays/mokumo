@@ -4,14 +4,15 @@ import { render, screen, waitFor } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-const { mockToastApiError } = vi.hoisted(() => ({
+const { mockToastApiError, mockToastError } = vi.hoisted(() => ({
   mockToastApiError: vi.fn(),
+  mockToastError: vi.fn(),
 }));
 
 vi.mock("$app/environment", () => ({ browser: true, dev: false, building: false }));
 vi.mock("$lib/utils/error-toast", () => ({ toastApiError: mockToastApiError }));
 vi.mock("$lib/components/toast", () => ({
-  toast: { success: vi.fn(), info: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), info: vi.fn(), error: mockToastError },
 }));
 vi.mock("$lib/api/customers", () => ({
   createCustomer: vi.fn(),
@@ -63,6 +64,7 @@ function makeCustomer(overrides: Partial<CustomerResponse> = {}): CustomerRespon
 describe("CustomerFormSheet — applyApiErrors", () => {
   beforeEach(() => {
     mockToastApiError.mockClear();
+    mockToastError.mockClear();
     mockCreateCustomer.mockClear();
     mockUpdateCustomer.mockClear();
   });
@@ -85,6 +87,7 @@ describe("CustomerFormSheet — applyApiErrors", () => {
 
     await waitFor(() => {
       expect(mockToastApiError).toHaveBeenCalledWith(apiError, expect.any(String));
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 
@@ -105,6 +108,7 @@ describe("CustomerFormSheet — applyApiErrors", () => {
     await waitFor(() => {
       const [, fallback] = mockToastApiError.mock.calls[0] as [unknown, string];
       expect(fallback.length).toBeGreaterThan(0);
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 
@@ -129,6 +133,7 @@ describe("CustomerFormSheet — applyApiErrors", () => {
 
     await waitFor(() => {
       expect(mockToastApiError).toHaveBeenCalledWith(apiError, expect.any(String));
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 
@@ -154,6 +159,7 @@ describe("CustomerFormSheet — applyApiErrors", () => {
 
     await waitFor(() => {
       expect(mockToastApiError).not.toHaveBeenCalled();
+      expect(mockToastError).not.toHaveBeenCalled();
       expect(screen.getByText("Display name is required")).toBeInTheDocument();
     });
   });
