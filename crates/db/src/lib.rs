@@ -42,7 +42,7 @@ pub fn known_migration_names() -> Vec<String> {
 ///   developers. Disabling keeps behavior consistent with Windows and avoids historic
 ///   macOS mmap edge cases.
 pub const CONFIGURED_MMAP_SIZE: i64 = if cfg!(target_os = "linux") {
-    268_435_456
+    256 * 1024 * 1024
 } else {
     0
 };

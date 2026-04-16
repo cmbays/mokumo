@@ -263,7 +263,7 @@ async fn main() {
             } else {
                 format!("{mmap_mb} MB")
             };
-            println!("  mmap_size:    {mmap_label}");
+            println!("  configured mmap_size: {mmap_label}");
             println!("  page_size:    {} bytes", diag.page_size);
             println!(
                 "  page_count:   {} ({} KB)",
