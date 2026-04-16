@@ -22,7 +22,6 @@ fn make_exec_migration(
         deps,
         target,
         sql: format!("CREATE TABLE IF NOT EXISTS test_{name} (id INTEGER PRIMARY KEY)"),
-        _should_fail: false,
     })
 }
 
@@ -32,7 +31,6 @@ fn make_failing_exec_migration(name: &'static str, deps: Vec<&'static str>) -> A
         deps,
         target: MigrationTarget::PerProfile,
         sql: "THIS IS INVALID SQL".to_string(),
-        _should_fail: true,
     })
 }
 
@@ -41,7 +39,6 @@ struct ExecMigration {
     deps: Vec<&'static str>,
     target: MigrationTarget,
     sql: String,
-    _should_fail: bool,
 }
 
 #[async_trait::async_trait]
@@ -51,7 +48,7 @@ impl Migration for ExecMigration {
     }
 
     fn graft_id(&self) -> GraftId {
-        GraftId("test")
+        GraftId::new("test")
     }
 
     fn target(&self) -> MigrationTarget {
@@ -62,7 +59,7 @@ impl Migration for ExecMigration {
         self.deps
             .iter()
             .map(|&name| kikan::MigrationRef {
-                graft: GraftId("test"),
+                graft: GraftId::new("test"),
                 name,
             })
             .collect()
@@ -195,7 +192,7 @@ impl Migration for AlterTableMigration {
     }
 
     fn graft_id(&self) -> GraftId {
-        GraftId("test")
+        GraftId::new("test")
     }
 
     fn target(&self) -> MigrationTarget {

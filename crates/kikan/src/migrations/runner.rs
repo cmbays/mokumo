@@ -21,7 +21,7 @@ pub async fn run_migrations(
 
     let unapplied: Vec<_> = ordered
         .into_iter()
-        .filter(|m| !applied.contains(&(m.graft_id().0.to_string(), m.name().to_string())))
+        .filter(|m| !applied.contains(&(m.graft_id().get().to_string(), m.name().to_string())))
         .collect();
 
     if unapplied.is_empty() {
@@ -94,7 +94,7 @@ async fn apply_single(
             Alias::new("applied_at"),
         ])
         .values_panic([
-            Value::from(graft.0).into(),
+            Value::from(graft.get()).into(),
             Value::from(name).into(),
             Expr::cust("unixepoch()"),
         ])

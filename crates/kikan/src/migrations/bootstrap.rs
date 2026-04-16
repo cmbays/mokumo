@@ -19,7 +19,7 @@ pub(crate) struct BootstrapMigrations;
 
 impl BootstrapMigrations {
     pub(crate) fn graft_id() -> GraftId {
-        GraftId("kikan")
+        GraftId::new("kikan")
     }
 
     pub(crate) fn migrations() -> Vec<Box<dyn Migration>> {

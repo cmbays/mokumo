@@ -29,11 +29,13 @@ impl BootConfig {
                 )
             })?;
 
-        let bind_addr: SocketAddr = std::env::args()
-            .skip_while(|a| a != "--bind-addr")
-            .nth(1)
-            .and_then(|s| s.parse().ok())
-            .unwrap_or_else(|| "127.0.0.1:3000".parse().unwrap());
+        let default_addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
+        let bind_addr = match std::env::args().skip_while(|a| a != "--bind-addr").nth(1) {
+            Some(s) => s.parse().map_err(|_| {
+                crate::error::EngineError::Boot(format!("invalid --bind-addr value: {s}"))
+            })?,
+            None => default_addr,
+        };
 
         Ok(Self {
             data_dir,

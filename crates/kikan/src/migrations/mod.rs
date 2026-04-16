@@ -6,7 +6,17 @@ pub mod runner;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct GraftId(pub &'static str);
+pub struct GraftId(&'static str);
+
+impl GraftId {
+    pub const fn new(id: &'static str) -> Self {
+        Self(id)
+    }
+
+    pub fn get(&self) -> &'static str {
+        self.0
+    }
+}
 
 impl std::fmt::Display for GraftId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

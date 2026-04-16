@@ -28,7 +28,7 @@ impl Graft for StubGraft {
     type AppState = ();
 
     fn id() -> GraftId {
-        GraftId("stub")
+        GraftId::new("stub")
     }
 
     fn migrations(&self) -> Vec<Box<dyn Migration>> {
@@ -89,7 +89,7 @@ impl Migration for SimpleMigration {
     }
 
     fn graft_id(&self) -> GraftId {
-        GraftId("stub")
+        GraftId::new("stub")
     }
 
     fn target(&self) -> MigrationTarget {
@@ -100,7 +100,7 @@ impl Migration for SimpleMigration {
         self.deps
             .iter()
             .map(|&name| MigrationRef {
-                graft: GraftId("stub"),
+                graft: GraftId::new("stub"),
                 name,
             })
             .collect()

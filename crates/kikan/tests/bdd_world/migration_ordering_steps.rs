@@ -33,7 +33,7 @@ impl Migration for BddMigration {
     }
 
     fn graft_id(&self) -> GraftId {
-        GraftId(self.graft)
+        GraftId::new(self.graft)
     }
 
     fn target(&self) -> MigrationTarget {
@@ -44,7 +44,7 @@ impl Migration for BddMigration {
         self.deps
             .iter()
             .map(|&(graft, name)| MigrationRef {
-                graft: GraftId(graft),
+                graft: GraftId::new(graft),
                 name,
             })
             .collect()
@@ -375,7 +375,7 @@ fn replace_migration(
     target: MigrationTarget,
 ) {
     w.migrations
-        .retain(|m| !(m.name() == name && m.graft_id().0 == graft));
+        .retain(|m| !(m.name() == name && m.graft_id().get() == graft));
     w.migrations
         .push(make_bdd_migration(name, graft, deps, target));
 }
