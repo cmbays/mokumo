@@ -11,7 +11,7 @@ pub mod tenancy;
 pub use activity::{ActivityLogEntry, ActivityWriter, SqliteActivityWriter};
 pub use app_handle::AppHandleShim;
 pub use boot::{BootConfig, DeploymentMode};
-pub use engine::{Engine, EngineContext};
+pub use engine::{Engine, EngineContext, Sessions};
 pub use error::{
     ActivityWriteError, AppHandleError, DagError, EngineError, MigrationError, TenancyError,
 };
