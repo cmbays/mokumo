@@ -65,10 +65,7 @@ async fn rebuild_as_first_launch(w: &mut ApiWorld) {
         shutdown.cancelled().await;
     });
 
-    let server = TestServer::builder()
-        .save_cookies()
-        .build(serve)
-        .expect("failed to create test server");
+    let server = TestServer::builder().save_cookies().build(serve);
 
     w.server = server;
     w.shutdown_token = shutdown_token;
@@ -137,10 +134,7 @@ async fn rebuild_as_non_first_launch(w: &mut ApiWorld) {
         shutdown.cancelled().await;
     });
 
-    let server = TestServer::builder()
-        .save_cookies()
-        .build(serve)
-        .expect("failed to create test server");
+    let server = TestServer::builder().save_cookies().build(serve);
 
     w.server = server;
     w.shutdown_token = shutdown_token;

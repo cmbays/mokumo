@@ -5,4 +5,6 @@ export type HealthResponse = {
   version: string;
   uptime_seconds: number;
   database: string;
+  install_ok: boolean;
+  storage_ok: boolean;
 };

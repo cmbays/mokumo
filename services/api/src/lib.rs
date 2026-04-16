@@ -44,6 +44,10 @@ use tower_sessions_sqlx_store::SqliteStore;
 use auth::backend::Backend;
 use mokumo_types::HealthResponse;
 
+/// Path of the demo-reset endpoint, used both in route registration and in the
+/// auth middleware to bypass the 423 guard for the recovery mechanism.
+pub const DEMO_RESET_PATH: &str = "/api/demo/reset";
+
 /// Error returned by `setup_profile_db` and `prepare_database`.
 ///
 /// Carries the human-readable error message and the path to the pre-migration backup
@@ -116,6 +120,12 @@ pub struct AppState {
     pub is_first_launch: Arc<AtomicBool>,
     /// Prevents concurrent restore operations. Set to true while a restore is in-flight.
     pub restore_in_progress: Arc<AtomicBool>,
+    /// True when the demo database has a fully-seeded admin account (admin@demo.local with
+    /// non-empty password_hash). Set at boot; re-validated after demo reset and on profile
+    /// switch to Demo. When Production is the active profile, callers must gate on
+    /// `active_profile` first — do not read this flag without checking the active profile.
+    /// Protected routes return 423 DEMO_SETUP_REQUIRED when this is false.
+    pub demo_install_ok: Arc<AtomicBool>,
     /// Rate limiter for restore attempts (5 per hour, shared across validate + restore).
     pub restore_limiter: rate_limit::RateLimiter,
     /// Debug-only WebSocket heartbeat interval in milliseconds.
@@ -644,6 +654,28 @@ pub async fn init_session_and_setup(
 
 /// Build the Axum router with health check, SPA fallback, and tracing.
 ///
+/// Resolve the `demo_install_ok` flag at startup.
+///
+/// Runs `validate_installation` against the demo DB when the active profile is Demo;
+/// always returns `true` for Production (an empty production DB is valid — setup is
+/// pending, not broken). Logs the result at `info` level for observability.
+async fn resolve_demo_install_ok(
+    demo_db: &DatabaseConnection,
+    active_profile: SetupMode,
+) -> Arc<AtomicBool> {
+    let ok = if active_profile == SetupMode::Demo {
+        let ok = mokumo_db::validate_installation(demo_db).await;
+        tracing::info!(
+            demo_install_ok = ok,
+            "demo installation validation complete"
+        );
+        ok
+    } else {
+        true
+    };
+    Arc::new(AtomicBool::new(ok))
+}
+
 /// Test-only convenience wrapper. Does NOT spawn the background IP refresh
 /// task — the local IP is computed once and never updated. Use
 /// `build_app_with_shutdown` in production for graceful lifecycle control.
@@ -661,6 +693,8 @@ pub async fn build_app(
     let (session_store, setup_completed, setup_token) =
         init_session_and_setup(&production_db, &session_db_path).await?;
 
+    let demo_install_ok = resolve_demo_install_ok(&demo_db, active_profile).await;
+
     let (router, _ws) = build_app_inner(
         config,
         demo_db,
@@ -672,6 +706,7 @@ pub async fn build_app(
         session_store,
         setup_completed,
         setup_token.clone(),
+        demo_install_ok,
     );
     Ok((router, setup_token))
 }
@@ -737,6 +772,8 @@ pub async fn build_app_with_shutdown(
         tracing::info!("Setup required — token: {token}");
     }
 
+    let demo_install_ok = resolve_demo_install_ok(&demo_db, active_profile).await;
+
     let (router, ws) = build_app_inner(
         config,
         demo_db,
@@ -748,6 +785,7 @@ pub async fn build_app_with_shutdown(
         session_store,
         setup_completed,
         setup_token.clone(),
+        demo_install_ok,
     );
     Ok((router, setup_token, ws))
 }
@@ -765,6 +803,7 @@ fn build_app_inner(
     session_store: SqliteStore,
     setup_completed: Arc<AtomicBool>,
     setup_token: Option<String>,
+    demo_install_ok: Arc<AtomicBool>,
 ) -> (Router, Arc<ws::manager::ConnectionManager>) {
     // Session layer: SameSite=Lax, HttpOnly, no Secure for M0 (LAN HTTP)
     // Lax (not Strict) so bookmarks and mDNS links preserve the session.
@@ -809,6 +848,7 @@ fn build_app_inner(
         logo_upload_limiter: rate_limit::RateLimiter::new(10, std::time::Duration::from_secs(60)),
         is_first_launch: Arc::new(AtomicBool::new(first_launch)),
         restore_in_progress: Arc::new(AtomicBool::new(false)),
+        demo_install_ok,
         restore_limiter: rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(3600)),
         #[cfg(debug_assertions)]
         ws_ping_ms: config.ws_ping_ms,
@@ -830,6 +870,37 @@ fn build_app_inner(
                         });
                     }
                     _ = token.cancelled() => break,
+                }
+            }
+        });
+    }
+
+    // Background task: run PRAGMA optimize every 2 hours and once on graceful shutdown.
+    // Keeps SQLite's query-planner statistics fresh without blocking requests.
+    {
+        let demo_pool = state.demo_db.get_sqlite_connection_pool().clone();
+        let prod_pool = state.production_db.get_sqlite_connection_pool().clone();
+        let token = state.shutdown.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(2 * 3600));
+            interval.tick().await; // skip immediate first tick (already ran at startup)
+            loop {
+                tokio::select! {
+                    _ = interval.tick() => {
+                        for pool in [&demo_pool, &prod_pool] {
+                            if let Err(e) = sqlx::query("PRAGMA optimize(0xfffe)").execute(pool).await {
+                                tracing::warn!("periodic PRAGMA optimize failed: {e}");
+                            }
+                        }
+                    }
+                    _ = token.cancelled() => {
+                        for pool in [&demo_pool, &prod_pool] {
+                            if let Err(e) = sqlx::query("PRAGMA optimize(0xfffe)").execute(pool).await {
+                                tracing::warn!("shutdown PRAGMA optimize failed: {e}");
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         });
@@ -859,7 +930,7 @@ fn build_app_inner(
             "/api/account/recovery-codes/regenerate",
             post(auth::regenerate_recovery_codes),
         )
-        .route("/api/demo/reset", post(demo::demo_reset))
+        .route(DEMO_RESET_PATH, post(demo::demo_reset))
         .route("/api/profile/switch", post(profile_switch::profile_switch))
         .route("/api/diagnostics", get(diagnostics::handler))
         .route("/api/diagnostics/bundle", get(diagnostics_bundle::handler))
@@ -1351,15 +1422,56 @@ async fn health(
     mokumo_db::health_check(state.db_for(SetupMode::Demo)).await?;
     mokumo_db::health_check(state.db_for(SetupMode::Production)).await?;
 
+    // Read the active profile once — both install_ok and db_path must agree on the
+    // same profile snapshot to avoid a TOCTOU race with a concurrent profile switch.
+    let active = *state.active_profile.read();
+
+    // install_ok is only meaningful in Demo profile. In Production the flag is
+    // permanently true (set at boot by resolve_demo_install_ok), but we re-derive
+    // it from the active profile here so that a cold-start server which later runs
+    // setup (switching from Demo→Production) reports install_ok=true immediately.
+    let install_ok = if active == SetupMode::Production {
+        true
+    } else {
+        state
+            .demo_install_ok
+            .load(std::sync::atomic::Ordering::Acquire)
+    };
+
+    // storage_ok: disk pressure on the data directory's filesystem volume +
+    // fragmentation check on the active profile database file.
+    let db_path = state.data_dir.join(active.as_dir_name()).join("mokumo.db");
+    let disk_warning = crate::diagnostics::compute_disk_warning(&state.data_dir);
+    let diag_result =
+        tokio::task::spawn_blocking(move || mokumo_db::diagnose_database(&db_path)).await;
+    let storage_ok = match diag_result {
+        Ok(Ok(diag)) => !disk_warning && !diag.vacuum_needed(),
+        Ok(Err(e)) => {
+            tracing::warn!("diagnose_database failed in health handler: {e}");
+            false
+        }
+        Err(e) => {
+            tracing::warn!("spawn_blocking panicked in health handler: {e}");
+            false
+        }
+    };
+
     let uptime_seconds = state.started_at.elapsed().as_secs();
+    let status = if install_ok && storage_ok {
+        "ok"
+    } else {
+        "degraded"
+    };
 
     Ok((
         [(axum::http::header::CACHE_CONTROL, "no-store")],
         Json(HealthResponse {
-            status: "ok".into(),
+            status: status.into(),
             version: env!("CARGO_PKG_VERSION").into(),
             uptime_seconds,
             database: "ok".into(),
+            install_ok,
+            storage_ok,
         }),
     ))
 }

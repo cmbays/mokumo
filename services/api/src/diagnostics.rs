@@ -71,6 +71,28 @@ pub async fn collect(state: &SharedState) -> Result<DiagnosticsResponse, AppErro
     })
 }
 
+/// Returns `true` when available disk space for the data directory is below the threshold.
+///
+/// Threshold is read from `MOKUMO_DISK_WARNING_THRESHOLD_BYTES` (default: 500 MiB).
+/// Set to `0` to disable the warning entirely — the `u64` comparison `available < 0`
+/// is never true. Returns `false` when no disk volume can be found (not a blocking
+/// condition).
+pub fn compute_disk_warning(data_dir: &Path) -> bool {
+    let threshold: u64 = std::env::var("MOKUMO_DISK_WARNING_THRESHOLD_BYTES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(524_288_000); // 500 MiB
+
+    let disks = Disks::new_with_refreshed_list();
+    let disk = disks
+        .iter()
+        .filter(|d| data_dir.starts_with(d.mount_point()))
+        .max_by_key(|d| d.mount_point().as_os_str().len());
+
+    disk.map(|d| d.available_space() < threshold)
+        .unwrap_or(false)
+}
+
 fn collect_system_diagnostics(data_dir: &Path) -> SystemDiagnostics {
     let mut sys = System::new();
     sys.refresh_memory();
@@ -97,6 +119,7 @@ fn collect_system_diagnostics(data_dir: &Path) -> SystemDiagnostics {
         used_memory_bytes: sys.used_memory(),
         disk_total_bytes: disk.map(|d| d.total_space()),
         disk_free_bytes: disk.map(|d| d.available_space()),
+        disk_warning: compute_disk_warning(data_dir),
     }
 }
 
@@ -110,9 +133,28 @@ async fn read_profile_diagnostics(
 ) -> Result<ProfileDbDiagnostics, AppError> {
     let rt = mokumo_db::read_db_runtime_diagnostics(db).await?;
     let file_size_bytes = tokio::fs::metadata(db_path).await.ok().map(|m| m.len());
+
+    let db_path_owned = db_path.to_path_buf();
+    let (wal_size_bytes, vacuum_needed) =
+        match tokio::task::spawn_blocking(move || mokumo_db::diagnose_database(&db_path_owned))
+            .await
+        {
+            Ok(Ok(d)) => (d.wal_size_bytes, d.vacuum_needed()),
+            Ok(Err(e)) => {
+                tracing::warn!(db = %db_path.display(), "diagnose_database failed: {e}");
+                (0, false)
+            }
+            Err(e) => {
+                tracing::warn!("spawn_blocking for diagnose_database panicked: {e}");
+                (0, false)
+            }
+        };
+
     Ok(ProfileDbDiagnostics {
         schema_version: rt.schema_version,
         file_size_bytes,
         wal_mode: rt.wal_mode,
+        wal_size_bytes,
+        vacuum_needed,
     })
 }

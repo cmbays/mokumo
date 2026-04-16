@@ -76,6 +76,8 @@ pub struct HealthResponse {
     #[ts(type = "number")]
     pub uptime_seconds: u64,
     pub database: String,
+    pub install_ok: bool,
+    pub storage_ok: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -95,26 +97,29 @@ mod tests {
 
     #[test]
     fn export_bindings() {
-        ServerStartupError::export_all()
+        ServerStartupError::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export ServerStartupError TypeScript bindings");
-        HealthResponse::export_all().expect("Failed to export TypeScript bindings");
-        ServerInfoResponse::export_all()
+        HealthResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export TypeScript bindings");
+        ServerInfoResponse::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export ServerInfoResponse TypeScript bindings");
-        BackupEntry::export_all().expect("Failed to export BackupEntry TypeScript bindings");
-        ProfileBackups::export_all().expect("Failed to export ProfileBackups TypeScript bindings");
-        BackupStatusResponse::export_all()
+        BackupEntry::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export BackupEntry TypeScript bindings");
+        ProfileBackups::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export ProfileBackups TypeScript bindings");
+        BackupStatusResponse::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export BackupStatusResponse TypeScript bindings");
-        setup::SetupStatusResponse::export_all()
+        setup::SetupStatusResponse::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export SetupStatusResponse TypeScript bindings");
-        setup::DemoResetResponse::export_all()
+        setup::DemoResetResponse::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export DemoResetResponse TypeScript bindings");
-        setup::ProfileSwitchRequest::export_all()
+        setup::ProfileSwitchRequest::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export ProfileSwitchRequest TypeScript bindings");
-        setup::ProfileSwitchResponse::export_all()
+        setup::ProfileSwitchResponse::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export ProfileSwitchResponse TypeScript bindings");
-        diagnostics::DiagnosticsResponse::export_all()
+        diagnostics::DiagnosticsResponse::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export DiagnosticsResponse TypeScript bindings");
-        diagnostics::SystemDiagnostics::export_all()
+        diagnostics::SystemDiagnostics::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export SystemDiagnostics TypeScript bindings");
     }
 
@@ -129,8 +134,10 @@ mod tests {
                 version in "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}",
                 uptime_seconds in 0u64..1_000_000,
                 database in "[a-zA-Z_]{1,10}",
+                install_ok in proptest::bool::ANY,
+                storage_ok in proptest::bool::ANY,
             ) {
-                let original = HealthResponse { status, version, uptime_seconds, database };
+                let original = HealthResponse { status, version, uptime_seconds, database, install_ok, storage_ok };
                 let json = serde_json::to_string(&original).unwrap();
                 let restored: HealthResponse = serde_json::from_str(&json).unwrap();
                 assert_eq!(original, restored);

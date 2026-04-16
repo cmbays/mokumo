@@ -4,4 +4,12 @@ export type ProfileDbDiagnostics = {
   schema_version: number;
   file_size_bytes: number | null;
   wal_mode: boolean;
+  /**
+   * Write-ahead log size in bytes; 0 when no WAL file exists.
+   */
+  wal_size_bytes: number;
+  /**
+   * True when the freelist exceeds 20 % of total pages (VACUUM advisable).
+   */
+  vacuum_needed: boolean;
 };
