@@ -19,12 +19,10 @@ impl<G: Graft> Engine<G> {
     pub fn new(config: BootConfig, graft: &G) -> Result<Self, EngineError> {
         let tenancy = Tenancy::new(config.data_dir.clone());
 
-        let self_graft = SelfGraft;
-        let mut subgraft_migrations: Vec<Vec<Box<dyn Migration>>> = Vec::new();
-        subgraft_migrations.push(self_graft.migrations());
-        for sg in &config.subgrafts {
-            subgraft_migrations.push(sg.migrations());
-        }
+        let subgraft_migrations: Vec<Vec<Box<dyn Migration>>> =
+            std::iter::once(SelfGraft.migrations())
+                .chain(config.subgrafts.iter().map(|sg| sg.migrations()))
+                .collect();
 
         let all_migrations =
             migrations::collect_migrations(graft.migrations(), subgraft_migrations);

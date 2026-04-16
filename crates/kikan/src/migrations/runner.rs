@@ -1,4 +1,6 @@
-use sea_orm::{ConnectionTrait, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
+use sea_orm::{
+    ConnectionTrait, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement, Value,
+};
 use std::sync::Arc;
 use tracing::info;
 
@@ -63,6 +65,7 @@ async fn apply_single(
     pool: &DatabaseConnection,
     migration: &dyn Migration,
 ) -> Result<(), EngineError> {
+    use sea_orm::sea_query::{Alias, Expr, Query};
     use sea_orm::{SqliteTransactionMode, TransactionOptions, TransactionTrait};
 
     let graft = migration.graft_id();
@@ -83,11 +86,20 @@ async fn apply_single(
     })?;
 
     let inner = conn.into_inner();
-    inner
-        .execute_unprepared(&format!(
-            "INSERT INTO kikan_migrations (graft_id, name, applied_at) VALUES ('{graft}', '{name}', unixepoch())"
-        ))
-        .await?;
+    let insert = Query::insert()
+        .into_table(Alias::new("kikan_migrations"))
+        .columns([
+            Alias::new("graft_id"),
+            Alias::new("name"),
+            Alias::new("applied_at"),
+        ])
+        .values_panic([
+            Value::from(graft.0).into(),
+            Value::from(name).into(),
+            Expr::cust("unixepoch()"),
+        ])
+        .to_owned();
+    inner.execute(&insert).await?;
     inner.commit().await?;
 
     Ok(())
@@ -98,45 +110,16 @@ async fn bootstrap_tables(pool: &DatabaseConnection) -> Result<(), EngineError> 
         .await?;
     pool.execute_unprepared(bootstrap::KIKAN_META_SQL).await?;
 
-    let already_tracked = is_tracked(pool, "kikan", "create_kikan_migrations").await?;
-    if !already_tracked {
-        pool.execute_unprepared(
-            "INSERT OR IGNORE INTO kikan_migrations (graft_id, name, applied_at) VALUES ('kikan', 'create_kikan_migrations', unixepoch())",
-        )
-        .await?;
-    }
-
-    let meta_tracked = is_tracked(pool, "kikan", "create_kikan_meta").await?;
-    if !meta_tracked {
-        pool.execute_unprepared(
-            "INSERT OR IGNORE INTO kikan_migrations (graft_id, name, applied_at) VALUES ('kikan', 'create_kikan_meta', unixepoch())",
-        )
-        .await?;
-    }
-
-    Ok(())
-}
-
-async fn is_tracked(
-    pool: &DatabaseConnection,
-    graft_id: &str,
-    name: &str,
-) -> Result<bool, EngineError> {
-    #[derive(Debug, FromQueryResult)]
-    struct CountRow {
-        cnt: i64,
-    }
-
-    let rows: Vec<CountRow> = CountRow::find_by_statement(Statement::from_string(
-        DatabaseBackend::Sqlite,
-        format!(
-            "SELECT COUNT(*) as cnt FROM kikan_migrations WHERE graft_id = '{graft_id}' AND name = '{name}'"
-        ),
-    ))
-    .all(pool)
+    pool.execute_unprepared(
+        "INSERT OR IGNORE INTO kikan_migrations (graft_id, name, applied_at) VALUES ('kikan', 'create_kikan_migrations', unixepoch())",
+    )
+    .await?;
+    pool.execute_unprepared(
+        "INSERT OR IGNORE INTO kikan_migrations (graft_id, name, applied_at) VALUES ('kikan', 'create_kikan_meta', unixepoch())",
+    )
     .await?;
 
-    Ok(rows.first().is_some_and(|r| r.cnt > 0))
+    Ok(())
 }
 
 async fn query_applied(pool: &DatabaseConnection) -> Result<Vec<(String, String)>, EngineError> {
