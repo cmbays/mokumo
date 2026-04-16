@@ -19,6 +19,7 @@ tracing = { workspace = true }
 parking_lot = { workspace = true }
 tower = { workspace = true }
 http = { workspace = true }
+rusqlite = { workspace = true }
 async-trait = "0.1"
 trait-variant = "0.1"
 

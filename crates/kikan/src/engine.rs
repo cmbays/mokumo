@@ -39,7 +39,8 @@ impl<G: Graft> Engine<G> {
         &self,
         pool: &sea_orm::DatabaseConnection,
     ) -> Result<(), EngineError> {
-        migrations::runner::run_migrations(pool, &self.all_migrations).await
+        migrations::runner::run_migrations_with_backfill(pool, &self.all_migrations, Some(G::id()))
+            .await
     }
 
     pub fn tenancy(&self) -> &Tenancy {

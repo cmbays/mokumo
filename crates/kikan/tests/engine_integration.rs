@@ -103,6 +103,38 @@ async fn headless_from_args_uses_env_data_dir() {
 }
 
 #[tokio::test]
+async fn setup_mode_serde_wire_format_canary() {
+    use kikan::SetupMode;
+
+    let demo_json = serde_json::to_string(&SetupMode::Demo).unwrap();
+    assert_eq!(
+        demo_json, "\"demo\"",
+        "Demo must serialize as lowercase 'demo'"
+    );
+
+    let prod_json = serde_json::to_string(&SetupMode::Production).unwrap();
+    assert_eq!(
+        prod_json, "\"production\"",
+        "Production must serialize as lowercase 'production'"
+    );
+
+    let demo_parsed: SetupMode = serde_json::from_str("\"demo\"").unwrap();
+    assert_eq!(demo_parsed, SetupMode::Demo);
+
+    let prod_parsed: SetupMode = serde_json::from_str("\"production\"").unwrap();
+    assert_eq!(prod_parsed, SetupMode::Production);
+
+    assert_eq!(SetupMode::Demo.as_str(), "demo");
+    assert_eq!(SetupMode::Production.as_dir_name(), "production");
+
+    assert_eq!("Demo".parse::<SetupMode>().unwrap(), SetupMode::Demo);
+    assert_eq!(
+        "PRODUCTION".parse::<SetupMode>().unwrap(),
+        SetupMode::Production
+    );
+}
+
+#[tokio::test]
 async fn deployment_mode_serde_roundtrip() {
     use kikan::DeploymentMode;
 

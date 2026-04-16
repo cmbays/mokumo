@@ -3712,6 +3712,7 @@ dependencies = [
  "http",
  "parking_lot",
  "proptest",
+ "rusqlite",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -4203,6 +4204,7 @@ dependencies = [
 name = "mokumo-api"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
  "axum-login",
  "axum-test",
@@ -4230,6 +4232,7 @@ dependencies = [
  "rpassword",
  "rusqlite",
  "rust-embed",
+ "sea-orm-migration",
  "serde",
  "serde_json",
  "serial_test",
@@ -4276,6 +4279,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "cucumber",
+ "kikan",
  "mokumo-core",
  "password-auth",
  "rand 0.10.1",
@@ -4334,6 +4338,7 @@ dependencies = [
 name = "mokumo-types"
 version = "0.1.0"
 dependencies = [
+ "kikan",
  "mokumo-core",
  "proptest",
  "serde",

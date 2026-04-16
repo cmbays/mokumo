@@ -1,4 +1,7 @@
+pub mod guards;
+pub mod layout;
 mod profile_id;
+pub mod resolve;
 
 pub use profile_id::{ProfileId, SetupMode};
 

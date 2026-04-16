@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::error::{EngineError, MigrationError};
+use crate::migrations::GraftId;
 use crate::migrations::Migration;
 use crate::migrations::bootstrap;
 use crate::migrations::conn::MigrationConn;
@@ -14,7 +15,19 @@ pub async fn run_migrations(
     pool: &DatabaseConnection,
     all_migrations: &[Arc<dyn Migration>],
 ) -> Result<(), EngineError> {
+    run_migrations_with_backfill(pool, all_migrations, None).await
+}
+
+pub async fn run_migrations_with_backfill(
+    pool: &DatabaseConnection,
+    all_migrations: &[Arc<dyn Migration>],
+    backfill_graft_id: Option<GraftId>,
+) -> Result<(), EngineError> {
     bootstrap_tables(pool).await?;
+
+    if let Some(graft_id) = backfill_graft_id {
+        backfill_seaql_if_present(pool, graft_id).await?;
+    }
 
     let applied = query_applied(pool).await?;
     let ordered = dag::resolve(all_migrations)?;
@@ -125,6 +138,72 @@ async fn bootstrap_tables(pool: &DatabaseConnection) -> Result<(), EngineError> 
     .await?;
 
     Ok(())
+}
+
+pub async fn backfill_seaql_if_present(
+    pool: &DatabaseConnection,
+    graft_id: GraftId,
+) -> Result<usize, EngineError> {
+    #[derive(Debug, FromQueryResult)]
+    struct TableCheck {
+        cnt: i64,
+    }
+
+    let seaql_exists: Vec<TableCheck> = TableCheck::find_by_statement(Statement::from_string(
+        DatabaseBackend::Sqlite,
+        "SELECT COUNT(*) as cnt FROM sqlite_master WHERE type='table' AND name='seaql_migrations'",
+    ))
+    .all(pool)
+    .await?;
+
+    if seaql_exists.is_empty() || seaql_exists[0].cnt == 0 {
+        return Ok(0);
+    }
+
+    #[derive(Debug, FromQueryResult)]
+    struct SeaqlRow {
+        version: String,
+        applied_at: i64,
+    }
+
+    let rows: Vec<SeaqlRow> = SeaqlRow::find_by_statement(Statement::from_string(
+        DatabaseBackend::Sqlite,
+        "SELECT version, applied_at FROM seaql_migrations",
+    ))
+    .all(pool)
+    .await?;
+
+    if rows.is_empty() {
+        return Ok(0);
+    }
+
+    let mut count = 0;
+    for row in &rows {
+        use sea_orm::sea_query::{Alias, Expr, Query, SqliteQueryBuilder};
+
+        let insert = Query::insert()
+            .into_table(Alias::new("kikan_migrations"))
+            .columns([
+                Alias::new("graft_id"),
+                Alias::new("name"),
+                Alias::new("applied_at"),
+            ])
+            .values_panic([
+                Value::from(graft_id.get()).into(),
+                Value::from(row.version.as_str()).into(),
+                Expr::val(row.applied_at),
+            ])
+            .to_owned();
+
+        let sql = insert.to_string(SqliteQueryBuilder);
+        debug_assert!(sql.starts_with("INSERT INTO"));
+        let sql = sql.replacen("INSERT INTO", "INSERT OR IGNORE INTO", 1);
+        pool.execute_unprepared(&sql).await?;
+        count += 1;
+    }
+
+    info!(count, graft = %graft_id, "backfilled seaql_migrations into kikan_migrations");
+    Ok(count)
 }
 
 async fn query_applied(pool: &DatabaseConnection) -> Result<Vec<(String, String)>, EngineError> {
