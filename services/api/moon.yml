@@ -109,6 +109,13 @@ tasks:
     - '@group(allRust)'
     options:
       runFromWorkspaceRoot: true
+  deny:
+    command: cargo deny check
+    inputs:
+    - /deny.toml
+    - /Cargo.lock
+    options:
+      runFromWorkspaceRoot: true
   fmt:
     command: cargo fmt --all --check
     inputs:
