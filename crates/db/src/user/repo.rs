@@ -487,9 +487,10 @@ impl SeaOrmUserRepo {
         Ok(row.map(|(id, locked_until)| (UserId::new(id), locked_until)))
     }
 
-    /// Atomically increment `failed_login_attempts`. If the new count reaches
-    /// `threshold` and the account is not already locked, set `locked_until`
-    /// to `now + lock_secs` seconds.
+    /// Atomically increment `failed_login_attempts` and log a `LoginFailed` or
+    /// `AccountLocked` activity entry in the same transaction. If the new count
+    /// reaches `threshold` and the account is not already locked, set
+    /// `locked_until` to `now + lock_secs` seconds.
     ///
     /// Returns `(new_count, locked_until)`. Callers should check whether
     /// `locked_until` is `Some` to decide whether to return HTTP 423.
@@ -511,8 +512,20 @@ impl SeaOrmUserRepo {
                 message: "lock_secs out of range".into(),
             })?;
 
-        let pool = self.db.get_sqlite_connection_pool();
-        let row: Option<(i32, Option<String>)> = sqlx::query_as(
+        let txn = self.db.begin().await.map_err(sea_err)?;
+
+        let before = UserEntity::find_by_id(user_id.get())
+            .filter(entity::Column::DeletedAt.is_null())
+            .one(&txn)
+            .await
+            .map_err(sea_err)?
+            .ok_or_else(|| DomainError::NotFound {
+                entity: "user",
+                id: user_id.to_string(),
+            })?;
+
+        txn.execute_raw(sea_orm::Statement::from_sql_and_values(
+            sea_orm::DbBackend::Sqlite,
             "UPDATE users
                 SET
                     failed_login_attempts = CASE
@@ -529,25 +542,44 @@ impl SeaOrmUserRepo {
                         THEN ?
                         ELSE NULL
                     END
-             WHERE id = ? AND deleted_at IS NULL
-             RETURNING failed_login_attempts, locked_until",
-        )
-        .bind(threshold)
-        .bind(&lock_until_ts)
-        .bind(user_id.get())
-        .fetch_optional(pool)
+             WHERE id = ? AND deleted_at IS NULL",
+            vec![
+                sea_orm::Value::from(threshold),
+                sea_orm::Value::from(lock_until_ts),
+                sea_orm::Value::from(user_id.get()),
+            ],
+        ))
         .await
-        .map_err(|e| DomainError::Internal {
-            message: format!("failed to record failed attempt: {e}"),
-        })?;
+        .map_err(sea_err)?;
 
-        match row {
-            Some((count, locked_until)) => Ok((count, locked_until)),
-            None => Err(DomainError::NotFound {
-                entity: "user",
-                id: user_id.to_string(),
-            }),
-        }
+        let after = UserEntity::find_by_id(user_id.get())
+            .one(&txn)
+            .await
+            .map_err(sea_err)?
+            .ok_or_else(|| DomainError::Internal {
+                message: "user disappeared mid-transaction".into(),
+            })?;
+        let count = after.failed_login_attempts;
+        let locked_until = after.locked_until.clone();
+        let user = User::from(after);
+
+        // Audit event fires *inside* the same transaction that mutates the
+        // counter so a commit failure rolls back both — satisfying the
+        // adapter-enforced activity-logging contract. We log AccountLocked only
+        // when this attempt transitioned the account into the locked state
+        // (counter advanced past threshold); repeat attempts against an already
+        // locked account still log LoginFailed.
+        let counter_advanced = before.failed_login_attempts != count;
+        let action = if counter_advanced && count >= threshold && locked_until.is_some() {
+            ActivityAction::AccountLocked
+        } else {
+            ActivityAction::LoginFailed
+        };
+        log_user_activity(&txn, &user, action).await?;
+
+        txn.commit().await.map_err(sea_err)?;
+
+        Ok((count, locked_until))
     }
 
     /// Reset `failed_login_attempts` to 0 and clear `locked_until`.
@@ -578,10 +610,10 @@ impl SeaOrmUserRepo {
     }
 
     /// Admin unlock: reset `failed_login_attempts` to 0 and clear `locked_until`,
-    /// then log `ActivityAction::AccountUnlocked`.
+    /// then log `ActivityAction::AccountUnlocked` with the admin as actor.
     ///
     /// Intended for Tauri IPC Stage 4 to wire an `unlock_user` admin command.
-    pub async fn unlock_user(&self, user_id: UserId) -> Result<(), DomainError> {
+    pub async fn unlock_user(&self, user_id: UserId, actor_id: UserId) -> Result<(), DomainError> {
         let txn = self.db.begin().await.map_err(sea_err)?;
 
         let result = txn
@@ -601,17 +633,10 @@ impl SeaOrmUserRepo {
             });
         }
 
-        let user = User::from(
-            UserEntity::find_by_id(user_id.get())
-                .one(&txn)
-                .await
-                .map_err(sea_err)?
-                .ok_or_else(|| DomainError::Internal {
-                    message: "user disappeared mid-transaction".into(),
-                })?,
-        );
+        let user = reload_user_in_txn(&txn, &user_id).await?;
 
-        log_user_activity(&txn, &user, ActivityAction::AccountUnlocked).await?;
+        log_user_activity_with_actor(&txn, &user, ActivityAction::AccountUnlocked, actor_id)
+            .await?;
         txn.commit().await.map_err(sea_err)?;
         Ok(())
     }
@@ -1585,12 +1610,13 @@ mod tests {
         let (db, _tmp) = test_db().await;
         let repo = SeaOrmUserRepo::new(db.clone());
         let user_id = create_test_user(&repo, "unlock@shop.local").await;
+        let admin_id = create_test_user(&repo, "admin@shop.local").await;
 
         // Lock the account
         repo.record_failed_attempt(user_id, 1, 900).await.unwrap();
 
         // Admin unlock
-        repo.unlock_user(user_id).await.unwrap();
+        repo.unlock_user(user_id, admin_id).await.unwrap();
 
         let (_, locked_until) = repo
             .find_lockout_state_by_email("unlock@shop.local")
@@ -1602,14 +1628,18 @@ mod tests {
             "lockout should be cleared by unlock_user"
         );
 
-        // Activity log should have account_unlocked entry
+        // Activity log should have account_unlocked entry with admin as actor
         let pool = db.get_sqlite_connection_pool();
-        let row: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM activity_log WHERE action = 'account_unlocked'")
-                .fetch_one(pool)
-                .await
-                .unwrap();
+        let row: (i64, String, String) = sqlx::query_as(
+            "SELECT COUNT(*), MAX(entity_id), MAX(actor_id)
+             FROM activity_log WHERE action = 'account_unlocked'",
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
         assert_eq!(row.0, 1, "should have one account_unlocked activity entry");
+        assert_eq!(row.1, user_id.to_string(), "entity should be unlocked user");
+        assert_eq!(row.2, admin_id.to_string(), "actor should be admin");
     }
 
     #[tokio::test]

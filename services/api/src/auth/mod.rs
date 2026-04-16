@@ -12,7 +12,6 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use axum_login::AuthSession;
 use mokumo_core::activity::ActivityAction;
-use mokumo_core::user::traits::UserRepository;
 use mokumo_core::user::{RoleId, UserId};
 use mokumo_db::user::repo::SeaOrmUserRepo;
 use mokumo_types::auth::{
@@ -131,13 +130,17 @@ async fn login(
     let user = match auth_result {
         Some(user) => user,
         None => {
-            return handle_failed_login(&repo, &req.email, lockout_state.map(|(id, _)| id)).await;
+            return handle_failed_login(&repo, lockout_state.map(|(id, _)| id)).await;
         }
     };
 
     // Step 6: auth succeeded and account is not locked — clear failed-attempt
-    // counter and create session.
-    let _ = repo.clear_failed_attempts(user.user.id).await;
+    // counter and create session. A clear failure here must abort the login so
+    // we don't leave stale lockout state behind while still minting a session.
+    if let Err(e) = repo.clear_failed_attempts(user.user.id).await {
+        tracing::error!(user_id = %user.user.id, "Failed to clear lockout state: {e}");
+        return Err(AppError::InternalError("Failed to finalize login".into()));
+    }
 
     if let Err(e) = auth_session.login(&user).await {
         tracing::error!("Session login error: {e}");
@@ -164,13 +167,14 @@ fn is_still_locked(locked_until: &str) -> bool {
 ///
 /// If `user_id` is Some (the email matched a user), increment the failed-attempt
 /// counter. When the counter reaches the lockout threshold, the account is locked
-/// and HTTP 423 is returned. Otherwise HTTP 401 is returned.
+/// and HTTP 423 is returned. Otherwise HTTP 401 is returned. Audit logging
+/// (LoginFailed / AccountLocked) is handled atomically inside
+/// `record_failed_attempt` within the same DB transaction as the counter update.
 ///
 /// If `user_id` is None (email not found), return 401 without revealing that the
 /// account doesn't exist.
 async fn handle_failed_login(
     repo: &SeaOrmUserRepo,
-    email: &str,
     user_id: Option<UserId>,
 ) -> Result<Json<UserResponse>, AppError> {
     let Some(uid) = user_id else {
@@ -184,29 +188,13 @@ async fn handle_failed_login(
         .record_failed_attempt(uid, LOGIN_LOCKOUT_THRESHOLD, LOGIN_LOCKOUT_SECS)
         .await
     {
-        Ok((_, Some(_))) => {
-            // Account just locked (or was already locked — shouldn't reach here, but safe).
-            if let Ok(Some(user)) = repo.find_by_email(email).await {
-                let _ = repo
-                    .log_auth_activity(&user, ActivityAction::AccountLocked)
-                    .await;
-            }
-            Err(AppError::AccountLocked(
-                "Account locked due to too many failed login attempts. Try again later.".into(),
-            ))
-        }
-        Ok((_, None)) => {
-            // Below threshold — log LoginFailed and return 401.
-            if let Ok(Some(user)) = repo.find_by_email(email).await {
-                let _ = repo
-                    .log_auth_activity(&user, ActivityAction::LoginFailed)
-                    .await;
-            }
-            Err(AppError::Unauthorized(
-                ErrorCode::InvalidCredentials,
-                "Invalid email or password".into(),
-            ))
-        }
+        Ok((_, Some(_))) => Err(AppError::AccountLocked(
+            "Account locked due to too many failed login attempts. Try again later.".into(),
+        )),
+        Ok((_, None)) => Err(AppError::Unauthorized(
+            ErrorCode::InvalidCredentials,
+            "Invalid email or password".into(),
+        )),
         Err(e) => {
             tracing::error!("Failed to record failed login attempt: {e}");
             // Return generic 401 — don't expose internal errors.
