@@ -88,11 +88,25 @@ async fn run_migrations_creates_tracking_tables_and_applies_all() {
 
     let applied = query_applied(&db).await;
     let names: Vec<&str> = applied.iter().map(|r| r.name.as_str()).collect();
-    assert!(names.contains(&"A"));
-    assert!(names.contains(&"B"));
-    assert!(names.contains(&"C"));
-    assert!(names.contains(&"D"));
+    assert!(names.contains(&"A"), "migration A not tracked");
+    assert!(names.contains(&"B"), "migration B not tracked");
+    assert!(names.contains(&"C"), "migration C not tracked");
+    assert!(names.contains(&"D"), "migration D not tracked");
     assert_eq!(applied.iter().filter(|r| r.graft_id == "stub").count(), 4);
+
+    assert!(
+        table_exists(&db, "test_A").await,
+        "migration A did not create its table"
+    );
+    assert!(
+        table_exists(&db, "test_D").await,
+        "migration D did not create its table"
+    );
+    assert_eq!(
+        count_tables_matching(&db, "test_%").await,
+        4,
+        "expected 4 test tables from stub migrations"
+    );
 }
 
 #[tokio::test]
@@ -227,4 +241,32 @@ async fn bootstrap_tracking_records_correct_graft_id() {
     let names: Vec<&str> = kikan_rows.iter().map(|r| r.name.as_str()).collect();
     assert!(names.contains(&"create_kikan_migrations"));
     assert!(names.contains(&"create_kikan_meta"));
+}
+
+#[tokio::test]
+async fn bootstrap_is_idempotent_across_multiple_runs() {
+    let db = in_memory_db().await;
+
+    runner::run_migrations(&db, &[]).await.unwrap();
+    let first_count = query_applied(&db).await.len();
+
+    runner::run_migrations(&db, &[]).await.unwrap();
+    let second_count = query_applied(&db).await.len();
+
+    assert_eq!(
+        first_count, second_count,
+        "bootstrap should not create duplicate tracking records"
+    );
+    assert_eq!(first_count, 2, "exactly 2 bootstrap records expected");
+}
+
+#[tokio::test]
+async fn runner_skips_empty_migration_set_cleanly() {
+    let db = in_memory_db().await;
+
+    runner::run_migrations(&db, &[]).await.unwrap();
+
+    assert!(table_exists(&db, "kikan_migrations").await);
+    assert!(table_exists(&db, "kikan_meta").await);
+    assert_eq!(count_tables_matching(&db, "test_%").await, 0);
 }
