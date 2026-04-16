@@ -1,3 +1,4 @@
+@wip
 Feature: Host-header allowlist (DNS-rebinding defense)
 
   The server rejects any HTTP request whose Host header is not

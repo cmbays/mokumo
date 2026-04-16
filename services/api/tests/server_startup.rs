@@ -78,6 +78,7 @@ async fn health_endpoint_returns_ok_and_version() {
         .oneshot(
             Request::builder()
                 .uri("/api/health")
+                .header("host", "127.0.0.1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -126,6 +127,7 @@ async fn health_endpoint_returns_500_error_body_on_db_failure() {
         .oneshot(
             Request::builder()
                 .uri("/api/health")
+                .header("host", "127.0.0.1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -155,6 +157,7 @@ async fn spa_fallback_returns_json_404_for_unknown_api_paths() {
         .oneshot(
             Request::builder()
                 .uri("/api/unknown")
+                .header("host", "127.0.0.1")
                 .body(Body::empty())
                 .unwrap(),
         )
