@@ -8,3 +8,11 @@ repository.workspace = true
 description = "Kikan — self-hosted Rust application platform core"
 
 [dependencies]
+# First production deps for kikan (R9). DNS-rebinding defense (host-header
+# allowlist) is kikan-owned infrastructure — requires tower middleware primitives.
+tower = { version = "0.5", features = ["util"] }
+http = "1"
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }

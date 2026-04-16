@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Host-header allowlist (DNS-rebinding defense)**: Every HTTP request whose `Host` header is not `127.0.0.1`, `localhost`, or `[::1]` (any port) is rejected with 403 before reaching any handler or auth layer. Missing or multiple `Host` headers also fail closed. Implemented as a `tower::Layer` in `crates/kikan` — kikan's first production dependency. (#518)
 - **`mokumo migrate status`**: New CLI subcommand that shows the current schema version, lists all applied migrations with timestamps, and lists any pending (unapplied) migrations. Useful for advanced users and CI pipelines that need to verify migration state before upgrades. (#406)
 - **`--verbose` / `--quiet` global CLI flags**: `-v` sets the server tracing level to `debug`, `-vv` to `trace`, and `-q` suppresses all output except errors. Accepted in any position on the command line (global Clap args); override `RUST_LOG` for the server console layer on startup. (#407)
 - **Boot-time install guard**: Health endpoint reports `install_ok` flag and `status: "degraded"` when the flag is false. Protected routes return 423 `DEMO_SETUP_REQUIRED` when the demo admin account is missing, inactive, soft-deleted, or has an empty password hash. Reset demo data to restore access. (#342)
