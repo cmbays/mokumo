@@ -27,10 +27,83 @@ impl From<entity::Model> for User {
     }
 }
 
+const DELETE_LAST_ADMIN_MSG: &str =
+    "Cannot delete the last admin account. Assign another admin first.";
+const DEMOTE_LAST_ADMIN_MSG: &str =
+    "Cannot demote the last admin account. Assign another admin first.";
+
+async fn find_active_user_in_txn<C: ConnectionTrait>(
+    conn: &C,
+    id: &UserId,
+) -> Result<entity::Model, DomainError> {
+    UserEntity::find_by_id(id.get())
+        .filter(entity::Column::DeletedAt.is_null())
+        .one(conn)
+        .await
+        .map_err(sea_err)?
+        .ok_or_else(|| DomainError::NotFound {
+            entity: "user",
+            id: id.to_string(),
+        })
+}
+
+async fn reload_user_in_txn<C: ConnectionTrait>(
+    conn: &C,
+    id: &UserId,
+) -> Result<User, DomainError> {
+    UserEntity::find_by_id(id.get())
+        .one(conn)
+        .await
+        .map_err(sea_err)?
+        .map(User::from)
+        .ok_or_else(|| DomainError::Internal {
+            message: "user disappeared mid-transaction".into(),
+        })
+}
+
+/// Guard: if the target is an admin and the operation would remove them
+/// (soft-delete when `new_role` is None, or demotion when `new_role != ADMIN`),
+/// reject unless another active admin remains.
+async fn ensure_not_last_admin<C: ConnectionTrait>(
+    conn: &C,
+    current_role: RoleId,
+    new_role: Option<RoleId>,
+    message: &str,
+) -> Result<(), DomainError> {
+    let removes_admin =
+        current_role == RoleId::ADMIN && new_role.map(|r| r != RoleId::ADMIN).unwrap_or(true);
+    if !removes_admin {
+        return Ok(());
+    }
+    let count = UserEntity::find()
+        .filter(entity::Column::RoleId.eq(RoleId::ADMIN.get()))
+        .filter(entity::Column::DeletedAt.is_null())
+        .count(conn)
+        .await
+        .map_err(sea_err)?;
+    if count <= 1 {
+        return Err(DomainError::Conflict {
+            message: message.into(),
+        });
+    }
+    Ok(())
+}
+
 async fn log_user_activity(
     conn: &impl ConnectionTrait,
     user: &User,
     action: ActivityAction,
+) -> Result<(), DomainError> {
+    log_user_activity_with_actor(conn, user, action, user.id).await
+}
+
+/// Activity log helper used when the actor is a different user than the target
+/// (e.g., an admin deleting or demoting another user).
+async fn log_user_activity_with_actor(
+    conn: &impl ConnectionTrait,
+    user: &User,
+    action: ActivityAction,
+    actor_id: UserId,
 ) -> Result<(), DomainError> {
     let payload = serde_json::to_value(user).map_err(|e| DomainError::Internal {
         message: format!("failed to serialize user for activity log: {e}"),
@@ -40,7 +113,7 @@ async fn log_user_activity(
         "user",
         &user.id.to_string(),
         action,
-        &user.id.to_string(),
+        &actor_id.to_string(),
         "user",
         &payload,
     )
@@ -460,6 +533,64 @@ impl UserRepository for SeaOrmUserRepo {
             .await
             .map_err(sea_err)?;
         Ok(count as i64)
+    }
+
+    async fn count_active_admins(&self) -> Result<u64, DomainError> {
+        let count = UserEntity::find()
+            .filter(entity::Column::RoleId.eq(RoleId::ADMIN.get()))
+            .filter(entity::Column::DeletedAt.is_null())
+            .count(&self.db)
+            .await
+            .map_err(sea_err)?;
+        Ok(count)
+    }
+
+    async fn soft_delete_user(&self, id: &UserId, actor_id: UserId) -> Result<User, DomainError> {
+        let txn = self.db.begin().await.map_err(sea_err)?;
+        let model = find_active_user_in_txn(&txn, id).await?;
+        ensure_not_last_admin(
+            &txn,
+            RoleId::new(model.role_id),
+            None,
+            DELETE_LAST_ADMIN_MSG,
+        )
+        .await?;
+
+        let mut active: entity::ActiveModel = model.into();
+        active.deleted_at = ActiveValue::Set(Some(chrono::Utc::now().to_rfc3339()));
+        active.is_active = ActiveValue::Set(false);
+        active.update(&txn).await.map_err(sea_err)?;
+
+        let user = reload_user_in_txn(&txn, id).await?;
+        log_user_activity_with_actor(&txn, &user, ActivityAction::SoftDeleted, actor_id).await?;
+        txn.commit().await.map_err(sea_err)?;
+        Ok(user)
+    }
+
+    async fn update_user_role(
+        &self,
+        id: &UserId,
+        new_role: RoleId,
+        actor_id: UserId,
+    ) -> Result<User, DomainError> {
+        let txn = self.db.begin().await.map_err(sea_err)?;
+        let model = find_active_user_in_txn(&txn, id).await?;
+        ensure_not_last_admin(
+            &txn,
+            RoleId::new(model.role_id),
+            Some(new_role),
+            DEMOTE_LAST_ADMIN_MSG,
+        )
+        .await?;
+
+        let mut active: entity::ActiveModel = model.into();
+        active.role_id = ActiveValue::Set(new_role.get());
+        active.update(&txn).await.map_err(sea_err)?;
+
+        let user = reload_user_in_txn(&txn, id).await?;
+        log_user_activity_with_actor(&txn, &user, ActivityAction::RoleUpdated, actor_id).await?;
+        txn.commit().await.map_err(sea_err)?;
+        Ok(user)
     }
 }
 
@@ -990,5 +1121,138 @@ mod tests {
 
         let updated_user = repo.find_by_id(&user.id).await.unwrap().unwrap();
         assert_ne!(updated_user.updated_at, original_updated);
+    }
+
+    fn admin_req(email: &str) -> CreateUser {
+        CreateUser {
+            email: email.to_string(),
+            name: "Admin".to_string(),
+            password: "pass123".to_string(),
+            role_id: RoleId::ADMIN,
+        }
+    }
+
+    fn staff_req(email: &str) -> CreateUser {
+        CreateUser {
+            email: email.to_string(),
+            name: "Staff".to_string(),
+            password: "pass123".to_string(),
+            role_id: RoleId::STAFF,
+        }
+    }
+
+    #[tokio::test]
+    async fn soft_delete_user_removes_target() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let admin = repo.create(&admin_req("admin@shop.local")).await.unwrap();
+        let staff = repo.create(&staff_req("staff@shop.local")).await.unwrap();
+
+        let result = repo.soft_delete_user(&staff.id, admin.id).await;
+        assert!(result.is_ok());
+        let deleted = result.unwrap();
+        assert!(deleted.deleted_at.is_some());
+
+        // Verify it's gone from active queries
+        let found = repo.find_by_id(&staff.id).await.unwrap();
+        assert!(found.is_none());
+    }
+
+    #[tokio::test]
+    async fn soft_delete_user_last_admin_guard_fires() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let admin = repo.create(&admin_req("admin@shop.local")).await.unwrap();
+
+        let result = repo.soft_delete_user(&admin.id, admin.id).await;
+        assert!(
+            matches!(result, Err(DomainError::Conflict { ref message }) if
+            message.contains("Cannot delete the last admin account"))
+        );
+
+        // Admin must still be active
+        let still_there = repo.find_by_id(&admin.id).await.unwrap();
+        assert!(still_there.is_some());
+        assert!(still_there.unwrap().deleted_at.is_none());
+    }
+
+    // R6 boundary: a soft-deleted admin must NOT count — guard fires even when ghost admin exists
+    #[tokio::test]
+    async fn soft_delete_user_ghost_admin_not_counted() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let admin1 = repo.create(&admin_req("admin1@shop.local")).await.unwrap();
+        let admin2 = repo.create(&admin_req("admin2@shop.local")).await.unwrap();
+
+        // Soft-delete admin2 to create a "ghost admin"
+        repo.soft_delete_user(&admin2.id, admin1.id).await.unwrap();
+
+        // Now admin1 is the only *active* admin; deleting admin1 should fail
+        let result = repo.soft_delete_user(&admin1.id, admin1.id).await;
+        assert!(
+            matches!(result, Err(DomainError::Conflict { ref message }) if
+            message.contains("Cannot delete the last admin account"))
+        );
+    }
+
+    #[tokio::test]
+    async fn update_user_role_demotes_target() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let admin1 = repo.create(&admin_req("admin1@shop.local")).await.unwrap();
+        let admin2 = repo.create(&admin_req("admin2@shop.local")).await.unwrap();
+
+        let result = repo
+            .update_user_role(&admin2.id, RoleId::STAFF, admin1.id)
+            .await;
+        assert!(result.is_ok());
+        let updated = result.unwrap();
+        assert_eq!(updated.role_id, RoleId::STAFF);
+    }
+
+    #[tokio::test]
+    async fn update_user_role_demote_last_admin_guard_fires() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let admin = repo.create(&admin_req("admin@shop.local")).await.unwrap();
+
+        let result = repo
+            .update_user_role(&admin.id, RoleId::STAFF, admin.id)
+            .await;
+        assert!(
+            matches!(result, Err(DomainError::Conflict { ref message }) if
+            message.contains("Cannot demote the last admin account"))
+        );
+
+        // Role must be unchanged
+        let still_admin = repo.find_by_id(&admin.id).await.unwrap().unwrap();
+        assert_eq!(still_admin.role_id, RoleId::ADMIN);
+    }
+
+    // R6 boundary: ghost admin must not count for demote guard
+    #[tokio::test]
+    async fn update_user_role_ghost_admin_not_counted() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let admin1 = repo.create(&admin_req("admin1@shop.local")).await.unwrap();
+        let admin2 = repo.create(&admin_req("admin2@shop.local")).await.unwrap();
+
+        // Soft-delete admin2 to create a ghost admin
+        repo.soft_delete_user(&admin2.id, admin1.id).await.unwrap();
+
+        // Demoting admin1 (the only active admin) must fail
+        let result = repo
+            .update_user_role(&admin1.id, RoleId::STAFF, admin1.id)
+            .await;
+        assert!(
+            matches!(result, Err(DomainError::Conflict { ref message }) if
+            message.contains("Cannot demote the last admin account"))
+        );
     }
 }

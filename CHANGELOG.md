@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **User management endpoints**: `DELETE /api/users/:id` (soft-delete) and `PATCH /api/users/:id/role` (role change). Both endpoints require admin caller auth and include a last-admin guard: attempting to delete or demote the only active admin returns `409 Conflict`. (#365)
+
 - **LAN access onboarding and settings toggle**: First-run setup wizard now has an explicit LAN access consent step ("Enable LAN Access" / "Not now") between the recovery codes and completion screens, so shop owners know why the OS may prompt for network permissions. Shop settings gains a LAN Access toggle to change the preference later. The preference (`lan_access_enabled`) is persisted in `kikan_meta` and gates mDNS registration at server start — LAN discovery is off by default until the owner enables it. Exposes `GET` / `PUT /api/settings/lan-access`. (#519)
 - **`kikan-events` crate**: typed event bus over `tokio::sync::broadcast` with `BroadcastEventBus`, 4 event types (Lifecycle, Health, Migration, Profile), and full BDD coverage (#517)
 - **`kikan-mail` crate**: async `Mailer` trait with `LettreMailer` (SMTP via lettre/rustls) and `CapturingMailer` test adapter, `OutgoingMail` pre-wired for future outbox pattern (#515)

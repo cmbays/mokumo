@@ -1,3 +1,4 @@
+pub mod service;
 pub mod traits;
 
 use serde::{Deserialize, Serialize};

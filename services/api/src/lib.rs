@@ -18,6 +18,7 @@ pub mod security_headers;
 pub mod server_info;
 pub mod settings;
 pub mod shop;
+pub mod user;
 pub mod ws;
 
 use std::path::{Path, PathBuf};
@@ -935,6 +936,7 @@ fn build_app_inner(
 
     let protected_routes = Router::new()
         .nest("/api/customers", customer::router())
+        .nest("/api/users", user::router())
         .nest("/api/activity", activity::router())
         .nest("/api/settings", settings::router())
         .nest("/api/auth", auth::auth_me_router())
