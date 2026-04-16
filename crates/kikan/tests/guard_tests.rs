@@ -2,15 +2,6 @@ use kikan::GraftId;
 use kikan::MigrationRef;
 use kikan::tenancy::guards;
 
-fn create_test_db(dir: &std::path::Path, name: &str) -> std::path::PathBuf {
-    let path = dir.join(name);
-    let conn = rusqlite::Connection::open(&path).unwrap();
-    conn.execute_batch("CREATE TABLE test_table (id INTEGER PRIMARY KEY)")
-        .unwrap();
-    drop(conn);
-    path
-}
-
 fn create_db_with_app_id(dir: &std::path::Path, app_id: i64) -> std::path::PathBuf {
     let path = dir.join("test.db");
     let conn = rusqlite::Connection::open(&path).unwrap();
