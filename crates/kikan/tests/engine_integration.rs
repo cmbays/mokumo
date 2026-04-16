@@ -1,7 +1,7 @@
 #[path = "support/mod.rs"]
 mod support;
 
-use kikan::{BootConfig, Engine};
+use kikan::{BootConfig, Engine, EngineError};
 use sea_orm::{Database, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
 use support::StubGraft;
 
@@ -72,6 +72,34 @@ async fn profile_id_display_and_setup_mode_roundtrip() {
     assert_eq!(pid.get(), SetupMode::Demo);
 
     assert!("invalid".parse::<SetupMode>().is_err());
+}
+
+#[tokio::test]
+async fn headless_from_args_fails_without_data_dir_env() {
+    // SAFETY: test-only; no other test depends on MOKUMO_DATA_DIR
+    unsafe { std::env::remove_var("MOKUMO_DATA_DIR") };
+    let result = BootConfig::headless_from_args();
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(err, EngineError::Boot(_)));
+    assert!(err.to_string().contains("MOKUMO_DATA_DIR"));
+}
+
+#[tokio::test]
+async fn headless_from_args_uses_env_data_dir() {
+    // SAFETY: test-only; sets env var for this test
+    unsafe { std::env::set_var("MOKUMO_DATA_DIR", "/tmp/kikan-test-headless") };
+    let result = BootConfig::headless_from_args();
+    unsafe { std::env::remove_var("MOKUMO_DATA_DIR") };
+    let config = result.unwrap();
+    assert_eq!(
+        config.data_dir,
+        std::path::PathBuf::from("/tmp/kikan-test-headless")
+    );
+    assert_eq!(
+        config.bind_addr,
+        "127.0.0.1:3000".parse::<std::net::SocketAddr>().unwrap()
+    );
 }
 
 #[tokio::test]
