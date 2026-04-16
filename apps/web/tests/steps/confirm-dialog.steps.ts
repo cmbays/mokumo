@@ -134,6 +134,7 @@ Then("the dialog is still open", async ({ page }) => {
 Then("no critical accessibility violations are found", async ({ page }) => {
   const dialog = page.getByRole("alertdialog").first();
   const dialogId = await dialog.getAttribute("id");
+  expect(dialogId, "alertdialog should expose an id for scoped axe scans").toBeTruthy();
 
   async function tryAxe() {
     // Wait for any in-flight axe run from @storybook/addon-a11y to finish.
@@ -142,7 +143,7 @@ Then("no critical accessibility violations are found", async ({ page }) => {
       null,
       { timeout: 10_000 },
     );
-    return new AxeBuilder({ page }).include(`#${dialogId}`).analyze();
+    return new AxeBuilder({ page }).include(`#${CSS.escape(dialogId!)}`).analyze();
   }
 
   // Retry up to 3 times to handle the TOCTOU race: storybook's a11y addon can

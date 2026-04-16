@@ -132,17 +132,10 @@ async fn bind_succeeds(w: &mut ApiWorld) {
 }
 
 #[then("the assigned port is outside the 6565-6575 range")]
-async fn assigned_port_outside_default_range(_w: &mut ApiWorld) {
-    // Occupy ports 6565–6575 so the OS must pick something else for :0 bind.
-    // _blockers stay alive until after the bind assertion (drop at end of step).
-    let _blockers: Vec<_> = (6565u16..=6575)
-        .filter_map(|p| std::net::TcpListener::bind(format!("127.0.0.1:{p}")).ok())
-        .collect();
-
-    let (_, addr) = try_bind_ephemeral_loopback()
-        .await
-        .expect("try_bind_ephemeral_loopback should succeed even with 6565-6575 occupied");
-
+async fn assigned_port_outside_default_range(w: &mut ApiWorld) {
+    let addr = w
+        .ephemeral_addr
+        .expect("ephemeral bind must have run first");
     assert!(
         addr.port() < 6565 || addr.port() > 6575,
         "Expected port outside 6565-6575, got {}",
