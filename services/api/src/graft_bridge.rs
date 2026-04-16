@@ -59,13 +59,10 @@ impl Graft for MokumoGraftBridge {
 }
 
 struct BridgedSeaOrmMigration {
-    inner: Box<dyn sea_orm_migration::MigrationTrait>,
+    inner: Box<dyn sea_orm_migration::MigrationTrait + Send + Sync>,
     name: &'static str,
     dep: Option<MigrationRef>,
 }
-
-unsafe impl Send for BridgedSeaOrmMigration {}
-unsafe impl Sync for BridgedSeaOrmMigration {}
 
 #[async_trait::async_trait]
 impl Migration for BridgedSeaOrmMigration {

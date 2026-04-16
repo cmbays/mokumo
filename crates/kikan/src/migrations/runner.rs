@@ -15,16 +15,18 @@ pub async fn run_migrations(
     pool: &DatabaseConnection,
     all_migrations: &[Arc<dyn Migration>],
 ) -> Result<(), EngineError> {
+    run_migrations_with_backfill(pool, all_migrations, None).await
+}
+
+pub async fn run_migrations_with_backfill(
+    pool: &DatabaseConnection,
+    all_migrations: &[Arc<dyn Migration>],
+    backfill_graft_id: Option<GraftId>,
+) -> Result<(), EngineError> {
     bootstrap_tables(pool).await?;
 
-    let graft_ids: Vec<GraftId> = all_migrations
-        .iter()
-        .map(|m| m.graft_id())
-        .collect::<std::collections::HashSet<_>>()
-        .into_iter()
-        .collect();
-    for graft_id in &graft_ids {
-        backfill_seaql_if_present(pool, *graft_id).await?;
+    if let Some(graft_id) = backfill_graft_id {
+        backfill_seaql_if_present(pool, graft_id).await?;
     }
 
     let applied = query_applied(pool).await?;
@@ -177,7 +179,7 @@ pub async fn backfill_seaql_if_present(
 
     let mut count = 0;
     for row in &rows {
-        use sea_orm::sea_query::{Alias, Expr, Query};
+        use sea_orm::sea_query::{Alias, Expr, Query, SqliteQueryBuilder};
 
         let insert = Query::insert()
             .into_table(Alias::new("kikan_migrations"))
@@ -187,14 +189,15 @@ pub async fn backfill_seaql_if_present(
                 Alias::new("applied_at"),
             ])
             .values_panic([
-                sea_orm::Value::from(graft_id.get()).into(),
-                sea_orm::Value::from(row.version.as_str()).into(),
+                Value::from(graft_id.get()).into(),
+                Value::from(row.version.as_str()).into(),
                 Expr::val(row.applied_at),
             ])
             .to_owned();
 
-        let sql = insert.to_string(sea_orm::sea_query::SqliteQueryBuilder);
-        let sql = sql.replace("INSERT INTO", "INSERT OR IGNORE INTO");
+        let sql = insert.to_string(SqliteQueryBuilder);
+        debug_assert!(sql.starts_with("INSERT INTO"));
+        let sql = sql.replacen("INSERT INTO", "INSERT OR IGNORE INTO", 1);
         pool.execute_unprepared(&sql).await?;
         count += 1;
     }
