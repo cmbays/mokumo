@@ -104,7 +104,14 @@ fn diamond_dependency() {
 fn self_loop_detected() {
     let migrations = arc_migrations(vec![make_per_profile("A", vec!["A"])]);
     let result = dag::resolve(&migrations);
-    assert!(matches!(result, Err(DagError::Cycle { .. })));
+    match &result {
+        Err(DagError::Cycle { path }) => {
+            assert!(!path.is_empty(), "cycle path should not be empty");
+            let names: Vec<&str> = path.iter().map(|r| r.name).collect();
+            assert!(names.contains(&"A"));
+        }
+        _ => panic!("expected Cycle error"),
+    }
 }
 
 #[test]
@@ -114,7 +121,17 @@ fn two_node_cycle_detected() {
         make_per_profile("B", vec!["A"]),
     ]);
     let result = dag::resolve(&migrations);
-    assert!(matches!(result, Err(DagError::Cycle { .. })));
+    match &result {
+        Err(DagError::Cycle { path }) => {
+            assert!(
+                path.len() >= 2,
+                "cycle path should contain at least 2 nodes"
+            );
+            let names: Vec<&str> = path.iter().map(|r| r.name).collect();
+            assert!(names.contains(&"A") || names.contains(&"B"));
+        }
+        _ => panic!("expected Cycle error"),
+    }
 }
 
 #[test]

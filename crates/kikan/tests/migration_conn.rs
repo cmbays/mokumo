@@ -40,6 +40,25 @@ async fn query_applied(db: &DatabaseConnection) -> Vec<MigrationRow> {
     .unwrap()
 }
 
+async fn count_tables_matching(db: &DatabaseConnection, pattern: &str) -> i64 {
+    #[derive(Debug, FromQueryResult)]
+    struct CountRow {
+        cnt: i64,
+    }
+
+    let rows: Vec<CountRow> = CountRow::find_by_statement(Statement::from_string(
+        DatabaseBackend::Sqlite,
+        format!(
+            "SELECT COUNT(*) as cnt FROM sqlite_master WHERE type='table' AND name LIKE '{pattern}'"
+        ),
+    ))
+    .all(db)
+    .await
+    .unwrap_or_default();
+
+    rows.first().map_or(0, |r| r.cnt)
+}
+
 async fn table_exists(db: &DatabaseConnection, table: &str) -> bool {
     #[derive(Debug, FromQueryResult)]
     struct CountRow {
@@ -156,4 +175,56 @@ async fn bootstrap_tables_created_before_first_migration() {
 
     assert!(table_exists(&db, "kikan_migrations").await);
     assert!(table_exists(&db, "kikan_meta").await);
+}
+
+#[tokio::test]
+async fn migrations_create_actual_schema_objects() {
+    let db = in_memory_db().await;
+    let migrations = stub_migrations();
+
+    assert_eq!(count_tables_matching(&db, "test_%").await, 0);
+
+    runner::run_migrations(&db, &migrations).await.unwrap();
+
+    assert!(table_exists(&db, "test_A").await);
+    assert!(table_exists(&db, "test_B").await);
+    assert!(table_exists(&db, "test_C").await);
+    assert!(table_exists(&db, "test_D").await);
+    assert_eq!(count_tables_matching(&db, "test_%").await, 4);
+}
+
+#[tokio::test]
+async fn foreign_keys_are_re_enabled_after_batch() {
+    let db = in_memory_db().await;
+    let migrations = vec![
+        Arc::from(make_migration("x", vec![], MigrationTarget::PerProfile)) as Arc<dyn Migration>,
+    ];
+
+    runner::run_migrations(&db, &migrations).await.unwrap();
+
+    #[derive(Debug, FromQueryResult)]
+    struct FkRow {
+        foreign_keys: i32,
+    }
+    let fk_rows: Vec<FkRow> = FkRow::find_by_statement(Statement::from_string(
+        DatabaseBackend::Sqlite,
+        "PRAGMA foreign_keys",
+    ))
+    .all(&db)
+    .await
+    .unwrap();
+    assert_eq!(fk_rows.first().unwrap().foreign_keys, 1);
+}
+
+#[tokio::test]
+async fn bootstrap_tracking_records_correct_graft_id() {
+    let db = in_memory_db().await;
+    runner::run_migrations(&db, &[]).await.unwrap();
+
+    let applied = query_applied(&db).await;
+    let kikan_rows: Vec<_> = applied.iter().filter(|r| r.graft_id == "kikan").collect();
+    assert_eq!(kikan_rows.len(), 2);
+    let names: Vec<&str> = kikan_rows.iter().map(|r| r.name.as_str()).collect();
+    assert!(names.contains(&"create_kikan_migrations"));
+    assert!(names.contains(&"create_kikan_meta"));
 }
