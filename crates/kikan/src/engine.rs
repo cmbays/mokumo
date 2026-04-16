@@ -130,15 +130,17 @@ impl<G: Graft> Engine<G> {
     /// Wrap `G::data_plane_routes(&state)` with platform tower layers
     /// (tracing, host allowlist, session layer) and bind `state`.
     ///
-    /// Layer order matches the pre-Stage-3 composition in
-    /// `services/api::build_app_inner`: `TraceLayer` outermost, then
-    /// `HostHeaderAllowList`, then session layer. The `platform_routes()`
+    /// Axum applies the last `.layer()` as the outermost wrap. The
+    /// pre-Stage-3 composition in `services/api::build_app_inner` has
+    /// `HostHeaderAllowList` as the outermost layer (reject bad hosts
+    /// before any other work), then `TraceLayer`, then the session
+    /// layer innermost. This matches that order. The `platform_routes()`
     /// merge seam is introduced in S3.1 once `MokumoAppState` exists.
     pub fn build_router(&self, state: G::AppState) -> Router {
         G::data_plane_routes(&state)
+            .layer(session_layer(&self.ctx.sessions))
             .layer(TraceLayer::new_for_http())
             .layer(HostHeaderAllowList::loopback_only())
-            .layer(session_layer(&self.ctx.sessions))
             .with_state(state)
     }
 

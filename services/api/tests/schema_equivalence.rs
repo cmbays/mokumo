@@ -20,7 +20,7 @@ struct MasterRow {
 async fn get_app_schema(db: &DatabaseConnection) -> Vec<String> {
     let rows: Vec<MasterRow> = MasterRow::find_by_statement(Statement::from_string(
         DatabaseBackend::Sqlite,
-        "SELECT sql FROM sqlite_master WHERE type IN ('table', 'index', 'trigger') AND sql IS NOT NULL AND name NOT LIKE 'kikan_%' AND name != 'seaql_migrations' ORDER BY name",
+        "SELECT sql FROM sqlite_master WHERE type IN ('table', 'index', 'trigger') AND sql IS NOT NULL AND name NOT LIKE 'kikan_%' AND name != 'seaql_migrations' AND name NOT LIKE 'tower_sessions%' ORDER BY name",
     ))
     .all(db)
     .await
