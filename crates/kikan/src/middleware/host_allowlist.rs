@@ -76,17 +76,26 @@ where
         let host_values: Vec<_> = req.headers().get_all(HOST).into_iter().collect();
 
         if host_values.len() != 1 {
+            tracing::warn!(
+                host_count = host_values.len(),
+                uri = %req.uri(),
+                "host-allowlist: rejected (expected exactly 1 Host header)"
+            );
             return Box::pin(std::future::ready(Ok(build_rejection())));
         }
 
         let header_val = match host_values[0].to_str() {
             Ok(v) => v,
-            Err(_) => return Box::pin(std::future::ready(Ok(build_rejection()))),
+            Err(_) => {
+                tracing::warn!(uri = %req.uri(), "host-allowlist: rejected (non-ASCII Host header)");
+                return Box::pin(std::future::ready(Ok(build_rejection())));
+            }
         };
 
         let host = parse_host(header_val);
 
         if !self.allowed.iter().any(|a| a == &host) {
+            tracing::warn!(host = %host, uri = %req.uri(), "host-allowlist: rejected (not in allowlist)");
             return Box::pin(std::future::ready(Ok(build_rejection())));
         }
 

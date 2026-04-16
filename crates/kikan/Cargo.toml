@@ -10,8 +10,9 @@ description = "Kikan — self-hosted Rust application platform core"
 [dependencies]
 # First production deps for kikan (R9). DNS-rebinding defense (host-header
 # allowlist) is kikan-owned infrastructure — requires tower middleware primitives.
-tower = { version = "0.5", features = ["util"] }
-http = "1"
+tower = { workspace = true }
+http = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
