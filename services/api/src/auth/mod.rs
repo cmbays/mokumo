@@ -88,8 +88,26 @@ async fn login(
     // Login always authenticates against production_db (same as Backend::authenticate).
     let repo = SeaOrmUserRepo::new(state.production_db.clone());
 
-    // Step 2: pre-check DB-backed account lockout before running argon2.
-    // Returns (user_id, locked_until) so we reuse user_id in step 4.
+    // Step 2: run authentication FIRST so argon2 cost is paid on every
+    // request, regardless of whether the account is locked. Checking lockout
+    // before argon2 leaks account state via response-time side-channel
+    // (locked accounts return ~instantly while unlocked accounts wait on
+    // password hashing). The lockout decision is applied after auth below.
+    let creds = Credentials {
+        email: req.email.clone(),
+        password: req.password,
+    };
+
+    let auth_result = match auth_session.authenticate(creds).await {
+        Ok(maybe_user) => maybe_user,
+        Err(e) => {
+            tracing::error!("Authentication error: {e}");
+            return Err(AppError::InternalError("An internal error occurred".into()));
+        }
+    };
+
+    // Step 3: fetch current lockout state. Timing of this query is uniform
+    // whether the account is locked or not (indexed lookup by email).
     let lockout_state = match repo.find_lockout_state_by_email(&req.email).await {
         Ok(state) => state,
         Err(e) => {
@@ -98,6 +116,9 @@ async fn login(
         }
     };
 
+    // Step 4: if the account is currently locked, reject regardless of auth
+    // outcome. We do NOT create a session and do NOT clear the failed-attempt
+    // counter — the lock must expire naturally or be cleared by an admin.
     if let Some((_, Some(ref locked_until))) = lockout_state
         && is_still_locked(locked_until)
     {
@@ -106,25 +127,16 @@ async fn login(
         ));
     }
 
-    let creds = Credentials {
-        email: req.email.clone(),
-        password: req.password,
-    };
-
-    // Step 3: run authentication (argon2 password verify inside Backend).
-    let user = match auth_session.authenticate(creds).await {
-        Ok(Some(user)) => user,
-        Ok(None) => {
-            // Step 4: auth failed — increment lockout counter if user exists.
+    // Step 5: apply the auth result now that we know the account is not locked.
+    let user = match auth_result {
+        Some(user) => user,
+        None => {
             return handle_failed_login(&repo, &req.email, lockout_state.map(|(id, _)| id)).await;
         }
-        Err(e) => {
-            tracing::error!("Authentication error: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
     };
 
-    // Step 5: auth succeeded — clear failed-attempt counter and create session.
+    // Step 6: auth succeeded and account is not locked — clear failed-attempt
+    // counter and create session.
     let _ = repo.clear_failed_attempts(user.user.id).await;
 
     if let Err(e) = auth_session.login(&user).await {

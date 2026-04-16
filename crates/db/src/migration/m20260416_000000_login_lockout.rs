@@ -36,12 +36,41 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // SQLite does not support DROP COLUMN for columns added via ALTER TABLE
-        // on older SQLite versions. Recreate the table without the new columns.
+        // SQLite ALTER TABLE DROP COLUMN is unavailable on older versions, and
+        // `CREATE TABLE AS SELECT` would lose the primary key, UNIQUE, FK, and
+        // DEFAULT constraints. Recreate the table with the original schema from
+        // m20260327_000000_users_and_roles, copy data, then restore the
+        // partial index and updated_at trigger.
         let conn = manager.get_connection();
 
+        conn.execute_unprepared("DROP TRIGGER IF EXISTS users_updated_at")
+            .await?;
+        conn.execute_unprepared("DROP INDEX IF EXISTS idx_users_deleted_at")
+            .await?;
+
         conn.execute_unprepared(
-            "CREATE TABLE users_backup AS SELECT
+            "CREATE TABLE users_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                role_id INTEGER NOT NULL DEFAULT 1 REFERENCES roles(id) ON DELETE RESTRICT,
+                is_active BOOLEAN NOT NULL DEFAULT 1,
+                last_login_at TEXT,
+                recovery_code_hash TEXT,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                deleted_at TEXT
+            )",
+        )
+        .await?;
+
+        conn.execute_unprepared(
+            "INSERT INTO users_new (
+                id, email, name, password_hash, role_id, is_active,
+                last_login_at, recovery_code_hash, created_at, updated_at, deleted_at
+             )
+             SELECT
                 id, email, name, password_hash, role_id, is_active,
                 last_login_at, recovery_code_hash, created_at, updated_at, deleted_at
              FROM users",
@@ -50,8 +79,21 @@ impl MigrationTrait for Migration {
 
         conn.execute_unprepared("DROP TABLE users").await?;
 
-        conn.execute_unprepared("ALTER TABLE users_backup RENAME TO users")
+        conn.execute_unprepared("ALTER TABLE users_new RENAME TO users")
             .await?;
+
+        conn.execute_unprepared(
+            "CREATE INDEX idx_users_deleted_at ON users(id) WHERE deleted_at IS NULL",
+        )
+        .await?;
+
+        conn.execute_unprepared(
+            "CREATE TRIGGER users_updated_at AFTER UPDATE ON users
+             FOR EACH ROW BEGIN
+                 UPDATE users SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = OLD.id;
+             END",
+        )
+        .await?;
 
         conn.execute_unprepared("PRAGMA user_version = 8").await?;
 

@@ -672,16 +672,25 @@ impl UserRepository for SeaOrmUserRepo {
 
         let txn = self.db.begin().await.map_err(sea_err)?;
 
-        txn.execute_raw(sea_orm::Statement::from_sql_and_values(
-            sea_orm::DbBackend::Sqlite,
-            "UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL",
-            vec![
-                sea_orm::Value::from(new_hash),
-                sea_orm::Value::from(id.get()),
-            ],
-        ))
-        .await
-        .map_err(sea_err)?;
+        let result = txn
+            .execute_raw(sea_orm::Statement::from_sql_and_values(
+                sea_orm::DbBackend::Sqlite,
+                "UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL",
+                vec![
+                    sea_orm::Value::from(new_hash),
+                    sea_orm::Value::from(id.get()),
+                ],
+            ))
+            .await
+            .map_err(sea_err)?;
+
+        if result.rows_affected() == 0 {
+            txn.rollback().await.map_err(sea_err)?;
+            return Err(DomainError::NotFound {
+                entity: "user",
+                id: id.to_string(),
+            });
+        }
 
         let user = User::from(
             UserEntity::find_by_id(id.get())
