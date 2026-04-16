@@ -8,6 +8,19 @@ pub enum SetupMode {
     Production,
 }
 
+impl SetupMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Demo => "demo",
+            Self::Production => "production",
+        }
+    }
+
+    pub fn as_dir_name(&self) -> &'static str {
+        self.as_str()
+    }
+}
+
 impl fmt::Display for SetupMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -21,7 +34,7 @@ impl std::str::FromStr for SetupMode {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        match s.trim().to_lowercase().as_str() {
             "demo" => Ok(Self::Demo),
             "production" => Ok(Self::Production),
             other => Err(format!("unknown setup mode: {other}")),

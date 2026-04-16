@@ -58,8 +58,26 @@ pub enum TenancyError {
     #[error("profile not found: {profile}")]
     ProfileNotFound { profile: String },
 
+    #[error("not a Mokumo database: {}", path.display())]
+    NotMokumoDatabase { path: std::path::PathBuf },
+
+    #[error("schema incompatible: database at {} has unknown migrations: {:?}", path.display(), unknown_migrations)]
+    SchemaIncompatible {
+        path: std::path::PathBuf,
+        unknown_migrations: Vec<String>,
+    },
+
+    #[error("backup error: {0}")]
+    Backup(String),
+
+    #[error("layout migration error: {0}")]
+    Layout(#[from] std::io::Error),
+
     #[error("database error: {0}")]
     Db(#[from] sea_orm::DbErr),
+
+    #[error("rusqlite error: {0}")]
+    Rusqlite(#[from] rusqlite::Error),
 }
 
 #[derive(Debug, thiserror::Error)]

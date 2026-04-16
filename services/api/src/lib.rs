@@ -7,6 +7,7 @@ pub mod diagnostics;
 pub mod diagnostics_bundle;
 pub mod discovery;
 pub mod error;
+pub mod graft_bridge;
 pub mod logging;
 pub mod pagination;
 pub mod profile_db;

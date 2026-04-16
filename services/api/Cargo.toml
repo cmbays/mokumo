@@ -9,6 +9,8 @@ mokumo-core = { workspace = true }
 mokumo-db = { workspace = true }
 mokumo-types = { workspace = true }
 kikan = { workspace = true }
+sea-orm-migration = { workspace = true }
+async-trait = "0.1"
 axum = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
