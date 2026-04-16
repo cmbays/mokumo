@@ -1,13 +1,18 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use axum::Router;
 use sea_orm::DatabaseConnection;
+use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::activity::{ActivityWriter, SqliteActivityWriter};
 use crate::boot::BootConfig;
 use crate::error::EngineError;
 use crate::graft::{Graft, SelfGraft, SubGraft};
+use crate::middleware::host_allowlist::HostHeaderAllowList;
+use crate::middleware::session_layer;
 use crate::migrations;
 use crate::migrations::Migration;
 use crate::tenancy::Tenancy;
@@ -120,5 +125,33 @@ impl<G: Graft> Engine<G> {
 
     pub fn context(&self) -> EngineContext {
         self.ctx.clone()
+    }
+
+    /// Wrap `G::data_plane_routes(&state)` with platform tower layers
+    /// (tracing, host allowlist, session layer) and bind `state`.
+    ///
+    /// Layer order matches the pre-Stage-3 composition in
+    /// `services/api::build_app_inner`: `TraceLayer` outermost, then
+    /// `HostHeaderAllowList`, then session layer. The `platform_routes()`
+    /// merge seam is introduced in S3.1 once `MokumoAppState` exists.
+    pub fn build_router(&self, state: G::AppState) -> Router {
+        G::data_plane_routes(&state)
+            .layer(TraceLayer::new_for_http())
+            .layer(HostHeaderAllowList::loopback_only())
+            .layer(session_layer(&self.ctx.sessions))
+            .with_state(state)
+    }
+
+    /// No-shutdown convenience. Binaries needing graceful shutdown use
+    /// [`Engine::build_router`] directly and pass the router to
+    /// `axum::serve` with their own shutdown token.
+    pub async fn serve(
+        &self,
+        state: G::AppState,
+        listener: TcpListener,
+    ) -> Result<(), EngineError> {
+        let app = self.build_router(state);
+        axum::serve(listener, app).await?;
+        Ok(())
     }
 }

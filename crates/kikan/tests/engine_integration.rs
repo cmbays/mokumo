@@ -19,6 +19,48 @@ async fn test_runtime() -> (DatabaseConnection, SqliteStore) {
 }
 
 #[tokio::test]
+async fn build_router_composes_layers_and_serves_404() {
+    use axum::body::Body;
+    use http::{Request, StatusCode};
+    use tower::util::ServiceExt;
+
+    let graft = StubGraft::diamond();
+    let config = BootConfig::new(std::path::PathBuf::from("/tmp/test-engine-router"));
+    let (pool, store) = test_runtime().await;
+    let engine = Engine::new(config, &graft, pool, store).unwrap();
+
+    let router = engine.build_router(());
+    let request = Request::builder()
+        .uri("/unknown")
+        .header("host", "127.0.0.1")
+        .body(Body::empty())
+        .unwrap();
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn build_router_rejects_disallowed_host() {
+    use axum::body::Body;
+    use http::{Request, StatusCode};
+    use tower::util::ServiceExt;
+
+    let graft = StubGraft::diamond();
+    let config = BootConfig::new(std::path::PathBuf::from("/tmp/test-engine-router-host"));
+    let (pool, store) = test_runtime().await;
+    let engine = Engine::new(config, &graft, pool, store).unwrap();
+
+    let router = engine.build_router(());
+    let request = Request::builder()
+        .uri("/unknown")
+        .header("host", "evil.com")
+        .body(Body::empty())
+        .unwrap();
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn engine_new_collects_graft_and_subgraft_migrations() {
     let graft = StubGraft::diamond();
     let config = BootConfig::new(std::path::PathBuf::from("/tmp/test-engine"));
