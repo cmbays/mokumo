@@ -27,7 +27,9 @@ tokio = { version = "1", features = ["full"] }
 
 # Web framework
 axum = { version = "0.8", features = ["macros", "multipart", "ws"] }
+tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
+http = "1"
 
 # Auth
 axum-login = "0.18"

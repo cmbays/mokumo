@@ -998,6 +998,7 @@ fn build_app_inner(
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
         .layer(axum::middleware::from_fn(security_headers::middleware))
+        .layer(kikan::middleware::host_allowlist::HostHeaderAllowList::loopback_only())
         .with_state(state);
     (app, ws_handle)
 }

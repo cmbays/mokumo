@@ -3601,6 +3601,13 @@ dependencies = [
 [[package]]
 name = "kikan"
 version = "0.1.0"
+dependencies = [
+ "http",
+ "serde_json",
+ "tokio",
+ "tower",
+ "tracing",
+]
 
 [[package]]
 name = "kikan-cli"
@@ -4025,6 +4032,7 @@ dependencies = [
  "futures-util",
  "http",
  "insta",
+ "kikan",
  "local-ip-address",
  "mdns-sd",
  "mokumo-core",

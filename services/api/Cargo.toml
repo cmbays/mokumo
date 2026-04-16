@@ -8,6 +8,7 @@ license.workspace = true
 mokumo-core = { workspace = true }
 mokumo-db = { workspace = true }
 mokumo-types = { workspace = true }
+kikan = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
@@ -55,8 +56,8 @@ bdd = []
 serial_test = { workspace = true }
 tempfile = "3"
 reqwest = { version = "0.13", features = ["json"] }
-tower = { version = "0.5", features = ["util"] }
-http = "1"
+tower = { workspace = true }
+http = { workspace = true }
 serde_json = { workspace = true }
 axum-test = { workspace = true }
 cucumber = { workspace = true }
