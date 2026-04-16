@@ -62,6 +62,8 @@ fn user_to_response(user: &mokumo_core::user::User) -> UserResponse {
         is_active: user.is_active,
         last_login_at: user.last_login_at.clone(),
         created_at: user.created_at.clone(),
+        updated_at: user.updated_at.clone(),
+        deleted_at: user.deleted_at.clone(),
     }
 }
 

@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -12,6 +12,15 @@ pub struct UserResponse {
     pub is_active: bool,
     pub last_login_at: Option<String>,
     pub created_at: String,
+    pub updated_at: String,
+    pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, TS)]
+#[ts(export)]
+pub struct UpdateUserRoleRequest {
+    #[ts(type = "number")]
+    pub role_id: i64,
 }
 
 #[cfg(test)]
