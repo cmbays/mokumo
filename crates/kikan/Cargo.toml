@@ -16,6 +16,8 @@ thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
+kikan-types = { workspace = true }
 tracing = { workspace = true }
 parking_lot = { workspace = true }
 tower = { workspace = true }
@@ -42,7 +44,6 @@ mokumo-core = { path = "../core" }
 [dev-dependencies]
 proptest = { workspace = true }
 cucumber = { workspace = true }
-kikan-types = { workspace = true }
 # Dev-only reverse dep so Stage-3 repo tests inherited from `mokumo-db`
 # can keep calling the mokumo vertical's `initialize_database` and
 # `is_setup_complete`. Cargo tolerates dev-dep cycles; this edge is

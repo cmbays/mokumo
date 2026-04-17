@@ -1,34 +1,11 @@
 use std::sync::Arc;
 
-use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
 
-#[derive(Debug, Clone)]
-pub struct MdnsStatus {
-    pub active: bool,
-    pub hostname: Option<String>,
-    pub port: u16,
-    pub bind_host: String,
-}
-
-impl Default for MdnsStatus {
-    fn default() -> Self {
-        Self {
-            active: false,
-            hostname: None,
-            port: 0,
-            bind_host: "127.0.0.1".into(),
-        }
-    }
-}
-
-pub type SharedMdnsStatus = Arc<RwLock<MdnsStatus>>;
-
-impl MdnsStatus {
-    pub fn shared() -> SharedMdnsStatus {
-        Arc::new(RwLock::new(Self::default()))
-    }
-}
+// MdnsStatus / SharedMdnsStatus moved to `kikan::platform_state` as part of
+// S4.0 platform-state lift. Re-exported here to preserve existing import
+// paths inside `services/api`.
+pub use kikan::{MdnsStatus, SharedMdnsStatus};
 
 pub struct MdnsHandle {
     daemon: Option<mdns_sd::ServiceDaemon>,

@@ -3,6 +3,7 @@ pub mod auth;
 pub mod diagnostics;
 pub mod error;
 pub mod pagination;
+pub mod profile;
 pub mod settings;
 pub mod setup;
 pub mod user;
@@ -11,7 +12,7 @@ pub mod ws;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-pub use kikan::SetupMode;
+pub use profile::SetupMode;
 
 /// Typed error payload emitted as a Tauri `"server-error"` event when the server
 /// fails to start in the restart loop (after the initial setup phase).

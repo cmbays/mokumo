@@ -94,7 +94,7 @@ pub struct AppState {
     /// Wrapped in `parking_lot::RwLock` (non-poisoning) so the profile-switch
     /// handler (Session 2) can update it in-process without a restart.
     /// Writes happen only in the profile-switch handler after persisting to disk.
-    pub active_profile: parking_lot::RwLock<SetupMode>,
+    pub active_profile: Arc<parking_lot::RwLock<SetupMode>>,
     pub ws: Arc<ws::manager::ConnectionManager>,
     pub shutdown: CancellationToken,
     pub started_at: std::time::Instant,
@@ -168,6 +168,34 @@ impl AppState {
 }
 
 pub type SharedState = Arc<AppState>;
+
+impl AppState {
+    /// Narrow to the kikan-owned `PlatformState` slice.
+    ///
+    /// Used by platform handlers (diagnostics, demo reset, backup status)
+    /// that only need the platform fields. Cheap: every field inside
+    /// `PlatformState` is `Arc`-backed (or `DatabaseConnection`, internally
+    /// `Arc`-wrapped), so cloning is O(1).
+    ///
+    /// The corresponding `FromRef<SharedState> for PlatformState` impl —
+    /// required for Axum's `State<PlatformState>` extractor — is added in
+    /// S4.1 once the platform handlers relocate under `kikan::platform::`.
+    /// Until then, call this method explicitly from handler bodies.
+    pub fn platform_state(&self) -> kikan::PlatformState {
+        kikan::PlatformState {
+            data_dir: self.data_dir.clone(),
+            demo_db: self.demo_db.clone(),
+            production_db: self.production_db.clone(),
+            active_profile: self.active_profile.clone(),
+            shutdown: self.shutdown.clone(),
+            started_at: self.started_at,
+            mdns_status: self.mdns_status.clone(),
+            demo_install_ok: self.demo_install_ok.clone(),
+            is_first_launch: self.is_first_launch.clone(),
+            setup_completed: self.setup_completed.clone(),
+        }
+    }
+}
 
 #[derive(Embed)]
 #[folder = "../../apps/web/build"]
@@ -844,7 +872,7 @@ fn build_app_inner(
     let state: SharedState = Arc::new(AppState {
         demo_db,
         production_db,
-        active_profile: parking_lot::RwLock::new(active_profile),
+        active_profile: Arc::new(parking_lot::RwLock::new(active_profile)),
         ws: ws_handle.clone(),
         shutdown,
         started_at: std::time::Instant::now(),
