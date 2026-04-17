@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use cucumber::{then, when};
-use mokumo_api::try_bind_ephemeral_loopback;
+use kikan_tauri::try_bind_ephemeral_loopback;
 
 use super::ApiWorld;
 

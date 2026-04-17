@@ -6,6 +6,7 @@ vi.mock("$lib/components/toast", () => ({ toast: { error: mockError } }));
 import { toastApiError } from "./error-toast";
 import type { ErrorBody } from "$lib/types/kikan/ErrorBody";
 import type { ErrorCode } from "$lib/types/kikan/ErrorCode";
+import type { ShopErrorCode } from "$lib/types/shop/ShopErrorCode";
 
 describe("toastApiError", () => {
   beforeEach(() => mockError.mockClear());
@@ -29,7 +30,7 @@ describe("toastApiError", () => {
   // codes are valid ErrorCode variants, but it does NOT enforce that a new
   // backend code is added to the allow-list — only these tests do.
 
-  const ALLOW_LISTED_CODES: ErrorCode[] = [
+  const ALLOW_LISTED_CODES: Array<ErrorCode | ShopErrorCode> = [
     "rate_limited",
     "invalid_credentials",
     "not_found",
@@ -53,7 +54,10 @@ describe("toastApiError", () => {
 
   it.each(ALLOW_LISTED_CODES)("surfaces server message for allow-listed code: %s", (code) => {
     const error: ErrorBody = {
-      code,
+      // The shop-vertical codes come over the wire as strings; the runtime
+      // wire shape is identical to `ErrorBody`, so a cast is safe. See
+      // Stage-3 S4.3 notes in mokumo-shop::types::error.
+      code: code as ErrorCode,
       message: `Server message for ${code}`,
       details: null,
     };

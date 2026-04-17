@@ -30,6 +30,7 @@ use crate::shop::adapter::SqliteShopLogoRepository;
 use crate::shop::error::ShopLogoHandlerError;
 use crate::shop::logo_validator::LogoValidator;
 use crate::shop::service::ShopLogoService;
+use crate::types::error::ShopErrorCode;
 
 #[derive(Clone)]
 pub struct ShopLogoRouterDeps {
@@ -72,8 +73,8 @@ fn build_service(
 
 fn require_production(mode: SetupMode) -> Result<(), ShopLogoHandlerError> {
     if mode != SetupMode::Production {
-        return Err(ShopLogoHandlerError::Forbidden {
-            code: ErrorCode::ShopLogoRequiresProductionProfile,
+        return Err(ShopLogoHandlerError::ShopForbidden {
+            code: ShopErrorCode::ShopLogoRequiresProductionProfile,
             message: "Logo management requires the production profile".into(),
         });
     }
@@ -113,8 +114,8 @@ pub(crate) async fn get_logo_impl(
         "webp" => "image/webp",
         other => {
             tracing::error!("get_logo: unknown extension stored: {other}");
-            return Err(ShopLogoHandlerError::Unprocessable {
-                code: ErrorCode::LogoMalformed,
+            return Err(ShopLogoHandlerError::ShopUnprocessable {
+                code: ShopErrorCode::LogoMalformed,
                 message: "Stored logo has an unknown format".into(),
             });
         }
@@ -303,8 +304,8 @@ async fn delete_logo(
 }
 
 fn missing_logo_field(reason: &'static str) -> ShopLogoHandlerError {
-    ShopLogoHandlerError::BadRequest {
-        code: ErrorCode::MissingField,
+    ShopLogoHandlerError::ShopBadRequest {
+        code: ShopErrorCode::MissingField,
         message: reason.into(),
     }
 }

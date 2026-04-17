@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use axum::Router;
+use axum::routing::{get, post};
 use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -15,6 +16,8 @@ use crate::middleware::host_allowlist::HostHeaderAllowList;
 use crate::middleware::session_layer;
 use crate::migrations;
 use crate::migrations::Migration;
+use crate::platform;
+use crate::platform_state::PlatformState;
 use crate::tenancy::Tenancy;
 
 /// Runtime context shared across all requests. All fields have O(1) `Clone`:
@@ -156,4 +159,31 @@ impl<G: Graft> Engine<G> {
         axum::serve(listener, app).await?;
         Ok(())
     }
+}
+
+/// Public (unauthenticated) platform routes that consume
+/// [`PlatformState`]. Currently:
+/// - `GET /api/backup-status`
+///
+/// The host crate is responsible for binding the inner state with
+/// `.with_state(...)` (or merging into the outer router when
+/// `PlatformState: FromRef<OuterState>` holds).
+pub fn platform_public_routes() -> Router<PlatformState> {
+    Router::new().route("/api/backup-status", get(platform::backup_status::handler))
+}
+
+/// Protected platform routes (require the host's auth layer). The
+/// caller wraps these with whatever `route_layer` enforces login —
+/// kikan does not own the auth middleware. Currently:
+/// - `POST /api/demo/reset`
+/// - `GET  /api/diagnostics`
+/// - `GET  /api/diagnostics/bundle`
+pub fn platform_protected_routes() -> Router<PlatformState> {
+    Router::new()
+        .route("/api/demo/reset", post(platform::demo::demo_reset))
+        .route("/api/diagnostics", get(platform::diagnostics::handler))
+        .route(
+            "/api/diagnostics/bundle",
+            get(platform::diagnostics_bundle::handler),
+        )
 }

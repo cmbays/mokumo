@@ -3714,29 +3714,34 @@ dependencies = [
  "dashmap",
  "http",
  "kikan-types",
+ "mdns-sd",
  "mokumo-core",
- "mokumo-db",
  "mokumo-shop",
  "parking_lot",
  "password-auth",
  "proptest",
  "rand 0.10.1",
+ "regex",
  "rusqlite",
  "sea-orm",
  "sea-orm-migration",
  "serde",
  "serde_json",
+ "serial_test",
  "sqlx",
+ "sysinfo",
  "tempfile",
  "thiserror 2.0.18",
  "time",
  "tokio",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-sessions",
  "tower-sessions-sqlx-store",
  "tracing",
  "trait-variant",
+ "zip",
 ]
 
 [[package]]
@@ -3800,7 +3805,8 @@ name = "kikan-tauri"
 version = "0.1.0"
 dependencies = [
  "kikan",
- "tauri",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3808,7 +3814,6 @@ name = "kikan-types"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "kikan",
  "mokumo-core",
  "proptest",
  "serde",
@@ -4246,11 +4251,11 @@ dependencies = [
  "http",
  "insta",
  "kikan",
+ "kikan-tauri",
  "kikan-types",
  "local-ip-address",
  "mdns-sd",
  "mokumo-core",
- "mokumo-db",
  "mokumo-shop",
  "parking_lot",
  "password-auth",
@@ -4260,6 +4265,7 @@ dependencies = [
  "rpassword",
  "rusqlite",
  "rust-embed",
+ "sea-orm",
  "sea-orm-migration",
  "serde",
  "serde_json",
@@ -4298,39 +4304,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "mokumo-db"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "cucumber",
- "kikan",
- "mokumo-core",
- "mokumo-shop",
- "password-auth",
- "rand 0.10.1",
- "rusqlite",
- "sea-orm",
- "sea-orm-migration",
- "serde_json",
- "sqlx",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "mokumo-desktop"
 version = "0.1.0"
 dependencies = [
  "axum",
  "kikan",
+ "kikan-tauri",
  "kikan-types",
  "local-ip-address",
  "mokumo-api",
  "mokumo-core",
- "mokumo-db",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -4367,8 +4350,8 @@ dependencies = [
  "kikan",
  "kikan-types",
  "mokumo-core",
- "mokumo-db",
  "regex",
+ "rusqlite",
  "sea-orm",
  "sea-orm-migration",
  "serde",

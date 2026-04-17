@@ -4,10 +4,11 @@ use clap::Parser;
 use tokio_util::sync::CancellationToken;
 
 use kikan::SetupMode;
+use kikan::platform::discovery;
 use mokumo_api::{
     DB_SIDECAR_SUFFIXES, ServerConfig, build_app_with_shutdown, cli_backup, cli_migrate_status,
-    cli_reset_db, cli_reset_password, cli_restore, discovery, ensure_data_dirs,
-    format_lock_conflict_message, format_reset_db_conflict_message, lock_file_path,
+    cli_reset_db, cli_reset_password, cli_restore, ensure_data_dirs, format_lock_conflict_message,
+    format_reset_db_conflict_message, lock_file_path,
     logging::{console_level_from_flags, init_tracing},
     prepare_database, read_lock_info, resolve_active_profile, try_bind, write_lock_info,
 };
@@ -229,7 +230,7 @@ async fn main() {
                 _lock_guard = None;
             }
 
-            let diag = match mokumo_db::diagnose_database(&db_path) {
+            let diag = match kikan::db::diagnose_database(&db_path) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Cannot diagnose database at {}: {e}", db_path.display());
@@ -257,8 +258,8 @@ async fn main() {
 
             println!("Database: {}", db_path.display());
             println!("  auto_vacuum:  {auto_vacuum_label} ({})", diag.auto_vacuum);
-            let mmap_mb = mokumo_db::CONFIGURED_MMAP_SIZE / (1024 * 1024);
-            let mmap_label = if mokumo_db::CONFIGURED_MMAP_SIZE == 0 {
+            let mmap_mb = kikan::db::CONFIGURED_MMAP_SIZE / (1024 * 1024);
+            let mmap_label = if kikan::db::CONFIGURED_MMAP_SIZE == 0 {
                 "disabled (not beneficial on this platform)".to_string()
             } else {
                 format!("{mmap_mb} MB")
@@ -320,7 +321,7 @@ async fn main() {
                 }
 
                 // Re-diagnose to get a fresh freelist count after potential VACUUM.
-                let diag2 = match mokumo_db::diagnose_database(&db_path) {
+                let diag2 = match kikan::db::diagnose_database(&db_path) {
                     Ok(d) => d,
                     Err(e) => {
                         eprintln!("Cannot reopen database after fixes: {e}");
@@ -342,7 +343,7 @@ async fn main() {
                     };
                     match conn.execute_batch("PRAGMA incremental_vacuum") {
                         Ok(()) => {
-                            let diag3 = mokumo_db::diagnose_database(&db_path).unwrap_or(diag2);
+                            let diag3 = kikan::db::diagnose_database(&db_path).unwrap_or(diag2);
                             let reclaimed = diag2.freelist_count - diag3.freelist_count;
                             println!(
                                 "  Reclaimed {reclaimed} pages ({} KB).",

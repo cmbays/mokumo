@@ -67,7 +67,7 @@ pub struct RuntimeDiagnostics {
     #[ts(type = "number")]
     pub uptime_seconds: u64,
     #[ts(type = "\"demo\" | \"production\"")]
-    pub active_profile: kikan::SetupMode,
+    pub active_profile: crate::SetupMode,
     pub setup_complete: bool,
     pub is_first_launch: bool,
     pub mdns_active: bool,

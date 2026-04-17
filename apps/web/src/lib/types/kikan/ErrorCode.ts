@@ -6,6 +6,9 @@
  * Serializes to snake_case strings (e.g. `NotFound` → `"not_found"`),
  * keeping the wire format unchanged from the previous `String` representation.
  * Both Rust and generated TypeScript get exhaustive matching.
+ *
+ * **Platform-only.** Shop-vertical codes live in
+ * `mokumo-shop::types::error::ShopErrorCode`.
  */
 export type ErrorCode =
   | "not_found"
@@ -26,12 +29,5 @@ export type ErrorCode =
   | "database_corrupt"
   | "schema_incompatible"
   | "restore_in_progress"
-  | "shop_logo_requires_production_profile"
-  | "logo_format_unsupported"
-  | "logo_too_large"
-  | "logo_dimensions_exceeded"
-  | "logo_malformed"
-  | "missing_field"
-  | "shop_logo_not_found"
   | "demo_setup_required"
   | "account_locked";
