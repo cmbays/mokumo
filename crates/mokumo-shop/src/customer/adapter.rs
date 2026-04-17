@@ -356,3 +356,295 @@ impl CustomerRepository for SqliteCustomerRepository {
         Ok(customer)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::domain::{CreateCustomer, UpdateCustomer};
+    use super::*;
+    use kikan::activity::SqliteActivityWriter;
+
+    async fn test_db() -> (
+        DatabaseConnection,
+        sqlx::sqlite::SqlitePool,
+        tempfile::TempDir,
+    ) {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = tmp.path().join("test.db");
+        let url = format!("sqlite:{}?mode=rwc", db_path.display());
+        let db = mokumo_db::initialize_database(&url).await.unwrap();
+        let pool = db.get_sqlite_connection_pool().clone();
+        (db, pool, tmp)
+    }
+
+    fn make_repo(db: DatabaseConnection) -> SqliteCustomerRepository {
+        SqliteCustomerRepository::new(db, Arc::new(SqliteActivityWriter::new()))
+    }
+
+    fn sample_create() -> CreateCustomer {
+        CreateCustomer {
+            display_name: "Test Corp".to_string(),
+            company_name: None,
+            email: None,
+            phone: None,
+            address_line1: None,
+            address_line2: None,
+            city: None,
+            state: None,
+            postal_code: None,
+            country: None,
+            notes: None,
+            portal_enabled: None,
+            tax_exempt: None,
+            payment_terms: None,
+            credit_limit_cents: None,
+            lead_source: None,
+            tags: None,
+        }
+    }
+
+    fn empty_update() -> UpdateCustomer {
+        UpdateCustomer::default()
+    }
+
+    async fn create_test_customer(
+        repo: &SqliteCustomerRepository,
+        display_name: &str,
+        company_name: Option<&str>,
+        email: Option<&str>,
+    ) -> Customer {
+        repo.create(
+            &CreateCustomer {
+                display_name: display_name.to_string(),
+                company_name: company_name.map(String::from),
+                email: email.map(String::from),
+                ..sample_create()
+            },
+            &Actor::system(),
+        )
+        .await
+        .expect("create test customer")
+    }
+
+    #[tokio::test]
+    async fn sqlite_transaction_drop_rolls_back() {
+        let (_db, pool, _tmp) = test_db().await;
+
+        {
+            let mut tx = pool.begin().await.unwrap();
+            let id = CustomerId::generate();
+            sqlx::query(
+                "INSERT INTO customers (id, display_name, portal_enabled, tax_exempt, payment_terms, country) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )
+            .bind(id.to_string())
+            .bind("Rollback Corp")
+            .bind(false)
+            .bind(false)
+            .bind("due_on_receipt")
+            .bind("US")
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        }
+
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM customers")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 0);
+    }
+
+    #[tokio::test]
+    async fn list_search_filters_by_display_name() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+
+        create_test_customer(
+            &repo,
+            "Acme Printing",
+            Some("Acme Corp"),
+            Some("info@acme.com"),
+        )
+        .await;
+        create_test_customer(
+            &repo,
+            "Beta Apparel",
+            Some("Beta LLC"),
+            Some("hello@beta.com"),
+        )
+        .await;
+        create_test_customer(&repo, "Gamma Designs", None, None).await;
+
+        let params = PageParams::new(Some(1), Some(25));
+        let filter = IncludeDeleted::ExcludeDeleted;
+
+        let (results, count) = repo.list(params, filter, Some("acme")).await.unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(results[0].display_name, "Acme Printing");
+
+        let (results, count) = repo.list(params, filter, Some("beta")).await.unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(results[0].display_name, "Beta Apparel");
+
+        let (results, count) = repo.list(params, filter, Some("@acme")).await.unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(results[0].display_name, "Acme Printing");
+
+        let (_, count) = repo.list(params, filter, None).await.unwrap();
+        assert_eq!(count, 3);
+
+        let (_, count) = repo.list(params, filter, Some("")).await.unwrap();
+        assert_eq!(count, 3);
+
+        let (_, count) = repo.list(params, filter, Some("zzzzz")).await.unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn create_rolls_back_when_activity_log_fails() {
+        let (db, pool, _tmp) = test_db().await;
+
+        sqlx::query("DROP TABLE activity_log")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let repo = make_repo(db);
+        let result = repo.create(&sample_create(), &Actor::system()).await;
+        assert!(
+            result.is_err(),
+            "create should fail when activity_log missing"
+        );
+
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM customers")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 0, "row must roll back on activity_log failure");
+    }
+
+    #[tokio::test]
+    async fn double_soft_delete_returns_not_found() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
+        repo.soft_delete(&customer.id, &actor).await.unwrap();
+
+        let result = repo.soft_delete(&customer.id, &actor).await;
+        assert!(matches!(result, Err(DomainError::NotFound { .. })));
+    }
+
+    #[tokio::test]
+    async fn empty_update_is_noop() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
+        let before = repo
+            .find_by_id(&customer.id, IncludeDeleted::ExcludeDeleted)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let after = repo
+            .update(&customer.id, &empty_update(), &actor)
+            .await
+            .unwrap();
+
+        assert_eq!(before.display_name, after.display_name);
+        assert_eq!(before.company_name, after.company_name);
+        assert_eq!(before.email, after.email);
+        assert_eq!(before.phone, after.phone);
+        assert_eq!(before.portal_enabled, after.portal_enabled);
+        assert_eq!(before.tax_exempt, after.tax_exempt);
+        assert_eq!(before.payment_terms, after.payment_terms);
+        assert_eq!(before.credit_limit_cents, after.credit_limit_cents);
+    }
+
+    #[tokio::test]
+    async fn update_modifies_display_name() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
+        let after = repo
+            .update(
+                &customer.id,
+                &UpdateCustomer {
+                    display_name: Some("Renamed Corp".to_string()),
+                    ..UpdateCustomer::default()
+                },
+                &actor,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(after.display_name, "Renamed Corp");
+    }
+
+    #[tokio::test]
+    async fn update_on_missing_customer_returns_not_found() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+
+        let result = repo
+            .update(&CustomerId::generate(), &empty_update(), &actor)
+            .await;
+        assert!(matches!(result, Err(DomainError::NotFound { .. })));
+    }
+
+    #[tokio::test]
+    async fn restore_clears_deleted_at() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
+        repo.soft_delete(&customer.id, &actor).await.unwrap();
+
+        let restored = repo.restore(&customer.id, &actor).await.unwrap();
+        assert!(restored.deleted_at.is_none());
+        assert_eq!(restored.id, customer.id);
+    }
+
+    #[tokio::test]
+    async fn restore_non_deleted_returns_not_found() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
+        let result = repo.restore(&customer.id, &actor).await;
+        assert!(matches!(result, Err(DomainError::NotFound { .. })));
+    }
+
+    #[tokio::test]
+    async fn restored_customer_appears_in_default_list() {
+        let (db, _pool, _tmp) = test_db().await;
+        let repo = make_repo(db);
+        let actor = Actor::system();
+        let params = PageParams::new(Some(1), Some(25));
+
+        let customer = repo.create(&sample_create(), &actor).await.unwrap();
+        repo.soft_delete(&customer.id, &actor).await.unwrap();
+
+        let (list, _) = repo
+            .list(params, IncludeDeleted::ExcludeDeleted, None)
+            .await
+            .unwrap();
+        assert!(list.iter().all(|c| c.id != customer.id));
+
+        repo.restore(&customer.id, &actor).await.unwrap();
+
+        let (list, _) = repo
+            .list(params, IncludeDeleted::ExcludeDeleted, None)
+            .await
+            .unwrap();
+        assert!(list.iter().any(|c| c.id == customer.id));
+    }
+}

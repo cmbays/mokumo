@@ -1,7 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import type { CustomerResponse } from "../../src/lib/types/kikan/CustomerResponse";
+import type { CustomerResponse } from "../../src/lib/types/shop/CustomerResponse";
 import type { MeResponse } from "../../src/lib/types/kikan/MeResponse";
 import type { ServerInfoResponse } from "../../src/lib/types/kikan/ServerInfoResponse";
 import type { UserResponse } from "../../src/lib/types/kikan/UserResponse";

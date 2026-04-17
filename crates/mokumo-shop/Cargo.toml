@@ -28,6 +28,8 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 cucumber = { workspace = true }
+mokumo-db = { workspace = true }
+sqlx = { workspace = true }
 tempfile = "3"
 sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls"] }
 
