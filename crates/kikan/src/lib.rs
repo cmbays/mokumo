@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod app_handle;
+pub mod auth;
 pub mod backup;
 pub mod boot;
 pub mod db;

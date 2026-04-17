@@ -28,6 +28,8 @@ async-trait = "0.1"
 trait-variant = "0.1"
 chrono = { workspace = true }
 time = { workspace = true }
+password-auth = { workspace = true }
+rand = { workspace = true }
 
 # Transitional: kikan temporarily depends on mokumo-core for ActivityAction,
 # ActivityEntry, DomainError, PageParams, and the ActivityLogRepository port.

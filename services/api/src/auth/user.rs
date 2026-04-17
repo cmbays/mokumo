@@ -1,6 +1,6 @@
 use axum_login::AuthUser;
 use kikan::SetupMode;
-use mokumo_core::user::User;
+use kikan::auth::User;
 
 /// Compound user identity: profile discriminant + database-level user ID.
 ///
@@ -56,7 +56,7 @@ impl AuthUser for AuthenticatedUser {
 mod tests {
     use super::*;
     use axum_login::AuthUser;
-    use mokumo_core::user::{RoleId, UserId};
+    use kikan::auth::{RoleId, UserId};
 
     fn test_user() -> User {
         User {

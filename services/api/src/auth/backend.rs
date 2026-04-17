@@ -1,10 +1,10 @@
 use axum_login::AuthnBackend;
 use kikan::SetupMode;
+use kikan::auth::SeaOrmUserRepo;
+use kikan::auth::UserId;
+use kikan::auth::password;
 use mokumo_core::error::DomainError;
-use mokumo_core::user::UserId;
 use mokumo_db::DatabaseConnection;
-use mokumo_db::user::password;
-use mokumo_db::user::repo::SeaOrmUserRepo;
 
 use super::user::{AuthenticatedUser, ProfileUserId};
 

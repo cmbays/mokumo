@@ -1,5 +1,10 @@
-pub mod traits;
+//! Platform auth domain types.
+//!
+//! Pre-Stage-3 these lived in `mokumo_core::user`. Lifted into kikan by #507.
+//! `DomainError` still comes from `mokumo_core` via kikan's transitional dep;
+//! it migrates to kikan when core dissolves.
 
+use mokumo_core::error::DomainError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -71,6 +76,29 @@ pub struct CreateUser {
     pub name: String,
     pub password: String,
     pub role_id: RoleId,
+}
+
+/// Port for user persistence operations.
+pub trait UserRepository: Send + Sync {
+    fn create(&self, req: &CreateUser) -> impl Future<Output = Result<User, DomainError>> + Send;
+
+    fn find_by_id(
+        &self,
+        id: &UserId,
+    ) -> impl Future<Output = Result<Option<User>, DomainError>> + Send;
+
+    fn find_by_email(
+        &self,
+        email: &str,
+    ) -> impl Future<Output = Result<Option<User>, DomainError>> + Send;
+
+    fn update_password(
+        &self,
+        id: &UserId,
+        new_password: &str,
+    ) -> impl Future<Output = Result<(), DomainError>> + Send;
+
+    fn count(&self) -> impl Future<Output = Result<i64, DomainError>> + Send;
 }
 
 #[cfg(test)]

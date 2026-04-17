@@ -34,7 +34,6 @@ mod tests {
             .await
             .unwrap();
         assert!(!hash.is_empty(), "hash should not be empty");
-        // PHC string format: starts with "$argon2" or "$bcrypt", etc.
         assert!(hash.starts_with('$'), "hash should be a PHC-format string");
     }
 

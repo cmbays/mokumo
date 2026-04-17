@@ -11,15 +11,15 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use axum_login::AuthSession;
+use kikan::auth::RoleId;
+use kikan::auth::SeaOrmUserRepo;
+use kikan::auth::UserRepository;
 use kikan_types::auth::{
     LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
 };
 use kikan_types::error::ErrorCode;
 use kikan_types::user::UserResponse;
 use mokumo_core::activity::ActivityAction;
-use mokumo_core::user::RoleId;
-use mokumo_core::user::traits::UserRepository;
-use mokumo_db::user::repo::SeaOrmUserRepo;
 
 use crate::SharedState;
 use crate::error::AppError;
@@ -48,7 +48,7 @@ pub fn setup_router() -> Router<SharedState> {
     Router::new().route("/", post(setup))
 }
 
-fn user_to_response(user: &mokumo_core::user::User) -> UserResponse {
+fn user_to_response(user: &kikan::auth::User) -> UserResponse {
     UserResponse {
         id: user.id.get(),
         email: user.email.clone(),
@@ -188,7 +188,7 @@ pub async fn regenerate_recovery_codes(
     };
 
     // Verify password
-    match mokumo_db::user::password::verify_password(req.password, password_hash).await {
+    match kikan::auth::password::verify_password(req.password, password_hash).await {
         Ok(true) => {}
         Ok(false) => {
             return Err(AppError::Unauthorized(
@@ -363,7 +363,7 @@ fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Result<(),
 
 async fn auto_login(
     repo: &SeaOrmUserRepo,
-    user: &mokumo_core::user::User,
+    user: &kikan::auth::User,
     auth_session: &mut AuthSessionType,
 ) {
     use kikan::SetupMode;
