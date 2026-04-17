@@ -29,6 +29,12 @@ trait-variant = "0.1"
 chrono = { workspace = true }
 time = { workspace = true }
 
+# Transitional: kikan temporarily depends on mokumo-core for ActivityAction,
+# ActivityEntry, DomainError, PageParams, and the ActivityLogRepository port.
+# These types migrate fully to kikan in later Stage 3 sessions; the edge is
+# removed when core dissolves.
+mokumo-core = { path = "../core" }
+
 [dev-dependencies]
 proptest = { workspace = true }
 cucumber = { workspace = true }

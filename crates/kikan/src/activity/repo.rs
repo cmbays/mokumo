@@ -1,4 +1,10 @@
-use crate::db_err;
+//! Reader half of the activity log — `SqliteActivityLogRepo`.
+//!
+//! The writer half (`SqliteActivityWriter`) lives in `crate::activity::sqlite`.
+//! Together they own the platform's activity-log persistence contract; verticals
+//! call `insert_activity_log_raw` from within their mutation transactions
+//! (see the `pub` re-export at the module root).
+
 use chrono::{DateTime, NaiveDateTime, Utc};
 use mokumo_core::activity::traits::ActivityLogRepository;
 use mokumo_core::activity::{ActivityAction, ActivityEntry};
@@ -18,13 +24,23 @@ struct ActivityRow {
     created_at: String,
 }
 
+fn db_err(e: sqlx::Error) -> DomainError {
+    DomainError::Internal {
+        message: e.to_string(),
+    }
+}
+
+fn sea_err(e: sea_orm::DbErr) -> DomainError {
+    DomainError::Internal {
+        message: e.to_string(),
+    }
+}
+
 /// Parse a SQLite timestamp string (e.g. `2026-03-27T12:00:00Z`) into `DateTime<Utc>`.
 fn parse_sqlite_timestamp(s: &str) -> Result<DateTime<Utc>, DomainError> {
-    // Try ISO 8601 with timezone suffix first
     if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
         return Ok(dt.with_timezone(&Utc));
     }
-    // Fallback: parse as naive datetime (no timezone) and assume UTC
     NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S")
         .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S"))
         .map(|naive| naive.and_utc())
@@ -53,10 +69,11 @@ fn row_to_entry(row: ActivityRow) -> Result<ActivityEntry, DomainError> {
 
 /// Insert an activity log entry using the provided connection.
 ///
-/// Called from entity repo adapters (customer, garment, quote, etc.)
-/// during mutation transactions. The caller owns the transaction —
-/// this function only executes the INSERT.
-pub(crate) async fn insert_activity_log_raw(
+/// Called from entity repo adapters during mutation transactions. The caller
+/// owns the transaction — this function only executes the INSERT. `entity_type`
+/// and `actor_type` are opaque strings owned by the calling vertical; kikan
+/// passes them through without interpretation.
+pub async fn insert_activity_log_raw(
     conn: &impl sea_orm::ConnectionTrait,
     entity_type: &str,
     entity_id: &str,
@@ -82,7 +99,7 @@ pub(crate) async fn insert_activity_log_raw(
         ],
     ))
     .await
-    .map_err(crate::sea_err)?;
+    .map_err(sea_err)?;
 
     Ok(())
 }
@@ -148,11 +165,30 @@ mod tests {
     use mokumo_core::activity::traits::ActivityLogRepository;
     use mokumo_core::pagination::PageParams;
 
-    async fn test_pool() -> (sqlx::SqlitePool, tempfile::TempDir) {
+    /// Create a pool with the activity_log table initialized. Kikan's test
+    /// harness can't run mokumo's SeaORM migrator (DAG would flow the wrong
+    /// way), so the table is created inline. Schema is byte-identical to
+    /// `m20260324_000001_customers_and_activity.rs`.
+    async fn test_pool() -> (SqlitePool, tempfile::TempDir) {
         let tmp = tempfile::tempdir().unwrap();
         let url = format!("sqlite:{}?mode=rwc", tmp.path().join("test.db").display());
-        let db = crate::initialize_database(&url).await.unwrap();
+        let db = crate::db::initialize_database(&url).await.unwrap();
         let pool = db.get_sqlite_connection_pool().clone();
+        sqlx::query(
+            "CREATE TABLE activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                actor_id TEXT NOT NULL DEFAULT 'system',
+                actor_type TEXT NOT NULL DEFAULT 'system',
+                payload TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
         (pool, tmp)
     }
 
@@ -170,13 +206,11 @@ mod tests {
         .unwrap();
     }
 
-    // ── row_to_entry ──────────────────────────────────────────────────────────
-
     #[test]
     fn row_to_entry_valid_rfc3339_timestamp() {
         let row = ActivityRow {
             id: 1,
-            entity_type: "customer".to_string(),
+            entity_type: "thing".to_string(),
             entity_id: "abc".to_string(),
             action: "created".to_string(),
             actor_id: "user-1".to_string(),
@@ -186,7 +220,7 @@ mod tests {
         };
         let entry = row_to_entry(row).unwrap();
         assert_eq!(entry.id, 1);
-        assert_eq!(entry.entity_type, "customer");
+        assert_eq!(entry.entity_type, "thing");
         assert_eq!(entry.payload["key"], "value");
     }
 
@@ -194,7 +228,7 @@ mod tests {
     fn row_to_entry_naive_datetime_without_timezone() {
         let row = ActivityRow {
             id: 2,
-            entity_type: "customer".to_string(),
+            entity_type: "thing".to_string(),
             entity_id: "def".to_string(),
             action: "updated".to_string(),
             actor_id: "system".to_string(),
@@ -210,7 +244,7 @@ mod tests {
     fn row_to_entry_naive_space_separated_timestamp() {
         let row = ActivityRow {
             id: 3,
-            entity_type: "customer".to_string(),
+            entity_type: "thing".to_string(),
             entity_id: "ghi".to_string(),
             action: "deleted".to_string(),
             actor_id: "system".to_string(),
@@ -226,7 +260,7 @@ mod tests {
     fn row_to_entry_invalid_json_returns_error() {
         let row = ActivityRow {
             id: 4,
-            entity_type: "customer".to_string(),
+            entity_type: "thing".to_string(),
             entity_id: "jkl".to_string(),
             action: "created".to_string(),
             actor_id: "system".to_string(),
@@ -241,7 +275,7 @@ mod tests {
     fn row_to_entry_invalid_timestamp_returns_error() {
         let row = ActivityRow {
             id: 5,
-            entity_type: "customer".to_string(),
+            entity_type: "thing".to_string(),
             entity_id: "mno".to_string(),
             action: "created".to_string(),
             actor_id: "system".to_string(),
@@ -251,8 +285,6 @@ mod tests {
         };
         assert!(row_to_entry(row).is_err());
     }
-
-    // ── list ──────────────────────────────────────────────────────────────────
 
     #[tokio::test]
     async fn list_empty_returns_zero_count() {
@@ -269,8 +301,8 @@ mod tests {
     #[tokio::test]
     async fn list_all_returns_all_entries() {
         let (pool, _tmp) = test_pool().await;
-        insert_activity(&pool, "customer", "c1", "created").await;
-        insert_activity(&pool, "customer", "c2", "created").await;
+        insert_activity(&pool, "thing", "t1", "created").await;
+        insert_activity(&pool, "thing", "t2", "created").await;
         let repo = SqliteActivityLogRepo::new(pool);
         let (entries, count) = repo
             .list(None, None, PageParams::new(None, None))
@@ -283,36 +315,36 @@ mod tests {
     #[tokio::test]
     async fn list_filter_by_entity_type() {
         let (pool, _tmp) = test_pool().await;
-        insert_activity(&pool, "customer", "c1", "created").await;
-        insert_activity(&pool, "order", "o1", "created").await;
+        insert_activity(&pool, "thing", "t1", "created").await;
+        insert_activity(&pool, "widget", "w1", "created").await;
         let repo = SqliteActivityLogRepo::new(pool);
         let (entries, count) = repo
-            .list(Some("customer"), None, PageParams::new(None, None))
+            .list(Some("thing"), None, PageParams::new(None, None))
             .await
             .unwrap();
         assert_eq!(count, 1);
-        assert_eq!(entries[0].entity_type, "customer");
+        assert_eq!(entries[0].entity_type, "thing");
     }
 
     #[tokio::test]
     async fn list_filter_by_entity_id() {
         let (pool, _tmp) = test_pool().await;
-        insert_activity(&pool, "customer", "c1", "created").await;
-        insert_activity(&pool, "customer", "c2", "created").await;
+        insert_activity(&pool, "thing", "t1", "created").await;
+        insert_activity(&pool, "thing", "t2", "created").await;
         let repo = SqliteActivityLogRepo::new(pool);
         let (entries, count) = repo
-            .list(None, Some("c1"), PageParams::new(None, None))
+            .list(None, Some("t1"), PageParams::new(None, None))
             .await
             .unwrap();
         assert_eq!(count, 1);
-        assert_eq!(entries[0].entity_id, "c1");
+        assert_eq!(entries[0].entity_id, "t1");
     }
 
     #[tokio::test]
     async fn list_pagination_limits_results() {
         let (pool, _tmp) = test_pool().await;
         for i in 0..5 {
-            insert_activity(&pool, "customer", &format!("c{i}"), "created").await;
+            insert_activity(&pool, "thing", &format!("t{i}"), "created").await;
         }
         let repo = SqliteActivityLogRepo::new(pool);
         let (entries, count) = repo
