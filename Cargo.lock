@@ -4356,7 +4356,23 @@ dependencies = [
 name = "mokumo-shop"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "cucumber",
  "kikan",
+ "kikan-types",
+ "mokumo-core",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "ts-rs",
+ "uuid",
 ]
 
 [[package]]
