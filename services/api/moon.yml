@@ -253,6 +253,14 @@ tasks:
         fi
       done
       cp "$TEMP_BINDINGS"/*.ts "$KIKAN_BINDINGS/" 2>/dev/null || true
+      # ts-rs emits `serde_json/JsonValue.ts` as a subdir alongside the flat
+      # DTO files when a struct references `serde_json::Value` (e.g. the
+      # activity-log payload). Propagate that subdir to the expected-output
+      # layout so the diff does not flag it as drift.
+      for sub in "$TEMP_BINDINGS"/*/; do
+        [ -d "$sub" ] || continue
+        cp -r "$sub" "$KIKAN_BINDINGS/"
+      done
 
       diff -ru apps/web/src/lib/types/kikan/ "$KIKAN_BINDINGS/"
       diff -ru apps/web/src/lib/types/shop/ "$SHOP_BINDINGS/"

@@ -219,3 +219,169 @@ async fn restore_customer(
     let customer = svc.restore(&customer_id, &actor).await?;
     Ok(Json(to_response(customer)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::{Body, to_bytes};
+    use axum::http::{Request, StatusCode};
+    use kikan::activity::SqliteActivityWriter;
+    use mokumo_core::actor::Actor;
+    use sea_orm::DatabaseConnection;
+    use tower::ServiceExt;
+
+    use crate::customer::CustomerRepository;
+
+    async fn test_db() -> (DatabaseConnection, tempfile::TempDir) {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = tmp.path().join("test.db");
+        let url = format!("sqlite:{}?mode=rwc", db_path.display());
+        let db = mokumo_db::initialize_database(&url).await.unwrap();
+        (db, tmp)
+    }
+
+    fn sample_create(name: &str) -> CreateCustomer {
+        CreateCustomer {
+            display_name: name.to_string(),
+            company_name: None,
+            email: None,
+            phone: None,
+            address_line1: None,
+            address_line2: None,
+            city: None,
+            state: None,
+            postal_code: None,
+            country: None,
+            notes: None,
+            portal_enabled: None,
+            tax_exempt: None,
+            payment_terms: None,
+            credit_limit_cents: None,
+            lead_source: None,
+            tags: None,
+        }
+    }
+
+    fn build_test_router(db: DatabaseConnection) -> Router {
+        let deps = CustomerRouterDeps {
+            activity_writer: Arc::new(SqliteActivityWriter::new()),
+        };
+        customer_router()
+            .with_state(deps)
+            .layer(axum::Extension(kikan::ProfileDb(db)))
+    }
+
+    async fn seed_customer(db: &DatabaseConnection, name: &str) -> Customer {
+        let repo = SqliteCustomerRepository::new(db.clone(), Arc::new(SqliteActivityWriter::new()));
+        repo.create(&sample_create(name), &Actor::system())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn get_customer_returns_200_for_existing_id() {
+        let (db, _tmp) = test_db().await;
+        let customer = seed_customer(&db, "Fetch Me Corp").await;
+        let app = build_test_router(db);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/{}", customer.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = to_bytes(resp.into_body(), 65536).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["display_name"], "Fetch Me Corp");
+        assert_eq!(body["id"], customer.id.to_string());
+    }
+
+    #[tokio::test]
+    async fn get_customer_returns_404_for_missing_id() {
+        let (db, _tmp) = test_db().await;
+        let app = build_test_router(db);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/{}", CustomerId::generate()))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn get_customer_returns_404_for_malformed_id() {
+        let (db, _tmp) = test_db().await;
+        let app = build_test_router(db);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri("/not-a-uuid")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn get_customer_excludes_soft_deleted_by_default() {
+        let (db, _tmp) = test_db().await;
+        let customer = seed_customer(&db, "Soft Deleted Corp").await;
+        let repo = SqliteCustomerRepository::new(db.clone(), Arc::new(SqliteActivityWriter::new()));
+        repo.soft_delete(&customer.id, &Actor::system())
+            .await
+            .unwrap();
+
+        let app = build_test_router(db);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/{}", customer.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn get_customer_includes_soft_deleted_with_flag() {
+        let (db, _tmp) = test_db().await;
+        let customer = seed_customer(&db, "Restorable Corp").await;
+        let repo = SqliteCustomerRepository::new(db.clone(), Arc::new(SqliteActivityWriter::new()));
+        repo.soft_delete(&customer.id, &Actor::system())
+            .await
+            .unwrap();
+
+        let app = build_test_router(db);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/{}?include_deleted=true", customer.id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+}

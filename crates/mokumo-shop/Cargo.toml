@@ -31,5 +31,6 @@ cucumber = { workspace = true }
 mokumo-db = { workspace = true }
 sqlx = { workspace = true }
 tempfile = "3"
+tower = { workspace = true }
 sea-orm = { workspace = true, features = ["sqlx-sqlite", "runtime-tokio-rustls"] }
 

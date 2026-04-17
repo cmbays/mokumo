@@ -339,6 +339,20 @@ mod tests {
         (db, tmp)
     }
 
+    // ── read_db_runtime_diagnostics ──────────────────────────────────────────
+
+    #[tokio::test]
+    async fn runtime_diagnostics_reports_schema_version() {
+        let (db, _tmp) = test_db().await;
+        let diag = read_db_runtime_diagnostics(&db).await.unwrap();
+        assert!(
+            diag.schema_version > 0,
+            "migrated db should have non-zero user_version, got {}",
+            diag.schema_version
+        );
+        assert!(diag.wal_mode, "initialize_database must enable WAL mode");
+    }
+
     // ── get_setup_mode ────────────────────────────────────────────────────────
 
     #[tokio::test]
