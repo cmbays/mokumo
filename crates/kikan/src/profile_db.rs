@@ -19,6 +19,7 @@ use axum::http::{StatusCode, request::Parts};
 use axum::response::{IntoResponse, Response};
 
 use crate::db::DatabaseConnection;
+use crate::tenancy::SetupMode;
 
 /// Per-request database handle injected by the vertical's profile-routing
 /// middleware.
@@ -51,6 +52,31 @@ where
             .extensions
             .get::<ProfileDb>()
             .cloned()
+            .ok_or_else(missing_extension_response)
+    }
+}
+
+/// Per-request view of the request's effective profile (Demo / Production).
+///
+/// Inserted into request extensions by the same middleware that provides
+/// `ProfileDb`. Handlers with profile-gated policy (e.g. logo management
+/// requires Production) extract this instead of reaching into a shared
+/// `AppState`. Keeping the extractor in kikan lets vertical crates
+/// enforce profile policy without depending on the shell.
+#[derive(Clone, Copy, Debug)]
+pub struct ActiveProfile(pub SetupMode);
+
+impl<S> FromRequestParts<S> for ActiveProfile
+where
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<ActiveProfile>()
+            .copied()
             .ok_or_else(missing_extension_response)
     }
 }

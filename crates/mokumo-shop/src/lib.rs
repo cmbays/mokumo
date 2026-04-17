@@ -16,11 +16,16 @@
 
 pub mod activity;
 pub mod customer;
+pub mod shop;
 pub mod types;
 
 pub use activity::ActivityAction;
 pub use customer::{
     CreateCustomer, Customer, CustomerHandlerError, CustomerId, CustomerRepository,
     CustomerRouterDeps, CustomerService, SqliteCustomerRepository, UpdateCustomer, customer_router,
+};
+pub use shop::{
+    ShopLogoHandlerError, ShopLogoInfo, ShopLogoRepository, ShopLogoRouterDeps, ShopLogoService,
+    SqliteShopLogoRepository, shop_logo_protected_router, shop_logo_public_router,
 };
 pub use types::CustomerResponse;

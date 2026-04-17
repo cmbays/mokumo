@@ -22,9 +22,9 @@ use axum_login::AuthSession;
 use axum_login::AuthUser;
 
 use crate::SharedState;
-use kikan::ProfileDb;
 use kikan::auth::Backend;
 use kikan::auth::ProfileUserId;
+use kikan::{ActiveProfile, ProfileDb};
 
 /// Middleware: inject `ProfileDb` into request extensions based on session profile.
 ///
@@ -40,13 +40,15 @@ pub async fn profile_db_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    let db = if let Some(user) = &auth_session.user {
-        let ProfileUserId(mode, _) = user.id();
-        state.db_for(mode).clone()
+    let (mode, db) = if let Some(user) = &auth_session.user {
+        let ProfileUserId(m, _) = user.id();
+        (m, state.db_for(m).clone())
     } else {
-        state.db_for(*state.active_profile.read()).clone()
+        let m = *state.active_profile.read();
+        (m, state.db_for(m).clone())
     };
 
     request.extensions_mut().insert(ProfileDb(db));
+    request.extensions_mut().insert(ActiveProfile(mode));
     next.run(request).await
 }

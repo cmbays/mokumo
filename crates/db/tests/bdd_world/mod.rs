@@ -1,5 +1,4 @@
 use cucumber::{World, given, then, when};
-use mokumo_core::activity::ActivityEntry;
 use mokumo_core::error::DomainError;
 use mokumo_core::sequence::FormattedSequence;
 use mokumo_core::sequence::traits::SequenceGenerator;
@@ -11,7 +10,6 @@ use std::collections::HashSet;
 mod install_validation_steps;
 mod migration_safety_steps;
 mod restore_steps;
-mod shop_logo_steps;
 mod storage_diagnostics_steps;
 
 #[derive(Debug, World)]
@@ -24,9 +22,6 @@ pub struct DbWorld {
     results: Vec<Result<FormattedSequence, DomainError>>,
     last_seeded_name: Option<String>,
     _tmp: tempfile::TempDir,
-    // Shop logo test state
-    last_logo_error: Option<DomainError>,
-    activity_query_result: Option<(Vec<ActivityEntry>, i64)>,
     // Migration safety scenario state
     ms_tmp: Option<tempfile::TempDir>,
     ms_db_path: Option<std::path::PathBuf>,
@@ -69,8 +64,6 @@ impl DbWorld {
             results: Vec::new(),
             last_seeded_name: None,
             _tmp: tmp,
-            last_logo_error: None,
-            activity_query_result: None,
             ms_tmp: None,
             ms_db_path: None,
             ms_backup_path: None,
