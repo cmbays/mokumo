@@ -1,9 +1,6 @@
 # CRAP score configuration for Mokumo
 # Scoped to unit-testable crates only. Integration-only layers are excluded:
 #   - services/api/src/** — Axum handlers, covered by BDD integration tests (not --lib)
-#   - crates/mokumo-shop/src/*/handler.rs — vertical Axum handlers, covered by
-#     BDD integration tests mounted through services/api
-#     (e.g. shop_logo.feature, customer_soft_delete.feature)
 #   - apps/mokumo-desktop/**  — Tauri entry point, no unit test surface
 #   - apps/mokumo-server/**   — binary entry point, no unit test surface
 #   - **/tests/**        — Test helpers have 0% coverage by definition
@@ -14,7 +11,6 @@ preset = "strict"
 
 exclude = [
   "services/api/src/**",
-  "crates/mokumo-shop/src/*/handler.rs",
   "apps/mokumo-desktop/**",
   "apps/mokumo-server/**",
   "**/tests/**",

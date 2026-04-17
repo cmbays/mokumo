@@ -55,6 +55,7 @@ impl SqliteShopLogoRepository {
         &self,
         tx: &DatabaseTransaction,
         actor: &Actor,
+        action: ActivityAction,
         payload: serde_json::Value,
     ) -> Result<(), DomainError> {
         let entry = ActivityLogEntry {
@@ -62,7 +63,7 @@ impl SqliteShopLogoRepository {
             actor_type: actor.actor_type().to_string(),
             entity_kind: "shop_settings".to_string(),
             entity_id: "1".to_string(),
-            action: ActivityAction::Updated.as_str().to_string(),
+            action: action.as_str().to_string(),
             payload,
             occurred_at: Utc::now(),
         };
@@ -114,8 +115,13 @@ impl ShopLogoRepository for SqliteShopLogoRepository {
         .await
         .map_err(sea_err)?;
 
-        self.log_activity(&tx, actor, json!({"action": "shop_logo_uploaded"}))
-            .await?;
+        self.log_activity(
+            &tx,
+            actor,
+            ActivityAction::Updated,
+            json!({"action": "shop_logo_uploaded"}),
+        )
+        .await?;
 
         tx.commit().await.map_err(sea_err)?;
         Ok(())
@@ -134,8 +140,13 @@ impl ShopLogoRepository for SqliteShopLogoRepository {
         .await
         .map_err(sea_err)?;
 
-        self.log_activity(&tx, actor, json!({"action": "shop_logo_deleted"}))
-            .await?;
+        self.log_activity(
+            &tx,
+            actor,
+            ActivityAction::SoftDeleted,
+            json!({"action": "shop_logo_deleted"}),
+        )
+        .await?;
 
         tx.commit().await.map_err(sea_err)?;
         Ok(())

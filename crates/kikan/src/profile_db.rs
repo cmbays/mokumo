@@ -143,6 +143,44 @@ mod tests {
         assert!(json["details"].is_null());
     }
 
+    #[tokio::test]
+    async fn active_profile_extractor_rejects_when_missing() {
+        use axum::http::Request;
+
+        let req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        let (mut parts, _) = req.into_parts();
+
+        let result = ActiveProfile::from_request_parts(&mut parts, &()).await;
+        assert_eq!(
+            result.unwrap_err().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    #[tokio::test]
+    async fn active_profile_extractor_returns_inserted_value() {
+        use axum::http::Request;
+
+        let mut req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        req.extensions_mut().insert(ActiveProfile(SetupMode::Demo));
+        let (mut parts, _) = req.into_parts();
+
+        let ActiveProfile(mode) = ActiveProfile::from_request_parts(&mut parts, &())
+            .await
+            .expect("extractor should succeed when extension present");
+        assert_eq!(mode, SetupMode::Demo);
+
+        let mut req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        req.extensions_mut()
+            .insert(ActiveProfile(SetupMode::Production));
+        let (mut parts, _) = req.into_parts();
+
+        let ActiveProfile(mode) = ActiveProfile::from_request_parts(&mut parts, &())
+            .await
+            .expect("extractor should succeed when extension present");
+        assert_eq!(mode, SetupMode::Production);
+    }
+
     /// Verify that from_request_parts returns the exact ProfileDb that was
     /// inserted, and that two distinct databases inserted for demo vs
     /// production sessions are correctly routed — the extracted handle
