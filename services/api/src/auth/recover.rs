@@ -6,7 +6,7 @@ use kikan_types::error::ErrorCode;
 
 use crate::SharedState;
 use crate::error::AppError;
-use crate::profile_db::ProfileDb;
+use kikan::ProfileDb;
 
 pub async fn recover(
     State(state): State<SharedState>,

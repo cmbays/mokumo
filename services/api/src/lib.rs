@@ -130,6 +130,13 @@ pub struct AppState {
     pub demo_install_ok: Arc<AtomicBool>,
     /// Rate limiter for restore attempts (5 per hour, shared across validate + restore).
     pub restore_limiter: rate_limit::RateLimiter,
+    /// Shared platform-side activity log writer. Stateless `Arc<dyn ActivityWriter>`
+    /// so vertical repos and handlers take a singleton reference without binding
+    /// to a specific profile's `DatabaseConnection` — writers receive the
+    /// per-request transaction at call time. Pre-populated here so V6c's
+    /// customer vertical (extracted to `mokumo-shop`) can be wired without
+    /// requiring further AppState plumbing.
+    pub activity_writer: Arc<dyn kikan::ActivityWriter>,
     /// Debug-only WebSocket heartbeat interval in milliseconds.
     /// Set from --ws-ping-ms flag; absent in release builds.
     #[cfg(debug_assertions)]
@@ -860,6 +867,7 @@ fn build_app_inner(
         restore_in_progress: Arc::new(AtomicBool::new(false)),
         demo_install_ok,
         restore_limiter: rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(3600)),
+        activity_writer: Arc::new(kikan::SqliteActivityWriter::new()),
         #[cfg(debug_assertions)]
         ws_ping_ms: config.ws_ping_ms,
     });

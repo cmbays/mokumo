@@ -23,7 +23,7 @@ use mokumo_core::activity::ActivityAction;
 
 use crate::SharedState;
 use crate::error::AppError;
-use crate::profile_db::ProfileDb;
+use kikan::ProfileDb;
 
 pub type AuthSessionType = AuthSession<Backend>;
 

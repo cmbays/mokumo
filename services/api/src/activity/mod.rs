@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::SharedState;
 use crate::error::AppError;
 use crate::pagination::PaginationParams;
-use crate::profile_db::ProfileDb;
+use kikan::ProfileDb;
 
 pub fn router() -> Router<SharedState> {
     Router::new().route("/", get(list_activity))

@@ -10,8 +10,8 @@ use kikan_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use kikan_types::error::ErrorCode;
 
 use crate::error::AppError;
-use crate::profile_db::ProfileDb;
 use crate::{PendingReset, SharedState};
+use kikan::ProfileDb;
 
 const PIN_EXPIRY: Duration = Duration::from_secs(15 * 60);
 
