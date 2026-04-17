@@ -1,20 +1,18 @@
 //! Mokumo shop vertical — **neutral shop core.**
 //!
-//! Passes the auto-repair-shop litmus test: customers, shop settings,
-//! sequences, quotes, invoices, orders, kanban workflow, generic
-//! inventory (passthrough/consumable), products, cost+markup pricing,
-//! and shop financials all generalize across shop-style businesses.
+//! The types and services in this crate are intended to generalize
+//! across shop-style businesses: customers, shop settings, sequences,
+//! quotes, invoices, orders, kanban workflow, generic inventory
+//! (passthrough/consumable), products, cost+markup pricing, and shop
+//! financials.
 //!
 //! Decorator-specific concepts — garments as substrates, artwork
 //! pipelines, method-specific pricing (screenprint tiers, embroidery
-//! stitch counts), mockup generators — belong in a future
-//! `mokumo-decor` crate layered on top of this core, and individual
-//! method crates layered on top of that. Growth is additive: new crates
-//! sit above the neutral core; the neutral core is never re-extracted
-//! from a specialized crate.
-//!
-//! See `CLAUDE.md` → Crate stratification and the ADR at
-//! `ops/decisions/mokumo/adr-neutral-core-additive-verticals.md`.
+//! stitch counts), mockup generators — do not belong here. They are
+//! intended for a separate `mokumo-decor` crate layered on top, and
+//! individual method crates layered on top of that. Growth is
+//! additive: new crates sit above the neutral core; the neutral core
+//! is never re-extracted from a specialized crate.
 
 pub mod activity;
 pub mod customer;
