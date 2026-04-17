@@ -19,6 +19,7 @@ use axum::http::{StatusCode, request::Parts};
 use axum::response::{IntoResponse, Response};
 
 use crate::db::DatabaseConnection;
+use crate::tenancy::SetupMode;
 
 /// Per-request database handle injected by the vertical's profile-routing
 /// middleware.
@@ -51,6 +52,31 @@ where
             .extensions
             .get::<ProfileDb>()
             .cloned()
+            .ok_or_else(missing_extension_response)
+    }
+}
+
+/// Per-request view of the request's effective profile (Demo / Production).
+///
+/// Inserted into request extensions by the same middleware that provides
+/// `ProfileDb`. Handlers with profile-gated policy (e.g. logo management
+/// requires Production) extract this instead of reaching into a shared
+/// `AppState`. Keeping the extractor in kikan lets vertical crates
+/// enforce profile policy without depending on the shell.
+#[derive(Clone, Copy, Debug)]
+pub struct ActiveProfile(pub SetupMode);
+
+impl<S> FromRequestParts<S> for ActiveProfile
+where
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<ActiveProfile>()
+            .copied()
             .ok_or_else(missing_extension_response)
     }
 }
@@ -115,6 +141,44 @@ mod tests {
         assert_eq!(json["code"], "internal_error");
         assert_eq!(json["message"], "An internal error occurred");
         assert!(json["details"].is_null());
+    }
+
+    #[tokio::test]
+    async fn active_profile_extractor_rejects_when_missing() {
+        use axum::http::Request;
+
+        let req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        let (mut parts, _) = req.into_parts();
+
+        let result = ActiveProfile::from_request_parts(&mut parts, &()).await;
+        assert_eq!(
+            result.unwrap_err().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    #[tokio::test]
+    async fn active_profile_extractor_returns_inserted_value() {
+        use axum::http::Request;
+
+        let mut req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        req.extensions_mut().insert(ActiveProfile(SetupMode::Demo));
+        let (mut parts, _) = req.into_parts();
+
+        let ActiveProfile(mode) = ActiveProfile::from_request_parts(&mut parts, &())
+            .await
+            .expect("extractor should succeed when extension present");
+        assert_eq!(mode, SetupMode::Demo);
+
+        let mut req = Request::builder().body(axum::body::Body::empty()).unwrap();
+        req.extensions_mut()
+            .insert(ActiveProfile(SetupMode::Production));
+        let (mut parts, _) = req.into_parts();
+
+        let ActiveProfile(mode) = ActiveProfile::from_request_parts(&mut parts, &())
+            .await
+            .expect("extractor should succeed when extension present");
+        assert_eq!(mode, SetupMode::Production);
     }
 
     /// Verify that from_request_parts returns the exact ProfileDb that was

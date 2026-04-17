@@ -11,12 +11,10 @@ pub mod logging;
 pub mod pagination;
 pub mod profile_db;
 pub mod profile_switch;
-pub mod rate_limit;
 pub mod restore;
 pub mod security_headers;
 pub mod server_info;
 pub mod settings;
-pub mod shop;
 pub mod user;
 pub mod ws;
 
@@ -44,6 +42,7 @@ use tower_sessions::session_store::ExpiredDeletion;
 use tower_sessions_sqlx_store::SqliteStore;
 
 use kikan::auth::Backend;
+use kikan::rate_limit;
 use kikan_types::HealthResponse;
 
 /// Path of the demo-reset endpoint, used both in route registration and in the
@@ -115,8 +114,6 @@ pub struct AppState {
     pub regen_limiter: rate_limit::RateLimiter,
     /// Rate limiter for profile switch attempts (3 per 15 min per user).
     pub switch_limiter: rate_limit::RateLimiter,
-    /// Rate limiter for logo upload attempts (10 per minute per user).
-    pub logo_upload_limiter: rate_limit::RateLimiter,
     /// True until the first profile switch completes (set false after active_profile is written).
     /// Initialized at startup from whether the active_profile file is absent.
     pub is_first_launch: Arc<AtomicBool>,
@@ -865,7 +862,6 @@ fn build_app_inner(
         ),
         regen_limiter: rate_limit::RateLimiter::new(3, std::time::Duration::from_secs(3600)),
         switch_limiter: rate_limit::RateLimiter::new(3, rate_limit::DEFAULT_WINDOW),
-        logo_upload_limiter: rate_limit::RateLimiter::new(10, std::time::Duration::from_secs(60)),
         is_first_launch: Arc::new(AtomicBool::new(first_launch)),
         restore_in_progress: Arc::new(AtomicBool::new(false)),
         demo_install_ok,
@@ -937,14 +933,22 @@ fn build_app_inner(
     // from the incoming request, which doesn't reflect a session created by a
     // preceding middleware in the same request cycle.
 
-    // Logo upload/delete sub-router with an explicit 3 MiB body limit.
-    // The extra MiB above the 2 MiB logo limit covers multipart framing overhead.
-    let shop_upload_router = Router::new()
-        .route(
-            "/api/shop/logo",
-            post(shop::post_logo).delete(shop::delete_logo),
-        )
-        .layer(axum::extract::DefaultBodyLimit::max(3 * 1024 * 1024));
+    // Shop-logo router lives in the mokumo-shop vertical; the 3 MiB body
+    // limit (1 MiB above the 2 MiB LogoValidator cap to absorb multipart
+    // framing) is applied inside `shop_logo_protected_router()`.
+    let shop_logo_deps = mokumo_shop::ShopLogoRouterDeps {
+        activity_writer: state.activity_writer.clone(),
+        production_db: state.production_db.clone(),
+        data_dir: state.data_dir.clone(),
+        logo_upload_limiter: Arc::new(kikan::rate_limit::RateLimiter::new(
+            10,
+            std::time::Duration::from_secs(60),
+        )),
+    };
+    let shop_upload_router = Router::new().nest(
+        "/api/shop",
+        mokumo_shop::shop_logo_protected_router().with_state(shop_logo_deps.clone()),
+    );
 
     let protected_routes = Router::new()
         .nest(
@@ -986,7 +990,10 @@ fn build_app_inner(
         .route("/api/server-info", get(server_info::handler))
         .route("/api/setup-status", get(setup_status))
         .route("/api/backup-status", get(backup_status::handler))
-        .route("/api/shop/logo", get(shop::get_logo))
+        .nest(
+            "/api/shop",
+            mokumo_shop::shop_logo_public_router().with_state(shop_logo_deps),
+        )
         .nest("/api/auth", auth::auth_router())
         .nest("/api/setup", auth::setup_router())
         .merge(restore_routes)
@@ -1532,14 +1539,19 @@ async fn setup_status(
             crate::error::AppError::InternalError("Failed to read production setup status".into())
         })?;
 
-    let logo_info = mokumo_db::get_logo_info(&state.production_db)
-        .await
-        .map_err(|e| {
-            tracing::error!("setup_status: failed to fetch logo_info: {e}");
-            crate::error::AppError::InternalError("Failed to read shop logo".into())
-        })?;
+    let logo_info: Option<(Option<String>, Option<i64>)> =
+        sqlx::query_as("SELECT logo_extension, logo_epoch FROM shop_settings WHERE id = 1")
+            .fetch_optional(state.production_db.get_sqlite_connection_pool())
+            .await
+            .map_err(|e| {
+                tracing::error!("setup_status: failed to fetch logo_info: {e}");
+                crate::error::AppError::InternalError("Failed to read shop logo".into())
+            })?;
 
-    let logo_url = logo_info.map(|(_, updated_at)| format!("/api/shop/logo?v={updated_at}"));
+    let logo_url = logo_info.and_then(|(ext, ts)| match (ext, ts) {
+        (Some(_), Some(updated_at)) => Some(format!("/api/shop/logo?v={updated_at}")),
+        _ => None,
+    });
 
     Ok(Json(kikan_types::setup::SetupStatusResponse {
         setup_complete,

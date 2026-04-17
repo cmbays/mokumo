@@ -4,7 +4,6 @@ pub mod migration;
 pub mod restore;
 pub mod role;
 pub mod sequence;
-pub mod shop;
 
 use mokumo_core::error::DomainError;
 
@@ -43,22 +42,6 @@ pub fn known_migration_names() -> Vec<String> {
         .iter()
         .map(|m| m.name().to_string())
         .collect()
-}
-
-/// Convert a sqlx error into a DomainError::Internal.
-/// Shared across all repository implementations.
-pub(crate) fn db_err(e: sqlx::Error) -> DomainError {
-    DomainError::Internal {
-        message: e.to_string(),
-    }
-}
-
-/// Convert a SeaORM error into a DomainError::Internal.
-/// Analogous to `db_err()` for sqlx errors. Used via `map_err(sea_err)`.
-pub(crate) fn sea_err(e: sea_orm::DbErr) -> DomainError {
-    DomainError::Internal {
-        message: e.to_string(),
-    }
 }
 
 /// Create a mokumo-vertical database: open a pool with the kikan PRAGMA
@@ -122,7 +105,9 @@ pub async fn health_check(db: &DatabaseConnection) -> Result<(), DomainError> {
     db.execute_unprepared("SELECT 1")
         .await
         .map(|_| ())
-        .map_err(sea_err)
+        .map_err(|e| DomainError::Internal {
+            message: e.to_string(),
+        })
 }
 
 /// Check whether the database has a fully-seeded demo admin account.
@@ -299,17 +284,6 @@ pub async fn get_shop_name(db: &DatabaseConnection) -> Result<Option<String>, Da
             .await
             .map_err(DatabaseSetupError::Query)?;
     Ok(row.and_then(|(v,)| v))
-}
-
-/// Fetch the logo extension and cache-buster timestamp from shop_settings.
-///
-/// Returns `None` if the row does not exist or either `logo_extension` or `logo_updated_at` is NULL.
-pub async fn get_logo_info(
-    db: &DatabaseConnection,
-) -> Result<Option<(String, i64)>, DatabaseSetupError> {
-    shop::get_logo_info(db)
-        .await
-        .map_err(|e| DatabaseSetupError::Query(sqlx::Error::Protocol(e.to_string())))
 }
 
 /// Check whether first-run setup has been completed.
