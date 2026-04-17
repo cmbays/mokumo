@@ -1,12 +1,17 @@
 pub mod activity;
 pub mod auth;
-pub mod backup_status;
-pub mod demo;
-pub mod diagnostics;
-pub mod diagnostics_bundle;
-pub mod discovery;
 pub mod error;
 pub mod graft_bridge;
+
+// Compatibility re-exports — the platform handlers + helpers were lifted into
+// `kikan::platform` in S4.1 (#507). External tests and the desktop shell still
+// reach for them through the historic `mokumo_api::*` paths; the re-exports
+// keep those call sites working without touching the lifted modules.
+pub use kikan::platform::backup_status;
+pub use kikan::platform::demo;
+pub use kikan::platform::diagnostics;
+pub use kikan::platform::diagnostics_bundle;
+pub use kikan::platform::discovery;
 pub mod logging;
 pub mod pagination;
 pub mod profile_db;
@@ -98,7 +103,7 @@ pub struct AppState {
     pub ws: Arc<ws::manager::ConnectionManager>,
     pub shutdown: CancellationToken,
     pub started_at: std::time::Instant,
-    pub mdns_status: discovery::SharedMdnsStatus,
+    pub mdns_status: kikan::SharedMdnsStatus,
     pub local_ip: tokio::sync::watch::Receiver<Option<std::net::IpAddr>>,
     pub setup_completed: Arc<AtomicBool>,
     pub setup_in_progress: Arc<AtomicBool>,
@@ -134,6 +139,9 @@ pub struct AppState {
     /// customer vertical (extracted to `mokumo-shop`) can be wired without
     /// requiring further AppState plumbing.
     pub activity_writer: Arc<dyn kikan::ActivityWriter>,
+    /// Vertical-supplied DB initializer used by demo reset (carried into
+    /// `PlatformState` via `platform_state()`).
+    pub profile_db_initializer: kikan::platform_state::SharedProfileDbInitializer,
     /// Rate limiter for login attempts (10 per 15 min per email, LAN-mode policy).
     /// Keyed by email — fast in-memory guard before DB-backed account lockout.
     pub login_limiter: rate_limit::RateLimiter,
@@ -193,7 +201,28 @@ impl AppState {
             demo_install_ok: self.demo_install_ok.clone(),
             is_first_launch: self.is_first_launch.clone(),
             setup_completed: self.setup_completed.clone(),
+            profile_db_initializer: self.profile_db_initializer.clone(),
         }
+    }
+}
+
+/// Vertical-supplied profile DB initializer that re-opens & re-migrates a
+/// freshly-copied database file. Used by `kikan::platform::demo::demo_reset`.
+struct MokumoProfileDbInitializer;
+
+impl kikan::platform_state::ProfileDbInitializer for MokumoProfileDbInitializer {
+    fn initialize<'a>(
+        &'a self,
+        database_url: &'a str,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<DatabaseConnection, kikan::db::DatabaseSetupError>,
+                > + Send
+                + 'a,
+        >,
+    > {
+        Box::pin(async move { mokumo_shop::db::initialize_database(database_url).await })
     }
 }
 
@@ -322,7 +351,7 @@ pub async fn prepare_database(
         backup_path: None,
     })?;
 
-    if let Err(e) = demo::copy_sidecar_if_needed(data_dir) {
+    if let Err(e) = kikan::platform::demo::copy_sidecar_if_needed(data_dir) {
         tracing::warn!(
             "Failed to copy demo sidecar: {e}; \
              demo will start with empty database (no pre-seeded data)"
@@ -468,9 +497,11 @@ async fn setup_profile_db(
                     "Demo database has unknown migrations from newer Mokumo version; \
                      resetting to fresh demo data."
                 );
-                demo::force_copy_sidecar(data_dir).map_err(|e| ProfileDbError {
-                    message: format!("Failed to reset demo database: {e}"),
-                    backup_path: backup_path.clone(),
+                kikan::platform::demo::force_copy_sidecar(data_dir).map_err(|e| {
+                    ProfileDbError {
+                        message: format!("Failed to reset demo database: {e}"),
+                        backup_path: backup_path.clone(),
+                    }
                 })?;
                 // Re-run guards on the fresh sidecar before initializing.
                 // The bundled sidecar could theoretically be malformed or from a future version.
@@ -746,7 +777,7 @@ pub async fn build_app(
         production_db,
         active_profile,
         CancellationToken::new(),
-        discovery::MdnsStatus::shared(),
+        kikan::MdnsStatus::shared(),
         local_ip_rx,
         session_store,
         setup_completed,
@@ -768,7 +799,7 @@ pub async fn build_app_with_shutdown(
     production_db: DatabaseConnection,
     active_profile: SetupMode,
     shutdown: CancellationToken,
-    mdns_status: discovery::SharedMdnsStatus,
+    mdns_status: kikan::SharedMdnsStatus,
 ) -> Result<
     (Router, Option<String>, Arc<ws::manager::ConnectionManager>),
     Box<dyn std::error::Error + Send + Sync>,
@@ -843,7 +874,7 @@ fn build_app_inner(
     production_db: DatabaseConnection,
     active_profile: SetupMode,
     shutdown: CancellationToken,
-    mdns_status: discovery::SharedMdnsStatus,
+    mdns_status: kikan::SharedMdnsStatus,
     local_ip: tokio::sync::watch::Receiver<Option<std::net::IpAddr>>,
     session_store: SqliteStore,
     setup_completed: Arc<AtomicBool>,
@@ -895,6 +926,7 @@ fn build_app_inner(
         demo_install_ok,
         restore_limiter: rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(3600)),
         activity_writer: Arc::new(kikan::SqliteActivityWriter::new()),
+        profile_db_initializer: Arc::new(MokumoProfileDbInitializer),
         // Login rate limiter: 10 attempts per 15 min per email (LAN-mode policy per
         // platform deployment modes). In-memory; separate from DB-backed account lockout.
         login_limiter: rate_limit::RateLimiter::new(10, rate_limit::DEFAULT_WINDOW),
@@ -993,12 +1025,13 @@ fn build_app_inner(
             "/api/account/recovery-codes/regenerate",
             post(auth::regenerate_recovery_codes),
         )
-        .route(DEMO_RESET_PATH, post(demo::demo_reset))
         .route("/api/profile/switch", post(profile_switch::profile_switch))
-        .route("/api/diagnostics", get(diagnostics::handler))
-        .route("/api/diagnostics/bundle", get(diagnostics_bundle::handler))
         .route("/ws", get(ws::ws_handler))
         .merge(shop_upload_router)
+        // Lifted from `services/api` in S4.1 — protected platform routes
+        // (`/api/demo/reset`, `/api/diagnostics`, `/api/diagnostics/bundle`)
+        // are owned by `kikan::platform` and bound to `PlatformState` here.
+        .merge(kikan::platform_protected_routes().with_state(state.platform_state()))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::require_auth_with_demo_auto_login,
@@ -1017,7 +1050,9 @@ fn build_app_inner(
         .route("/api/health", get(health))
         .route("/api/server-info", get(server_info::handler))
         .route("/api/setup-status", get(setup_status))
-        .route("/api/backup-status", get(backup_status::handler))
+        // Lifted in S4.1 — `GET /api/backup-status` lives in
+        // `kikan::platform::backup_status`.
+        .merge(kikan::platform_public_routes().with_state(state.platform_state()))
         .nest(
             "/api/shop",
             mokumo_shop::shop_logo_public_router().with_state(shop_logo_deps),
@@ -1507,7 +1542,7 @@ async fn health(
     // storage_ok: disk pressure on the data directory's filesystem volume +
     // fragmentation check on the active profile database file.
     let db_path = state.data_dir.join(active.as_dir_name()).join("mokumo.db");
-    let disk_warning = crate::diagnostics::compute_disk_warning(&state.data_dir);
+    let disk_warning = kikan::platform::diagnostics::compute_disk_warning(&state.data_dir);
     let diag_result =
         tokio::task::spawn_blocking(move || kikan::db::diagnose_database(&db_path)).await;
     let storage_ok = match diag_result {

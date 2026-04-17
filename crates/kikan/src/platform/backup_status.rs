@@ -8,9 +8,9 @@
 use axum::{Json, extract::State};
 use kikan_types::{BackupEntry, BackupStatusResponse, ProfileBackups};
 
-use crate::SharedState;
+use crate::PlatformState;
 
-pub async fn handler(State(state): State<SharedState>) -> Json<BackupStatusResponse> {
+pub async fn handler(State(state): State<PlatformState>) -> Json<BackupStatusResponse> {
     Json(BackupStatusResponse {
         production: collect_profile_backups(&state.data_dir.join("production").join("mokumo.db"))
             .await,
@@ -19,7 +19,7 @@ pub async fn handler(State(state): State<SharedState>) -> Json<BackupStatusRespo
 }
 
 async fn collect_profile_backups(db_path: &std::path::Path) -> ProfileBackups {
-    let backups = match kikan::backup::collect_existing_backups(db_path).await {
+    let backups = match crate::backup::collect_existing_backups(db_path).await {
         Ok(b) => b,
         Err(_) => return ProfileBackups { backups: vec![] },
     };

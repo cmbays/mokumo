@@ -14,7 +14,7 @@ fn format_host(ip: &IpAddr) -> String {
 
 pub async fn handler(State(state): State<SharedState>) -> Json<ServerInfoResponse> {
     let status = state.mdns_status.read();
-    let on_loopback = crate::discovery::is_loopback(&status.bind_host);
+    let on_loopback = kikan::platform::discovery::is_loopback(&status.bind_host);
 
     let lan_url = if status.active {
         status

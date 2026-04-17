@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use axum::{Json, extract::State};
-use kikan::SetupMode;
 use kikan_types::diagnostics::{
     AppDiagnostics, DatabaseDiagnostics, DiagnosticsResponse, OsDiagnostics, ProfileDbDiagnostics,
     RuntimeDiagnostics, SystemDiagnostics,
@@ -9,17 +8,17 @@ use kikan_types::diagnostics::{
 use sea_orm::DatabaseConnection;
 use sysinfo::{Disks, System};
 
-use crate::{SharedState, error::AppError};
+use crate::{AppError, PlatformState, SetupMode};
 
 pub async fn handler(
-    State(state): State<SharedState>,
+    State(state): State<PlatformState>,
 ) -> Result<Json<DiagnosticsResponse>, AppError> {
     Ok(Json(collect(&state).await?))
 }
 
 /// Collect the full diagnostics snapshot. Called by both the diagnostics handler
 /// and the bundle export handler so sysinfo is only queried in one place.
-pub async fn collect(state: &SharedState) -> Result<DiagnosticsResponse, AppError> {
+pub async fn collect(state: &PlatformState) -> Result<DiagnosticsResponse, AppError> {
     let production_db_path = profile_db_path(&state.data_dir, SetupMode::Production);
     let demo_db_path = profile_db_path(&state.data_dir, SetupMode::Demo);
 
@@ -131,12 +130,12 @@ async fn read_profile_diagnostics(
     db: &DatabaseConnection,
     db_path: &Path,
 ) -> Result<ProfileDbDiagnostics, AppError> {
-    let rt = kikan::db::read_db_runtime_diagnostics(db).await?;
+    let rt = crate::db::read_db_runtime_diagnostics(db).await?;
     let file_size_bytes = tokio::fs::metadata(db_path).await.ok().map(|m| m.len());
 
     let db_path_owned = db_path.to_path_buf();
     let (wal_size_bytes, vacuum_needed) =
-        match tokio::task::spawn_blocking(move || kikan::db::diagnose_database(&db_path_owned))
+        match tokio::task::spawn_blocking(move || crate::db::diagnose_database(&db_path_owned))
             .await
         {
             Ok(Ok(d)) => (d.wal_size_bytes, d.vacuum_needed()),

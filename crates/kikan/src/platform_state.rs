@@ -24,7 +24,9 @@
 //! identifiers. `MdnsStatus` is considered platform infra (LAN
 //! discovery, not a shop concept).
 
+use std::future::Future;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -32,7 +34,25 @@ use parking_lot::RwLock;
 use sea_orm::DatabaseConnection;
 use tokio_util::sync::CancellationToken;
 
+use crate::db::DatabaseSetupError;
 use crate::tenancy::SetupMode;
+
+/// Re-initialize a profile database from a freshly-copied file.
+///
+/// Used by `platform::demo::demo_reset` after the demo sidecar has been
+/// force-copied: the host wires a closure that opens the new pool, runs the
+/// vertical migrator, and applies post-migration optimizations. Defined here
+/// (instead of in `crate::platform::demo`) so [`PlatformState`] can carry it
+/// without dragging the demo handler into the type's public surface.
+pub trait ProfileDbInitializer: Send + Sync + 'static {
+    fn initialize<'a>(
+        &'a self,
+        database_url: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<DatabaseConnection, DatabaseSetupError>> + Send + 'a>>;
+}
+
+/// Type alias for the shared profile-DB initializer. Cloning is `Arc::clone`.
+pub type SharedProfileDbInitializer = Arc<dyn ProfileDbInitializer>;
 
 /// LAN-discovery status snapshot. Populated by the mDNS registration task
 /// and read by diagnostics handlers.
@@ -93,6 +113,11 @@ pub struct PlatformState {
     pub demo_install_ok: Arc<AtomicBool>,
     pub is_first_launch: Arc<AtomicBool>,
     pub setup_completed: Arc<AtomicBool>,
+    /// Vertical-supplied hook used by `platform::demo::demo_reset` to
+    /// re-open and re-migrate the demo profile after the sidecar copy.
+    /// Kept behind `Arc<dyn …>` so kikan does not depend on any vertical
+    /// migrator (preserves I4).
+    pub profile_db_initializer: SharedProfileDbInitializer,
 }
 
 impl PlatformState {

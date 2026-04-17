@@ -10,6 +10,7 @@ pub mod error;
 pub mod graft;
 pub mod middleware;
 pub mod migrations;
+pub mod platform;
 pub mod platform_state;
 pub mod profile_db;
 pub mod rate_limit;
@@ -19,7 +20,9 @@ pub use activity::{ActivityLogEntry, ActivityWriter, SqliteActivityWriter};
 pub use app_error::AppError;
 pub use app_handle::AppHandleShim;
 pub use boot::{BootConfig, DeploymentMode};
-pub use engine::{Engine, EngineContext, Sessions};
+pub use engine::{
+    Engine, EngineContext, Sessions, platform_protected_routes, platform_public_routes,
+};
 pub use error::{
     ActivityWriteError, AppHandleError, DagError, EngineError, MigrationError, TenancyError,
 };

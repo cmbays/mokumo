@@ -34,6 +34,10 @@ time = { workspace = true }
 password-auth = { workspace = true }
 rand = { workspace = true }
 dashmap = { workspace = true }
+mdns-sd = { workspace = true }
+sysinfo = { workspace = true }
+zip = { workspace = true }
+regex = { workspace = true }
 
 # Transitional: kikan temporarily depends on mokumo-core for ActivityAction,
 # ActivityEntry, DomainError, PageParams, and the ActivityLogRepository port.
@@ -51,6 +55,7 @@ cucumber = { workspace = true }
 # disappears when the migrator + setup seed lift into kikan itself.
 mokumo-shop = { workspace = true }
 sqlx = { workspace = true }
+serial_test = { workspace = true }
 tempfile = "3"
 tokio = { workspace = true, features = ["test-util"] }
 

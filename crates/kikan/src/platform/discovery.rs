@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use tokio_util::sync::CancellationToken;
 
-// MdnsStatus / SharedMdnsStatus moved to `kikan::platform_state` as part of
-// S4.0 platform-state lift. Re-exported here to preserve existing import
-// paths inside `services/api`.
-pub use kikan::{MdnsStatus, SharedMdnsStatus};
+// MdnsStatus / SharedMdnsStatus live in `crate::platform_state` and are
+// re-exported at the crate root as `kikan::{MdnsStatus, SharedMdnsStatus}`.
+pub use crate::{MdnsStatus, SharedMdnsStatus};
 
 pub struct MdnsHandle {
     daemon: Option<mdns_sd::ServiceDaemon>,

@@ -7,7 +7,7 @@ use regex::Regex;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
-use crate::{SharedState, diagnostics, error::AppError};
+use crate::{AppError, PlatformState, platform::diagnostics};
 
 /// Patterns applied to each log line to redact common sensitive values.
 /// Compiled once per process lifetime via OnceLock (non-hot path, but called per log line).
@@ -52,7 +52,7 @@ fn scrub_line<'a>(line: &'a str, patterns: &[(Regex, &'static str)]) -> std::bor
     result
 }
 
-pub async fn handler(State(state): State<SharedState>) -> Result<impl IntoResponse, AppError> {
+pub async fn handler(State(state): State<PlatformState>) -> Result<impl IntoResponse, AppError> {
     // Collect diagnostics snapshot (shares sysinfo logic with GET /api/diagnostics).
     let diag = diagnostics::collect(&state).await?;
     let metadata_json = serde_json::to_string_pretty(&diag)

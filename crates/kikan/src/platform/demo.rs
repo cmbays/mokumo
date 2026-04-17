@@ -2,11 +2,11 @@ use std::path::Path;
 
 use axum::Json;
 use axum::extract::State;
-use kikan::SetupMode;
 use kikan_types::setup::DemoResetResponse;
 
-use crate::SharedState;
-use crate::error::AppError;
+use crate::AppError;
+use crate::PlatformState;
+use crate::SetupMode;
 
 /// POST /api/demo/reset — reset the demo database to its original sidecar state.
 ///
@@ -15,7 +15,7 @@ use crate::error::AppError;
 /// is false, the middleware bypasses the auth chain for this path so the recovery
 /// mechanism can be called even when `admin@demo.local` is missing from the database.
 pub async fn demo_reset(
-    State(state): State<SharedState>,
+    State(state): State<PlatformState>,
 ) -> Result<Json<DemoResetResponse>, AppError> {
     // Must be demo mode
     if *state.active_profile.read() != SetupMode::Demo {
@@ -43,9 +43,9 @@ pub async fn demo_reset(
     // and for clients that poll health before the server restarts).
     let demo_db_path = state.data_dir.join("demo").join("mokumo.db");
     let demo_url = format!("sqlite:{}?mode=rwc", demo_db_path.display());
-    match mokumo_shop::db::initialize_database(&demo_url).await {
+    match state.profile_db_initializer.initialize(&demo_url).await {
         Ok(fresh_db) => {
-            let ok = kikan::db::validate_installation(&fresh_db).await;
+            let ok = crate::db::validate_installation(&fresh_db).await;
             state
                 .demo_install_ok
                 .store(ok, std::sync::atomic::Ordering::Release);
