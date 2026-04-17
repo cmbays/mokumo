@@ -56,6 +56,10 @@ vergen-gitcl = { version = "9", features = ["build", "cargo", "rustc"] }
 bdd = []
 
 [dev-dependencies]
+# kikan-tauri is a dev-dep only — the BDD ephemeral-bind steps import
+# `try_bind_ephemeral_loopback` from there. Keeping it out of [dependencies]
+# preserves I3 (headless mokumo-server has no Tauri transitive deps).
+kikan-tauri = { workspace = true }
 serial_test = { workspace = true }
 tempfile = "3"
 reqwest = { version = "0.13", features = ["json"] }

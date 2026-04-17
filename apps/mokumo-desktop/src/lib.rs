@@ -8,12 +8,12 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tokio_util::sync::CancellationToken;
 
+use kikan_tauri::try_bind_ephemeral_loopback;
 use kikan_types::ServerStartupError;
 use mokumo_api::discovery::MdnsHandle;
 use mokumo_api::logging::init_tracing;
 use mokumo_api::{
     ProfileDbError, ServerConfig, build_app_with_shutdown, discovery, prepare_database,
-    try_bind_ephemeral_loopback,
 };
 
 /// Holds the server task handle so `ExitRequested` can await a clean drain.

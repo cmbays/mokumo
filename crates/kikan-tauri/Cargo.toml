@@ -10,3 +10,5 @@ description = "Kikan Tauri IPC adapter — thin #[tauri::command] wrappers over 
 [dependencies]
 kikan = { workspace = true }
 tauri = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

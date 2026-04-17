@@ -3806,6 +3806,8 @@ version = "0.1.0"
 dependencies = [
  "kikan",
  "tauri",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -4250,6 +4252,7 @@ dependencies = [
  "http",
  "insta",
  "kikan",
+ "kikan-tauri",
  "kikan-types",
  "local-ip-address",
  "mdns-sd",
@@ -4307,6 +4310,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "kikan",
+ "kikan-tauri",
  "kikan-types",
  "local-ip-address",
  "mokumo-api",

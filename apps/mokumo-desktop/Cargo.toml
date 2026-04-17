@@ -23,6 +23,7 @@ mokumo-api = { workspace = true }
 mokumo-core = { workspace = true }
 kikan-types = { workspace = true }
 kikan = { workspace = true }
+kikan-tauri = { workspace = true }
 
 # Async runtime (TcpListener type from try_bind)
 tokio = { workspace = true }
