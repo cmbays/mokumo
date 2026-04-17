@@ -1,7 +1,7 @@
-pub mod backend;
 pub mod recover;
 pub mod reset;
-pub mod user;
+
+pub use kikan::auth::{AuthenticatedUser, Backend, Credentials, ProfileUserId};
 
 use std::sync::atomic::Ordering;
 
@@ -24,8 +24,6 @@ use mokumo_core::activity::ActivityAction;
 use crate::SharedState;
 use crate::error::AppError;
 use crate::profile_db::ProfileDb;
-
-use backend::{Backend, Credentials};
 
 pub type AuthSessionType = AuthSession<Backend>;
 
@@ -375,7 +373,7 @@ async fn auto_login(
             return;
         }
     };
-    let auth_user = user::AuthenticatedUser::new(user.clone(), hash, SetupMode::Production);
+    let auth_user = AuthenticatedUser::new(user.clone(), hash, SetupMode::Production);
     if let Err(e) = auth_session.login(&auth_user).await {
         tracing::warn!("Auto-login after setup failed: {e}");
     }
@@ -425,7 +423,7 @@ pub async fn require_auth_with_demo_auto_login(
         let repo = SeaOrmUserRepo::new(state.demo_db.clone());
         match repo.find_by_email_with_hash("admin@demo.local").await {
             Ok(Some((user, hash))) => {
-                let auth_user = user::AuthenticatedUser::new(user, hash, SetupMode::Demo);
+                let auth_user = AuthenticatedUser::new(user, hash, SetupMode::Demo);
                 if let Err(e) = auth_session.login(&auth_user).await {
                     tracing::warn!("Demo auto-login session creation failed: {e}");
                 }

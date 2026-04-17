@@ -10,9 +10,9 @@ use kikan_types::error::ErrorCode;
 use kikan_types::setup::{ProfileSwitchRequest, ProfileSwitchResponse};
 
 use crate::SharedState;
-use crate::auth::backend::Backend;
-use crate::auth::user::AuthenticatedUser;
 use crate::error::AppError;
+use kikan::auth::AuthenticatedUser;
+use kikan::auth::Backend;
 
 /// Session key used to carry the production user's email into the demo session so that a
 /// subsequent demo→production switch can look up the correct account.

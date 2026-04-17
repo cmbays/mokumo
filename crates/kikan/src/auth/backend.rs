@@ -1,12 +1,12 @@
 use axum_login::AuthnBackend;
-use kikan::SetupMode;
-use kikan::auth::SeaOrmUserRepo;
-use kikan::auth::UserId;
-use kikan::auth::password;
 use mokumo_core::error::DomainError;
-use mokumo_db::DatabaseConnection;
+use sea_orm::DatabaseConnection;
 
+use super::domain::UserId;
+use super::password;
+use super::repo::SeaOrmUserRepo;
 use super::user::{AuthenticatedUser, ProfileUserId};
+use crate::SetupMode;
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Credentials {
@@ -101,9 +101,6 @@ mod tests {
     // (demo_auth.feature, session_invalidation.feature, profile_middleware.feature).
     // Here we just verify the constructor and db_for dispatch.
 
-    // db_for tests require real DatabaseConnection — tested via integration tests.
-    // This module primarily exercises the type-level guarantees.
-
     #[test]
     fn credentials_deserializes() {
         let json = r#"{"email":"a@b.com","password":"secret"}"#;
@@ -117,8 +114,6 @@ mod tests {
     /// invalidates all active sessions for live users.
     #[test]
     fn profile_user_id_roundtrip() {
-        use crate::auth::user::ProfileUserId;
-
         let cases = [
             (ProfileUserId(SetupMode::Demo, 1), r#"["demo",1]"#),
             (

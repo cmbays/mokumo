@@ -43,7 +43,7 @@ use tower_sessions::SessionManagerLayer;
 use tower_sessions::session_store::ExpiredDeletion;
 use tower_sessions_sqlx_store::SqliteStore;
 
-use auth::backend::Backend;
+use kikan::auth::Backend;
 use kikan_types::HealthResponse;
 
 /// Path of the demo-reset endpoint, used both in route registration and in the

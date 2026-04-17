@@ -17,9 +17,9 @@ use axum_login::AuthUser;
 use mokumo_db::DatabaseConnection;
 
 use crate::SharedState;
-use crate::auth::backend::Backend;
-use crate::auth::user::ProfileUserId;
 use crate::error::AppError;
+use kikan::auth::Backend;
+use kikan::auth::ProfileUserId;
 
 /// Per-request database handle injected by `ProfileDbMiddleware`.
 ///

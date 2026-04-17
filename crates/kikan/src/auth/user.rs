@@ -1,6 +1,7 @@
 use axum_login::AuthUser;
-use kikan::SetupMode;
-use kikan::auth::User;
+
+use super::domain::User;
+use crate::SetupMode;
 
 /// Compound user identity: profile discriminant + database-level user ID.
 ///
@@ -55,8 +56,8 @@ impl AuthUser for AuthenticatedUser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::{RoleId, UserId};
     use axum_login::AuthUser;
-    use kikan::auth::{RoleId, UserId};
 
     fn test_user() -> User {
         User {

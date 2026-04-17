@@ -8,8 +8,8 @@ use std::time::SystemTime;
 use tokio::fs;
 
 use crate::SharedState;
-use crate::auth::backend::Backend;
 use crate::error::AppError;
+use kikan::auth::Backend;
 
 /// POST /api/shop/logo — upload or replace the shop logo.
 ///
