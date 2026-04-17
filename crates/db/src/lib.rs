@@ -1,9 +1,12 @@
 pub mod activity;
 pub mod meta;
-pub mod migration;
 pub mod restore;
 pub mod role;
-pub mod sequence;
+
+/// Re-export of [`mokumo_shop::migrations`] under the pre-S2.5 path so
+/// tests still importing `mokumo_db::migration::Migrator` keep compiling
+/// until `crates/db` dissolves in S3.1b.
+pub use mokumo_shop::migrations as migration;
 
 use mokumo_core::error::DomainError;
 

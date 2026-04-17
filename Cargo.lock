@@ -4288,13 +4288,11 @@ name = "mokumo-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "cucumber",
  "regex",
  "serde",
  "serde_json",
  "serde_with",
  "thiserror 2.0.18",
- "tokio",
  "uuid",
 ]
 
@@ -4371,6 +4369,7 @@ dependencies = [
  "mokumo-db",
  "regex",
  "sea-orm",
+ "sea-orm-migration",
  "serde",
  "serde_json",
  "serde_with",

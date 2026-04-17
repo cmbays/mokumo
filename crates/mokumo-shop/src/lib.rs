@@ -16,6 +16,8 @@
 
 pub mod activity;
 pub mod customer;
+pub mod migrations;
+pub mod sequence;
 pub mod shop;
 pub mod types;
 
