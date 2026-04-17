@@ -10,7 +10,8 @@
 //!   vN → vN+1 schema upgrade — specifically that `pre_migration_backup` runs cleanly
 //!   and that `initialize_database` applies remaining migrations without data loss.
 
-use mokumo_db::{check_application_id, pre_migration_backup};
+use kikan::backup::pre_migration_backup;
+use kikan::db::check_application_id;
 use mokumo_shop::db::{check_schema_compatibility, initialize_database};
 
 // ── Shared seed helpers ────────────────────────────────────────────────────────────────────────

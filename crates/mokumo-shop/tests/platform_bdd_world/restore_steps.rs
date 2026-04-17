@@ -7,12 +7,12 @@ use sea_orm_migration::MigratorTrait as _;
 
 use mokumo_shop::restore::{self, RestoreError};
 
-use super::DbWorld;
+use super::PlatformBddWorld;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// Ensure `restore_tmp` is initialized and return its path.
-fn ensure_tmp(w: &mut DbWorld) -> PathBuf {
+fn ensure_tmp(w: &mut PlatformBddWorld) -> PathBuf {
     if w.restore_tmp.is_none() {
         w.restore_tmp = Some(tempfile::tempdir().expect("failed to create temp dir"));
     }
@@ -47,7 +47,7 @@ fn make_sqlite_with_app_id(path: &Path, app_id: i64) {
 /// about.
 fn make_mokumo_db_with_all_migrations(path: &Path) {
     let conn = rusqlite::Connection::open(path).unwrap();
-    let app_id = mokumo_db::MOKUMO_APPLICATION_ID;
+    let app_id = kikan::db::KIKAN_APPLICATION_ID;
     conn.execute_batch(&format!(
         "PRAGMA application_id = {app_id};
          CREATE TABLE seaql_migrations (version TEXT NOT NULL, applied_at BIGINT NOT NULL);
@@ -75,7 +75,7 @@ fn first_known_migration() -> String {
 // ── Given steps ───────────────────────────────────────────────────────────────
 
 #[given(expr = "a SQLite file with application_id {word}")]
-async fn given_sqlite_with_application_id(w: &mut DbWorld, app_id_str: String) {
+async fn given_sqlite_with_application_id(w: &mut PlatformBddWorld, app_id_str: String) {
     // SQLite's application_id is a 32-bit signed integer; reinterpret hex
     // values that exceed i32::MAX as their two's-complement signed form so the
     // PRAGMA stores the intended bit pattern.
@@ -92,7 +92,7 @@ async fn given_sqlite_with_application_id(w: &mut DbWorld, app_id_str: String) {
 }
 
 #[given("a file that is not a valid SQLite database")]
-async fn given_non_sqlite_file(w: &mut DbWorld) {
+async fn given_non_sqlite_file(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let path = dir.join("garbage.db");
     std::fs::write(&path, b"this is definitely not a sqlite database!!!").unwrap();
@@ -100,7 +100,7 @@ async fn given_non_sqlite_file(w: &mut DbWorld) {
 }
 
 #[given("a valid Mokumo database file")]
-async fn given_valid_mokumo_db(w: &mut DbWorld) {
+async fn given_valid_mokumo_db(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let path = dir.join("valid.db");
     make_mokumo_db_with_all_migrations(&path);
@@ -108,7 +108,7 @@ async fn given_valid_mokumo_db(w: &mut DbWorld) {
 }
 
 #[given("a SQLite file with a valid header but truncated data pages")]
-async fn given_truncated_sqlite(w: &mut DbWorld) {
+async fn given_truncated_sqlite(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let original = dir.join("source.db");
     make_mokumo_db_with_all_migrations(&original);
@@ -121,7 +121,7 @@ async fn given_truncated_sqlite(w: &mut DbWorld) {
 }
 
 #[given("a SQLite file with deliberately corrupted page data")]
-async fn given_corrupted_sqlite(w: &mut DbWorld) {
+async fn given_corrupted_sqlite(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let original = dir.join("source.db");
     make_mokumo_db_with_all_migrations(&original);
@@ -141,7 +141,7 @@ async fn given_corrupted_sqlite(w: &mut DbWorld) {
 }
 
 #[given("a Mokumo database at the current schema version")]
-async fn given_db_at_current_schema(w: &mut DbWorld) {
+async fn given_db_at_current_schema(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let path = dir.join("current.db");
     make_mokumo_db_with_all_migrations(&path);
@@ -149,10 +149,10 @@ async fn given_db_at_current_schema(w: &mut DbWorld) {
 }
 
 #[given("a Mokumo database at an older schema version")]
-async fn given_db_at_older_schema(w: &mut DbWorld) {
+async fn given_db_at_older_schema(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let path = dir.join("older.db");
-    let app_id = mokumo_db::MOKUMO_APPLICATION_ID;
+    let app_id = kikan::db::KIKAN_APPLICATION_ID;
     let oldest = first_known_migration();
     let conn = rusqlite::Connection::open(&path).unwrap();
     conn.execute_batch(&format!(
@@ -167,10 +167,10 @@ async fn given_db_at_older_schema(w: &mut DbWorld) {
 }
 
 #[given("a Mokumo database with migrations not known to this binary")]
-async fn given_db_with_unknown_migrations(w: &mut DbWorld) {
+async fn given_db_with_unknown_migrations(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let path = dir.join("unknown.db");
-    let app_id = mokumo_db::MOKUMO_APPLICATION_ID;
+    let app_id = kikan::db::KIKAN_APPLICATION_ID;
     let conn = rusqlite::Connection::open(&path).unwrap();
     conn.execute_batch(&format!(
         "PRAGMA application_id = {app_id};
@@ -184,15 +184,15 @@ async fn given_db_with_unknown_migrations(w: &mut DbWorld) {
 }
 
 #[given("a Mokumo database with no seaql_migrations table")]
-async fn given_db_without_migrations_table(w: &mut DbWorld) {
+async fn given_db_without_migrations_table(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let path = dir.join("no_migrations.db");
-    make_sqlite_with_app_id(&path, mokumo_db::MOKUMO_APPLICATION_ID);
+    make_sqlite_with_app_id(&path, kikan::db::KIKAN_APPLICATION_ID);
     w.restore_candidate_path = Some(path);
 }
 
 #[given(expr = "a valid Mokumo database file of {int}KB")]
-async fn given_valid_mokumo_db_of_size(w: &mut DbWorld, size_kb: i32) {
+async fn given_valid_mokumo_db_of_size(w: &mut PlatformBddWorld, size_kb: i32) {
     let dir = ensure_tmp(w);
     let path = dir.join("sized.db");
     make_mokumo_db_with_all_migrations(&path);
@@ -212,7 +212,7 @@ async fn given_valid_mokumo_db_of_size(w: &mut DbWorld, size_kb: i32) {
 }
 
 #[given("no production database exists")]
-async fn given_no_production_db(w: &mut DbWorld) {
+async fn given_no_production_db(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let production = dir.join("production");
     // Intentionally do not create the directory — copy_to_production handles it.
@@ -220,7 +220,7 @@ async fn given_no_production_db(w: &mut DbWorld) {
 }
 
 #[given("a production database already exists")]
-async fn given_production_db_exists(w: &mut DbWorld) {
+async fn given_production_db_exists(w: &mut PlatformBddWorld) {
     let dir = ensure_tmp(w);
     let production = dir.join("production");
     std::fs::create_dir_all(&production).unwrap();
@@ -231,7 +231,7 @@ async fn given_production_db_exists(w: &mut DbWorld) {
 // ── When steps ────────────────────────────────────────────────────────────────
 
 #[when("the file is validated as a restore candidate")]
-async fn when_validated(w: &mut DbWorld) {
+async fn when_validated(w: &mut PlatformBddWorld) {
     let path = w
         .restore_candidate_path
         .as_ref()
@@ -241,7 +241,7 @@ async fn when_validated(w: &mut DbWorld) {
 }
 
 #[when("the candidate is copied to the production slot")]
-async fn when_copied_to_production(w: &mut DbWorld) {
+async fn when_copied_to_production(w: &mut PlatformBddWorld) {
     let source = w
         .restore_candidate_path
         .as_ref()
@@ -256,7 +256,7 @@ async fn when_copied_to_production(w: &mut DbWorld) {
 }
 
 #[when("a copy to the production slot is attempted")]
-async fn when_copy_attempted(w: &mut DbWorld) {
+async fn when_copy_attempted(w: &mut PlatformBddWorld) {
     let source = w
         .restore_candidate_path
         .as_ref()
@@ -273,7 +273,7 @@ async fn when_copy_attempted(w: &mut DbWorld) {
 // ── Then steps ────────────────────────────────────────────────────────────────
 
 fn validate_result<'a>(
-    w: &'a DbWorld,
+    w: &'a PlatformBddWorld,
 ) -> &'a Result<mokumo_shop::restore::CandidateInfo, RestoreError> {
     w.restore_validate_result
         .as_ref()
@@ -281,37 +281,37 @@ fn validate_result<'a>(
 }
 
 #[then("the identity check passes")]
-async fn then_identity_passes(w: &mut DbWorld) {
+async fn then_identity_passes(w: &mut PlatformBddWorld) {
     let result = validate_result(w);
     assert!(result.is_ok(), "Expected Ok, got: {result:?}");
 }
 
-#[then("validation fails with NotMokumoDatabase")]
-async fn then_fails_not_mokumo(w: &mut DbWorld) {
+#[then("validation fails with NotKikanDatabase")]
+async fn then_fails_not_mokumo(w: &mut PlatformBddWorld) {
     let result = validate_result(w);
     assert!(
-        matches!(result, Err(RestoreError::NotMokumoDatabase { .. })),
-        "Expected NotMokumoDatabase, got: {result:?}"
+        matches!(result, Err(RestoreError::NotKikanDatabase { .. })),
+        "Expected NotKikanDatabase, got: {result:?}"
     );
 }
 
 #[then("the integrity check passes")]
-async fn then_integrity_passes(w: &mut DbWorld) {
+async fn then_integrity_passes(w: &mut PlatformBddWorld) {
     let result = validate_result(w);
     assert!(result.is_ok(), "Expected Ok, got: {result:?}");
 }
 
 #[then("validation fails with DatabaseCorrupt")]
-async fn then_fails_corrupt(w: &mut DbWorld) {
+async fn then_fails_corrupt(w: &mut PlatformBddWorld) {
     let result = validate_result(w);
     // Truncated/corrupt files may surface as either DatabaseCorrupt (opens but
-    // integrity_check fails) or NotMokumoDatabase (cannot be opened at all);
+    // integrity_check fails) or NotKikanDatabase (cannot be opened at all);
     // both are acceptable failure modes for the validation pipeline.
     assert!(
         matches!(
             result,
             Err(RestoreError::DatabaseCorrupt { .. })
-                | Err(RestoreError::NotMokumoDatabase { .. })
+                | Err(RestoreError::NotKikanDatabase { .. })
                 | Err(RestoreError::Sqlite(_))
         ),
         "Expected DatabaseCorrupt (or related failure), got: {result:?}"
@@ -319,13 +319,13 @@ async fn then_fails_corrupt(w: &mut DbWorld) {
 }
 
 #[then("the compatibility check passes")]
-async fn then_compat_passes(w: &mut DbWorld) {
+async fn then_compat_passes(w: &mut PlatformBddWorld) {
     let result = validate_result(w);
     assert!(result.is_ok(), "Expected Ok, got: {result:?}");
 }
 
 #[then("validation fails with SchemaIncompatible")]
-async fn then_fails_schema_incompat(w: &mut DbWorld) {
+async fn then_fails_schema_incompat(w: &mut PlatformBddWorld) {
     let result = validate_result(w);
     assert!(
         matches!(result, Err(RestoreError::SchemaIncompatible { .. })),
@@ -334,7 +334,7 @@ async fn then_fails_schema_incompat(w: &mut DbWorld) {
 }
 
 #[then("the candidate info reports the older schema version")]
-async fn then_info_reports_older(w: &mut DbWorld) {
+async fn then_info_reports_older(w: &mut PlatformBddWorld) {
     let info = validate_result(w)
         .as_ref()
         .expect("validation should have succeeded");
@@ -347,7 +347,7 @@ async fn then_info_reports_older(w: &mut DbWorld) {
 }
 
 #[then("the candidate info contains the file size")]
-async fn then_info_has_file_size(w: &mut DbWorld) {
+async fn then_info_has_file_size(w: &mut PlatformBddWorld) {
     let info = validate_result(w)
         .as_ref()
         .expect("validation should have succeeded");
@@ -355,7 +355,7 @@ async fn then_info_has_file_size(w: &mut DbWorld) {
 }
 
 #[then("the candidate info contains the schema version")]
-async fn then_info_has_schema_version(w: &mut DbWorld) {
+async fn then_info_has_schema_version(w: &mut PlatformBddWorld) {
     let info = validate_result(w)
         .as_ref()
         .expect("validation should have succeeded");
@@ -366,7 +366,7 @@ async fn then_info_has_schema_version(w: &mut DbWorld) {
 }
 
 #[then("the production database exists")]
-async fn then_production_db_exists(w: &mut DbWorld) {
+async fn then_production_db_exists(w: &mut PlatformBddWorld) {
     let result = w
         .restore_copy_result
         .as_ref()
@@ -381,7 +381,7 @@ async fn then_production_db_exists(w: &mut DbWorld) {
 }
 
 #[then("the production database content matches the source")]
-async fn then_production_matches_source(w: &mut DbWorld) {
+async fn then_production_matches_source(w: &mut PlatformBddWorld) {
     let source = w.restore_candidate_path.as_ref().unwrap();
     let production = w.restore_production_dir.as_ref().unwrap().join("mokumo.db");
 
@@ -400,11 +400,11 @@ async fn then_production_matches_source(w: &mut DbWorld) {
     let app_id: i64 = conn
         .query_row("PRAGMA application_id", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(app_id, mokumo_db::MOKUMO_APPLICATION_ID);
+    assert_eq!(app_id, kikan::db::KIKAN_APPLICATION_ID);
 }
 
 #[then("the copy fails with ProductionDbExists")]
-async fn then_copy_fails_exists(w: &mut DbWorld) {
+async fn then_copy_fails_exists(w: &mut PlatformBddWorld) {
     let result = w
         .restore_copy_result
         .as_ref()
@@ -416,7 +416,7 @@ async fn then_copy_fails_exists(w: &mut DbWorld) {
 }
 
 #[then("the copy uses a temporary file in the production directory")]
-async fn then_copy_uses_temp_file(w: &mut DbWorld) {
+async fn then_copy_uses_temp_file(w: &mut PlatformBddWorld) {
     // After a successful copy, the temp file should be cleaned up and the final
     // file should exist in the production directory.
     let production = w.restore_production_dir.as_ref().unwrap();
@@ -428,7 +428,7 @@ async fn then_copy_uses_temp_file(w: &mut DbWorld) {
 }
 
 #[then("the temporary file is atomically renamed to the final path")]
-async fn then_temp_file_renamed(w: &mut DbWorld) {
+async fn then_temp_file_renamed(w: &mut PlatformBddWorld) {
     let production = w.restore_production_dir.as_ref().unwrap();
     assert!(
         production.join("mokumo.db").exists(),

@@ -1,5 +1,5 @@
 use cucumber::World;
-use mokumo_db::DatabaseConnection;
+use sea_orm::DatabaseConnection;
 use sqlx::SqlitePool;
 
 mod install_validation_steps;
@@ -9,7 +9,7 @@ mod storage_diagnostics_steps;
 
 #[derive(Debug, World)]
 #[world(init = Self::new)]
-pub struct DbWorld {
+pub struct PlatformBddWorld {
     #[allow(dead_code)]
     db: DatabaseConnection,
     #[allow(dead_code)]
@@ -39,7 +39,7 @@ pub struct DbWorld {
     pub restore_production_dir: Option<std::path::PathBuf>,
 }
 
-impl DbWorld {
+impl PlatformBddWorld {
     async fn new() -> Self {
         let tmp = tempfile::tempdir().expect("failed to create temp dir");
         let db_path = tmp.path().join("test.db");

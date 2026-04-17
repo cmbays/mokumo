@@ -4302,10 +4302,8 @@ name = "mokumo-db"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "cucumber",
  "kikan",
  "mokumo-core",
- "mokumo-shop",
  "password-auth",
  "rand 0.10.1",
  "rusqlite",
@@ -4313,7 +4311,6 @@ dependencies = [
  "sea-orm-migration",
  "serde_json",
  "sqlx",
- "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -4369,6 +4366,7 @@ dependencies = [
  "mokumo-core",
  "mokumo-db",
  "regex",
+ "rusqlite",
  "sea-orm",
  "sea-orm-migration",
  "serde",

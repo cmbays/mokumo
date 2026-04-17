@@ -8,7 +8,7 @@
 /// - PRAGMA user_version stamped correctly after full migration run
 /// - PRAGMA application_id stamped correctly after full migration run
 /// - All migrations return use_transaction() == Some(true)
-use mokumo_db::{check_application_id, ensure_auto_vacuum};
+use kikan::db::{check_application_id, ensure_auto_vacuum};
 use mokumo_shop::db::{check_schema_compatibility, initialize_database};
 use sea_orm_migration::MigratorTrait as _;
 
@@ -60,7 +60,7 @@ fn check_application_id_fails_for_wrong_id() {
 
     let err = check_application_id(&db_path).unwrap_err();
     assert!(
-        matches!(err, mokumo_db::DatabaseSetupError::NotKikanDatabase { .. }),
+        matches!(err, kikan::db::DatabaseSetupError::NotKikanDatabase { .. }),
         "Expected NotKikanDatabase, got: {err:?}"
     );
 }
@@ -131,7 +131,7 @@ async fn check_schema_compatibility_fails_unknown_migration() {
 
     let err = check_schema_compatibility(&db_path).unwrap_err();
     match err {
-        mokumo_db::DatabaseSetupError::SchemaIncompatible {
+        kikan::db::DatabaseSetupError::SchemaIncompatible {
             unknown_migrations, ..
         } => {
             assert!(
@@ -197,7 +197,7 @@ async fn initialize_database_intercepts_dberr_custom_for_downgrade() {
     assert!(
         matches!(
             err,
-            mokumo_db::DatabaseSetupError::SchemaIncompatible { .. }
+            kikan::db::DatabaseSetupError::SchemaIncompatible { .. }
         ),
         "Expected SchemaIncompatible from DbErr::Custom interception, got: {err:?}"
     );

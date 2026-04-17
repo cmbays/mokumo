@@ -1,4 +1,4 @@
-use mokumo_db::ensure_auto_vacuum;
+use kikan::db::ensure_auto_vacuum;
 use mokumo_shop::db::initialize_database;
 use sqlx::Row;
 
@@ -63,7 +63,7 @@ async fn pragmas_are_set_correctly() {
         .get(0);
     // mmap_size is platform-conditional: 256 MB on Linux, disabled (0) elsewhere.
     // See CONFIGURED_MMAP_SIZE in crates/db/src/lib.rs.
-    assert_eq!(mmap_size, mokumo_db::CONFIGURED_MMAP_SIZE);
+    assert_eq!(mmap_size, kikan::db::CONFIGURED_MMAP_SIZE);
 
     drop(db);
 }

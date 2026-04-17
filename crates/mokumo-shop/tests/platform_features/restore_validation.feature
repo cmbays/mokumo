@@ -20,12 +20,12 @@ Feature: Restore candidate validation
   Scenario: File with non-Mokumo application_id fails identity check
     Given a SQLite file with application_id 0xDEADBEEF
     When the file is validated as a restore candidate
-    Then validation fails with NotMokumoDatabase
+    Then validation fails with NotKikanDatabase
 
   Scenario: Non-SQLite file fails identity check
     Given a file that is not a valid SQLite database
     When the file is validated as a restore candidate
-    Then validation fails with NotMokumoDatabase
+    Then validation fails with NotKikanDatabase
 
   # --- Integrity check ---
 

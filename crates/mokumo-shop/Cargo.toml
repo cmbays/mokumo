@@ -33,6 +33,7 @@ uuid = { workspace = true }
 [dev-dependencies]
 cucumber = { workspace = true }
 mokumo-db = { workspace = true }
+rusqlite = { workspace = true }
 sqlx = { workspace = true }
 tempfile = "3"
 tower = { workspace = true }
@@ -45,5 +46,10 @@ bdd = []
 
 [[test]]
 name = "bdd"
+harness = false
+required-features = ["bdd"]
+
+[[test]]
+name = "platform_bdd"
 harness = false
 required-features = ["bdd"]

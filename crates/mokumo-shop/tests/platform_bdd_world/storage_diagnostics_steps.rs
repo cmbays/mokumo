@@ -1,23 +1,23 @@
-use super::DbWorld;
+use super::PlatformBddWorld;
 use cucumber::{given, then, when};
 
 // --- Given steps ---
 
 /// Fresh database with no deletions: freelist is negligible, fragmentation < 20%.
 #[given("a database with no deleted rows")]
-async fn no_deleted_rows(_w: &mut DbWorld) {
-    // Default DbWorld starts with a fresh migrated database — no deletions.
+async fn no_deleted_rows(_w: &mut PlatformBddWorld) {
+    // Default PlatformBddWorld starts with a fresh migrated database — no deletions.
 }
 
 #[given("an empty newly created database")]
-async fn empty_new_database(_w: &mut DbWorld) {
-    // Default DbWorld is already an empty newly created database.
+async fn empty_new_database(_w: &mut PlatformBddWorld) {
+    // Default PlatformBddWorld is already an empty newly created database.
 }
 
 /// Insert enough rows to occupy multiple pages, then delete all of them so the
 /// freelist / page_count ratio exceeds 20 %.
 #[given("a database where more than 20 percent of pages are free")]
-async fn heavily_fragmented(w: &mut DbWorld) {
+async fn heavily_fragmented(w: &mut PlatformBddWorld) {
     // Create a scratch table that is wide enough for each row to fill most of a page.
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS _frag_scratch (id INTEGER PRIMARY KEY, data BLOB NOT NULL)",
@@ -53,7 +53,7 @@ async fn heavily_fragmented(w: &mut DbWorld) {
 /// SQLite happens to consolidate pages the ratio will be even lower, which still means
 /// vacuum_needed = false — the only guarantee the scenario requires.
 #[given("a database where exactly 20 percent of pages are free")]
-async fn boundary_fragmentation(w: &mut DbWorld) {
+async fn boundary_fragmentation(w: &mut PlatformBddWorld) {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS _bound_scratch (id INTEGER PRIMARY KEY, data BLOB NOT NULL)",
     )
@@ -78,7 +78,7 @@ async fn boundary_fragmentation(w: &mut DbWorld) {
 
 /// Remove the WAL file if it exists so wal_size_bytes == 0.
 #[given("a database with no WAL file present")]
-async fn no_wal_file(w: &mut DbWorld) {
+async fn no_wal_file(w: &mut PlatformBddWorld) {
     // WAL file is "{db_path}-wal". Removing it is safe for a test database that is
     // not currently using WAL journal mode for this connection (we hold an SQLx pool
     // in WAL mode, so the WAL should be empty after checkpoint).
@@ -97,7 +97,7 @@ async fn no_wal_file(w: &mut DbWorld) {
 
 /// Write to the database to ensure a WAL file exists, and record its expected size.
 #[given("a database with an active WAL file of known size")]
-async fn active_wal_file(w: &mut DbWorld) {
+async fn active_wal_file(w: &mut PlatformBddWorld) {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS _wal_scratch (id INTEGER PRIMARY KEY, data TEXT NOT NULL)",
     )
@@ -126,7 +126,7 @@ async fn active_wal_file(w: &mut DbWorld) {
 // --- When steps ---
 
 #[when("storage diagnostics are collected")]
-async fn collect_storage_diagnostics(w: &mut DbWorld) {
+async fn collect_storage_diagnostics(w: &mut PlatformBddWorld) {
     let db_path = w.db_path.clone();
     let result = tokio::task::spawn_blocking(move || kikan::db::diagnose_database(&db_path))
         .await
@@ -137,7 +137,7 @@ async fn collect_storage_diagnostics(w: &mut DbWorld) {
 // --- Then steps ---
 
 #[then("vacuum_needed is false")]
-async fn vacuum_not_needed(w: &mut DbWorld) {
+async fn vacuum_not_needed(w: &mut PlatformBddWorld) {
     let diag = w
         .last_db_diagnostics
         .as_ref()
@@ -160,7 +160,7 @@ async fn vacuum_not_needed(w: &mut DbWorld) {
 }
 
 #[then("vacuum_needed is true")]
-async fn vacuum_needed(w: &mut DbWorld) {
+async fn vacuum_needed(w: &mut PlatformBddWorld) {
     let diag = w
         .last_db_diagnostics
         .as_ref()
@@ -183,7 +183,7 @@ async fn vacuum_needed(w: &mut DbWorld) {
 }
 
 #[then("wal_size_bytes is 0")]
-async fn wal_size_is_zero(w: &mut DbWorld) {
+async fn wal_size_is_zero(w: &mut PlatformBddWorld) {
     let diag = w
         .last_db_diagnostics
         .as_ref()
@@ -198,7 +198,7 @@ async fn wal_size_is_zero(w: &mut DbWorld) {
 }
 
 #[then("wal_size_bytes matches the size of the WAL file")]
-async fn wal_size_matches(w: &mut DbWorld) {
+async fn wal_size_matches(w: &mut PlatformBddWorld) {
     let diag = w
         .last_db_diagnostics
         .as_ref()

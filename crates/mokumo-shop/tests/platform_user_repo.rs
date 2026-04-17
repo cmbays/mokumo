@@ -1,11 +1,9 @@
 //! Integration tests for `kikan::auth::SeaOrmUserRepo`.
 //!
-//! These tests live in `crates/db/tests/` (not in kikan) because they need
+//! These tests live in mokumo-shop's integration suite because they need
 //! the full mokumo schema (users, roles seed data, settings, activity_log,
-//! `updated_at` triggers) — all of which the `mokumo_db` migrator owns.
-//! kikan cannot invoke that migrator without violating I4 DAG direction.
-//! When `crates/db` dissolves in S3.1b, these tests move to the garment
-//! crate's integration test suite.
+//! `updated_at` triggers) — all owned by the mokumo-shop migrator. kikan
+//! cannot invoke that migrator without violating I4 DAG direction.
 
 use kikan::auth::{CreateUser, RoleId, SeaOrmUserRepo, UserId, UserRepository};
 use mokumo_shop::db::initialize_database;

@@ -10,12 +10,12 @@
 use cucumber::{given, then, when};
 use sea_orm_migration::MigratorTrait as _;
 
-use super::DbWorld;
+use super::PlatformBddWorld;
 
 // ── Scenario 1 & 2: Given — set up DB at version N ────────────────────────────────────────────
 
 #[given(expr = "an existing database at schema version {int}")]
-async fn given_database_at_schema_version(w: &mut DbWorld, version: u32) {
+async fn given_database_at_schema_version(w: &mut PlatformBddWorld, version: u32) {
     let tmp = tempfile::tempdir().unwrap();
     let db_path = tmp.path().join("mokumo.db");
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
@@ -38,7 +38,7 @@ async fn given_database_at_schema_version(w: &mut DbWorld, version: u32) {
 }
 
 #[given(expr = "the database is at schema version {int}")]
-async fn given_db_at_schema_version(w: &mut DbWorld, version: u32) {
+async fn given_db_at_schema_version(w: &mut PlatformBddWorld, version: u32) {
     let tmp = tempfile::tempdir().unwrap();
     let db_path = tmp.path().join("mokumo.db");
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
@@ -59,7 +59,7 @@ async fn given_db_at_schema_version(w: &mut DbWorld, version: u32) {
 /// (real migrations start with "m20260321..."), ensuring the oldest fake backup is removed by
 /// rotation when the new real backup is created.
 #[given(expr = "backups exist from previous upgrades to versions {int}, {int}, and {int}")]
-async fn given_existing_backups(w: &mut DbWorld, v1: u32, v2: u32, v3: u32) {
+async fn given_existing_backups(w: &mut PlatformBddWorld, v1: u32, v2: u32, v3: u32) {
     let db_path = w.ms_db_path.as_ref().unwrap().clone();
     let dir = db_path.parent().unwrap().to_path_buf();
     let db_name = db_path.file_name().unwrap().to_str().unwrap().to_string();
@@ -86,7 +86,7 @@ async fn given_existing_backups(w: &mut DbWorld, v1: u32, v2: u32, v3: u32) {
 // ── Scenario 3: Given — no database file ──────────────────────────────────────────────────────
 
 #[given("no database file exists")]
-async fn given_no_database_file(w: &mut DbWorld) {
+async fn given_no_database_file(w: &mut PlatformBddWorld) {
     let tmp = tempfile::tempdir().unwrap();
     let db_path = tmp.path().join("mokumo.db");
     // db_path intentionally NOT created
@@ -97,8 +97,8 @@ async fn given_no_database_file(w: &mut DbWorld) {
 // ── Scenario 4: Given — fully migrated DB ─────────────────────────────────────────────────────
 
 #[given("a database with all current migrations applied")]
-async fn given_fully_migrated_db(w: &mut DbWorld) {
-    // DbWorld::new() already creates a fully-migrated temp DB — record table count.
+async fn given_fully_migrated_db(w: &mut PlatformBddWorld) {
+    // PlatformBddWorld::new() already creates a fully-migrated temp DB — record table count.
     let count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
     )
@@ -111,7 +111,7 @@ async fn given_fully_migrated_db(w: &mut DbWorld) {
 // ── Scenario 5: Given — migration registry ────────────────────────────────────────────────────
 
 #[given("the migration registry")]
-async fn given_migration_registry(_w: &mut DbWorld) {
+async fn given_migration_registry(_w: &mut PlatformBddWorld) {
     // No setup required — the migration registry is static.
 }
 
@@ -124,13 +124,13 @@ async fn given_migration_registry(_w: &mut DbWorld) {
 /// 2. Locate the newest backup file in the temp dir and store it
 /// 3. Apply the Nth migration via `Migrator::up(&db, Some(N))`
 #[when(expr = "a schema upgrade to version {int} runs")]
-async fn when_schema_upgrade_to_version(w: &mut DbWorld, version: u32) {
+async fn when_schema_upgrade_to_version(w: &mut PlatformBddWorld, version: u32) {
     let db_path = w.ms_db_path.as_ref().unwrap().clone();
     let tmp_dir = w.ms_tmp.as_ref().unwrap().path().to_path_buf();
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
 
     // Guard 2: backup before migration
-    let _backup = mokumo_db::pre_migration_backup(&db_path)
+    let _backup = kikan::backup::pre_migration_backup(&db_path)
         .await
         .expect("pre_migration_backup should succeed");
 
@@ -157,10 +157,10 @@ async fn when_schema_upgrade_to_version(w: &mut DbWorld, version: u32) {
 // ── Scenario 3: When — first initialization ───────────────────────────────────────────────────
 
 #[when("the database is initialized for the first time")]
-async fn when_initialized_for_first_time(w: &mut DbWorld) {
+async fn when_initialized_for_first_time(w: &mut PlatformBddWorld) {
     let db_path = w.ms_db_path.as_ref().unwrap().clone();
     // pre_migration_backup returns Ok(None) silently when no file exists
-    let result = mokumo_db::pre_migration_backup(&db_path)
+    let result = kikan::backup::pre_migration_backup(&db_path)
         .await
         .expect("pre_migration_backup should succeed (skip) when DB does not exist");
     assert!(
@@ -172,7 +172,7 @@ async fn when_initialized_for_first_time(w: &mut DbWorld) {
 // ── Scenario 4: When — bad migration ──────────────────────────────────────────────────────────
 
 #[when("a migration containing invalid SQL is applied")]
-async fn when_bad_migration_applied(w: &mut DbWorld) {
+async fn when_bad_migration_applied(w: &mut PlatformBddWorld) {
     use sea_orm_migration::prelude::*;
 
     struct BadMigration;
@@ -215,7 +215,7 @@ async fn when_bad_migration_applied(w: &mut DbWorld) {
         }
     }
 
-    // Attempt the bad migration against the DbWorld's fully-migrated DB.
+    // Attempt the bad migration against the PlatformBddWorld's fully-migrated DB.
     // The good migrations (1-7) are already applied so only BadMigration runs.
     let result = MigratorWithBad::up(&w.db, None).await;
     w.ms_migration_failed = result.is_err();
@@ -227,7 +227,7 @@ async fn when_bad_migration_applied(w: &mut DbWorld) {
 /// The actual backup filename encodes the full migration version string. We verify that
 /// a backup file with the standard naming prefix exists, regardless of the exact suffix.
 #[then(expr = "a backup file {string} is created")]
-async fn then_backup_file_created(w: &mut DbWorld, _expected_name: String) {
+async fn then_backup_file_created(w: &mut PlatformBddWorld, _expected_name: String) {
     let backup = w
         .ms_backup_path
         .as_ref()
@@ -240,12 +240,12 @@ async fn then_backup_file_created(w: &mut DbWorld, _expected_name: String) {
 }
 
 #[then("the backup is a valid Mokumo database that passes the startup guard chain")]
-async fn then_backup_passes_guard_chain(w: &mut DbWorld) {
+async fn then_backup_passes_guard_chain(w: &mut PlatformBddWorld) {
     let backup_path = w.ms_backup_path.as_ref().unwrap().clone();
     let backup_url = format!("sqlite:{}?mode=rwc", backup_path.display());
 
     // Guard 1: valid Mokumo database (PRAGMA application_id)
-    mokumo_db::check_application_id(&backup_path).expect("Backup should pass check_application_id");
+    kikan::db::check_application_id(&backup_path).expect("Backup should pass check_application_id");
 
     // Guard 2 intentionally omitted — see upgrade_path.rs for the rationale.
     // Backing up a backup would be noise and does not test the guard chain.
@@ -275,7 +275,7 @@ async fn then_backup_passes_guard_chain(w: &mut DbWorld) {
 }
 
 #[then("the backup contains the same row counts as the source database")]
-async fn then_backup_has_same_row_counts(w: &mut DbWorld) {
+async fn then_backup_has_same_row_counts(w: &mut PlatformBddWorld) {
     // Compare the backup's seaql_migrations count as captured BEFORE initialize_database
     // ran in the previous Then step. initialize_database applies remaining migrations which
     // would inflate the count — the pre-upgrade snapshot is the faithful comparison point.
@@ -295,7 +295,7 @@ async fn then_backup_has_same_row_counts(w: &mut DbWorld) {
 // ── Scenario 2 Then: rotation ─────────────────────────────────────────────────────────────────
 
 #[then(expr = "a backup of version {int} is created before upgrading")]
-async fn then_backup_of_version_created(w: &mut DbWorld, _version: u32) {
+async fn then_backup_of_version_created(w: &mut PlatformBddWorld, _version: u32) {
     let backup = w
         .ms_backup_path
         .as_ref()
@@ -307,7 +307,7 @@ async fn then_backup_of_version_created(w: &mut DbWorld, _version: u32) {
 }
 
 #[then("the oldest backup is removed")]
-async fn then_oldest_backup_removed(w: &mut DbWorld) {
+async fn then_oldest_backup_removed(w: &mut PlatformBddWorld) {
     let oldest = w
         .ms_oldest_backup
         .as_ref()
@@ -320,7 +320,7 @@ async fn then_oldest_backup_removed(w: &mut DbWorld) {
 }
 
 #[then("three backup files remain")]
-async fn then_three_backups_remain(w: &mut DbWorld) {
+async fn then_three_backups_remain(w: &mut PlatformBddWorld) {
     let db_path = w.ms_db_path.as_ref().unwrap();
     let dir = db_path.parent().unwrap();
     let db_name = db_path.file_name().unwrap().to_str().unwrap();
@@ -340,7 +340,7 @@ async fn then_three_backups_remain(w: &mut DbWorld) {
 // ── Scenario 3 Then: no backup on first run ───────────────────────────────────────────────────
 
 #[then("no backup file is created")]
-async fn then_no_backup_file(w: &mut DbWorld) {
+async fn then_no_backup_file(w: &mut PlatformBddWorld) {
     let dir = w.ms_tmp.as_ref().unwrap().path();
     let mut count = 0u32;
     let mut entries = tokio::fs::read_dir(dir).await.unwrap();
@@ -359,7 +359,7 @@ async fn then_no_backup_file(w: &mut DbWorld) {
 // ── Scenario 4 Then: failed migration atomicity ───────────────────────────────────────────────
 
 #[then("the migration should fail")]
-async fn then_migration_failed(w: &mut DbWorld) {
+async fn then_migration_failed(w: &mut PlatformBddWorld) {
     assert!(
         w.ms_migration_failed,
         "Expected the bad migration to fail with an error"
@@ -367,7 +367,7 @@ async fn then_migration_failed(w: &mut DbWorld) {
 }
 
 #[then("the database schema should be identical to before the attempt")]
-async fn then_schema_identical(w: &mut DbWorld) {
+async fn then_schema_identical(w: &mut PlatformBddWorld) {
     let expected = w
         .ms_table_count_before
         .expect("ms_table_count_before should be set by the Given step");
@@ -385,7 +385,7 @@ async fn then_schema_identical(w: &mut DbWorld) {
 }
 
 #[then("no partial changes should be visible")]
-async fn then_no_partial_changes(w: &mut DbWorld) {
+async fn then_no_partial_changes(w: &mut PlatformBddWorld) {
     let count: (i64,) =
         sqlx::query_as("SELECT COUNT(*) FROM sqlite_master WHERE name = 'bdd_fail_table'")
             .fetch_one(&w.pool)
@@ -400,7 +400,7 @@ async fn then_no_partial_changes(w: &mut DbWorld) {
 // ── Scenario 5 Then: all migrations transactional ─────────────────────────────────────────────
 
 #[then("every registered migration should be marked as transactional")]
-async fn then_all_migrations_transactional(_w: &mut DbWorld) {
+async fn then_all_migrations_transactional(_w: &mut PlatformBddWorld) {
     use mokumo_shop::migrations::Migrator;
 
     let all_ok = Migrator::migrations()

@@ -1,9 +1,8 @@
 use cucumber::World as _;
 
-#[path = "bdd_world/mod.rs"]
-mod bdd_world;
+#[path = "platform_bdd_world/mod.rs"]
+mod platform_bdd_world;
 
-/// Tags that exempt a scenario from the fail-on-skipped gate.
 const SKIP_EXEMPT_TAGS: &[&str] = &["wip", "allow.skipped", "future"];
 
 fn is_exempt(tags: &[String]) -> bool {
@@ -12,16 +11,13 @@ fn is_exempt(tags: &[String]) -> bool {
 
 #[tokio::main]
 async fn main() {
-    bdd_world::DbWorld::cucumber()
+    platform_bdd_world::PlatformBddWorld::cucumber()
         .fail_on_skipped_with(|feature, rule, scenario| {
-            // Only fail on skipped if the scenario is NOT exempt.
-            // Returning true = "yes, fail this skipped scenario".
-            // Returning false = "allow this scenario to be skipped".
             !is_exempt(&feature.tags)
                 && rule.is_none_or(|r| !is_exempt(&r.tags))
                 && !is_exempt(&scenario.tags)
         })
-        .filter_run_and_exit("tests/features", |feature, _, sc| {
+        .filter_run_and_exit("tests/platform_features", |feature, _, sc| {
             let dominated_by_wip =
                 feature.tags.iter().any(|t| t == "wip") || sc.tags.iter().any(|t| t == "wip");
             !dominated_by_wip

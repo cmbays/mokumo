@@ -1,4 +1,4 @@
-use mokumo_db::pre_migration_backup;
+use kikan::backup::pre_migration_backup;
 use mokumo_shop::db::initialize_database;
 
 #[tokio::test]
