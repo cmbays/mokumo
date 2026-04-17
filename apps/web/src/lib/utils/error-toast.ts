@@ -1,5 +1,6 @@
 import type { ErrorBody } from "$lib/types/kikan/ErrorBody";
 import type { ErrorCode } from "$lib/types/kikan/ErrorCode";
+import type { ShopErrorCode } from "$lib/types/shop/ShopErrorCode";
 import { toast } from "$lib/components/toast";
 
 /**
@@ -7,12 +8,12 @@ import { toast } from "$lib/components/toast";
  * Security-sensitive codes (unauthorized, internal_error, etc.) fall through
  * to the caller-supplied fallback to avoid leaking implementation details.
  *
- * Typed as Set<ErrorCode> so the compiler catches invalid entries (typos are
- * a compile error). New error codes default to the caller-supplied fallback —
- * intentional: unknown codes are treated as security-sensitive until
- * explicitly allow-listed here.
+ * Typed as Set<ErrorCode | ShopErrorCode> so the compiler catches invalid
+ * entries (typos are a compile error). New error codes default to the
+ * caller-supplied fallback — intentional: unknown codes are treated as
+ * security-sensitive until explicitly allow-listed here.
  */
-const USER_VISIBLE_CODES: Set<ErrorCode> = new Set([
+const USER_VISIBLE_CODES: Set<ErrorCode | ShopErrorCode> = new Set([
   "rate_limited",
   "invalid_credentials",
   "not_found",
