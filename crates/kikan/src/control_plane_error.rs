@@ -123,6 +123,14 @@ impl From<ControlPlaneError> for AppError {
                 AppError::StateConflict(kind.error_code(), kind.message().to_string())
             }
             ControlPlaneError::Validation { field, message } => {
+                // `AppError::BadRequest` renders 400 without a structured
+                // `details` envelope. Routing through `DomainError::Validation`
+                // would surface the `{field: [message]}` map but render 422,
+                // breaking the `control_plane_error_variants.feature` pin of
+                // `Validation → 400`. Keep the HTTP body flat (the `field`
+                // prefix on the message preserves the field-context for
+                // clients) and defer the "add details to 400" question to an
+                // `AppError::BadRequestWithDetails` variant follow-up.
                 AppError::BadRequest(ErrorCode::ValidationError, format!("{field}: {message}"))
             }
             ControlPlaneError::PermissionDenied => {

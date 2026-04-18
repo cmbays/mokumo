@@ -61,7 +61,14 @@ impl From<BootstrapError> for ControlPlaneError {
                 }
             }
             BootstrapError::Domain(DomainError::Validation { details }) => {
-                let (field, message) = details
+                // HashMap iteration order is non-deterministic; sort by key so
+                // repeated conversions with the same input always pick the
+                // same field. Keeps handler output reproducible and tests
+                // stable when a composite path later surfaces multiple
+                // field-level errors.
+                let mut entries: Vec<_> = details.into_iter().collect();
+                entries.sort_by(|a, b| a.0.cmp(&b.0));
+                let (field, message) = entries
                     .into_iter()
                     .next()
                     .map(|(f, msgs)| (f, msgs.into_iter().next().unwrap_or_default()))
@@ -767,9 +774,19 @@ impl SeaOrmUserRepo {
 
     /// Bootstrap the first admin account: atomically create the admin user +
     /// 10 recovery codes + `ActivityAction::Bootstrap` entry, but only if no
-    /// active admin exists. The uniqueness guard runs *inside* the
-    /// transaction so concurrent bootstraps race-safely; the second caller
-    /// sees `BootstrapError::AlreadyBootstrapped`.
+    /// active admin exists.
+    ///
+    /// The guard runs inside the transaction so sequential callers race-safely
+    /// — a second call on a non-empty admin set rolls back and returns
+    /// `BootstrapError::AlreadyBootstrapped`. This is NOT, however, safe under
+    /// *concurrent* callers: SQLite's default `DEFERRED` transaction takes a
+    /// write lock at the first write, not at `BEGIN`, so two in-flight
+    /// bootstraps could both observe `existing_admins == 0` before either
+    /// inserts. In the current deployment model bootstrap is a single-shot
+    /// first-run operation protected by application-level coordination
+    /// (`setup_token`, `setup_in_progress`), so the DEFERRED race is
+    /// unreachable. Adding a partial unique index on `(role_id, deleted_at)`
+    /// is tracked as a follow-up if the threat model ever changes.
     pub async fn bootstrap_admin_with_codes(
         &self,
         email: &str,
@@ -1850,6 +1867,155 @@ mod tests {
         assert!(
             matches!(result, Err(DomainError::NotFound { .. })),
             "expected NotFound, got {result:?}"
+        );
+    }
+
+    async fn activity_count(db: &DatabaseConnection, entity_type: &str, action: &str) -> i64 {
+        let pool = db.get_sqlite_connection_pool();
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM activity_log WHERE entity_type = ?1 AND action = ?2",
+        )
+        .bind(entity_type)
+        .bind(action)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn create_user_with_codes_success_persists_user_codes_and_activity() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        let req = CreateUser {
+            email: "composite@shop.local".to_string(),
+            name: "Composite".to_string(),
+            password: "testpassword123".to_string(),
+            role_id: RoleId::new(2),
+        };
+        let (user, codes) = repo.create_user_with_codes(&req, 10).await.unwrap();
+
+        assert_eq!(user.email, "composite@shop.local");
+        assert_eq!(codes.len(), 10, "should return exactly 10 plaintext codes");
+
+        let (_, hash) = repo
+            .find_by_email_with_hash("composite@shop.local")
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!hash.is_empty(), "password hash must be set");
+
+        let stored = UserEntity::find()
+            .filter(entity::Column::Id.eq(user.id.get()))
+            .one(&db)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(
+            stored.recovery_code_hash.is_some(),
+            "recovery_code_hash must be stored"
+        );
+
+        assert_eq!(
+            activity_count(&db, "user", "created").await,
+            1,
+            "should log exactly one 'user.created' activity"
+        );
+    }
+
+    #[tokio::test]
+    async fn create_user_with_codes_rejects_zero_count() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        let req = CreateUser {
+            email: "zero@shop.local".to_string(),
+            name: "Zero".to_string(),
+            password: "pw".to_string(),
+            role_id: RoleId::new(2),
+        };
+        let err = repo.create_user_with_codes(&req, 0).await.unwrap_err();
+        match err {
+            DomainError::Validation { details } => {
+                assert!(
+                    details.contains_key("recovery_codes"),
+                    "details must name the rejected field, got {details:?}"
+                );
+            }
+            other => panic!("expected DomainError::Validation, got {other:?}"),
+        }
+
+        // Rollback is implicit: no user row and no activity row.
+        let found = repo.find_by_email("zero@shop.local").await.unwrap();
+        assert!(found.is_none(), "rejected batch must not persist user");
+        assert_eq!(activity_count(&db, "user", "created").await, 0);
+    }
+
+    #[tokio::test]
+    async fn create_user_with_codes_rejects_count_above_sixteen() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let req = CreateUser {
+            email: "toomany@shop.local".to_string(),
+            name: "Too Many".to_string(),
+            password: "pw".to_string(),
+            role_id: RoleId::new(2),
+        };
+        let err = repo.create_user_with_codes(&req, 17).await.unwrap_err();
+        assert!(
+            matches!(err, DomainError::Validation { .. }),
+            "expected Validation for count > 16, got {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn bootstrap_admin_with_codes_success_persists_admin_and_activity() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        let (user, codes) = repo
+            .bootstrap_admin_with_codes("founder@shop.local", "Founder", "initial-pw")
+            .await
+            .unwrap();
+
+        assert_eq!(user.email, "founder@shop.local");
+        assert_eq!(user.role_id, RoleId::ADMIN);
+        assert!(user.is_active);
+        assert_eq!(codes.len(), 10);
+
+        assert_eq!(
+            activity_count(&db, "user", "bootstrap").await,
+            1,
+            "should log a 'user.bootstrap' activity"
+        );
+    }
+
+    #[tokio::test]
+    async fn bootstrap_admin_with_codes_rejects_when_admin_exists() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        repo.bootstrap_admin_with_codes("first@shop.local", "First", "pw")
+            .await
+            .unwrap();
+
+        let err = repo
+            .bootstrap_admin_with_codes("second@shop.local", "Second", "pw")
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, BootstrapError::AlreadyBootstrapped),
+            "second bootstrap must be rejected, got {err:?}"
+        );
+
+        // Second call rolled back — no second user, no new activity entry.
+        let found = repo.find_by_email("second@shop.local").await.unwrap();
+        assert!(found.is_none(), "rejected bootstrap must not persist user");
+        assert_eq!(
+            activity_count(&db, "user", "bootstrap").await,
+            1,
+            "only the first bootstrap should have an activity entry"
         );
     }
 }

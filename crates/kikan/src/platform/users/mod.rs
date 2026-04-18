@@ -3,12 +3,13 @@
 //! Lifted from `services/api/src/user/mod.rs` in Wave A.3a. These routes
 //! cover admin-only user mutations (soft delete, role update). They rely
 //! entirely on per-request extractors (`AuthSession`, `ProfileDb`) and
-//! carry no singleton dependencies — hence the router is `Router<()>`
-//! rather than a `Router<SomeDeps>`.
+//! carry no singleton dependencies — hence the router is generic over the
+//! outer Axum state (`Router<S>`) rather than a `Router<SomeDeps>`.
 //!
 //! Composite-method atomicity (create-with-codes, regenerate-with-log,
-//! bootstrap) is a separate follow-up (Wave A.3b): it requires new
-//! `UserRepo` methods and step definitions for `user_repo_atomicity.feature`.
+//! bootstrap) lives in the repository layer (`kikan::auth::repo`) and is
+//! covered by `user_repo_atomicity.feature` — that work landed in Wave
+//! A.3b together with the `BootstrapError` type.
 
 use axum::extract::Path;
 use axum::routing::{delete, patch};
