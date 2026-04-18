@@ -3,15 +3,13 @@ use std::time::{Duration, SystemTime};
 
 use axum::Json;
 use axum::extract::State;
-use kikan::auth::SeaOrmUserRepo;
-use kikan::auth::UserRepository;
-use kikan::auth::password;
 use kikan_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use kikan_types::error::ErrorCode;
 
-use crate::error::AppError;
-use crate::{PendingReset, SharedState};
-use kikan::ProfileDb;
+use super::{AuthRouterDeps, PendingReset};
+use crate::auth::password;
+use crate::auth::{SeaOrmUserRepo, UserRepository};
+use crate::{AppError, ProfileDb};
 
 const PIN_EXPIRY: Duration = Duration::from_secs(15 * 60);
 
@@ -47,7 +45,7 @@ fn recovery_html(pin: &str) -> String {
 }
 
 pub async fn forgot_password(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ForgotPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
@@ -62,7 +60,7 @@ pub async fn forgot_password(
                 email_hash = %hash_email_for_recovery_file(&req.email),
                 "forgot-password: no account found"
             );
-            let dummy_path = recovery_file_path_for_email(&state.recovery_dir, &req.email);
+            let dummy_path = recovery_file_path_for_email(&deps.recovery_dir, &req.email);
             return Ok(Json(serde_json::json!({
                 "message": "If an account with that email exists, a recovery file has been placed on the server.",
                 "recovery_file_path": dummy_path.to_string_lossy()
@@ -85,7 +83,7 @@ pub async fn forgot_password(
         AppError::InternalError("An internal error occurred".into())
     })?;
 
-    let dir = &state.recovery_dir;
+    let dir = &deps.recovery_dir;
     if let Err(e) = tokio::fs::create_dir_all(dir).await {
         tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
         return Err(AppError::InternalError("An internal error occurred".into()));
@@ -96,7 +94,7 @@ pub async fn forgot_password(
         return Err(AppError::InternalError("An internal error occurred".into()));
     }
 
-    state.reset_pins.insert(
+    deps.reset_pins.insert(
         req.email.clone(),
         PendingReset {
             pin_hash,
@@ -112,11 +110,11 @@ pub async fn forgot_password(
 }
 
 pub async fn reset_password(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let entry = state.reset_pins.get(&req.email).ok_or_else(|| {
+    let entry = deps.reset_pins.get(&req.email).ok_or_else(|| {
         AppError::BadRequest(ErrorCode::ValidationError, "No reset request found".into())
     })?;
     let (pin_hash, created_at) = (entry.pin_hash.clone(), entry.created_at);
@@ -126,7 +124,7 @@ pub async fn reset_password(
         .duration_since(created_at)
         .unwrap_or(Duration::ZERO);
     if elapsed > PIN_EXPIRY {
-        state.reset_pins.remove(&req.email);
+        deps.reset_pins.remove(&req.email);
         return Err(AppError::BadRequest(
             ErrorCode::ValidationError,
             "PIN expired".into(),
@@ -169,8 +167,8 @@ pub async fn reset_password(
             AppError::InternalError("Failed to update password".into())
         })?;
 
-    state.reset_pins.remove(&req.email);
-    let file_path = recovery_file_path_for_email(&state.recovery_dir, &req.email);
+    deps.reset_pins.remove(&req.email);
+    let file_path = recovery_file_path_for_email(&deps.recovery_dir, &req.email);
     let _ = std::fs::remove_file(file_path);
 
     Ok(Json(

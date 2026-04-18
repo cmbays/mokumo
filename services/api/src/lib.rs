@@ -1,5 +1,4 @@
 pub mod activity;
-pub mod auth;
 pub mod error;
 pub mod graft;
 
@@ -47,9 +46,10 @@ use kikan::auth::Backend;
 use kikan::rate_limit;
 use kikan_types::HealthResponse;
 
-/// Path of the demo-reset endpoint, used both in route registration and in the
-/// auth middleware to bypass the 423 guard for the recovery mechanism.
-pub const DEMO_RESET_PATH: &str = "/api/demo/reset";
+/// Path of the demo-reset endpoint. Re-exported from
+/// `kikan::platform::auth::DEMO_RESET_PATH` for downstream callers that
+/// still reference the historic `mokumo_api::DEMO_RESET_PATH` path.
+pub use kikan::platform::auth::DEMO_RESET_PATH;
 
 /// Error returned by `setup_profile_db` and `prepare_database`.
 ///
@@ -63,11 +63,7 @@ pub struct ProfileDbError {
     pub backup_path: Option<std::path::PathBuf>,
 }
 
-/// A pending file-drop password reset entry.
-pub struct PendingReset {
-    pub pin_hash: String,
-    pub created_at: std::time::SystemTime,
-}
+pub use kikan::platform::auth::PendingReset;
 
 /// Configuration for the Mokumo server.
 ///
@@ -111,9 +107,9 @@ pub struct MokumoAppState {
     /// Directory where recovery files are placed for file-drop password reset.
     pub recovery_dir: PathBuf,
     /// Rate limiter for recovery code verification attempts (5 per 15 min per email).
-    pub recovery_limiter: rate_limit::RateLimiter,
+    pub recovery_limiter: Arc<rate_limit::RateLimiter>,
     /// Rate limiter for recovery code regeneration attempts (3 per hour per user).
-    pub regen_limiter: rate_limit::RateLimiter,
+    pub regen_limiter: Arc<rate_limit::RateLimiter>,
     /// Rate limiter for profile switch attempts (3 per 15 min per user).
     pub switch_limiter: rate_limit::RateLimiter,
     /// True until the first profile switch completes (set false after active_profile is written).
@@ -141,7 +137,7 @@ pub struct MokumoAppState {
     pub profile_db_initializer: kikan::platform_state::SharedProfileDbInitializer,
     /// Rate limiter for login attempts (10 per 15 min per email, LAN-mode policy).
     /// Keyed by email — fast in-memory guard before DB-backed account lockout.
-    pub login_limiter: rate_limit::RateLimiter,
+    pub login_limiter: Arc<rate_limit::RateLimiter>,
     /// Debug-only WebSocket heartbeat interval in milliseconds.
     /// Set from --ws-ping-ms flag; absent in release builds.
     #[cfg(debug_assertions)]
@@ -201,6 +197,21 @@ impl MokumoAppState {
             is_first_launch: self.is_first_launch.clone(),
             setup_completed: self.setup_completed.clone(),
             profile_db_initializer: self.profile_db_initializer.clone(),
+        }
+    }
+}
+
+impl From<&MokumoAppState> for kikan::platform::auth::AuthRouterDeps {
+    fn from(state: &MokumoAppState) -> Self {
+        Self {
+            platform: state.platform_state(),
+            login_limiter: state.login_limiter.clone(),
+            recovery_limiter: state.recovery_limiter.clone(),
+            regen_limiter: state.regen_limiter.clone(),
+            reset_pins: state.reset_pins.clone(),
+            recovery_dir: state.recovery_dir.clone(),
+            setup_token: state.setup_token.clone(),
+            setup_in_progress: state.setup_in_progress.clone(),
         }
     }
 }
@@ -905,11 +916,14 @@ fn build_app_inner(
         data_dir: config.data_dir.clone(),
         reset_pins: Arc::new(dashmap::DashMap::new()),
         recovery_dir: config.recovery_dir.clone(),
-        recovery_limiter: rate_limit::RateLimiter::new(
+        recovery_limiter: Arc::new(rate_limit::RateLimiter::new(
             rate_limit::DEFAULT_MAX_ATTEMPTS,
             rate_limit::DEFAULT_WINDOW,
-        ),
-        regen_limiter: rate_limit::RateLimiter::new(3, std::time::Duration::from_secs(3600)),
+        )),
+        regen_limiter: Arc::new(rate_limit::RateLimiter::new(
+            3,
+            std::time::Duration::from_secs(3600),
+        )),
         switch_limiter: rate_limit::RateLimiter::new(3, rate_limit::DEFAULT_WINDOW),
         is_first_launch: Arc::new(AtomicBool::new(first_launch)),
         restore_in_progress: Arc::new(AtomicBool::new(false)),
@@ -919,7 +933,7 @@ fn build_app_inner(
         profile_db_initializer: Arc::new(MokumoProfileDbInitializer),
         // Login rate limiter: 10 attempts per 15 min per email (LAN-mode policy per
         // platform deployment modes). In-memory; separate from DB-backed account lockout.
-        login_limiter: rate_limit::RateLimiter::new(10, rate_limit::DEFAULT_WINDOW),
+        login_limiter: Arc::new(rate_limit::RateLimiter::new(10, rate_limit::DEFAULT_WINDOW)),
         #[cfg(debug_assertions)]
         ws_ping_ms: config.ws_ping_ms,
     });
@@ -1000,6 +1014,19 @@ fn build_app_inner(
         mokumo_shop::shop_logo_protected_router().with_state(shop_logo_deps.clone()),
     );
 
+    let auth_deps = kikan::platform::auth::AuthRouterDeps::from(&*state);
+
+    // Auth-stated sub-router for protected auth endpoints. Uses its own
+    // `AuthRouterDeps` state; merged into `protected_routes` which runs
+    // on `SharedState`.
+    let protected_auth_routes = Router::new()
+        .nest("/api/auth", kikan::platform::auth::auth_me_router())
+        .route(
+            "/api/account/recovery-codes/regenerate",
+            post(kikan::platform::auth::regenerate_recovery_codes),
+        )
+        .with_state(auth_deps.clone());
+
     let protected_routes = Router::new()
         .nest(
             "/api/customers",
@@ -1010,21 +1037,17 @@ fn build_app_inner(
         .nest("/api/users", user::router())
         .nest("/api/activity", activity::router())
         .nest("/api/settings", settings::router())
-        .nest("/api/auth", auth::auth_me_router())
-        .route(
-            "/api/account/recovery-codes/regenerate",
-            post(auth::regenerate_recovery_codes),
-        )
         .route("/api/profile/switch", post(profile_switch::profile_switch))
         .route("/ws", get(ws::ws_handler))
+        .merge(protected_auth_routes)
         .merge(shop_upload_router)
         // Lifted from `services/api` in S4.1 — protected platform routes
         // (`/api/demo/reset`, `/api/diagnostics`, `/api/diagnostics/bundle`)
         // are owned by `kikan::platform` and bound to `PlatformState` here.
         .merge(kikan::platform_protected_routes().with_state(state.platform_state()))
         .route_layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            auth::require_auth_with_demo_auto_login,
+            state.platform_state(),
+            kikan::platform::auth::require_auth_with_demo_auto_login,
         ));
 
     // Restore routes: unauthenticated, 500 MB body limit for file uploads.
@@ -1047,8 +1070,14 @@ fn build_app_inner(
             "/api/shop",
             mokumo_shop::shop_logo_public_router().with_state(shop_logo_deps),
         )
-        .nest("/api/auth", auth::auth_router())
-        .nest("/api/setup", auth::setup_router())
+        .nest(
+            "/api/auth",
+            kikan::platform::auth::auth_router().with_state(auth_deps.clone()),
+        )
+        .nest(
+            "/api/setup",
+            kikan::platform::auth::setup_router().with_state(auth_deps.clone()),
+        )
         .merge(restore_routes)
         .merge(protected_routes);
 

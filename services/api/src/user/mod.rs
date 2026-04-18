@@ -5,8 +5,9 @@ use kikan::auth::{RoleId, UserId, UserService};
 use kikan_types::error::ErrorCode;
 use kikan_types::user::{UpdateUserRoleRequest, UserResponse};
 
+use kikan::platform::auth::AuthSessionType;
+
 use crate::SharedState;
-use crate::auth::AuthSessionType;
 use crate::error::AppError;
 
 pub fn router() -> Router<SharedState> {
