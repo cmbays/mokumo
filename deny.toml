@@ -5,9 +5,9 @@
 # CI: runs in the security job of .github/workflows/quality.yml
 
 [graph]
-# Match the workspace — exclude Tauri crates since they pull platform-specific
-# system deps that vary by host and are checked separately in desktop-e2e.
-exclude = ["mokumo-desktop", "kikan-tauri"]
+# Exclude mokumo-desktop: pulls Tauri + platform-specific system deps that vary
+# by host OS and are checked separately in the desktop-e2e job.
+exclude = ["mokumo-desktop"]
 
 # ──────────────────────────────────────────────────────────────────────
 # Advisories — deny crates with known vulnerabilities

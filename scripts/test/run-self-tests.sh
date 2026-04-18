@@ -38,6 +38,7 @@ cd "$ROOT"
 # Real-tree must pass.
 assert_exit "I1 real-tree pass" 0 bash scripts/check-i1-domain-purity.sh
 assert_exit "I2 real-tree pass" 0 bash scripts/check-i2-adapter-boundary.sh
+assert_exit "I2b real-tree pass" 0 bash scripts/check-i2b-tauri-type-ids.sh
 assert_exit "I3 real-tree pass" 0 bash scripts/check-i3-headless.sh
 assert_exit "I4 real-tree pass" 0 bash scripts/check-i4-dag.sh
 assert_exit "I5 real-tree pass" 0 bash scripts/check-i5-features.sh
@@ -61,6 +62,7 @@ rm -f "$R13_FIX"
 # Fixtures must fail.
 assert_exit "I1 fixture fail"   1 bash scripts/check-i1-domain-purity.sh "${FIX}/i1-violation/src"
 assert_exit "I2 fixture fail"   1 bash scripts/check-i2-adapter-boundary.sh "${FIX}/i2-violation/src"
+assert_exit "I2b fixture fail"  1 bash scripts/check-i2b-tauri-type-ids.sh  "${FIX}/i2b-violation/src"
 assert_exit "I5 fixture fail"   1 bash scripts/check-i5-features.sh        "${FIX}/i5-violation/Cargo.toml"
 
 echo

@@ -590,6 +590,8 @@ jobs:
         run: bash scripts/check-i1-domain-purity.sh
       - name: I2 — adapter boundary (source)
         run: bash scripts/check-i2-adapter-boundary.sh
+      - name: I2b — adapter boundary (Tauri type identifiers)
+        run: bash scripts/check-i2b-tauri-type-ids.sh
       - name: I3 — headless server zero-tauri (deps)
         run: bash scripts/check-i3-headless.sh
       - name: I4 — dependency DAG
