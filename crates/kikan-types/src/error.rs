@@ -67,6 +67,8 @@ pub enum ErrorCode {
     DemoSetupRequired,
     /// Account locked after too many consecutive failed login attempts.
     AccountLocked,
+    /// First-admin bootstrap attempted when an admin already exists.
+    AlreadyBootstrapped,
 }
 
 impl std::fmt::Display for ErrorCode {
@@ -92,6 +94,7 @@ impl std::fmt::Display for ErrorCode {
             Self::RestoreInProgress => write!(f, "restore_in_progress"),
             Self::DemoSetupRequired => write!(f, "demo_setup_required"),
             Self::AccountLocked => write!(f, "account_locked"),
+            Self::AlreadyBootstrapped => write!(f, "already_bootstrapped"),
         }
     }
 }
@@ -114,7 +117,7 @@ mod tests {
 
     /// Exhaustive list of all platform ErrorCode variants.
     /// Update the array size when adding variants — the compiler enforces the count.
-    fn all_error_codes() -> [ErrorCode; 20] {
+    fn all_error_codes() -> [ErrorCode; 21] {
         [
             ErrorCode::NotFound,
             ErrorCode::Conflict,
@@ -136,6 +139,7 @@ mod tests {
             ErrorCode::RestoreInProgress,
             ErrorCode::DemoSetupRequired,
             ErrorCode::AccountLocked,
+            ErrorCode::AlreadyBootstrapped,
         ]
     }
 
@@ -170,6 +174,7 @@ mod tests {
             (ErrorCode::RestoreInProgress, "\"restore_in_progress\""),
             (ErrorCode::DemoSetupRequired, "\"demo_setup_required\""),
             (ErrorCode::AccountLocked, "\"account_locked\""),
+            (ErrorCode::AlreadyBootstrapped, "\"already_bootstrapped\""),
         ];
         for (variant, expected) in cases {
             assert_eq!(
@@ -203,6 +208,7 @@ mod tests {
             ("\"restore_in_progress\"", ErrorCode::RestoreInProgress),
             ("\"demo_setup_required\"", ErrorCode::DemoSetupRequired),
             ("\"account_locked\"", ErrorCode::AccountLocked),
+            ("\"already_bootstrapped\"", ErrorCode::AlreadyBootstrapped),
         ];
         for (json, expected) in cases {
             let code: ErrorCode = serde_json::from_str(json).unwrap();
@@ -364,6 +370,7 @@ mod tests {
                 Just(ErrorCode::RestoreInProgress),
                 Just(ErrorCode::DemoSetupRequired),
                 Just(ErrorCode::AccountLocked),
+                Just(ErrorCode::AlreadyBootstrapped),
             ]
         }
 

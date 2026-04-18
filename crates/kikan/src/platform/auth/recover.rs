@@ -1,21 +1,20 @@
 use axum::Json;
 use axum::extract::State;
-use kikan::auth::SeaOrmUserRepo;
 use kikan_types::auth::RecoverRequest;
 use kikan_types::error::ErrorCode;
 
-use crate::SharedState;
-use crate::error::AppError;
-use kikan::ProfileDb;
+use super::AuthRouterDeps;
+use crate::auth::SeaOrmUserRepo;
+use crate::{AppError, ProfileDb};
 
 pub async fn recover(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<RecoverRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     // Intentionally returns 400 (not 429) so rate-limited responses are
     // indistinguishable from invalid-code responses (OWASP anti-enumeration).
-    if !state.recovery_limiter.check_and_record(&req.email) {
+    if !deps.recovery_limiter.check_and_record(&req.email) {
         tracing::warn!(email = %req.email, "Recovery code rate limit exceeded");
         return Err(AppError::BadRequest(
             ErrorCode::ValidationError,

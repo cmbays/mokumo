@@ -609,7 +609,7 @@ async fn recovery_file_placed(w: &mut ApiWorld) {
 }
 
 fn recovery_file_path(w: &ApiWorld) -> std::path::PathBuf {
-    mokumo_api::auth::reset::recovery_file_path_for_email(&w.recovery_dir, "admin@shop.local")
+    kikan::platform::auth::reset::recovery_file_path_for_email(&w.recovery_dir, "admin@shop.local")
 }
 
 #[then("the file contains a PIN for resetting the password")]

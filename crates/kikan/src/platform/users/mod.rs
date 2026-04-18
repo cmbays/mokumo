@@ -1,25 +1,42 @@
+//! User administration HTTP handlers.
+//!
+//! Lifted from `services/api/src/user/mod.rs` in Wave A.3a. These routes
+//! cover admin-only user mutations (soft delete, role update). They rely
+//! entirely on per-request extractors (`AuthSession`, `ProfileDb`) and
+//! carry no singleton dependencies — hence the router is generic over the
+//! outer Axum state (`Router<S>`) rather than a `Router<SomeDeps>`.
+//!
+//! Composite-method atomicity (create-with-codes, regenerate-with-log,
+//! bootstrap) lives in the repository layer (`kikan::auth::repo`) and is
+//! covered by `user_repo_atomicity.feature` — that work landed in Wave
+//! A.3b together with the `BootstrapError` type.
+
 use axum::extract::Path;
 use axum::routing::{delete, patch};
 use axum::{Json, Router};
-use kikan::auth::{RoleId, UserId, UserService};
 use kikan_types::error::ErrorCode;
 use kikan_types::user::{UpdateUserRoleRequest, UserResponse};
 
-use crate::SharedState;
-use crate::auth::AuthSessionType;
-use crate::error::AppError;
+use crate::AppError;
+use crate::ProfileDb;
+use crate::auth::{RoleId, SeaOrmUserRepo, User, UserId, UserService};
+use crate::db::DatabaseConnection;
+use crate::platform::auth::AuthSessionType;
 
-pub fn router() -> Router<SharedState> {
+pub fn user_admin_router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     Router::new()
         .route("/{id}", delete(soft_delete_user))
         .route("/{id}/role", patch(update_user_role))
 }
 
-fn user_service(db: kikan::db::DatabaseConnection) -> UserService<kikan::auth::SeaOrmUserRepo> {
-    UserService::new(kikan::auth::SeaOrmUserRepo::new(db))
+fn user_service(db: DatabaseConnection) -> UserService<SeaOrmUserRepo> {
+    UserService::new(SeaOrmUserRepo::new(db))
 }
 
-fn to_response(u: kikan::auth::User) -> UserResponse {
+fn to_response(u: User) -> UserResponse {
     UserResponse {
         id: u.id.get(),
         email: u.email,
@@ -40,7 +57,7 @@ fn to_response(u: kikan::auth::User) -> UserResponse {
 
 async fn soft_delete_user(
     auth_session: AuthSessionType,
-    kikan::ProfileDb(db): kikan::ProfileDb,
+    ProfileDb(db): ProfileDb,
     Path(id): Path<i64>,
 ) -> Result<Json<UserResponse>, AppError> {
     let caller = auth_session.user.as_ref().ok_or_else(|| {
@@ -62,7 +79,7 @@ async fn soft_delete_user(
 
 async fn update_user_role(
     auth_session: AuthSessionType,
-    kikan::ProfileDb(db): kikan::ProfileDb,
+    ProfileDb(db): ProfileDb,
     Path(id): Path<i64>,
     Json(req): Json<UpdateUserRoleRequest>,
 ) -> Result<Json<UserResponse>, AppError> {

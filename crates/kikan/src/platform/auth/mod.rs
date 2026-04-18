@@ -1,9 +1,28 @@
+//! Platform-side auth HTTP handlers — `/api/auth/*`, `/api/setup`, account
+//! recovery flow, and the request-gating middleware.
+//!
+//! Lifted from `services/api/src/auth/` in Wave A.2 (kikan workspace split
+//! PR-A). These handlers are platform concerns — identity, session
+//! establishment, recovery codes, first-admin setup — not shop-vertical
+//! logic, so they live under `kikan::platform` alongside diagnostics /
+//! backup-status / demo-reset.
+//!
+//! ## Composition
+//!
+//! `AuthRouterDeps` bundles a [`PlatformState`](crate::PlatformState) clone
+//! with auth-specific singletons (rate limiters, reset-PIN store,
+//! recovery-file directory, setup-token). The services/api mount site
+//! binds deps once per router via `.with_state(AuthRouterDeps::from(&*state))`
+//! so handlers extract it directly as `State<AuthRouterDeps>`. The
+//! `require_auth_with_demo_auto_login` middleware only needs
+//! `PlatformState` and is wired with `from_fn_with_state(state.platform_state(), …)`.
+
 pub mod recover;
 pub mod reset;
 
-pub use kikan::auth::{AuthenticatedUser, Backend, Credentials, ProfileUserId};
-
-use std::sync::atomic::Ordering;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -11,7 +30,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use axum_login::AuthSession;
-use kikan::auth::{RoleId, SeaOrmUserRepo, UserId};
+use dashmap::DashMap;
 use kikan_types::auth::{
     LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
 };
@@ -19,13 +38,45 @@ use kikan_types::error::ErrorCode;
 use kikan_types::user::UserResponse;
 use mokumo_core::activity::ActivityAction;
 
-use crate::SharedState;
-use crate::error::AppError;
-use kikan::ProfileDb;
+use crate::auth::{AuthenticatedUser, Backend, Credentials, RoleId, SeaOrmUserRepo, UserId};
+use crate::rate_limit::RateLimiter;
+use crate::{AppError, PlatformState, ProfileDb, SetupMode};
+
+/// Route path for the demo-reset handler. The auth-gate middleware allows
+/// this path through even while the demo profile is mid-install, so shop
+/// owners can always recover a broken demo database.
+pub const DEMO_RESET_PATH: &str = "/api/demo/reset";
 
 pub type AuthSessionType = AuthSession<Backend>;
 
-pub fn auth_router() -> Router<SharedState> {
+/// A pending file-drop password reset entry — the hashed PIN plus the
+/// wall-clock instant it was issued. Expired entries are pruned lazily by
+/// the reset_password handler.
+pub struct PendingReset {
+    pub pin_hash: String,
+    pub created_at: std::time::SystemTime,
+}
+
+/// Router deps for the auth / setup sub-routers.
+///
+/// Holds a `PlatformState` clone (for DB pools, active_profile, setup
+/// flags, data_dir) plus auth-specific singletons. Every field is O(1)
+/// clonable — `PlatformState` is already Arc-backed, the limiters and
+/// reset-PIN map are behind `Arc`, and the primitive fields (PathBuf,
+/// Option<String>, AtomicBool) clone cheaply.
+#[derive(Clone)]
+pub struct AuthRouterDeps {
+    pub platform: PlatformState,
+    pub login_limiter: Arc<RateLimiter>,
+    pub recovery_limiter: Arc<RateLimiter>,
+    pub regen_limiter: Arc<RateLimiter>,
+    pub reset_pins: Arc<DashMap<String, PendingReset>>,
+    pub recovery_dir: PathBuf,
+    pub setup_token: Option<String>,
+    pub setup_in_progress: Arc<AtomicBool>,
+}
+
+pub fn auth_router() -> Router<AuthRouterDeps> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
@@ -36,15 +87,15 @@ pub fn auth_router() -> Router<SharedState> {
 
 /// Separate router for /api/auth/me — must be behind the demo auto-login
 /// middleware so that demo mode sessions are created before the auth check.
-pub fn auth_me_router() -> Router<SharedState> {
+pub fn auth_me_router() -> Router<AuthRouterDeps> {
     Router::new().route("/me", get(me))
 }
 
-pub fn setup_router() -> Router<SharedState> {
+pub fn setup_router() -> Router<AuthRouterDeps> {
     Router::new().route("/", post(setup))
 }
 
-fn user_to_response(user: &kikan::auth::User) -> UserResponse {
+fn user_to_response(user: &crate::auth::User) -> UserResponse {
     UserResponse {
         id: user.id.get(),
         email: user.email.clone(),
@@ -70,19 +121,19 @@ const LOGIN_LOCKOUT_THRESHOLD: i32 = 10;
 const LOGIN_LOCKOUT_SECS: i64 = 15 * 60;
 
 async fn login(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     mut auth_session: AuthSessionType,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<UserResponse>, AppError> {
     // Step 1: in-memory rate limit (fast, per-email).
-    if !state.login_limiter.check_and_record(&req.email) {
+    if !deps.login_limiter.check_and_record(&req.email) {
         return Err(AppError::TooManyRequests(
             "Too many login attempts. Try again later.".into(),
         ));
     }
 
     // Login always authenticates against production_db (same as Backend::authenticate).
-    let repo = SeaOrmUserRepo::new(state.production_db.clone());
+    let repo = SeaOrmUserRepo::new(deps.platform.production_db.clone());
 
     // Step 2: run authentication FIRST so argon2 cost is paid on every
     // request, regardless of whether the account is locked. Checking lockout
@@ -214,7 +265,7 @@ async fn logout(mut auth_session: AuthSessionType) -> Result<StatusCode, AppErro
 }
 
 async fn me(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
 ) -> Result<Json<MeResponse>, AppError> {
@@ -222,7 +273,7 @@ async fn me(
         AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into())
     })?;
 
-    let setup_complete = state.is_setup_complete();
+    let setup_complete = deps.platform.is_setup_complete();
     let repo = SeaOrmUserRepo::new(db.clone());
     let recovery_codes_remaining = match repo.recovery_codes_remaining(&user.user.id).await {
         Ok(count) => count,
@@ -244,7 +295,7 @@ async fn me(
 /// Intentional: this does NOT invalidate the user's existing sessions.
 /// Session invalidation on credential change is deferred to M1 (per CAO + Ada review).
 pub async fn regenerate_recovery_codes(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
     Json(req): Json<RegenerateRecoveryCodesRequest>,
@@ -256,7 +307,7 @@ pub async fn regenerate_recovery_codes(
         .clone();
 
     // Rate limit check
-    if !state
+    if !deps
         .regen_limiter
         .check_and_record(&user.user.id.to_string())
     {
@@ -280,7 +331,7 @@ pub async fn regenerate_recovery_codes(
     };
 
     // Verify password
-    match kikan::auth::password::verify_password(req.password, password_hash).await {
+    match crate::auth::password::verify_password(req.password, password_hash).await {
         Ok(true) => {}
         Ok(false) => {
             return Err(AppError::Unauthorized(
@@ -307,15 +358,15 @@ pub async fn regenerate_recovery_codes(
 }
 
 async fn setup(
-    State(state): State<SharedState>,
+    State(deps): State<AuthRouterDeps>,
     mut auth_session: AuthSessionType,
     Json(req): Json<SetupRequest>,
 ) -> Result<(StatusCode, Json<SetupResponse>), AppError> {
-    validate_setup_request(&state, &req)?;
+    validate_setup_request(&deps, &req)?;
 
-    let setup_guard = SetupAttemptGuard::acquire(&state)?;
+    let setup_guard = SetupAttemptGuard::acquire(&deps)?;
 
-    let repo = SeaOrmUserRepo::new(state.production_db.clone());
+    let repo = SeaOrmUserRepo::new(deps.platform.production_db.clone());
     let (user, recovery_codes) = match repo
         .create_admin_with_setup(
             &req.admin_email,
@@ -340,21 +391,22 @@ async fn setup(
 
     // Persist active_profile = "production" and update in-memory so subsequent
     // requests (including the auto-login below) use the production database.
-    use kikan::SetupMode;
-    let profile_path = state.data_dir.join("active_profile");
+    let profile_path = deps.platform.data_dir.join("active_profile");
     if let Err(e) = tokio::fs::write(&profile_path, "production").await {
         tracing::warn!("Failed to persist active_profile after setup: {e}");
     }
-    *state.active_profile.write() = SetupMode::Production;
+    *deps.platform.active_profile.write() = SetupMode::Production;
 
     // Clear the first-launch flag so that GET /api/setup-status returns is_first_launch: false
     // for the lifetime of this server process. The profile_switch handler does the same on a
     // successful switch, but setup may complete without going through a profile switch (e.g.
     // scripted onboarding or direct API use that bypasses the welcome screen).
-    let _ =
-        state
-            .is_first_launch
-            .compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed);
+    let _ = deps.platform.is_first_launch.compare_exchange(
+        true,
+        false,
+        Ordering::AcqRel,
+        Ordering::Relaxed,
+    );
 
     auto_login(&repo, &user, &mut auth_session).await;
 
@@ -362,20 +414,20 @@ async fn setup(
 }
 
 struct SetupAttemptGuard {
-    state: SharedState,
+    deps: AuthRouterDeps,
     completed: bool,
 }
 
 impl SetupAttemptGuard {
-    fn acquire(state: &SharedState) -> Result<Self, AppError> {
-        if state.setup_completed.load(Ordering::Acquire) {
+    fn acquire(deps: &AuthRouterDeps) -> Result<Self, AppError> {
+        if deps.platform.setup_completed.load(Ordering::Acquire) {
             return Err(AppError::Forbidden(
-                kikan_types::error::ErrorCode::Forbidden,
+                ErrorCode::Forbidden,
                 "Setup already completed".into(),
             ));
         }
 
-        if state
+        if deps
             .setup_in_progress
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
@@ -387,23 +439,26 @@ impl SetupAttemptGuard {
             ));
         }
 
-        if state.setup_completed.load(Ordering::Acquire) {
-            state.setup_in_progress.store(false, Ordering::Release);
+        if deps.platform.setup_completed.load(Ordering::Acquire) {
+            deps.setup_in_progress.store(false, Ordering::Release);
             return Err(AppError::Forbidden(
-                kikan_types::error::ErrorCode::Forbidden,
+                ErrorCode::Forbidden,
                 "Setup already completed".into(),
             ));
         }
 
         Ok(Self {
-            state: state.clone(),
+            deps: deps.clone(),
             completed: false,
         })
     }
 
     fn complete(mut self) {
-        self.state.setup_completed.store(true, Ordering::Release);
-        self.state.setup_in_progress.store(false, Ordering::Release);
+        self.deps
+            .platform
+            .setup_completed
+            .store(true, Ordering::Release);
+        self.deps.setup_in_progress.store(false, Ordering::Release);
         self.completed = true;
     }
 }
@@ -411,20 +466,20 @@ impl SetupAttemptGuard {
 impl Drop for SetupAttemptGuard {
     fn drop(&mut self) {
         if !self.completed {
-            self.state.setup_in_progress.store(false, Ordering::Release);
+            self.deps.setup_in_progress.store(false, Ordering::Release);
         }
     }
 }
 
-fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Result<(), AppError> {
-    if state.setup_completed.load(Ordering::Acquire) {
+fn validate_setup_request(deps: &AuthRouterDeps, req: &SetupRequest) -> Result<(), AppError> {
+    if deps.platform.setup_completed.load(Ordering::Acquire) {
         return Err(AppError::Forbidden(
-            kikan_types::error::ErrorCode::Forbidden,
+            ErrorCode::Forbidden,
             "Setup already completed".into(),
         ));
     }
 
-    let valid_token = state
+    let valid_token = deps
         .setup_token
         .as_ref()
         .is_some_and(|t| t == &req.setup_token);
@@ -455,10 +510,9 @@ fn validate_setup_request(state: &SharedState, req: &SetupRequest) -> Result<(),
 
 async fn auto_login(
     repo: &SeaOrmUserRepo,
-    user: &kikan::auth::User,
+    user: &crate::auth::User,
     auth_session: &mut AuthSessionType,
 ) {
-    use kikan::SetupMode;
     let hash = match repo.find_by_id_with_hash(&user.id).await {
         Ok(Some((_, hash))) => hash,
         Ok(None) => return,
@@ -477,7 +531,7 @@ async fn auto_login(
 ///
 /// Execution order (all modes):
 /// 1. **Boot guard** — if `demo_install_ok` is false and the path is not
-///    `DEMO_RESET_PATH`, return 423 `DemoSetupRequired`. This guard is only active
+///    [`DEMO_RESET_PATH`], return 423 `DemoSetupRequired`. This guard is only active
 ///    in Demo profile; Production always boots with `demo_install_ok=true`.
 /// 2. **Demo auto-login** — in Demo mode, if no session exists, log in the demo admin.
 /// 3. **Login-required check** — reject with 401 if still unauthenticated.
@@ -486,25 +540,21 @@ async fn auto_login(
 /// `login_required!` checks the user from the incoming request, which doesn't
 /// reflect a session created by a preceding middleware in the same request cycle.
 pub async fn require_auth_with_demo_auto_login(
-    State(state): State<SharedState>,
+    State(platform): State<PlatformState>,
     mut auth_session: AuthSessionType,
     request: axum::http::Request<axum::body::Body>,
     next: axum::middleware::Next,
 ) -> Response {
-    use kikan::SetupMode;
-
     // Boot guard: reject all protected routes while demo installation is incomplete.
     // Only active in Demo profile — Production always boots with demo_install_ok=true
     // and the guard is skipped entirely when Production is active.
     // Exception: /api/demo/reset is the recovery mechanism — it must bypass the entire
     // auth chain (both the 423 guard and the demo auto-login) so it can be called even
     // when admin@demo.local is missing from the database.
-    if *state.active_profile.read() == SetupMode::Demo
-        && !state
-            .demo_install_ok
-            .load(std::sync::atomic::Ordering::Acquire)
+    if *platform.active_profile.read() == SetupMode::Demo
+        && !platform.demo_install_ok.load(Ordering::Acquire)
     {
-        if request.uri().path() == crate::DEMO_RESET_PATH {
+        if request.uri().path() == DEMO_RESET_PATH {
             return next.run(request).await;
         }
         return AppError::DemoSetupRequired.into_response();
@@ -513,8 +563,8 @@ pub async fn require_auth_with_demo_auto_login(
     // Demo mode auto-login: create a session for the demo admin if not authenticated.
     // Uses find_by_email_with_hash to resolve user + hash in a single DB query
     // (avoids the 2-query path through auto_login → find_by_id_with_hash).
-    if *state.active_profile.read() == SetupMode::Demo && auth_session.user.is_none() {
-        let repo = SeaOrmUserRepo::new(state.demo_db.clone());
+    if *platform.active_profile.read() == SetupMode::Demo && auth_session.user.is_none() {
+        let repo = SeaOrmUserRepo::new(platform.demo_db.clone());
         match repo.find_by_email_with_hash("admin@demo.local").await {
             Ok(Some((user, hash))) => {
                 let auth_user = AuthenticatedUser::new(user, hash, SetupMode::Demo);

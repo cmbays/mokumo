@@ -22,6 +22,8 @@ pub enum ActivityAction {
     AccountLocked,
     /// User account unlocked by an admin.
     AccountUnlocked,
+    /// First-admin bootstrap on an empty user table.
+    Bootstrap,
 }
 
 impl std::fmt::Display for ActivityAction {
@@ -40,6 +42,7 @@ impl std::fmt::Display for ActivityAction {
             Self::RoleUpdated => write!(f, "role_updated"),
             Self::AccountLocked => write!(f, "account_locked"),
             Self::AccountUnlocked => write!(f, "account_unlocked"),
+            Self::Bootstrap => write!(f, "bootstrap"),
         }
     }
 }
@@ -94,5 +97,6 @@ mod tests {
             ActivityAction::AccountUnlocked.to_string(),
             "account_unlocked"
         );
+        assert_eq!(ActivityAction::Bootstrap.to_string(), "bootstrap");
     }
 }

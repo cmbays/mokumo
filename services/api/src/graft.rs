@@ -1,15 +1,37 @@
+//! `MokumoApp: Graft` — the Mokumo application fused to the kikan engine.
+//!
+//! Wave A.1 scope: materialize the `Graft` impl with `type AppState =
+//! MokumoAppState`, taking ownership of the per-profile migration set. The
+//! full rewire of `build_app`/`build_app_with_shutdown` through
+//! `Engine::<MokumoApp>::build_router` is deferred: `build_router` bakes in a
+//! fixed tower stack (session → trace → host allow-list) that does not
+//! accommodate `axum-login`'s `AuthManagerLayerBuilder`, `ProfileDbMiddleware`,
+//! or `security_headers` — services/api still needs the hand-rolled stack
+//! until the layer-ordering design pass lands. See the Wave A.1 notes in
+//! `/ops/workspace/mokumo/mokumo-20260417-kikan-stages-4-6/shape-plan-v2.md`.
+//!
+//! Until then, `build_state` and `data_plane_routes` are intentionally
+//! unimplemented — only `migrations()` is exercised (by the
+//! `schema_equivalence` test and the per-profile migration runner via
+//! `Engine::run_migrations`).
+
 use kikan::migrations::conn::MigrationConn;
 use kikan::{EngineContext, EngineError, Graft, GraftId, Migration, MigrationRef, MigrationTarget};
 use mokumo_shop::migrations::Migrator;
 use sea_orm_migration::MigratorTrait;
 use sea_orm_migration::sea_orm::DbErr;
 
+use crate::SharedState;
+
 const MOKUMO_GRAFT_ID: GraftId = GraftId::new("mokumo");
 
-pub struct MokumoGraftBridge;
+pub struct MokumoApp;
 
-impl Graft for MokumoGraftBridge {
-    type AppState = ();
+impl Graft for MokumoApp {
+    // `MokumoAppState` is always consumed behind `Arc` (`SharedState`) —
+    // FromRef/Clone on per-request extraction requires cheap clone, which
+    // `Arc<T>` provides without forcing Clone on every field.
+    type AppState = SharedState;
 
     fn id() -> GraftId {
         MOKUMO_GRAFT_ID
@@ -51,10 +73,27 @@ impl Graft for MokumoGraftBridge {
     }
 
     async fn build_state(&self, _ctx: &EngineContext) -> Result<Self::AppState, EngineError> {
-        Ok(())
+        // Deferred: MokumoAppState construction requires extras that do not
+        // live on EngineContext (rate limiters, reset_pins, recovery_dir,
+        // mdns_status, local_ip watch, setup flags, WS manager, shutdown
+        // token, DB pools keyed by profile). Wave A.1 leaves services/api's
+        // `build_app_inner` as the sole construction site; the `build_state`
+        // rewire is tracked with the `Engine::build_router` layer-order
+        // design pass.
+        Err(EngineError::Boot(
+            "MokumoApp::build_state is not wired yet; services/api::build_app \
+             constructs MokumoAppState directly (Wave A.1 scope cut)"
+                .to_string(),
+        ))
     }
 
     fn data_plane_routes(_state: &Self::AppState) -> axum::Router<Self::AppState> {
+        // Deferred: the production router composition lives in
+        // `services/api::build_app_inner` and layers `AuthManagerLayerBuilder`,
+        // `ProfileDbMiddleware`, `security_headers`, and the host allow-list
+        // that `Engine::build_router` does not currently provide hooks for.
+        // Returning an empty router keeps the trait satisfied without
+        // pretending to own the routing seam.
         axum::Router::new()
     }
 }

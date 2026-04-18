@@ -1,5 +1,5 @@
 use kikan::{BootConfig, Engine};
-use mokumo_api::graft_bridge::MokumoGraftBridge;
+use mokumo_api::graft::MokumoApp;
 use mokumo_shop::migrations::Migrator;
 use sea_orm::{Database, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
 use sea_orm_migration::MigratorTrait;
@@ -43,7 +43,7 @@ async fn kikan_engine_produces_identical_app_schema_to_legacy_migrator() {
     let kikan_url = format!("sqlite:{}?mode=rwc", kikan_path.display());
     let kikan_db = Database::connect(&kikan_url).await.unwrap();
     let store = test_session_store(&kikan_db).await;
-    let graft = MokumoGraftBridge;
+    let graft = MokumoApp;
     let config = BootConfig::new(tmp.path().to_path_buf());
     let engine = Engine::new(config, &graft, kikan_db.clone(), store).unwrap();
     engine.run_migrations(&kikan_db).await.unwrap();
@@ -67,7 +67,7 @@ async fn kikan_engine_produces_identical_app_schema_to_legacy_migrator() {
 }
 
 #[tokio::test]
-async fn graft_bridge_backfill_preserves_seaql_table() {
+async fn mokumo_app_backfill_preserves_seaql_table() {
     let tmp = tempfile::tempdir().unwrap();
     let db_path = tmp.path().join("backfill.db");
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
@@ -76,7 +76,7 @@ async fn graft_bridge_backfill_preserves_seaql_table() {
     Migrator::up(&db, None).await.unwrap();
 
     let store = test_session_store(&db).await;
-    let graft = MokumoGraftBridge;
+    let graft = MokumoApp;
     let config = BootConfig::new(tmp.path().to_path_buf());
     let engine = Engine::new(config, &graft, db.clone(), store).unwrap();
 

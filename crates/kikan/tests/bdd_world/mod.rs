@@ -4,8 +4,10 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 mod activity_visibility_steps;
+mod control_plane_error_steps;
 mod migration_execution_steps;
 mod migration_ordering_steps;
+mod user_repo_atomicity_steps;
 
 #[derive(World)]
 #[world(init = Self::new)]
@@ -23,6 +25,12 @@ pub struct KikanWorld {
     pub activity_tmp: Option<tempfile::TempDir>,
     pub activity_list: Vec<ActivityEntryResponse>,
     pub activity_total: i64,
+    // control_plane_error_variants fixtures
+    pub cp_error_variant: Option<String>,
+    pub cp_error_code: Option<String>,
+    pub cp_error_status: Option<u16>,
+    // user_repo_atomicity fixtures
+    pub user_repo_ctx: Option<user_repo_atomicity_steps::UserRepoCtx>,
 }
 
 impl std::fmt::Debug for KikanWorld {
@@ -52,6 +60,10 @@ impl KikanWorld {
             activity_tmp: None,
             activity_list: Vec::new(),
             activity_total: 0,
+            cp_error_variant: None,
+            cp_error_code: None,
+            cp_error_status: None,
+            user_repo_ctx: None,
         }
     }
 }

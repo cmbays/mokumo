@@ -9,9 +9,76 @@ use sea_orm::{
 
 use super::entity_user::{self as entity, Entity as UserEntity};
 use super::password;
+use crate::control_plane_error::{ConflictKind, ControlPlaneError};
 fn sea_err(e: sea_orm::DbErr) -> DomainError {
     DomainError::Internal {
         message: e.to_string(),
+    }
+}
+
+/// Error type for the first-admin bootstrap composite method.
+///
+/// Encodes the `ALREADY_BOOTSTRAPPED` conflict explicitly so handlers can
+/// render it as `ControlPlaneError::Conflict(ConflictKind::AlreadyBootstrapped)`
+/// without string-sniffing a generic `DomainError::Conflict`. Any other
+/// failure flows through `Domain`.
+#[derive(Debug)]
+pub enum BootstrapError {
+    /// Another admin account already exists; bootstrap refused.
+    AlreadyBootstrapped,
+    /// Underlying domain/persistence failure.
+    Domain(DomainError),
+}
+
+impl std::fmt::Display for BootstrapError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AlreadyBootstrapped => write!(f, "an admin account is already configured"),
+            Self::Domain(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+impl std::error::Error for BootstrapError {}
+
+impl From<DomainError> for BootstrapError {
+    fn from(e: DomainError) -> Self {
+        Self::Domain(e)
+    }
+}
+
+impl From<BootstrapError> for ControlPlaneError {
+    fn from(err: BootstrapError) -> Self {
+        match err {
+            BootstrapError::AlreadyBootstrapped => {
+                ControlPlaneError::Conflict(ConflictKind::AlreadyBootstrapped)
+            }
+            BootstrapError::Domain(DomainError::NotFound { .. }) => ControlPlaneError::NotFound,
+            BootstrapError::Domain(DomainError::Conflict { message }) => {
+                ControlPlaneError::Validation {
+                    field: "request".into(),
+                    message,
+                }
+            }
+            BootstrapError::Domain(DomainError::Validation { details }) => {
+                // HashMap iteration order is non-deterministic; sort by key so
+                // repeated conversions with the same input always pick the
+                // same field. Keeps handler output reproducible and tests
+                // stable when a composite path later surfaces multiple
+                // field-level errors.
+                let mut entries: Vec<_> = details.into_iter().collect();
+                entries.sort_by(|a, b| a.0.cmp(&b.0));
+                let (field, message) = entries
+                    .into_iter()
+                    .next()
+                    .map(|(f, msgs)| (f, msgs.into_iter().next().unwrap_or_default()))
+                    .unwrap_or_else(|| ("request".into(), "validation failed".into()));
+                ControlPlaneError::Validation { field, message }
+            }
+            BootstrapError::Domain(DomainError::Internal { message }) => {
+                ControlPlaneError::Internal(anyhow::anyhow!(message))
+            }
+        }
     }
 }
 
@@ -136,10 +203,15 @@ fn is_sqlite_busy_domain(err: &DomainError) -> bool {
 /// Generate 10 recovery codes with argon2 hashes.
 /// Returns (plaintext_codes, recovery_json_string).
 async fn generate_recovery_codes() -> Result<(Vec<String>, String), DomainError> {
+    generate_recovery_codes_n(10).await
+}
+
+/// Generate `n` recovery codes with argon2 hashes.
+async fn generate_recovery_codes_n(n: u32) -> Result<(Vec<String>, String), DomainError> {
     let plaintext_codes: Vec<String> = {
         use rand::RngExt;
         let mut rng = rand::rng();
-        (0..10)
+        (0..n)
             .map(|_| {
                 let mut code = String::with_capacity(9);
                 for i in 0..8 {
@@ -147,8 +219,8 @@ async fn generate_recovery_codes() -> Result<(Vec<String>, String), DomainError>
                         code.push('-');
                     }
                     let c = match rng.random_range(0..36u8) {
-                        n @ 0..=9 => (b'0' + n) as char,
-                        n => (b'a' + n - 10) as char,
+                        v @ 0..=9 => (b'0' + v) as char,
+                        v => (b'a' + v - 10) as char,
                     };
                     code.push(c);
                 }
@@ -643,6 +715,146 @@ impl SeaOrmUserRepo {
             .await?;
         txn.commit().await.map_err(sea_err)?;
         Ok(())
+    }
+
+    /// Create a user and attach a batch of hashed recovery codes in a single
+    /// transaction, logging an `ActivityAction::Created` entry on the same
+    /// connection. Either every row (user + codes + activity) persists or
+    /// none do.
+    ///
+    /// The caller specifies `codes_count` so the method can surface an
+    /// explicit `DomainError::Validation` when the batch is rejected — a
+    /// real validation seam that covers the `user_repo_atomicity.feature`
+    /// "recovery code batch that fails validation" scenario.
+    pub async fn create_user_with_codes(
+        &self,
+        req: &CreateUser,
+        codes_count: u32,
+    ) -> Result<(User, Vec<String>), DomainError> {
+        if codes_count == 0 || codes_count > 16 {
+            let mut details = std::collections::HashMap::new();
+            details.insert(
+                "recovery_codes".to_string(),
+                vec![format!(
+                    "codes_count must be between 1 and 16; got {codes_count}"
+                )],
+            );
+            return Err(DomainError::Validation { details });
+        }
+
+        let password_hash = password::hash_password(req.password.clone()).await?;
+        let (plaintext_codes, recovery_json) = generate_recovery_codes_n(codes_count).await?;
+
+        let txn = self.db.begin().await.map_err(sea_err)?;
+
+        let active = entity::ActiveModel {
+            id: ActiveValue::NotSet,
+            email: ActiveValue::Set(req.email.clone()),
+            name: ActiveValue::Set(req.name.clone()),
+            password_hash: ActiveValue::Set(password_hash),
+            role_id: ActiveValue::Set(req.role_id.get()),
+            is_active: ActiveValue::Set(true),
+            last_login_at: ActiveValue::NotSet,
+            recovery_code_hash: ActiveValue::Set(Some(recovery_json)),
+            created_at: ActiveValue::NotSet,
+            updated_at: ActiveValue::NotSet,
+            deleted_at: ActiveValue::NotSet,
+            failed_login_attempts: ActiveValue::Set(0),
+            locked_until: ActiveValue::Set(None),
+        };
+
+        let model = active.insert(&txn).await.map_err(sea_err)?;
+        let user = User::from(model);
+
+        log_user_activity(&txn, &user, ActivityAction::Created).await?;
+
+        txn.commit().await.map_err(sea_err)?;
+        Ok((user, plaintext_codes))
+    }
+
+    /// Bootstrap the first admin account: atomically create the admin user +
+    /// 10 recovery codes + `ActivityAction::Bootstrap` entry, but only if no
+    /// active admin exists.
+    ///
+    /// The guard runs inside the transaction so sequential callers race-safely
+    /// — a second call on a non-empty admin set rolls back and returns
+    /// `BootstrapError::AlreadyBootstrapped`. This is NOT, however, safe under
+    /// *concurrent* callers: SQLite's default `DEFERRED` transaction takes a
+    /// write lock at the first write, not at `BEGIN`, so two in-flight
+    /// bootstraps could both observe `existing_admins == 0` before either
+    /// inserts. In the current deployment model bootstrap is a single-shot
+    /// first-run operation protected by application-level coordination
+    /// (`setup_token`, `setup_in_progress`), so the DEFERRED race is
+    /// unreachable. Adding a partial unique index on `(role_id, deleted_at)`
+    /// is tracked as a follow-up if the threat model ever changes.
+    pub async fn bootstrap_admin_with_codes(
+        &self,
+        email: &str,
+        name: &str,
+        password: &str,
+    ) -> Result<(User, Vec<String>), BootstrapError> {
+        let password_hash = password::hash_password(password.to_string())
+            .await
+            .map_err(BootstrapError::Domain)?;
+        let (plaintext_codes, recovery_json) = generate_recovery_codes_n(10)
+            .await
+            .map_err(BootstrapError::Domain)?;
+
+        let txn = self
+            .db
+            .begin()
+            .await
+            .map_err(sea_err)
+            .map_err(BootstrapError::Domain)?;
+
+        let existing_admins = UserEntity::find()
+            .filter(entity::Column::RoleId.eq(RoleId::ADMIN.get()))
+            .filter(entity::Column::DeletedAt.is_null())
+            .count(&txn)
+            .await
+            .map_err(sea_err)
+            .map_err(BootstrapError::Domain)?;
+
+        if existing_admins > 0 {
+            txn.rollback()
+                .await
+                .map_err(sea_err)
+                .map_err(BootstrapError::Domain)?;
+            return Err(BootstrapError::AlreadyBootstrapped);
+        }
+
+        let active = entity::ActiveModel {
+            id: ActiveValue::NotSet,
+            email: ActiveValue::Set(email.to_string()),
+            name: ActiveValue::Set(name.to_string()),
+            password_hash: ActiveValue::Set(password_hash),
+            role_id: ActiveValue::Set(RoleId::ADMIN.get()),
+            is_active: ActiveValue::Set(true),
+            last_login_at: ActiveValue::NotSet,
+            recovery_code_hash: ActiveValue::Set(Some(recovery_json)),
+            created_at: ActiveValue::NotSet,
+            updated_at: ActiveValue::NotSet,
+            deleted_at: ActiveValue::NotSet,
+            failed_login_attempts: ActiveValue::Set(0),
+            locked_until: ActiveValue::Set(None),
+        };
+
+        let model = active
+            .insert(&txn)
+            .await
+            .map_err(sea_err)
+            .map_err(BootstrapError::Domain)?;
+        let user = User::from(model);
+
+        log_user_activity(&txn, &user, ActivityAction::Bootstrap)
+            .await
+            .map_err(BootstrapError::Domain)?;
+
+        txn.commit()
+            .await
+            .map_err(sea_err)
+            .map_err(BootstrapError::Domain)?;
+        Ok((user, plaintext_codes))
     }
 }
 
@@ -1655,6 +1867,155 @@ mod tests {
         assert!(
             matches!(result, Err(DomainError::NotFound { .. })),
             "expected NotFound, got {result:?}"
+        );
+    }
+
+    async fn activity_count(db: &DatabaseConnection, entity_type: &str, action: &str) -> i64 {
+        let pool = db.get_sqlite_connection_pool();
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM activity_log WHERE entity_type = ?1 AND action = ?2",
+        )
+        .bind(entity_type)
+        .bind(action)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn create_user_with_codes_success_persists_user_codes_and_activity() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        let req = CreateUser {
+            email: "composite@shop.local".to_string(),
+            name: "Composite".to_string(),
+            password: "testpassword123".to_string(),
+            role_id: RoleId::new(2),
+        };
+        let (user, codes) = repo.create_user_with_codes(&req, 10).await.unwrap();
+
+        assert_eq!(user.email, "composite@shop.local");
+        assert_eq!(codes.len(), 10, "should return exactly 10 plaintext codes");
+
+        let (_, hash) = repo
+            .find_by_email_with_hash("composite@shop.local")
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!hash.is_empty(), "password hash must be set");
+
+        let stored = UserEntity::find()
+            .filter(entity::Column::Id.eq(user.id.get()))
+            .one(&db)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(
+            stored.recovery_code_hash.is_some(),
+            "recovery_code_hash must be stored"
+        );
+
+        assert_eq!(
+            activity_count(&db, "user", "created").await,
+            1,
+            "should log exactly one 'user.created' activity"
+        );
+    }
+
+    #[tokio::test]
+    async fn create_user_with_codes_rejects_zero_count() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        let req = CreateUser {
+            email: "zero@shop.local".to_string(),
+            name: "Zero".to_string(),
+            password: "pw".to_string(),
+            role_id: RoleId::new(2),
+        };
+        let err = repo.create_user_with_codes(&req, 0).await.unwrap_err();
+        match err {
+            DomainError::Validation { details } => {
+                assert!(
+                    details.contains_key("recovery_codes"),
+                    "details must name the rejected field, got {details:?}"
+                );
+            }
+            other => panic!("expected DomainError::Validation, got {other:?}"),
+        }
+
+        // Rollback is implicit: no user row and no activity row.
+        let found = repo.find_by_email("zero@shop.local").await.unwrap();
+        assert!(found.is_none(), "rejected batch must not persist user");
+        assert_eq!(activity_count(&db, "user", "created").await, 0);
+    }
+
+    #[tokio::test]
+    async fn create_user_with_codes_rejects_count_above_sixteen() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db);
+
+        let req = CreateUser {
+            email: "toomany@shop.local".to_string(),
+            name: "Too Many".to_string(),
+            password: "pw".to_string(),
+            role_id: RoleId::new(2),
+        };
+        let err = repo.create_user_with_codes(&req, 17).await.unwrap_err();
+        assert!(
+            matches!(err, DomainError::Validation { .. }),
+            "expected Validation for count > 16, got {err:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn bootstrap_admin_with_codes_success_persists_admin_and_activity() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        let (user, codes) = repo
+            .bootstrap_admin_with_codes("founder@shop.local", "Founder", "initial-pw")
+            .await
+            .unwrap();
+
+        assert_eq!(user.email, "founder@shop.local");
+        assert_eq!(user.role_id, RoleId::ADMIN);
+        assert!(user.is_active);
+        assert_eq!(codes.len(), 10);
+
+        assert_eq!(
+            activity_count(&db, "user", "bootstrap").await,
+            1,
+            "should log a 'user.bootstrap' activity"
+        );
+    }
+
+    #[tokio::test]
+    async fn bootstrap_admin_with_codes_rejects_when_admin_exists() {
+        let (db, _tmp) = test_db().await;
+        let repo = SeaOrmUserRepo::new(db.clone());
+
+        repo.bootstrap_admin_with_codes("first@shop.local", "First", "pw")
+            .await
+            .unwrap();
+
+        let err = repo
+            .bootstrap_admin_with_codes("second@shop.local", "Second", "pw")
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, BootstrapError::AlreadyBootstrapped),
+            "second bootstrap must be rejected, got {err:?}"
+        );
+
+        // Second call rolled back — no second user, no new activity entry.
+        let found = repo.find_by_email("second@shop.local").await.unwrap();
+        assert!(found.is_none(), "rejected bootstrap must not persist user");
+        assert_eq!(
+            activity_count(&db, "user", "bootstrap").await,
+            1,
+            "only the first bootstrap should have an activity entry"
         );
     }
 }

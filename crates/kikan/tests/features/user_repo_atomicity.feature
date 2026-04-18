@@ -1,4 +1,3 @@
-@future
 Feature: User repository composite method atomicity (Pattern C)
 
   Multi-entity admin mutations are single composite UserRepo methods that
