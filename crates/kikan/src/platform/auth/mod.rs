@@ -41,7 +41,8 @@ use kikan_types::user::UserResponse;
 use mokumo_core::activity::ActivityAction;
 
 use crate::auth::{AuthenticatedUser, Backend, Credentials, RoleId, SeaOrmUserRepo, UserId};
-use crate::{AppError, ControlPlaneState, PlatformState, ProfileDb, SetupMode};
+use crate::control_plane;
+use crate::{AppError, ControlPlaneError, ControlPlaneState, PlatformState, ProfileDb, SetupMode};
 
 /// Route path for the demo-reset handler. The auth-gate middleware allows
 /// this path through even while the demo profile is mid-install, so shop
@@ -119,13 +120,20 @@ async fn login(
     // before argon2 leaks account state via response-time side-channel
     // (locked accounts return ~instantly while unlocked accounts wait on
     // password hashing). The lockout decision is applied after auth below.
+    //
+    // Delegates the credential-verification slice (lookup + active-check +
+    // argon2 compare) to the pure-fn layer. `PermissionDenied` from the
+    // pure fn conflates "unknown email" / "inactive user" / "bad password"
+    // — the same Ok(None) shape `Backend::authenticate` used to return —
+    // so the downstream lockout + handle_failed_login logic is unchanged.
     let creds = Credentials {
         email: req.email.clone(),
         password: req.password,
     };
 
-    let auth_result = match auth_session.authenticate(creds).await {
-        Ok(maybe_user) => maybe_user,
+    let auth_result = match control_plane::users::verify_credentials_struct(&deps, creds).await {
+        Ok(user) => Some(user),
+        Err(ControlPlaneError::PermissionDenied) => None,
         Err(e) => {
             tracing::error!("Authentication error: {e}");
             return Err(AppError::InternalError("An internal error occurred".into()));
@@ -273,66 +281,56 @@ async fn me(
 ///
 /// Intentional: this does NOT invalidate the user's existing sessions.
 /// Session invalidation on credential change is deferred to M1 (per CAO + Ada review).
+///
+/// Adapter responsibilities: extract the caller from the session, run
+/// the in-memory rate limiter, delegate the password-verify + regen
+/// composite to the pure `control_plane::users::regenerate_recovery_codes`
+/// fn, and map `ControlPlaneError` variants to the legacy wire shapes
+/// (`PermissionDenied` → 401/`invalid_credentials`/"Invalid password";
+/// `NotFound` → 500/"User not found"; `Internal` → 500/redacted).
 pub async fn regenerate_recovery_codes(
     State(deps): State<ControlPlaneState>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
     Json(req): Json<RegenerateRecoveryCodesRequest>,
 ) -> Result<Json<SetupResponse>, AppError> {
-    let user = auth_session
+    let caller = auth_session
         .user
         .as_ref()
         .ok_or_else(|| AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into()))?
         .clone();
 
-    // Rate limit check
     if !deps
         .regen_limiter
-        .check_and_record(&user.user.id.to_string())
+        .check_and_record(&caller.user.id.to_string())
     {
         return Err(AppError::TooManyRequests(
             "Too many regeneration attempts. Try again later.".into(),
         ));
     }
 
-    let repo = SeaOrmUserRepo::new(db.clone());
+    let recovery_codes =
+        control_plane::users::regenerate_recovery_codes(&deps, &db, caller.user.id, req.password)
+            .await
+            .map_err(map_regenerate_error)?;
 
-    // Re-fetch password hash from DB (not session cache) per AuthnBackend ADR
-    let password_hash = match repo.find_by_id_with_hash(&user.user.id).await {
-        Ok(Some((_, hash))) => hash,
-        Ok(None) => {
-            return Err(AppError::InternalError("User not found".into()));
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch user for regen: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
-    };
+    Ok(Json(SetupResponse { recovery_codes }))
+}
 
-    // Verify password
-    match crate::auth::password::verify_password(req.password, password_hash).await {
-        Ok(true) => {}
-        Ok(false) => {
-            return Err(AppError::Unauthorized(
-                ErrorCode::InvalidCredentials,
-                "Invalid password".into(),
-            ));
+/// Map `ControlPlaneError` from the regen pure fn into the legacy wire
+/// shapes. Preserves the pre-lift 401 "Invalid password" / 500 "User
+/// not found" / 500 redacted-internal behavior.
+fn map_regenerate_error(err: ControlPlaneError) -> AppError {
+    match err {
+        ControlPlaneError::PermissionDenied => {
+            AppError::Unauthorized(ErrorCode::InvalidCredentials, "Invalid password".into())
         }
-        Err(e) => {
-            tracing::error!("Password verification error: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
+        ControlPlaneError::NotFound => AppError::InternalError("User not found".into()),
+        ControlPlaneError::Internal(e) => {
+            tracing::error!("Recovery code regeneration failed: {e:#}");
+            AppError::InternalError("An internal error occurred".into())
         }
-    }
-
-    // Regenerate codes
-    match repo.regenerate_recovery_codes(&user.user.id).await {
-        Ok(recovery_codes) => Ok(Json(SetupResponse { recovery_codes })),
-        Err(e) => {
-            tracing::error!("Recovery code regeneration failed: {e}");
-            Err(AppError::InternalError(
-                "Failed to regenerate recovery codes".into(),
-            ))
-        }
+        other => other.into(),
     }
 }
 
