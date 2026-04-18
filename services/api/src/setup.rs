@@ -98,13 +98,21 @@ async fn vertical_setup(
         tracing::warn!("setup: failed to persist shop_name to shop_settings: {e}");
     }
 
-    // Persist active_profile = "production" and flip in-memory so subsequent
-    // requests (including the auto-login below) use the production database.
+    // Persist active_profile = "production" atomically (tmp-then-rename,
+    // matching the pattern in `switch_profile`) and flip in-memory only on
+    // success so a crash or write failure does not leave the process in
+    // Production mode while the disk still says Demo.
     let profile_path = deps.platform.data_dir.join("active_profile");
-    if let Err(e) = tokio::fs::write(&profile_path, "production").await {
-        tracing::warn!("setup: failed to persist active_profile: {e}");
+    let profile_tmp = deps.platform.data_dir.join("active_profile.tmp");
+    match async {
+        tokio::fs::write(&profile_tmp, "production").await?;
+        tokio::fs::rename(&profile_tmp, &profile_path).await
     }
-    *deps.platform.active_profile.write() = SetupMode::Production;
+    .await
+    {
+        Ok(()) => *deps.platform.active_profile.write() = SetupMode::Production,
+        Err(e) => tracing::warn!("setup: failed to persist active_profile: {e}"),
+    }
 
     // Clear the first-launch flag so GET /api/setup-status reflects
     // is_first_launch: false for the lifetime of this process.
