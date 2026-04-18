@@ -19,7 +19,14 @@ use kikan_types::error::{ErrorBody, ErrorCode};
 fn sample(variant: Variant) -> ControlPlaneError {
     match variant {
         Variant::NotFound => ControlPlaneError::NotFound,
-        Variant::Conflict => ControlPlaneError::Conflict(ConflictKind::AlreadyBootstrapped),
+        Variant::AlreadyBootstrapped => {
+            ControlPlaneError::Conflict(ConflictKind::AlreadyBootstrapped)
+        }
+        Variant::LastAdminProtected => {
+            ControlPlaneError::Conflict(ConflictKind::LastAdminProtected {
+                message: "Cannot delete the last admin account. Assign another admin first.".into(),
+            })
+        }
         Variant::Validation => ControlPlaneError::Validation {
             field: "email".into(),
             message: "required".into(),
@@ -29,14 +36,18 @@ fn sample(variant: Variant) -> ControlPlaneError {
     }
 }
 
-/// Enum-of-variants used by the exhaustiveness guard.
-/// Adding a variant here WITHOUT adding one to `ControlPlaneError` fails
-/// the match in `sample`. Adding one to `ControlPlaneError` without adding
-/// it here fails the exhaustiveness test.
+/// Enum-of-variants used by the exhaustiveness guard. One row per
+/// `(ControlPlaneError, ConflictKind)` combination so each `ConflictKind`
+/// has its own pinned wire tuple.
+///
+/// Adding a variant here WITHOUT covering every `ControlPlaneError` /
+/// `ConflictKind` in `sample` fails the match. Adding a `ConflictKind`
+/// without extending this enum fails the exhaustiveness test.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Variant {
     NotFound,
-    Conflict,
+    AlreadyBootstrapped,
+    LastAdminProtected,
     Validation,
     PermissionDenied,
     Internal,
@@ -44,7 +55,8 @@ enum Variant {
 
 const ALL_VARIANTS: &[Variant] = &[
     Variant::NotFound,
-    Variant::Conflict,
+    Variant::AlreadyBootstrapped,
+    Variant::LastAdminProtected,
     Variant::Validation,
     Variant::PermissionDenied,
     Variant::Internal,
@@ -53,7 +65,8 @@ const ALL_VARIANTS: &[Variant] = &[
 fn expected_tuple(variant: Variant) -> (ErrorCode, u16) {
     match variant {
         Variant::NotFound => (ErrorCode::NotFound, 404),
-        Variant::Conflict => (ErrorCode::AlreadyBootstrapped, 409),
+        Variant::AlreadyBootstrapped => (ErrorCode::AlreadyBootstrapped, 409),
+        Variant::LastAdminProtected => (ErrorCode::Conflict, 409),
         Variant::Validation => (ErrorCode::ValidationError, 400),
         Variant::PermissionDenied => (ErrorCode::Forbidden, 403),
         Variant::Internal => (ErrorCode::InternalError, 500),

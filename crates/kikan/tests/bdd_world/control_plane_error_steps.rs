@@ -16,7 +16,10 @@ use super::KikanWorld;
 fn sample_for(variant: &str) -> ControlPlaneError {
     match variant {
         "NotFound" => ControlPlaneError::NotFound,
-        "Conflict" => ControlPlaneError::Conflict(ConflictKind::AlreadyBootstrapped),
+        "AlreadyBootstrapped" => ControlPlaneError::Conflict(ConflictKind::AlreadyBootstrapped),
+        "LastAdminProtected" => ControlPlaneError::Conflict(ConflictKind::LastAdminProtected {
+            message: "Cannot delete the last admin account. Assign another admin first.".into(),
+        }),
         "Validation" => ControlPlaneError::Validation {
             field: "email".into(),
             message: "required".into(),

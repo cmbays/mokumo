@@ -20,12 +20,13 @@ Feature: Control plane error variant mapping
     And the response http status is <http_status>
 
     Examples:
-      | variant          | error_code           | http_status |
-      | NotFound         | not_found            | 404         |
-      | Conflict         | already_bootstrapped | 409         |
-      | Validation       | validation_error     | 400         |
-      | PermissionDenied | forbidden            | 403         |
-      | Internal         | internal_error       | 500         |
+      | variant             | error_code           | http_status |
+      | NotFound            | not_found            | 404         |
+      | AlreadyBootstrapped | already_bootstrapped | 409         |
+      | LastAdminProtected  | conflict             | 409         |
+      | Validation          | validation_error     | 400         |
+      | PermissionDenied    | forbidden            | 403         |
+      | Internal            | internal_error       | 500         |
 
   # --- Exhaustiveness guard ---
 
