@@ -23,11 +23,23 @@ use kikan_types::error::{ErrorBody, ErrorCode};
 use crate::app_error::AppError;
 
 /// Semantic conflict kind — narrows `ControlPlaneError::Conflict` enough to
-/// distinguish first-admin-bootstrap from generic conflict at the wire.
+/// distinguish specific state-conflict shapes at the wire.
+///
+/// Each kind pins a `(ErrorCode, http_status)` tuple in
+/// `tests/features/control_plane_error_variants.feature`. Adding a kind
+/// without adding a fixture row fails `tests/control_plane_error_variants.rs`
+/// via pattern-match exhaustiveness.
 #[derive(Debug)]
 pub enum ConflictKind {
     /// First-admin bootstrap attempted when an admin already exists.
+    /// Wire code: `already_bootstrapped`.
     AlreadyBootstrapped,
+    /// Mutation would leave the shop with zero active admins. Covers
+    /// both "delete last admin" and "demote last admin" — the caller
+    /// passes the context-specific message through so the wire text
+    /// preserves the existing `DomainError::Conflict { message }` copy
+    /// byte-for-byte. Wire code: `conflict`.
+    LastAdminProtected { message: String },
 }
 
 impl ConflictKind {
@@ -35,13 +47,17 @@ impl ConflictKind {
     pub fn error_code(&self) -> ErrorCode {
         match self {
             Self::AlreadyBootstrapped => ErrorCode::AlreadyBootstrapped,
+            Self::LastAdminProtected { .. } => ErrorCode::Conflict,
         }
     }
 
-    /// Default user-facing message.
-    pub fn message(&self) -> &'static str {
+    /// User-facing message. Returns `&str` (not `&'static str`) because
+    /// dynamic-payload variants like `LastAdminProtected` carry the
+    /// caller-supplied message inline.
+    pub fn message(&self) -> &str {
         match self {
             Self::AlreadyBootstrapped => "An admin account is already configured.",
+            Self::LastAdminProtected { message } => message,
         }
     }
 }

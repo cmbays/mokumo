@@ -9,20 +9,23 @@
 //!
 //! ## Composition
 //!
-//! `AuthRouterDeps` bundles a [`PlatformState`](crate::PlatformState) clone
-//! with auth-specific singletons (rate limiters, reset-PIN store,
-//! recovery-file directory, setup-token). The services/api mount site
-//! binds deps once per router via `.with_state(AuthRouterDeps::from(&*state))`
-//! so handlers extract it directly as `State<AuthRouterDeps>`. The
+//! `ControlPlaneState` (from `kikan::control_plane::state`) is the unified
+//! state slice consumed by these Axum handlers and by the pure-fn layer
+//! under `kikan::control_plane::users::*`. The services/api mount site
+//! binds state once per router via `.with_state(state.control_plane_state())`
+//! so handlers extract it as `State<ControlPlaneState>`. The
 //! `require_auth_with_demo_auto_login` middleware only needs
 //! `PlatformState` and is wired with `from_fn_with_state(state.platform_state(), …)`.
+//!
+//! Handler bodies in this module are thin delegations: Axum extractors →
+//! call `control_plane::users::*` → `.map_err(AppError::from)`. The session
+//! and cookie issuance stay in the HTTP adapter — the pure-fn layer cannot
+//! see `axum_login::AuthSession`.
 
 pub mod recover;
 pub mod reset;
 
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -30,7 +33,6 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use axum_login::AuthSession;
-use dashmap::DashMap;
 use kikan_types::auth::{
     LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
 };
@@ -39,8 +41,8 @@ use kikan_types::user::UserResponse;
 use mokumo_core::activity::ActivityAction;
 
 use crate::auth::{AuthenticatedUser, Backend, Credentials, RoleId, SeaOrmUserRepo, UserId};
-use crate::rate_limit::RateLimiter;
-use crate::{AppError, PlatformState, ProfileDb, SetupMode};
+use crate::control_plane;
+use crate::{AppError, ControlPlaneError, ControlPlaneState, PlatformState, ProfileDb, SetupMode};
 
 /// Route path for the demo-reset handler. The auth-gate middleware allows
 /// this path through even while the demo profile is mid-install, so shop
@@ -49,34 +51,12 @@ pub const DEMO_RESET_PATH: &str = "/api/demo/reset";
 
 pub type AuthSessionType = AuthSession<Backend>;
 
-/// A pending file-drop password reset entry — the hashed PIN plus the
-/// wall-clock instant it was issued. Expired entries are pruned lazily by
-/// the reset_password handler.
-pub struct PendingReset {
-    pub pin_hash: String,
-    pub created_at: std::time::SystemTime,
-}
+// `PendingReset` now lives under `kikan::control_plane::state`. Re-exported
+// here for source-compat with services/api and external callers that still
+// reference `kikan::platform::auth::PendingReset`.
+pub use crate::control_plane::PendingReset;
 
-/// Router deps for the auth / setup sub-routers.
-///
-/// Holds a `PlatformState` clone (for DB pools, active_profile, setup
-/// flags, data_dir) plus auth-specific singletons. Every field is O(1)
-/// clonable — `PlatformState` is already Arc-backed, the limiters and
-/// reset-PIN map are behind `Arc`, and the primitive fields (PathBuf,
-/// Option<String>, AtomicBool) clone cheaply.
-#[derive(Clone)]
-pub struct AuthRouterDeps {
-    pub platform: PlatformState,
-    pub login_limiter: Arc<RateLimiter>,
-    pub recovery_limiter: Arc<RateLimiter>,
-    pub regen_limiter: Arc<RateLimiter>,
-    pub reset_pins: Arc<DashMap<String, PendingReset>>,
-    pub recovery_dir: PathBuf,
-    pub setup_token: Option<String>,
-    pub setup_in_progress: Arc<AtomicBool>,
-}
-
-pub fn auth_router() -> Router<AuthRouterDeps> {
+pub fn auth_router() -> Router<ControlPlaneState> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
@@ -87,11 +67,11 @@ pub fn auth_router() -> Router<AuthRouterDeps> {
 
 /// Separate router for /api/auth/me — must be behind the demo auto-login
 /// middleware so that demo mode sessions are created before the auth check.
-pub fn auth_me_router() -> Router<AuthRouterDeps> {
+pub fn auth_me_router() -> Router<ControlPlaneState> {
     Router::new().route("/me", get(me))
 }
 
-pub fn setup_router() -> Router<AuthRouterDeps> {
+pub fn setup_router() -> Router<ControlPlaneState> {
     Router::new().route("/", post(setup))
 }
 
@@ -121,7 +101,7 @@ const LOGIN_LOCKOUT_THRESHOLD: i32 = 10;
 const LOGIN_LOCKOUT_SECS: i64 = 15 * 60;
 
 async fn login(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     mut auth_session: AuthSessionType,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<UserResponse>, AppError> {
@@ -140,13 +120,20 @@ async fn login(
     // before argon2 leaks account state via response-time side-channel
     // (locked accounts return ~instantly while unlocked accounts wait on
     // password hashing). The lockout decision is applied after auth below.
+    //
+    // Delegates the credential-verification slice (lookup + active-check +
+    // argon2 compare) to the pure-fn layer. `PermissionDenied` from the
+    // pure fn conflates "unknown email" / "inactive user" / "bad password"
+    // — the same Ok(None) shape `Backend::authenticate` used to return —
+    // so the downstream lockout + handle_failed_login logic is unchanged.
     let creds = Credentials {
         email: req.email.clone(),
         password: req.password,
     };
 
-    let auth_result = match auth_session.authenticate(creds).await {
-        Ok(maybe_user) => maybe_user,
+    let auth_result = match control_plane::users::verify_credentials_struct(&deps, creds).await {
+        Ok(user) => Some(user),
+        Err(ControlPlaneError::PermissionDenied) => None,
         Err(e) => {
             tracing::error!("Authentication error: {e}");
             return Err(AppError::InternalError("An internal error occurred".into()));
@@ -265,7 +252,7 @@ async fn logout(mut auth_session: AuthSessionType) -> Result<StatusCode, AppErro
 }
 
 async fn me(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
 ) -> Result<Json<MeResponse>, AppError> {
@@ -294,71 +281,68 @@ async fn me(
 ///
 /// Intentional: this does NOT invalidate the user's existing sessions.
 /// Session invalidation on credential change is deferred to M1 (per CAO + Ada review).
+///
+/// Adapter responsibilities: extract the caller from the session, run
+/// the in-memory rate limiter, delegate the password-verify + regen
+/// composite to the pure `control_plane::users::regenerate_recovery_codes`
+/// fn, and map `ControlPlaneError` variants to the legacy wire shapes
+/// (`PermissionDenied` → 401/`invalid_credentials`/"Invalid password";
+/// `NotFound` → 500/"User not found"; `Internal` → 500/redacted).
 pub async fn regenerate_recovery_codes(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
     Json(req): Json<RegenerateRecoveryCodesRequest>,
 ) -> Result<Json<SetupResponse>, AppError> {
-    let user = auth_session
+    let caller = auth_session
         .user
         .as_ref()
         .ok_or_else(|| AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into()))?
         .clone();
 
-    // Rate limit check
     if !deps
         .regen_limiter
-        .check_and_record(&user.user.id.to_string())
+        .check_and_record(&caller.user.id.to_string())
     {
         return Err(AppError::TooManyRequests(
             "Too many regeneration attempts. Try again later.".into(),
         ));
     }
 
-    let repo = SeaOrmUserRepo::new(db.clone());
+    let recovery_codes =
+        control_plane::users::regenerate_recovery_codes(&deps, &db, caller.user.id, req.password)
+            .await
+            .map_err(map_regenerate_error)?;
 
-    // Re-fetch password hash from DB (not session cache) per AuthnBackend ADR
-    let password_hash = match repo.find_by_id_with_hash(&user.user.id).await {
-        Ok(Some((_, hash))) => hash,
-        Ok(None) => {
-            return Err(AppError::InternalError("User not found".into()));
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch user for regen: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
-    };
+    Ok(Json(SetupResponse { recovery_codes }))
+}
 
-    // Verify password
-    match crate::auth::password::verify_password(req.password, password_hash).await {
-        Ok(true) => {}
-        Ok(false) => {
-            return Err(AppError::Unauthorized(
-                ErrorCode::InvalidCredentials,
-                "Invalid password".into(),
-            ));
+/// Map `ControlPlaneError` from the regen pure fn into the legacy wire
+/// shapes. Preserves the pre-lift 401 "Invalid password" / 500 "User
+/// not found" / 500 redacted-internal behavior, including the
+/// regen-step-specific 500 message "Failed to regenerate recovery
+/// codes" (distinguished via the `regen_failed:` anyhow tag set by
+/// the pure fn — see `control_plane::users::regenerate_recovery_codes`).
+fn map_regenerate_error(err: ControlPlaneError) -> AppError {
+    match err {
+        ControlPlaneError::PermissionDenied => {
+            AppError::Unauthorized(ErrorCode::InvalidCredentials, "Invalid password".into())
         }
-        Err(e) => {
-            tracing::error!("Password verification error: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
+        ControlPlaneError::NotFound => AppError::InternalError("User not found".into()),
+        ControlPlaneError::Internal(e) => {
+            tracing::error!("Recovery code regeneration failed: {e:#}");
+            if e.to_string().starts_with("regen_failed:") {
+                AppError::InternalError("Failed to regenerate recovery codes".into())
+            } else {
+                AppError::InternalError("An internal error occurred".into())
+            }
         }
-    }
-
-    // Regenerate codes
-    match repo.regenerate_recovery_codes(&user.user.id).await {
-        Ok(recovery_codes) => Ok(Json(SetupResponse { recovery_codes })),
-        Err(e) => {
-            tracing::error!("Recovery code regeneration failed: {e}");
-            Err(AppError::InternalError(
-                "Failed to regenerate recovery codes".into(),
-            ))
-        }
+        other => other.into(),
     }
 }
 
 async fn setup(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     mut auth_session: AuthSessionType,
     Json(req): Json<SetupRequest>,
 ) -> Result<(StatusCode, Json<SetupResponse>), AppError> {
@@ -414,12 +398,12 @@ async fn setup(
 }
 
 struct SetupAttemptGuard {
-    deps: AuthRouterDeps,
+    deps: ControlPlaneState,
     completed: bool,
 }
 
 impl SetupAttemptGuard {
-    fn acquire(deps: &AuthRouterDeps) -> Result<Self, AppError> {
+    fn acquire(deps: &ControlPlaneState) -> Result<Self, AppError> {
         if deps.platform.setup_completed.load(Ordering::Acquire) {
             return Err(AppError::Forbidden(
                 ErrorCode::Forbidden,
@@ -471,7 +455,7 @@ impl Drop for SetupAttemptGuard {
     }
 }
 
-fn validate_setup_request(deps: &AuthRouterDeps, req: &SetupRequest) -> Result<(), AppError> {
+fn validate_setup_request(deps: &ControlPlaneState, req: &SetupRequest) -> Result<(), AppError> {
     if deps.platform.setup_completed.load(Ordering::Acquire) {
         return Err(AppError::Forbidden(
             ErrorCode::Forbidden,

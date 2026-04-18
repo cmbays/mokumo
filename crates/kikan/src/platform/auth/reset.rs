@@ -6,7 +6,8 @@ use axum::extract::State;
 use kikan_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use kikan_types::error::ErrorCode;
 
-use super::{AuthRouterDeps, PendingReset};
+use super::PendingReset;
+use crate::ControlPlaneState;
 use crate::auth::password;
 use crate::auth::{SeaOrmUserRepo, UserRepository};
 use crate::{AppError, ProfileDb};
@@ -45,7 +46,7 @@ fn recovery_html(pin: &str) -> String {
 }
 
 pub async fn forgot_password(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ForgotPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
@@ -110,7 +111,7 @@ pub async fn forgot_password(
 }
 
 pub async fn reset_password(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
