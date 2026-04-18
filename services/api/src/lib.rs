@@ -1,4 +1,3 @@
-pub mod activity;
 pub mod error;
 pub mod graft;
 
@@ -1034,7 +1033,10 @@ fn build_app_inner(
             }),
         )
         .nest("/api/users", kikan::platform::users::user_admin_router())
-        .nest("/api/activity", activity::router())
+        .nest(
+            "/api/activity",
+            kikan::platform::activity_http::activity_router(),
+        )
         .nest("/api/settings", settings::router())
         .route("/api/profile/switch", post(profile_switch::profile_switch))
         .route("/ws", get(ws::ws_handler))

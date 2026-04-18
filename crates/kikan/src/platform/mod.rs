@@ -13,7 +13,9 @@
 //! - [`diagnostics_bundle`] — `GET /api/diagnostics/bundle`
 //! - [`discovery`] — mDNS registration helpers (no router)
 //! - [`users`] — `/api/users/*` admin mutations (soft delete, role update)
+//! - [`activity_http`] — `GET /api/activity` list endpoint
 
+pub mod activity_http;
 pub mod auth;
 pub mod backup_status;
 pub mod demo;

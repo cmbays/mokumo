@@ -1,18 +1,30 @@
+//! Activity log HTTP handler.
+//!
+//! Lifted from `services/api/src/activity/mod.rs` in Wave A.4. Exposes
+//! `GET /api/activity` with optional `entity_type`, `entity_id`, `page`, and
+//! `per_page` filters. Uses per-request extractors only (`ProfileDb`), so the
+//! router is generic over state — no `ActivityRouterDeps` struct is required.
+//!
+//! Distinct name from [`crate::activity`] (the writer/repo) to avoid module
+//! collision inside kikan.
+
 use axum::extract::Query;
 use axum::routing::get;
 use axum::{Json, Router};
-use kikan::activity::SqliteActivityLogRepo;
 use kikan_types::activity::{ActivityEntryResponse, to_response};
 use kikan_types::pagination::PaginatedList;
 use mokumo_core::activity::traits::ActivityLogRepository;
+use mokumo_core::pagination::PageParams;
 use serde::Deserialize;
 
-use crate::SharedState;
-use crate::error::AppError;
-use crate::pagination::PaginationParams;
-use kikan::ProfileDb;
+use crate::AppError;
+use crate::ProfileDb;
+use crate::activity::SqliteActivityLogRepo;
 
-pub fn router() -> Router<SharedState> {
+pub fn activity_router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     Router::new().route("/", get(list_activity))
 }
 
@@ -28,11 +40,7 @@ async fn list_activity(
     ProfileDb(db): ProfileDb,
     Query(query): Query<ListActivityQuery>,
 ) -> Result<Json<PaginatedList<ActivityEntryResponse>>, AppError> {
-    let params = PaginationParams {
-        page: query.page,
-        per_page: query.per_page,
-    }
-    .into_page_params();
+    let params = PageParams::new(query.page, query.per_page);
 
     let repo = SqliteActivityLogRepo::new(db.get_sqlite_connection_pool().clone());
     let (entries, total) = repo
