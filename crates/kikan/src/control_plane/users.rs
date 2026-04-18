@@ -138,15 +138,13 @@ pub async fn verify_credentials(
 /// the same wall-clock shape. The value itself is meaningless — the
 /// password "dummy" is never accepted because we discard the result of
 /// the hash comparison when the user was missing or inactive.
+///
+/// Pre-generated at dev-time via `password_auth::generate_hash` (argon2id,
+/// default params) and pasted verbatim so the first request that hits an
+/// unknown-email / inactive path does not pay the ~hundreds-of-ms argon2
+/// cost. Verified by `dummy_hash_burns_argon2_time` below.
 fn dummy_hash() -> &'static str {
-    use std::sync::OnceLock;
-    static DUMMY: OnceLock<String> = OnceLock::new();
-    DUMMY.get_or_init(|| {
-        // Generated once per process via argon2 with default parameters.
-        // Synchronous call is fine here: OnceLock ensures this runs at
-        // most once, amortized across every verify_credentials call.
-        password_auth::generate_hash("dummy-password-not-a-secret")
-    })
+    "$argon2id$v=19$m=19456,t=2,p=1$UdFu5I27gCzB9xwcJviD9Q$ozUqrLyi1vPrt8DiIXuhALiz41dGwbYcJovIGWDi08I"
 }
 
 /// Convenience: pass a `Credentials` struct directly (same semantics as
@@ -353,6 +351,23 @@ mod tests {
             ControlPlaneError::Internal(e) => assert!(e.to_string().contains("db offline")),
             other => panic!("expected Internal, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn dummy_hash_is_a_real_argon2id_phc_string() {
+        // The literal must parse as a valid argon2id PHC hash so
+        // verify_password actually burns argon2 time on the unknown-email
+        // and inactive-user paths. A malformed PHC would short-circuit
+        // and reopen the timing side-channel we're closing.
+        let h = dummy_hash();
+        assert!(
+            h.starts_with("$argon2id$"),
+            "dummy_hash must be argon2id PHC, got: {h}"
+        );
+        assert!(
+            password_auth::verify_password("wrong-password", h).is_err(),
+            "verify_password against dummy_hash with arbitrary input must fail (and burn argon2 time)"
+        );
     }
 
     #[test]

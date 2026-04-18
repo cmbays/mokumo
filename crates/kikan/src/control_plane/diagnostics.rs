@@ -23,7 +23,7 @@
 //! `ControlPlaneError::Internal(anyhow::anyhow!(...))`. The HTTP
 //! adapter renders that as 500; UDS renders it identically.
 
-use std::io::{BufRead as _, BufReader, Cursor, Write as _};
+use std::io::{BufRead as _, BufReader, Cursor, Read as _, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -76,7 +76,15 @@ pub async fn collect(state: &PlatformState) -> Result<DiagnosticsResponse, Contr
         port: mdns.port,
     };
 
-    let system = collect_system_diagnostics(&state.data_dir);
+    // sysinfo refresh + Disks enumeration is synchronous and can take
+    // hundreds of ms on slow filesystems. Hop to the blocking pool so
+    // the async executor stays responsive.
+    let data_dir = state.data_dir.clone();
+    let system = tokio::task::spawn_blocking(move || collect_system_diagnostics(&data_dir))
+        .await
+        .map_err(|e| {
+            ControlPlaneError::Internal(anyhow::anyhow!("system diagnostics worker panicked: {e}"))
+        })?;
 
     Ok(DiagnosticsResponse {
         app: AppDiagnostics {
@@ -222,7 +230,13 @@ fn write_log_files(
         })?;
         files_included += 1;
 
-        let reader = BufReader::new(file);
+        // Cap raw bytes read so a pathological log file with no newlines
+        // (or a single multi-GiB line) cannot exhaust memory. The take()
+        // wrapper enforces the cap at read-time, before BufRead::lines
+        // allocates the per-line String.
+        let remaining_budget = MAX_LOG_TOTAL_BYTES.saturating_sub(bytes_written);
+        let reader = BufReader::new(file.take(remaining_budget));
+        let mut hit_cap = false;
         for line in reader.lines() {
             let line = match line {
                 Ok(l) => l,
@@ -238,7 +252,8 @@ fn write_log_files(
             let scrubbed = scrub_line(&line, patterns);
             let line_bytes = scrubbed.len() as u64 + 1;
             if bytes_written.saturating_add(line_bytes) > MAX_LOG_TOTAL_BYTES {
-                return Ok(true);
+                hit_cap = true;
+                break;
             }
             zip.write_all(scrubbed.as_bytes()).map_err(|e| {
                 ControlPlaneError::Internal(anyhow::anyhow!("zip write logs/{name}: {e}"))
@@ -247,6 +262,9 @@ fn write_log_files(
                 ControlPlaneError::Internal(anyhow::anyhow!("zip write logs/{name}: {e}"))
             })?;
             bytes_written += line_bytes;
+        }
+        if hit_cap || bytes_written >= MAX_LOG_TOTAL_BYTES {
+            return Ok(true);
         }
     }
     Ok(false)
