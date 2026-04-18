@@ -1,7 +1,7 @@
 pub mod activity;
 pub mod auth;
 pub mod error;
-pub mod graft_bridge;
+pub mod graft;
 
 // Compatibility re-exports — `demo` and `discovery` are still referenced via
 // the historic `mokumo_api::*` paths from the desktop shell / BDD world after
@@ -85,7 +85,7 @@ pub struct ServerConfig {
     pub ws_ping_ms: Option<u64>,
 }
 
-pub struct AppState {
+pub struct MokumoAppState {
     /// Demo profile database connection.
     pub demo_db: DatabaseConnection,
     /// Production profile database connection.
@@ -134,7 +134,7 @@ pub struct AppState {
     /// to a specific profile's `DatabaseConnection` — writers receive the
     /// per-request transaction at call time. Pre-populated here so V6c's
     /// customer vertical (extracted to `mokumo-shop`) can be wired without
-    /// requiring further AppState plumbing.
+    /// requiring further MokumoAppState plumbing.
     pub activity_writer: Arc<dyn kikan::ActivityWriter>,
     /// Vertical-supplied DB initializer used by demo reset (carried into
     /// `PlatformState` via `platform_state()`).
@@ -148,7 +148,7 @@ pub struct AppState {
     pub ws_ping_ms: Option<u64>,
 }
 
-impl AppState {
+impl MokumoAppState {
     /// Return the database connection for the given profile.
     pub fn db_for(&self, mode: SetupMode) -> &DatabaseConnection {
         match mode {
@@ -172,9 +172,9 @@ impl AppState {
     }
 }
 
-pub type SharedState = Arc<AppState>;
+pub type SharedState = Arc<MokumoAppState>;
 
-impl AppState {
+impl MokumoAppState {
     /// Narrow to the kikan-owned `PlatformState` slice.
     ///
     /// Used by platform handlers (diagnostics, demo reset, backup status)
@@ -779,7 +779,7 @@ pub async fn build_app(
 
 /// Build the Axum router with an explicit shutdown token.
 ///
-/// The token is stored in `AppState` so handlers (e.g. WebSocket) can observe
+/// The token is stored in `MokumoAppState` so handlers (e.g. WebSocket) can observe
 /// shutdown and drain gracefully. Spawns background tasks for IP refresh and
 /// expired session cleanup, both stopped by the shutdown token.
 #[allow(unused_variables)] // config will be used by future CORS/rate-limit settings
@@ -890,7 +890,7 @@ fn build_app_inner(
 
     let ws_handle = Arc::new(ws::manager::ConnectionManager::new(64));
 
-    let state: SharedState = Arc::new(AppState {
+    let state: SharedState = Arc::new(MokumoAppState {
         demo_db,
         production_db,
         active_profile: Arc::new(parking_lot::RwLock::new(active_profile)),
