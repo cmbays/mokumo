@@ -16,5 +16,5 @@ TARGET="${1:-crates/kikan/src}"
 
 PATTERN='\bTauri[A-Z]\w*\b'
 
-rg_no_match_or_die "I2b" "$PATTERN" "$TARGET"
+rg_no_match_or_die "I2b" "$PATTERN" -t rust "$TARGET"
 echo "I2b ok: ${TARGET} contains no Tauri type identifiers"
