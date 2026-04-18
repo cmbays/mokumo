@@ -16,7 +16,6 @@ pub mod restore;
 pub mod security_headers;
 pub mod server_info;
 pub mod settings;
-pub mod user;
 pub mod ws;
 
 use std::path::{Path, PathBuf};
@@ -1034,7 +1033,7 @@ fn build_app_inner(
                 activity_writer: state.activity_writer.clone(),
             }),
         )
-        .nest("/api/users", user::router())
+        .nest("/api/users", kikan::platform::users::user_admin_router())
         .nest("/api/activity", activity::router())
         .nest("/api/settings", settings::router())
         .route("/api/profile/switch", post(profile_switch::profile_switch))
