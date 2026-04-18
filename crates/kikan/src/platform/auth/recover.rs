@@ -3,12 +3,12 @@ use axum::extract::State;
 use kikan_types::auth::RecoverRequest;
 use kikan_types::error::ErrorCode;
 
-use super::AuthRouterDeps;
+use crate::ControlPlaneState;
 use crate::auth::SeaOrmUserRepo;
 use crate::{AppError, ProfileDb};
 
 pub async fn recover(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<RecoverRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {

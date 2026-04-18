@@ -108,7 +108,7 @@ pub struct MokumoAppState {
     /// Rate limiter for recovery code regeneration attempts (3 per hour per user).
     pub regen_limiter: Arc<rate_limit::RateLimiter>,
     /// Rate limiter for profile switch attempts (3 per 15 min per user).
-    pub switch_limiter: rate_limit::RateLimiter,
+    pub switch_limiter: Arc<rate_limit::RateLimiter>,
     /// True until the first profile switch completes (set false after active_profile is written).
     /// Initialized at startup from whether the active_profile file is absent.
     pub is_first_launch: Arc<AtomicBool>,
@@ -196,19 +196,27 @@ impl MokumoAppState {
             profile_db_initializer: self.profile_db_initializer.clone(),
         }
     }
-}
 
-impl From<&MokumoAppState> for kikan::platform::auth::AuthRouterDeps {
-    fn from(state: &MokumoAppState) -> Self {
-        Self {
-            platform: state.platform_state(),
-            login_limiter: state.login_limiter.clone(),
-            recovery_limiter: state.recovery_limiter.clone(),
-            regen_limiter: state.regen_limiter.clone(),
-            reset_pins: state.reset_pins.clone(),
-            recovery_dir: state.recovery_dir.clone(),
-            setup_token: state.setup_token.clone(),
-            setup_in_progress: state.setup_in_progress.clone(),
+    /// Narrow to the kikan-owned `ControlPlaneState` slice.
+    ///
+    /// Extends `platform_state()` with the auth rate limiters, recovery
+    /// directory, reset-PIN map, first-admin setup token, and activity
+    /// writer. Bound once per control-plane router merge via
+    /// `.with_state(state.control_plane_state())`; pure fns under
+    /// `kikan::control_plane::*` and their Axum-handler delegations
+    /// under `kikan::platform::*` consume it via `State<ControlPlaneState>`.
+    pub fn control_plane_state(&self) -> kikan::ControlPlaneState {
+        kikan::ControlPlaneState {
+            platform: self.platform_state(),
+            login_limiter: self.login_limiter.clone(),
+            recovery_limiter: self.recovery_limiter.clone(),
+            regen_limiter: self.regen_limiter.clone(),
+            switch_limiter: self.switch_limiter.clone(),
+            reset_pins: self.reset_pins.clone(),
+            recovery_dir: self.recovery_dir.clone(),
+            setup_token: self.setup_token.clone(),
+            setup_in_progress: self.setup_in_progress.clone(),
+            activity_writer: self.activity_writer.clone(),
         }
     }
 }
@@ -921,7 +929,7 @@ fn build_app_inner(
             3,
             std::time::Duration::from_secs(3600),
         )),
-        switch_limiter: rate_limit::RateLimiter::new(3, rate_limit::DEFAULT_WINDOW),
+        switch_limiter: Arc::new(rate_limit::RateLimiter::new(3, rate_limit::DEFAULT_WINDOW)),
         is_first_launch: Arc::new(AtomicBool::new(first_launch)),
         restore_in_progress: Arc::new(AtomicBool::new(false)),
         demo_install_ok,
@@ -1011,18 +1019,18 @@ fn build_app_inner(
         mokumo_shop::shop_logo_protected_router().with_state(shop_logo_deps.clone()),
     );
 
-    let auth_deps = kikan::platform::auth::AuthRouterDeps::from(&*state);
+    let control_plane_state = state.control_plane_state();
 
-    // Auth-stated sub-router for protected auth endpoints. Uses its own
-    // `AuthRouterDeps` state; merged into `protected_routes` which runs
-    // on `SharedState`.
+    // Control-plane-stated sub-router for protected auth endpoints.
+    // Handlers under `kikan::platform::auth` are thin delegations over
+    // `kikan::control_plane::users::*`; both share `ControlPlaneState`.
     let protected_auth_routes = Router::new()
         .nest("/api/auth", kikan::platform::auth::auth_me_router())
         .route(
             "/api/account/recovery-codes/regenerate",
             post(kikan::platform::auth::regenerate_recovery_codes),
         )
-        .with_state(auth_deps.clone());
+        .with_state(control_plane_state.clone());
 
     let protected_routes = Router::new()
         .nest(
@@ -1072,11 +1080,11 @@ fn build_app_inner(
         )
         .nest(
             "/api/auth",
-            kikan::platform::auth::auth_router().with_state(auth_deps.clone()),
+            kikan::platform::auth::auth_router().with_state(control_plane_state.clone()),
         )
         .nest(
             "/api/setup",
-            kikan::platform::auth::setup_router().with_state(auth_deps.clone()),
+            kikan::platform::auth::setup_router().with_state(control_plane_state.clone()),
         )
         .merge(restore_routes)
         .merge(protected_routes);

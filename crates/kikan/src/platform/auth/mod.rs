@@ -9,20 +9,23 @@
 //!
 //! ## Composition
 //!
-//! `AuthRouterDeps` bundles a [`PlatformState`](crate::PlatformState) clone
-//! with auth-specific singletons (rate limiters, reset-PIN store,
-//! recovery-file directory, setup-token). The services/api mount site
-//! binds deps once per router via `.with_state(AuthRouterDeps::from(&*state))`
-//! so handlers extract it directly as `State<AuthRouterDeps>`. The
+//! `ControlPlaneState` (from `kikan::control_plane::state`) is the unified
+//! state slice consumed by these Axum handlers and by the pure-fn layer
+//! under `kikan::control_plane::users::*`. The services/api mount site
+//! binds state once per router via `.with_state(state.control_plane_state())`
+//! so handlers extract it as `State<ControlPlaneState>`. The
 //! `require_auth_with_demo_auto_login` middleware only needs
 //! `PlatformState` and is wired with `from_fn_with_state(state.platform_state(), …)`.
+//!
+//! Handler bodies in this module are thin delegations: Axum extractors →
+//! call `control_plane::users::*` → `.map_err(AppError::from)`. The session
+//! and cookie issuance stay in the HTTP adapter — the pure-fn layer cannot
+//! see `axum_login::AuthSession`.
 
 pub mod recover;
 pub mod reset;
 
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -30,7 +33,6 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use axum_login::AuthSession;
-use dashmap::DashMap;
 use kikan_types::auth::{
     LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
 };
@@ -39,8 +41,7 @@ use kikan_types::user::UserResponse;
 use mokumo_core::activity::ActivityAction;
 
 use crate::auth::{AuthenticatedUser, Backend, Credentials, RoleId, SeaOrmUserRepo, UserId};
-use crate::rate_limit::RateLimiter;
-use crate::{AppError, PlatformState, ProfileDb, SetupMode};
+use crate::{AppError, ControlPlaneState, PlatformState, ProfileDb, SetupMode};
 
 /// Route path for the demo-reset handler. The auth-gate middleware allows
 /// this path through even while the demo profile is mid-install, so shop
@@ -49,34 +50,12 @@ pub const DEMO_RESET_PATH: &str = "/api/demo/reset";
 
 pub type AuthSessionType = AuthSession<Backend>;
 
-/// A pending file-drop password reset entry — the hashed PIN plus the
-/// wall-clock instant it was issued. Expired entries are pruned lazily by
-/// the reset_password handler.
-pub struct PendingReset {
-    pub pin_hash: String,
-    pub created_at: std::time::SystemTime,
-}
+// `PendingReset` now lives under `kikan::control_plane::state`. Re-exported
+// here for source-compat with services/api and external callers that still
+// reference `kikan::platform::auth::PendingReset`.
+pub use crate::control_plane::PendingReset;
 
-/// Router deps for the auth / setup sub-routers.
-///
-/// Holds a `PlatformState` clone (for DB pools, active_profile, setup
-/// flags, data_dir) plus auth-specific singletons. Every field is O(1)
-/// clonable — `PlatformState` is already Arc-backed, the limiters and
-/// reset-PIN map are behind `Arc`, and the primitive fields (PathBuf,
-/// Option<String>, AtomicBool) clone cheaply.
-#[derive(Clone)]
-pub struct AuthRouterDeps {
-    pub platform: PlatformState,
-    pub login_limiter: Arc<RateLimiter>,
-    pub recovery_limiter: Arc<RateLimiter>,
-    pub regen_limiter: Arc<RateLimiter>,
-    pub reset_pins: Arc<DashMap<String, PendingReset>>,
-    pub recovery_dir: PathBuf,
-    pub setup_token: Option<String>,
-    pub setup_in_progress: Arc<AtomicBool>,
-}
-
-pub fn auth_router() -> Router<AuthRouterDeps> {
+pub fn auth_router() -> Router<ControlPlaneState> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
@@ -87,11 +66,11 @@ pub fn auth_router() -> Router<AuthRouterDeps> {
 
 /// Separate router for /api/auth/me — must be behind the demo auto-login
 /// middleware so that demo mode sessions are created before the auth check.
-pub fn auth_me_router() -> Router<AuthRouterDeps> {
+pub fn auth_me_router() -> Router<ControlPlaneState> {
     Router::new().route("/me", get(me))
 }
 
-pub fn setup_router() -> Router<AuthRouterDeps> {
+pub fn setup_router() -> Router<ControlPlaneState> {
     Router::new().route("/", post(setup))
 }
 
@@ -121,7 +100,7 @@ const LOGIN_LOCKOUT_THRESHOLD: i32 = 10;
 const LOGIN_LOCKOUT_SECS: i64 = 15 * 60;
 
 async fn login(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     mut auth_session: AuthSessionType,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<UserResponse>, AppError> {
@@ -265,7 +244,7 @@ async fn logout(mut auth_session: AuthSessionType) -> Result<StatusCode, AppErro
 }
 
 async fn me(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
 ) -> Result<Json<MeResponse>, AppError> {
@@ -295,7 +274,7 @@ async fn me(
 /// Intentional: this does NOT invalidate the user's existing sessions.
 /// Session invalidation on credential change is deferred to M1 (per CAO + Ada review).
 pub async fn regenerate_recovery_codes(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     auth_session: AuthSessionType,
     ProfileDb(db): ProfileDb,
     Json(req): Json<RegenerateRecoveryCodesRequest>,
@@ -358,7 +337,7 @@ pub async fn regenerate_recovery_codes(
 }
 
 async fn setup(
-    State(deps): State<AuthRouterDeps>,
+    State(deps): State<ControlPlaneState>,
     mut auth_session: AuthSessionType,
     Json(req): Json<SetupRequest>,
 ) -> Result<(StatusCode, Json<SetupResponse>), AppError> {
@@ -414,12 +393,12 @@ async fn setup(
 }
 
 struct SetupAttemptGuard {
-    deps: AuthRouterDeps,
+    deps: ControlPlaneState,
     completed: bool,
 }
 
 impl SetupAttemptGuard {
-    fn acquire(deps: &AuthRouterDeps) -> Result<Self, AppError> {
+    fn acquire(deps: &ControlPlaneState) -> Result<Self, AppError> {
         if deps.platform.setup_completed.load(Ordering::Acquire) {
             return Err(AppError::Forbidden(
                 ErrorCode::Forbidden,
@@ -471,7 +450,7 @@ impl Drop for SetupAttemptGuard {
     }
 }
 
-fn validate_setup_request(deps: &AuthRouterDeps, req: &SetupRequest) -> Result<(), AppError> {
+fn validate_setup_request(deps: &ControlPlaneState, req: &SetupRequest) -> Result<(), AppError> {
     if deps.platform.setup_completed.load(Ordering::Acquire) {
         return Err(AppError::Forbidden(
             ErrorCode::Forbidden,
