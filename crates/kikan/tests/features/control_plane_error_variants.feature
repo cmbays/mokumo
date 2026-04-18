@@ -1,4 +1,3 @@
-@future
 Feature: Control plane error variant mapping
 
   Every ControlPlaneError variant maps to a fixed (ErrorCode, http_status)
@@ -21,12 +20,12 @@ Feature: Control plane error variant mapping
     And the response http status is <http_status>
 
     Examples:
-      | variant                         | error_code                  | http_status |
-      | NotFound                        | NOT_FOUND                   | 404         |
-      | Conflict("already bootstrapped")| ALREADY_BOOTSTRAPPED        | 409         |
-      | Validation{field,message}       | VALIDATION                  | 400         |
-      | PermissionDenied                | PERMISSION_DENIED           | 403         |
-      | Internal(anyhow!("db offline")) | INTERNAL                    | 500         |
+      | variant          | error_code           | http_status |
+      | NotFound         | not_found            | 404         |
+      | Conflict         | already_bootstrapped | 409         |
+      | Validation       | validation_error     | 400         |
+      | PermissionDenied | forbidden            | 403         |
+      | Internal         | internal_error       | 500         |
 
   # --- Exhaustiveness guard ---
 

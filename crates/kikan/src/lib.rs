@@ -4,6 +4,7 @@ pub mod app_handle;
 pub mod auth;
 pub mod backup;
 pub mod boot;
+pub mod control_plane_error;
 pub mod db;
 pub mod engine;
 pub mod error;
@@ -20,6 +21,7 @@ pub use activity::{ActivityLogEntry, ActivityWriter, SqliteActivityWriter};
 pub use app_error::AppError;
 pub use app_handle::AppHandleShim;
 pub use boot::{BootConfig, DeploymentMode};
+pub use control_plane_error::{ConflictKind, ControlPlaneError};
 pub use engine::{
     Engine, EngineContext, Sessions, platform_protected_routes, platform_public_routes,
 };

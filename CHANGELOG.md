@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Internal
+
+- **`ControlPlaneError` narrow handler-level error type**: Introduces `kikan::ControlPlaneError` (5 variants: `NotFound`, `Conflict(ConflictKind)`, `Validation`, `PermissionDenied`, `Internal`) with `ConflictKind::AlreadyBootstrapped` for the first-admin bootstrap path. Both transport adapters render the same `(ErrorCode, http_status)` tuple — HTTP via `From<ControlPlaneError> for AppError`, UDS via direct `IntoResponse`. Pinned by `control_plane_error_variants.feature` (un-tagged) + `crates/kikan/tests/control_plane_error_variants.rs` table-driven test. Adds `ErrorCode::AlreadyBootstrapped` variant; regenerates TypeScript bindings. (#508)
+
 ### Changed
 
 - **Docs**: CLAUDE.md §Project Structure, §Architecture, §Coding Standards, §What NOT to Do rewritten to reflect the post-Stage-3 topology. Retires references to the dissolved `crates/core`/`crates/db` layers, the three-layer ladder, and the auto-repair litmus test per `adr-mokumo-extensions`. Adds the Engine/Application/Graft vocabulary and invariants I1–I5. Fixes `crates/kikan-tauri` Cargo description (`control_plane` → `platform`) and `crates/mokumo-shop/src/lib.rs` crate-level doc (retires `mokumo-decor` anticipation). (#508, #510)

@@ -30,4 +30,5 @@ export type ErrorCode =
   | "schema_incompatible"
   | "restore_in_progress"
   | "demo_setup_required"
-  | "account_locked";
+  | "account_locked"
+  | "already_bootstrapped";
