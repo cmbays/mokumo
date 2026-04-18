@@ -8,7 +8,7 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let conn = manager.get_connection();
         conn.execute_unprepared(
-            "CREATE INDEX IF NOT EXISTS idx_activity_log_created_at_id \
+            "CREATE INDEX idx_activity_log_created_at_id \
              ON activity_log(created_at DESC, id DESC)",
         )
         .await?;
@@ -21,6 +21,7 @@ impl MigrationTrait for Migration {
         let conn = manager.get_connection();
         conn.execute_unprepared("DROP INDEX IF EXISTS idx_activity_log_created_at_id")
             .await?;
+        conn.execute_unprepared("PRAGMA user_version = 9").await?;
         Ok(())
     }
 
