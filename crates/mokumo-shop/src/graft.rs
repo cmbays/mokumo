@@ -111,9 +111,74 @@ impl Graft for MokumoApp {
         &state.control_plane
     }
 
-    fn data_plane_routes(_state: &Self::AppState) -> axum::Router<Self::AppState> {
-        // Deferred to PR 3: production router lives in services/api::build_app_inner.
-        axum::Router::new()
+    fn data_plane_routes(state: &Self::AppState) -> axum::Router<Self::AppState> {
+        crate::routes::data_plane_routes(state)
+    }
+
+    fn spawn_background_tasks(&self, state: &Self::AppState) {
+        // Background task: re-check local IP every 30s.
+        // The watch::Sender is held by the build_app_with_shutdown caller;
+        // here we just refresh the domain's local_ip receiver.
+        // Note: The IP refresh sender is owned by the caller (mokumo-server
+        // or mokumo-desktop). This hook spawns the PIN sweep which is the
+        // domain concern that belongs in spawn_background_tasks.
+
+        // Background task: sweep expired reset PINs every 60s.
+        {
+            let pins = state.reset_pins().clone();
+            let token = state.shutdown().clone();
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = tokio::time::sleep(std::time::Duration::from_secs(60)) => {
+                            let now = std::time::SystemTime::now();
+                            pins.retain(|_, v| {
+                                now.duration_since(v.created_at)
+                                    .unwrap_or(std::time::Duration::ZERO)
+                                    < std::time::Duration::from_secs(15 * 60)
+                            });
+                        }
+                        _ = token.cancelled() => break,
+                    }
+                }
+            });
+        }
+
+        // Background task: run PRAGMA optimize every 2 hours and once on graceful shutdown.
+        {
+            let demo_pool = state.demo_db().get_sqlite_connection_pool().clone();
+            let prod_pool = state.production_db().get_sqlite_connection_pool().clone();
+            let token = state.shutdown().clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(2 * 3600));
+                interval.tick().await; // skip immediate first tick
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {
+                            for pool in [&demo_pool, &prod_pool] {
+                                if let Err(e) = sqlx::query("PRAGMA optimize(0xfffe)")
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::warn!("periodic PRAGMA optimize failed: {e}");
+                                }
+                            }
+                        }
+                        _ = token.cancelled() => {
+                            for pool in [&demo_pool, &prod_pool] {
+                                if let Err(e) = sqlx::query("PRAGMA optimize(0xfffe)")
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::warn!("shutdown PRAGMA optimize failed: {e}");
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            });
+        }
     }
 
     fn on_backup_created(

@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 
 use kikan::{BootConfig, Engine, EngineError, SetupMode};
 use sea_orm::{Database, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
-use support::StubGraft;
+use support::{StubGraft, stub_app_state};
 use tower_sessions_sqlx_store::SqliteStore;
 
 async fn in_memory_db() -> DatabaseConnection {
@@ -30,9 +30,11 @@ async fn build_router_composes_layers_and_serves_404() {
     let graft = StubGraft::diamond();
     let config = BootConfig::new(std::path::PathBuf::from("/tmp/test-engine-router"));
     let (pool, store) = test_runtime().await;
-    let engine = Engine::new(config, &graft, pool, store).unwrap();
+    let demo_db = in_memory_db().await;
+    let engine = Engine::new(config, &graft, pool.clone(), store).unwrap();
 
-    let router = engine.build_router(());
+    let state = stub_app_state(demo_db, pool, "/tmp/test-engine-router".into());
+    let router = engine.build_router(state);
     let request = Request::builder()
         .uri("/unknown")
         .header("host", "127.0.0.1")
@@ -51,9 +53,11 @@ async fn build_router_rejects_disallowed_host() {
     let graft = StubGraft::diamond();
     let config = BootConfig::new(std::path::PathBuf::from("/tmp/test-engine-router-host"));
     let (pool, store) = test_runtime().await;
-    let engine = Engine::new(config, &graft, pool, store).unwrap();
+    let demo_db = in_memory_db().await;
+    let engine = Engine::new(config, &graft, pool.clone(), store).unwrap();
 
-    let router = engine.build_router(());
+    let state = stub_app_state(demo_db, pool, "/tmp/test-engine-router-host".into());
+    let router = engine.build_router(state);
     let request = Request::builder()
         .uri("/unknown")
         .header("host", "evil.com")
@@ -223,7 +227,7 @@ async fn boot_returns_engine_and_app_state() {
     session_store.migrate().await.unwrap();
 
     let profile_db_init: kikan::platform_state::SharedProfileDbInitializer =
-        Arc::new(NoOpProfileDbInitializer);
+        Arc::new(support::NoOpProfileDbInitializer);
 
     let (engine, _state) = Engine::<StubGraft>::boot(
         config,
@@ -242,26 +246,4 @@ async fn boot_returns_engine_and_app_state() {
     .expect("Engine::boot should succeed");
 
     assert_eq!(engine.tenancy().data_dir(), dir.path());
-}
-
-struct NoOpProfileDbInitializer;
-
-impl kikan::platform_state::ProfileDbInitializer for NoOpProfileDbInitializer {
-    fn initialize<'a>(
-        &'a self,
-        _database_url: &'a str,
-    ) -> std::pin::Pin<
-        Box<
-            dyn std::future::Future<
-                    Output = Result<DatabaseConnection, kikan::db::DatabaseSetupError>,
-                > + Send
-                + 'a,
-        >,
-    > {
-        Box::pin(async {
-            Err(kikan::db::DatabaseSetupError::Migration(
-                sea_orm::DbErr::Custom("not supported in test".to_string()),
-            ))
-        })
-    }
 }

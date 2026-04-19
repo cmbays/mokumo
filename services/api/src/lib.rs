@@ -10,12 +10,16 @@ pub use kikan::platform::demo;
 pub use kikan::platform::discovery;
 pub mod logging;
 pub mod pagination;
-pub mod profile_switch;
+/// Re-export from mokumo-shop (moved in PR 3, Session 3.2).
+pub use mokumo_shop::profile_switch;
 pub mod restore;
-pub mod security_headers;
+/// Re-export from kikan (moved in PR 3, Session 3.1).
+pub use kikan::middleware::security_headers;
 pub mod server_info;
-pub mod settings;
-pub mod setup;
+/// Re-export from mokumo-shop (moved in PR 3, Session 3.2).
+pub use mokumo_shop::settings;
+/// Re-export from mokumo-shop (moved in PR 3, Session 3.2).
+pub use mokumo_shop::setup;
 pub mod ws;
 
 use std::path::{Path, PathBuf};
