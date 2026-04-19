@@ -30,8 +30,12 @@ check_tree() {
         return 2
     fi
 
+    # Anchor to line start so forbidden names only match at the crate-name
+    # position. `cargo tree --prefix none` emits `crate vX.Y.Z (/abs/path)`
+    # for workspace members — an unanchored pattern false-positives when the
+    # repo is cloned under a path containing `tauri`/`wry`/etc.
     local hits
-    hits="$(echo "$tree" | grep -iE "$FORBIDDEN" | sort -u || true)"
+    hits="$(echo "$tree" | grep -iE "^$FORBIDDEN" | sort -u || true)"
     if [[ -n "$hits" ]]; then
         echo "::error::I3 violated (${label}): ${PKG} transitively depends on Tauri/webview crates" >&2
         echo "Offending entries:" >&2
