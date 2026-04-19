@@ -21,12 +21,15 @@
 pub mod activity;
 pub mod customer;
 pub mod db;
+pub mod graft;
 pub mod lifecycle;
 pub mod migrations;
 pub mod restore;
 pub mod sequence;
 pub mod shop;
+pub mod state;
 pub mod types;
+pub mod ws;
 
 pub use activity::ActivityAction;
 pub use customer::{
