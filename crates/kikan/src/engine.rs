@@ -1,15 +1,21 @@
 use std::marker::PhantomData;
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use axum::Router;
 use axum::routing::{get, post};
+use dashmap::DashMap;
+use parking_lot::RwLock;
 use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
+use tokio_util::sync::CancellationToken;
 use tower_http::trace::TraceLayer;
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::activity::{ActivityWriter, SqliteActivityWriter};
 use crate::boot::BootConfig;
+use crate::control_plane::state::ControlPlaneState;
 use crate::error::EngineError;
 use crate::graft::{Graft, SelfGraft, SubGraft};
 use crate::middleware::host_allowlist::HostHeaderAllowList;
@@ -17,8 +23,9 @@ use crate::middleware::session_layer;
 use crate::migrations;
 use crate::migrations::Migration;
 use crate::platform;
-use crate::platform_state::PlatformState;
-use crate::tenancy::Tenancy;
+use crate::platform_state::{MdnsStatus, PlatformState, SharedProfileDbInitializer};
+use crate::rate_limit::RateLimiter;
+use crate::tenancy::{SetupMode, Tenancy};
 
 /// Runtime context shared across all requests. All fields have O(1) `Clone`:
 /// `DatabaseConnection` is internally Arc-wrapped; every other field is an
@@ -116,6 +123,86 @@ impl<G: Graft> Engine<G> {
     pub async fn run_migrations(&self, pool: &DatabaseConnection) -> Result<(), EngineError> {
         migrations::runner::run_migrations_with_backfill(pool, &self.all_migrations, Some(G::id()))
             .await
+    }
+
+    /// Boot the engine: construct the Engine, then assemble the full
+    /// application state from platform + control-plane + domain slices.
+    ///
+    /// Callers prepare database connections and session store beforehand;
+    /// `boot` handles migration execution, state composition, and
+    /// setup-token generation.
+    pub async fn boot(
+        config: BootConfig,
+        graft: &G,
+        demo_db: DatabaseConnection,
+        production_db: DatabaseConnection,
+        active_profile: SetupMode,
+        session_store: SqliteStore,
+        profile_db_initializer: SharedProfileDbInitializer,
+        setup_completed: Arc<AtomicBool>,
+        setup_token: Option<String>,
+        demo_install_ok: Arc<AtomicBool>,
+        recovery_dir: PathBuf,
+    ) -> Result<(Self, G::AppState), EngineError> {
+        let activity_writer: Arc<dyn ActivityWriter> = Arc::new(SqliteActivityWriter::new());
+
+        let engine = Self::new_with(
+            config,
+            graft,
+            production_db.clone(),
+            session_store,
+            activity_writer.clone(),
+        )?;
+
+        // Run migrations on both profile databases.
+        engine.run_migrations(&demo_db).await?;
+        engine.run_migrations(&production_db).await?;
+
+        let first_launch = !engine.config.data_dir.join("active_profile").exists();
+
+        // ── PlatformState ────────────────────────────────────────────
+        let platform = PlatformState {
+            data_dir: engine.config.data_dir.clone(),
+            demo_db,
+            production_db,
+            active_profile: Arc::new(RwLock::new(active_profile)),
+            shutdown: CancellationToken::new(),
+            started_at: std::time::Instant::now(),
+            mdns_status: MdnsStatus::shared(),
+            demo_install_ok,
+            is_first_launch: Arc::new(AtomicBool::new(first_launch)),
+            setup_completed,
+            profile_db_initializer,
+        };
+
+        // ── ControlPlaneState ────────────────────────────────────────
+        let rlc = &engine.config.rate_limit_config;
+        let control_plane = ControlPlaneState {
+            platform: platform.clone(),
+            login_limiter: Arc::new(RateLimiter::new(rlc.login.max_attempts, rlc.login.window)),
+            recovery_limiter: Arc::new(RateLimiter::new(
+                rlc.recovery.max_attempts,
+                rlc.recovery.window,
+            )),
+            regen_limiter: Arc::new(RateLimiter::new(rlc.regen.max_attempts, rlc.regen.window)),
+            switch_limiter: Arc::new(RateLimiter::new(
+                rlc.profile_switch.max_attempts,
+                rlc.profile_switch.window,
+            )),
+            reset_pins: Arc::new(DashMap::new()),
+            recovery_dir,
+            setup_token,
+            setup_in_progress: Arc::new(AtomicBool::new(false)),
+            activity_writer,
+        };
+
+        // ── DomainState ──────────────────────────────────────────────
+        let domain = graft.build_domain_state(&engine.ctx).await?;
+
+        // ── Compose ──────────────────────────────────────────────────
+        let app_state = G::compose_state(platform, control_plane, domain);
+
+        Ok((engine, app_state))
     }
 
     pub fn tenancy(&self) -> &Tenancy {
