@@ -1,31 +1,18 @@
 # CRAP score configuration for Mokumo
-# Scoped to unit-testable crates only. Integration-only layers are excluded:
-#   - services/api/src/** — Axum handlers, covered by BDD integration tests (not --lib)
-#   - crates/kikan/src/platform/** — platform-wiring Axum handlers lifted from
-#     services/api in S4.1 (#507); same BDD-coverage rationale applies.
-#   - crates/kikan/src/control_plane/** — transport-neutral pure-fn lift of the
-#     platform handlers in S4.2 PR-B (#508). Exercised end-to-end through the
-#     same BDD/hurl integration tests as platform/**. llvm-cov via nextest does
-#     not run the cucumber-rs BDD harness, so line coverage reads as 0% here
-#     even though semantic coverage is high; same rationale as platform/**.
-#     Scoped helpers with unit tests (e.g. scrub_line) still get coverage.
-#   - apps/mokumo-desktop/**  — Tauri entry point, no unit test surface
-#   - apps/mokumo-server/**   — binary entry point, no unit test surface
-#   - crates/kikan-cli/**     — UDS HTTP client library; exercised through
-#     the admin_uds integration tests (services/api/tests/admin_uds.rs),
-#     not via --lib unit tests. Same rationale as control_plane/**.
-#   - **/tests/**        — Test helpers have 0% coverage by definition
-
-# Strict preset (threshold 15). pre_migration_backup was decomposed in #288 —
-# build_backup_path, collect_existing_backups, rotate_backups extracted, CC reduced.
+# Scoped to unit-testable crates only. Integration-only layers are excluded
+# because llvm-cov via nextest does not run the cucumber-rs BDD harness, so
+# line coverage reads as 0% even when semantic coverage through BDD + hurl
+# integration tests is high.
 preset = "strict"
 
 exclude = [
-  "services/api/src/**",
+  # Platform-wiring Axum handlers; exercised through the BDD harness.
   "crates/kikan/src/platform/**",
+  # Transport-neutral control-plane handlers; exercised through the BDD harness.
+  # Scoped helpers with unit tests (e.g. scrub_line) still get coverage.
   "crates/kikan/src/control_plane/**",
-  # HTTP adapters moved from services/api in PR 3 (#512). Covered by BDD
-  # integration tests that still live in services/api/tests/ until PR 4.
+  # HTTP adapters; exercised through the `api_bdd` harness in
+  # crates/mokumo-shop/tests/.
   "crates/mokumo-shop/src/restore_handler.rs",
   "crates/mokumo-shop/src/profile_switch.rs",
   "crates/mokumo-shop/src/routes.rs",
@@ -33,18 +20,18 @@ exclude = [
   "crates/mokumo-shop/src/settings.rs",
   "crates/mokumo-shop/src/server_info.rs",
   "crates/mokumo-shop/src/ws/handler.rs",
-  # Binary-shell helpers moved from services/api in PR 4b (#512, PR #608).
-  # Exercised end-to-end through the BDD harness and demo-smoke / api-smoke
-  # integration tests (services/api/tests/ until PR 4c). llvm-cov via nextest
-  # does not run the cucumber-rs BDD harness, so line coverage reads 0% here
-  # despite high semantic coverage — same rationale as platform/** and
-  # control_plane/**.
+  # Binary-shell helpers; exercised through the BDD harness and
+  # demo-smoke / api-smoke integration tests.
   "crates/mokumo-shop/src/startup.rs",
   "crates/mokumo-shop/src/cli.rs",
   "crates/kikan/src/logging.rs",
+  # Binary entry points — no unit test surface.
   "apps/mokumo-desktop/**",
   "apps/mokumo-server/**",
+  # UDS HTTP client library; exercised through the admin_uds integration
+  # tests (crates/mokumo-shop/tests/admin_uds.rs).
   "crates/kikan-cli/**",
+  # Test helpers have 0% coverage by definition.
   "**/tests/**",
   "**/build.rs",
 ]

@@ -24,14 +24,14 @@ const options: LintOptions = {
   featureGlobs: [
     "apps/web/tests/features/**/*.feature",
     "crates/*/tests/features/**/*.feature",
-    "services/*/tests/features/**/*.feature",
+    "crates/*/tests/api_features/**/*.feature",
   ],
   stepDefGlobs: [
     "apps/web/tests/steps/**/*.steps.ts",
   ],
   rustStepDefGlobs: [
-    "services/*/tests/bdd_world/**/*.rs",
     "crates/*/tests/bdd_world/**/*.rs",
+    "crates/*/tests/api_bdd_world/**/*.rs",
   ],
   sharedStepPattern: "*-shared.steps.ts",
   excludeTags,

@@ -30,7 +30,7 @@ Measured against `main` at commit `b22e1b4`.
 
 *\*types crate 100% reflects derive-macro expansion tests (ts-rs export bindings), not serialization edge-case coverage.*
 
-### WebSocket Module Detail (`services/api/src/ws/`)
+### WebSocket Module Detail (`crates/mokumo-shop/src/ws/`)
 
 | File | Lines | Notes |
 |------|-------|-------|
