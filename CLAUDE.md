@@ -82,7 +82,7 @@ mokumo/
 │   ├── kikan-mail/           # Mailer SubGraft (SMTP via lettre, CapturingMailer for tests)
 │   ├── kikan-scheduler/      # Job scheduler SubGraft (apalis + immediate)
 │   ├── kikan-socket/         # Unix domain socket listener primitives
-│   ├── kikan-tauri/          # Tauri IPC adapter (thin wrappers over kikan::platform)
+│   ├── kikan-tauri/          # Tauri-shell-specific helpers (ephemeral-port binding)
 │   ├── kikan-cli/            # Admin CLI library — clap subcommands + UDS HTTP client
 │   │                          #   (subcommand-dispatched by mokumo-server, garage Pattern 3)
 │   ├── mokumo-shop/          # Mokumo Application — shop domain + extension API
@@ -193,7 +193,7 @@ session branches ──PR──→ main ──release──→ GitHub Releases (
 - No bare primitive IDs — Rust newtypes for all entity identifiers
 - No eslint — use `oxlint` for linting and `oxfmt` for formatting (OXC toolchain). Prettier only for `.svelte` files. Never install, configure, or run eslint.
 - No shop-vertical identifiers in `crates/kikan/**` — customer, garment, quote, invoice, print_job, shop belong in `mokumo-shop` (invariant I1).
-- No `tauri::` or `#[tauri::command]` under `crates/kikan/**` — Tauri integration lives in `kikan-tauri` only (invariant I2).
+- No `tauri::` or `#[tauri::command]` under `crates/kikan/**` — any Tauri-shell-specific code lives in `kikan-tauri` or `apps/mokumo-desktop` (invariant I2). Per `adr-tauri-http-not-ipc`, the webview talks to the embedded Axum server over real HTTP, not IPC; custom `#[tauri::command]` wrappers are not used for Mokumo control or data plane logic.
 - No dependency on `mokumo-shop`, `mokumo-desktop`, `mokumo-server`, or any adapter crate from inside `crates/kikan/` — DAG flows toward kikan, never away (invariant I4).
 - No `DeriveEntityModel` on types in domain or wire-type modules — entities are infrastructure types; they live with their repo impl.
 - No non-transactional SeaORM migrations — every migration must use `use_transaction() -> Some(true)`.

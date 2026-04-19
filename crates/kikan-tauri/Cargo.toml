@@ -5,13 +5,15 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Kikan Tauri IPC adapter — thin #[tauri::command] wrappers over kikan::platform handlers"
+description = "Helpers specific to the Tauri desktop shell (ephemeral-port binding, etc.)"
 
 [dependencies]
 kikan = { workspace = true }
-# `tauri` is aspirational — #[tauri::command] wrappers are not yet wired.
-# Keeping it out of [dependencies] for now avoids dragging `glib-sys` /
-# `libglib2.0-dev` into CI hosts that only build the Linux headless slice.
+# No `tauri` dep — per `adr-tauri-http-not-ipc` + `adr-kikan-binary-topology`,
+# Mokumo uses real HTTP (and UDS for admin), not `#[tauri::command]` IPC.
+# The Tauri runtime lives in `apps/mokumo-desktop`; this crate only needs
+# shell-specific helpers, which compile without pulling `glib-sys` /
+# `libglib2.0-dev` into headless CI slices.
 # (mokumo-shop dev-deps kikan-tauri for the BDD ephemeral-bind steps; see
 # crates/mokumo-shop/Cargo.toml.)
 tokio = { workspace = true }
