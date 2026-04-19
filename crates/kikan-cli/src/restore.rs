@@ -1,8 +1,9 @@
 //! CLI restore command — restore database from a backup file.
 //!
-//! Calls `kikan::backup::restore_from_backup` for the platform-generic
-//! restore, then dispatches `Graft::on_pre_restore` and `on_post_restore`
-//! lifecycle hooks for domain-specific artifacts (e.g. logo files).
+//! Dispatches `Graft::on_pre_restore` for domain validation, calls
+//! `kikan::backup::restore_from_backup` for the platform-generic restore,
+//! then dispatches `Graft::on_post_restore` for domain-specific artifacts
+//! (e.g. logo files).
 
 use std::path::Path;
 

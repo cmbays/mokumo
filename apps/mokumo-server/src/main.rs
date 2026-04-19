@@ -1017,10 +1017,20 @@ fn cmd_reset_password(data_dir: PathBuf, email: String, password_file: PathBuf, 
         std::process::exit(1);
     }
 
-    // Read password from file (same pattern as bootstrap --password-file).
-    let password = match std::fs::read_to_string(&password_file) {
-        Ok(s) => {
-            let trimmed = s.trim_end_matches('\n').trim_end_matches('\r');
+    // Read password from file with a 1 KiB size limit (same pattern as bootstrap).
+    let password = match std::fs::File::open(&password_file).and_then(|f| {
+        use std::io::Read;
+        let mut buf = vec![0u8; 1025];
+        let n = f.take(1025).read(&mut buf)?;
+        buf.truncate(n);
+        String::from_utf8(buf).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    }) {
+        Ok(p) if p.len() > 1024 => {
+            eprintln!("Password file exceeds 1 KiB: {}", password_file.display());
+            std::process::exit(1);
+        }
+        Ok(p) => {
+            let trimmed = p.trim_end_matches(['\r', '\n']);
             if trimmed.is_empty() {
                 eprintln!("Password file is empty: {}", password_file.display());
                 std::process::exit(1);
@@ -1063,23 +1073,30 @@ fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, productio
         return;
     }
 
-    // Flock guard — refuse if server is running.
+    // Flock guard — held through the entire reset to prevent concurrent server startup.
     let lock_path = mokumo_api::lock_file_path(&data_dir);
-    if let Ok(f) = std::fs::OpenOptions::new()
+    let lock_file = match std::fs::OpenOptions::new()
         .create(true)
         .truncate(false)
         .read(true)
         .write(true)
         .open(&lock_path)
     {
-        let mut flock = fd_lock::RwLock::new(f);
-        if flock.try_write().is_err() {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Cannot open lock file {}: {e}", lock_path.display());
+            std::process::exit(1);
+        }
+    };
+    let mut flock = fd_lock::RwLock::new(lock_file);
+    let _lock_guard = match flock.try_write() {
+        Ok(guard) => guard,
+        Err(_) => {
             eprintln!("Cannot reset database while the server is running.");
             eprintln!("Stop the server first, then retry.");
             std::process::exit(1);
         }
-        // Drop flock immediately — we just needed to check availability.
-    }
+    };
 
     if !force {
         eprintln!("Use --force to skip the confirmation prompt.");
@@ -1091,6 +1108,16 @@ fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, productio
 
     match kikan_cli::reset_db::run(&graft, &profile_dir, &recovery_dir, include_backups) {
         Ok(report) => {
+            if let Some((path, e)) = &report.recovery_dir_error {
+                eprintln!(
+                    "Warning: could not scan recovery dir {}: {e}",
+                    path.display()
+                );
+            }
+            if let Some((path, e)) = &report.backup_dir_error {
+                eprintln!("Warning: could not scan backup dir {}: {e}", path.display());
+            }
+
             if report.deleted.is_empty() && report.not_found.len() == 4 {
                 println!("No database found for the {} profile", profile.as_str());
                 println!("Nothing to reset.");
@@ -1104,6 +1131,13 @@ fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, productio
                 for path in &report.deleted {
                     println!("  deleted: {}", path.display());
                 }
+                for (path, e) in &report.failed {
+                    eprintln!("  FAILED: {}: {e}", path.display());
+                }
+            }
+
+            if !report.failed.is_empty() {
+                std::process::exit(1);
             }
         }
         Err(e) => {
@@ -1125,24 +1159,32 @@ fn cmd_restore(data_dir: PathBuf, backup_file: PathBuf, production: bool) {
     };
     let db_path = data_dir.join(profile.as_dir_name()).join("mokumo.db");
 
-    // Flock guard — refuse if server is running.
+    // Flock guard — held through the entire restore to prevent concurrent server startup.
     let lock_path = mokumo_api::lock_file_path(&data_dir);
-    if let Ok(f) = std::fs::OpenOptions::new()
+    let lock_file = match std::fs::OpenOptions::new()
         .create(true)
         .truncate(false)
         .read(true)
         .write(true)
         .open(&lock_path)
     {
-        let mut flock = fd_lock::RwLock::new(f);
-        if flock.try_write().is_err() {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Cannot open lock file {}: {e}", lock_path.display());
+            std::process::exit(1);
+        }
+    };
+    let mut flock = fd_lock::RwLock::new(lock_file);
+    let _lock_guard = match flock.try_write() {
+        Ok(guard) => guard,
+        Err(_) => {
             eprintln!(
                 "Cannot restore while the server is running — data directory is in use by a running server."
             );
             eprintln!("Stop the server first, then retry.");
             std::process::exit(1);
         }
-    }
+    };
 
     let graft = mokumo_api::graft::MokumoApp;
 

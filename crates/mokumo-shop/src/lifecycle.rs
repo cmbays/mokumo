@@ -19,6 +19,9 @@ pub fn copy_logo_to_backup(db_path: &Path, backup_path: &Path) {
 
     if let Some(ext) = read_logo_extension(backup_path) {
         let logo_src = db_dir.join(format!("logo.{ext}"));
+        if !logo_src.exists() {
+            return;
+        }
         let logo_dst = backup_path.with_extension(format!("logo.{ext}"));
         if let Err(e) = std::fs::copy(&logo_src, &logo_dst) {
             tracing::warn!(
@@ -71,9 +74,6 @@ pub fn restore_logo_from_backup(db_path: &Path, backup_path: &Path) {
 }
 
 /// Clean up domain-specific artifacts from a profile directory during reset.
-///
-/// Currently removes logo files. Future domain artifacts (e.g. uploaded
-/// garment images) would be cleaned up here as well.
 pub fn cleanup_domain_artifacts(profile_dir: &Path) {
     sweep_stale_logos(profile_dir);
 }
@@ -86,12 +86,20 @@ fn read_logo_extension(db_path: &Path) -> Option<String> {
     let conn =
         rusqlite::Connection::open_with_flags(db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .ok()?;
-    conn.query_row(
-        "SELECT logo_extension FROM shop_settings WHERE id = 1 AND logo_extension IS NOT NULL",
-        [],
-        |row| row.get::<_, String>(0),
-    )
-    .ok()
+    let ext = conn
+        .query_row(
+            "SELECT logo_extension FROM shop_settings WHERE id = 1 AND logo_extension IS NOT NULL",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()?;
+    // Validate against the allowlist to prevent path traversal via crafted DB values.
+    if LOGO_EXTENSIONS.contains(&ext.as_str()) {
+        Some(ext)
+    } else {
+        tracing::warn!("read_logo_extension: unexpected extension {ext:?}, ignoring");
+        None
+    }
 }
 
 #[cfg(test)]

@@ -21,9 +21,8 @@ pub struct RateWindow {
 
 /// Rate-limit configuration for all control-plane limiters.
 ///
-/// Captures the five rate-limiter specs that were previously hardcoded in
-/// `services/api`. Carried in [`BootConfig`] so `Engine::boot()` (PR 2)
-/// can construct limiters without reaching into domain code.
+/// Carried in [`BootConfig`] so the engine can construct limiters
+/// without reaching into domain code.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RateLimitConfig {
     /// Login attempts — 10 per 15 min per email (LAN-mode policy).
