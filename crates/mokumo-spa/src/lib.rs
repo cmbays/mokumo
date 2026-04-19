@@ -35,7 +35,7 @@ pub async fn serve_spa(uri: axum::http::Uri) -> Response {
     }
 
     if let Some(file) = SpaAssets::get(path) {
-        let cache = if path.contains("/_app/immutable/") {
+        let cache = if path.starts_with("_app/immutable/") {
             "public, max-age=31536000, immutable"
         } else {
             "public, max-age=3600"
