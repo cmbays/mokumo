@@ -1,0 +1,93 @@
+# Daily data-plane QA rotation manifest.
+#
+# All scopes start `enabled: false`. Enable a scope only after:
+#   1. The corresponding M0 dataplane route is implemented
+#   2. seed-demo.ts is extended for that route's entity fixtures
+#   3. A manual workflow_dispatch dry-run passes end-to-end
+#
+# Rotation order: alphabetical over enabled scopes, index = (epoch_day % count).
+# See .github/workflows/daily-qa-routine.yml for the trigger logic.
+
+cycle: dataplane
+
+pages:
+  - slug: artwork
+    enabled: false
+    route: /artwork
+    subroutes: []
+    scenarios:
+      - list page loads and displays expected columns
+      - new artwork button opens creation flow
+      - edit flow validates required fields before submit
+
+  - slug: customers
+    enabled: false
+    route: /customers
+    subroutes: []
+    scenarios:
+      - list page loads and renders seeded customers
+      - search/filter narrows results correctly
+      - create flow round-trips and appears in list
+
+  - slug: garments
+    enabled: false
+    route: /garments
+    subroutes: []
+    scenarios:
+      - list page loads and displays expected columns
+      - new garment button opens creation flow
+      - edit flow persists changes and shows confirmation
+
+  - slug: invoices
+    enabled: false
+    route: /invoices
+    subroutes: []
+    scenarios:
+      - list page loads and displays expected columns
+      - invoice detail view renders line items
+      - status transitions are surfaced correctly
+
+  - slug: orders
+    enabled: false
+    route: /orders
+    subroutes: []
+    scenarios:
+      - list page loads and displays expected columns
+      - order detail view renders correctly
+      - status badge reflects current order state
+
+  - slug: production
+    enabled: false
+    route: /production
+    subroutes: []
+    scenarios:
+      - production board loads and renders job cards
+      - job status can be advanced through workflow steps
+      - filters narrow the visible job set
+
+  - slug: quotes
+    enabled: false
+    route: /quotes
+    subroutes: []
+    scenarios:
+      - list page loads and displays expected columns
+      - new quote button opens creation flow
+      - quote detail view renders line items and totals
+
+  - slug: settings
+    enabled: false
+    route: /settings
+    subroutes: []
+    scenarios:
+      - settings page loads without error
+      - shop name field is editable and persists on save
+      - navigation between settings sections works
+
+  - slug: shipping
+    enabled: false
+    route: /shipping
+    subroutes: []
+    scenarios:
+      - list page loads and displays expected columns
+      - shipment detail view renders correctly
+      - carrier/tracking fields are present and editable

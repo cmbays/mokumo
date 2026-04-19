@@ -22,6 +22,8 @@ apps/web/build/
 .claude/*
 !.claude/rules/
 !.claude/rules/**
+!.claude/routines/
+!.claude/routines/**
 # OS
 .DS_Store
 Thumbs.db
