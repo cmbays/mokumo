@@ -4,8 +4,9 @@
 //! constructs `MokumoShopState`; `compose_state` assembles the full
 //! `MokumoState` from platform + control-plane + domain slices.
 //!
-//! `data_plane_routes` is deferred to PR 3 — the production router
-//! composition currently lives in `services/api::build_app_inner`.
+//! `data_plane_routes` returns the full domain route tree via
+//! `crate::routes::data_plane_routes`. `spawn_background_tasks` runs
+//! the PIN sweep (60s) and PRAGMA optimize (2h + shutdown) tasks.
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
