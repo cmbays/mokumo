@@ -24,10 +24,6 @@ pub async fn boot_router(
     shutdown_token: CancellationToken,
 ) -> (Router, Option<String>) {
     let session_db_path = data_dir.join("sessions.db");
-    let session_url = format!("sqlite:{}?mode=rwc", session_db_path.display());
-    let _session_pool = kikan::db::open_raw_sqlite_pool(&session_url)
-        .await
-        .expect("failed to open session database");
 
     let (session_store, setup_completed, setup_token) =
         mokumo_shop::startup::init_session_and_setup(&production_db, &session_db_path)
@@ -65,6 +61,8 @@ pub async fn boot_router(
         graft.spawn_background_tasks(&app_state);
     }
 
-    let router = engine.build_router(app_state);
+    let router = engine
+        .build_router(app_state)
+        .fallback(mokumo_spa::serve_spa);
     (router, setup_token)
 }

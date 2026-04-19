@@ -298,6 +298,7 @@ async fn database_unavailable(w: &mut ApiWorld) {
 
     w.server = server;
     w.shutdown_token = shutdown;
-    // Note: `tmp` is dropped here; the test only inspects error responses, so file lifetime is fine.
-    let _ = tmp;
+    // Stash tmp on the world so subsequent steps that reach the server
+    // still see the data_dir backing it.
+    w._tmp = tmp;
 }

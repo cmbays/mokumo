@@ -202,10 +202,15 @@ tasks:
       "$TARGET_DIR/debug/mokumo-server" serve --mode loopback &
       SERVER_PID=$!
       trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+      ready=0
       for i in $(seq 1 30); do
-        if curl -sf http://localhost:6565/api/health > /dev/null 2>&1; then break; fi
+        if curl -sf http://localhost:6565/api/health > /dev/null 2>&1; then ready=1; break; fi
         sleep 1
       done
+      if [ "$ready" -ne 1 ]; then
+        echo "mokumo-server did not become healthy within 30s" >&2
+        exit 1
+      fi
       # list-unauthenticated.hurl excluded: demo auto-login returns 200 locally.
       # That test is valid in CI where the server boots without demo mode.
       hurl --variables-file tests/api/envs/ci.env --test \
