@@ -92,25 +92,7 @@ pub struct ServerConfig {
 /// handlers access fields via accessor methods on `MokumoState`.
 pub type SharedState = mokumo_shop::state::SharedMokumoState;
 
-/// Vertical-supplied profile DB initializer that re-opens & re-migrates a
-/// freshly-copied database file. Used by `kikan::platform::demo::demo_reset`.
-struct MokumoProfileDbInitializer;
-
-impl kikan::platform_state::ProfileDbInitializer for MokumoProfileDbInitializer {
-    fn initialize<'a>(
-        &'a self,
-        database_url: &'a str,
-    ) -> std::pin::Pin<
-        Box<
-            dyn std::future::Future<
-                    Output = Result<DatabaseConnection, kikan::db::DatabaseSetupError>,
-                > + Send
-                + 'a,
-        >,
-    > {
-        Box::pin(async move { mokumo_shop::db::initialize_database(database_url).await })
-    }
-}
+pub use mokumo_shop::profile_db_init::MokumoProfileDbInitializer;
 
 #[derive(Embed)]
 #[folder = "../../apps/web/build"]
@@ -613,7 +595,7 @@ pub async fn init_session_and_setup(
 /// Runs `validate_installation` against the demo DB when the active profile is Demo;
 /// always returns `true` for Production (an empty production DB is valid — setup is
 /// pending, not broken). Logs the result at `info` level for observability.
-async fn resolve_demo_install_ok(
+pub async fn resolve_demo_install_ok(
     demo_db: &DatabaseConnection,
     active_profile: SetupMode,
 ) -> Arc<AtomicBool> {
