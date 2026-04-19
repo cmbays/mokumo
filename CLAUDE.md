@@ -82,7 +82,7 @@ mokumo/
 │   ├── kikan-mail/           # Mailer SubGraft (SMTP via lettre, CapturingMailer for tests)
 │   ├── kikan-scheduler/      # Job scheduler SubGraft (apalis + immediate)
 │   ├── kikan-socket/         # Unix domain socket listener primitives
-│   ├── kikan-tauri/          # Tauri IPC adapter (thin wrappers over kikan::platform)
+│   ├── kikan-tauri/          # Tauri-shell-specific helpers (ephemeral-port binding)
 │   ├── kikan-cli/            # Admin CLI library — clap subcommands + UDS HTTP client
 │   │                          #   (subcommand-dispatched by mokumo-server, garage Pattern 3)
 │   ├── mokumo-shop/          # Mokumo Application — shop domain + extension API
@@ -165,6 +165,14 @@ crates/kikan/src/
 15. **SeaORM migrations** — every migration returns `Some(true)` from `use_transaction()` (atomic SQLite migrations). Pre-migration backup is non-negotiable. `updated_at` triggers still required per item 11. Migrations compose through kikan's per-profile DAG runner: `kikan::SelfGraft` contributes platform-owned migrations; the primary `Graft` (mokumo's `MokumoApp`) contributes vertical migrations; SubGrafts (mailer, scheduler) contribute their own.
 16. **Pre-implementation boundary checklist** — before writing any conditional, path-matching, or range-checking code, answer four questions: (a) What are the boundary values? (b) What happens *at* each boundary? (c) What is the "almost right" input that should be rejected? (d) How does the caller see a rejected input (error code, status, message)? Each answer should have a corresponding test. See `ops/standards/testing/negative-path.md`.
 17. **I4 DAG discipline** — `kikan` depends on nothing in the workspace. `mokumo-shop` depends on `kikan` only (and `kikan-types`, `mokumo-core` transitively). Binaries (`mokumo-desktop`, `mokumo-server`) compose multiple crates. If a change would make kikan depend on mokumo-shop, pause and rethink — the surface probably belongs on kikan's side of the boundary or behind a new trait kikan owns.
+18. **Comments describe current reality, never history.** Default to writing no comment. When you do add one, apply the **forward-dating test**: read it as if six months have passed and you have no memory of the PR that added it. If the comment still makes sense, keep it. If it feels archaeological, delete it before committing. Specifically forbidden:
+    - PR / issue numbers in code comments (`#512`, `PR 4c`). The commit message and PR description are the audit trail — the comment is not.
+    - Lineage narration: "moved from X", "lifted from Y", "migrated from Z", "relocated in …", "previously lived in …", "renamed from …". If the new location is right, nobody needs to know the old one; `git log` does.
+    - Stage / phase / wave narrative: "post-Stage-3", "Wave A.2 lifted this", "S2.5 relocated", "V6c deletion sweep", "once Stage 1b lands". Internal milestone names rot the moment the milestone closes.
+    - Temporal language: "recently", "newly", "now lives in", "used to live in", "currently", "for now", "today … later". If the comment needs a time qualifier to be true, it will be wrong soon.
+    - Speculation about future work in a file that isn't doing that work: "aspirational", "this will grow to …", "Stage 4 will add …". File a ticket; don't narrate in the module.
+    - ADR and module-path references ARE fine when they explain WHY a non-obvious constraint exists ("see `adr-kikan-binary-topology` — UDS is the trust boundary"). ADRs are durable; PR numbers are not.
+    - When rewriting a stale comment, describe what the code **is** and the non-obvious **why** behind it. Never add a new comment that explains what just changed.
 
 ## Pre-Build Ritual
 
@@ -193,7 +201,7 @@ session branches ──PR──→ main ──release──→ GitHub Releases (
 - No bare primitive IDs — Rust newtypes for all entity identifiers
 - No eslint — use `oxlint` for linting and `oxfmt` for formatting (OXC toolchain). Prettier only for `.svelte` files. Never install, configure, or run eslint.
 - No shop-vertical identifiers in `crates/kikan/**` — customer, garment, quote, invoice, print_job, shop belong in `mokumo-shop` (invariant I1).
-- No `tauri::` or `#[tauri::command]` under `crates/kikan/**` — Tauri integration lives in `kikan-tauri` only (invariant I2).
+- No `tauri::` or `#[tauri::command]` under `crates/kikan/**` — any Tauri-shell-specific code lives in `kikan-tauri` or `apps/mokumo-desktop` (invariant I2). Per `adr-tauri-http-not-ipc`, the webview talks to the embedded Axum server over real HTTP, not IPC; custom `#[tauri::command]` wrappers are not used for Mokumo control or data plane logic.
 - No dependency on `mokumo-shop`, `mokumo-desktop`, `mokumo-server`, or any adapter crate from inside `crates/kikan/` — DAG flows toward kikan, never away (invariant I4).
 - No `DeriveEntityModel` on types in domain or wire-type modules — entities are infrastructure types; they live with their repo impl.
 - No non-transactional SeaORM migrations — every migration must use `use_transaction() -> Some(true)`.

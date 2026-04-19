@@ -1,5 +1,10 @@
-// kikan-tauri — Tauri IPC adapter and Tauri-shell-specific helpers.
-// #[tauri::command] wrappers over kikan::control_plane handlers migrate here in Stage 4.
+//! kikan-tauri — helpers specific to the Tauri desktop shell.
+//!
+//! Per `adr-kikan-binary-topology` + `adr-tauri-http-not-ipc`, Mokumo uses
+//! real HTTP for the data plane and UDS for admin. `#[tauri::command]`
+//! wrappers are not used for control or data plane logic. This crate
+//! holds only shell-specific helpers and exists as its own crate so kikan
+//! stays adapter-shell-agnostic (I2).
 
 pub mod net;
 
