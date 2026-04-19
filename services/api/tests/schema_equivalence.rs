@@ -35,6 +35,11 @@ async fn kikan_engine_produces_identical_app_schema_to_legacy_migrator() {
     let legacy_path = tmp.path().join("legacy.db");
     let legacy_url = format!("sqlite:{}?mode=rwc", legacy_path.display());
     let legacy_db = Database::connect(&legacy_url).await.unwrap();
+    // Platform tables (users, roles, shop_settings) are now owned by kikan.
+    // Run them first so vertical migrations that ALTER TABLE users succeed.
+    kikan::migrations::platform::run_platform_migrations(&legacy_db)
+        .await
+        .unwrap();
     Migrator::up(&legacy_db, None).await.unwrap();
     let legacy_schema = get_app_schema(&legacy_db).await;
     drop(legacy_db);
@@ -73,6 +78,10 @@ async fn mokumo_app_backfill_preserves_seaql_table() {
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
     let db = Database::connect(&url).await.unwrap();
 
+    // Platform tables run first so vertical migrations succeed.
+    kikan::migrations::platform::run_platform_migrations(&db)
+        .await
+        .unwrap();
     Migrator::up(&db, None).await.unwrap();
 
     let store = test_session_store(&db).await;
