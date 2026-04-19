@@ -4313,6 +4313,8 @@ dependencies = [
  "local-ip-address",
  "mokumo-api",
  "mokumo-core",
+ "mokumo-shop",
+ "mokumo-spa",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -4321,6 +4323,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tokio",
  "tokio-util",
+ "tower-sessions",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -4350,6 +4353,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-util",
+ "tower-sessions",
  "tracing",
 ]
 
@@ -4368,6 +4372,7 @@ dependencies = [
  "infer",
  "kikan",
  "kikan-types",
+ "local-ip-address",
  "mokumo-core",
  "parking_lot",
  "regex",
@@ -4387,6 +4392,18 @@ dependencies = [
  "ts-rs",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "mokumo-spa"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "kikan-types",
+ "rust-embed",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

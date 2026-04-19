@@ -92,25 +92,7 @@ pub struct ServerConfig {
 /// handlers access fields via accessor methods on `MokumoState`.
 pub type SharedState = mokumo_shop::state::SharedMokumoState;
 
-/// Vertical-supplied profile DB initializer that re-opens & re-migrates a
-/// freshly-copied database file. Used by `kikan::platform::demo::demo_reset`.
-struct MokumoProfileDbInitializer;
-
-impl kikan::platform_state::ProfileDbInitializer for MokumoProfileDbInitializer {
-    fn initialize<'a>(
-        &'a self,
-        database_url: &'a str,
-    ) -> std::pin::Pin<
-        Box<
-            dyn std::future::Future<
-                    Output = Result<DatabaseConnection, kikan::db::DatabaseSetupError>,
-                > + Send
-                + 'a,
-        >,
-    > {
-        Box::pin(async move { mokumo_shop::db::initialize_database(database_url).await })
-    }
-}
+pub use mokumo_shop::profile_db_init::MokumoProfileDbInitializer;
 
 #[derive(Embed)]
 #[folder = "../../apps/web/build"]
@@ -613,7 +595,7 @@ pub async fn init_session_and_setup(
 /// Runs `validate_installation` against the demo DB when the active profile is Demo;
 /// always returns `true` for Production (an empty production DB is valid — setup is
 /// pending, not broken). Logs the result at `info` level for observability.
-async fn resolve_demo_install_ok(
+pub async fn resolve_demo_install_ok(
     demo_db: &DatabaseConnection,
     active_profile: SetupMode,
 ) -> Arc<AtomicBool> {
@@ -643,8 +625,7 @@ pub async fn build_app(
     production_db: DatabaseConnection,
     active_profile: SetupMode,
 ) -> Result<(Router, Option<String>), Box<dyn std::error::Error + Send + Sync>> {
-    let local_ip = local_ip_address::local_ip().ok();
-    let (_, local_ip_rx) = tokio::sync::watch::channel(local_ip);
+    let local_ip = Arc::new(parking_lot::RwLock::new(local_ip_address::local_ip().ok()));
 
     let session_db_path = config.data_dir.join("sessions.db");
     let (session_store, setup_completed, setup_token) =
@@ -659,7 +640,7 @@ pub async fn build_app(
         active_profile,
         CancellationToken::new(),
         kikan::MdnsStatus::shared(),
-        local_ip_rx,
+        local_ip,
         session_store,
         setup_completed,
         setup_token.clone(),
@@ -690,11 +671,11 @@ pub async fn build_app_with_shutdown(
     ),
     Box<dyn std::error::Error + Send + Sync>,
 > {
-    let initial_ip = local_ip_address::local_ip().ok();
-    let (local_ip_tx, local_ip_rx) = tokio::sync::watch::channel(initial_ip);
+    let local_ip = Arc::new(parking_lot::RwLock::new(local_ip_address::local_ip().ok()));
 
     // Background task: re-check local IP every 30s
     let shutdown_token = shutdown.clone();
+    let local_ip_task = local_ip.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
         interval.tick().await; // skip immediate first tick
@@ -702,14 +683,10 @@ pub async fn build_app_with_shutdown(
             tokio::select! {
                 _ = interval.tick() => {
                     let current = local_ip_address::local_ip().ok();
-                    local_ip_tx.send_if_modified(|prev| {
-                        if *prev != current {
-                            *prev = current;
-                            true
-                        } else {
-                            false
-                        }
-                    });
+                    let mut guard = local_ip_task.write();
+                    if *guard != current {
+                        *guard = current;
+                    }
                 }
                 _ = shutdown_token.cancelled() => break,
             }
@@ -743,7 +720,7 @@ pub async fn build_app_with_shutdown(
         active_profile,
         shutdown,
         mdns_status,
-        local_ip_rx,
+        local_ip,
         session_store,
         setup_completed,
         setup_token.clone(),
@@ -761,7 +738,7 @@ fn build_app_inner(
     active_profile: SetupMode,
     shutdown: CancellationToken,
     mdns_status: kikan::SharedMdnsStatus,
-    local_ip: tokio::sync::watch::Receiver<Option<std::net::IpAddr>>,
+    local_ip: Arc<parking_lot::RwLock<Option<std::net::IpAddr>>>,
     session_store: SqliteStore,
     setup_completed: Arc<AtomicBool>,
     setup_token: Option<String>,

@@ -336,34 +336,84 @@ async fn cmd_serve(data_dir: PathBuf, mode: ServeMode, port: u16, verbose: u8, q
         "mokumo-server starting"
     );
 
+    // Session store + setup-token resolution (platform-level init that
+    // precedes Engine::boot because `setup_completed` and `setup_token`
+    // are PlatformState inputs).
+    let session_db_path = data_dir.join("sessions.db");
+    let (session_store, setup_completed, setup_token) =
+        match mokumo_api::init_session_and_setup(&production_db, &session_db_path).await {
+            Ok(r) => r,
+            Err(e) => {
+                tracing::error!("Session init failed: {e}");
+                std::process::exit(1);
+            }
+        };
+    let session_store_for_cleanup = session_store.clone();
+
+    let demo_install_ok = mokumo_api::resolve_demo_install_ok(&demo_db, active_profile).await;
+
+    let graft = mokumo_shop::graft::MokumoApp;
+    let profile_initializer: kikan::platform_state::SharedProfileDbInitializer =
+        std::sync::Arc::new(mokumo_shop::profile_db_init::MokumoProfileDbInitializer);
+    let recovery_dir = mokumo_api::resolve_recovery_dir();
+    let bind_addr: std::net::SocketAddr = format!("{host}:{port}")
+        .parse()
+        .expect("host:port parses as SocketAddr");
+    let boot_config = kikan::BootConfig::new(data_dir.clone()).with_bind_addr(bind_addr);
     let shutdown = CancellationToken::new();
-    let mdns_status = kikan::MdnsStatus::shared();
 
-    let config = mokumo_api::ServerConfig {
-        port,
-        host: host.to_string(),
-        data_dir: data_dir.clone(),
-        recovery_dir: mokumo_api::resolve_recovery_dir(),
-        #[cfg(debug_assertions)]
-        ws_ping_ms: None,
-    };
-
-    let (router, setup_token, _ws, app_state) = match mokumo_api::build_app_with_shutdown(
-        &config,
+    let (engine, app_state) = match kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
+        boot_config,
+        &graft,
         demo_db,
         production_db,
         active_profile,
+        session_store,
+        profile_initializer,
+        setup_completed,
+        setup_token.clone(),
+        demo_install_ok,
+        recovery_dir,
         shutdown.clone(),
-        mdns_status.clone(),
     )
     .await
     {
         Ok(r) => r,
         Err(e) => {
-            tracing::error!("Failed to build application: {e}");
+            tracing::error!("Engine boot failed: {e}");
             std::process::exit(1);
         }
     };
+
+    // mDNS status propagated from PlatformState for the later register_mdns call.
+    let mdns_status = app_state.mdns_status().clone();
+
+    // Domain background tasks (PIN sweep, PRAGMA optimize, local IP refresh).
+    {
+        use kikan::Graft;
+        graft.spawn_background_tasks(&app_state);
+    }
+
+    // Platform background task: expire stale sessions every 60s.
+    {
+        use tower_sessions::session_store::ExpiredDeletion;
+        let store = session_store_for_cleanup;
+        let token = shutdown.clone();
+        tokio::spawn(async move {
+            tokio::select! {
+                res = store.continuously_delete_expired(std::time::Duration::from_secs(60)) => {
+                    if let Err(err) = res {
+                        tracing::error!(error = %err, "session expiry cleanup task terminated");
+                    }
+                }
+                _ = token.cancelled() => {}
+            }
+        });
+    }
+
+    // Compose the HTTP router with the 5-layer middleware stack.
+    // mokumo-server is headless — it does NOT embed or serve the SPA.
+    let router = engine.build_router(app_state.clone());
 
     // Bind TCP listener for the data plane.
     let (listener, actual_port) = match mokumo_api::try_bind(host, port).await {
@@ -390,7 +440,7 @@ async fn cmd_serve(data_dir: PathBuf, mode: ServeMode, port: u16, verbose: u8, q
     // socket can't bind, startup fails rather than silently running
     // without the admin surface.
     let admin_socket = kikan_socket::admin_socket_path(&data_dir);
-    let admin_router = mokumo_api::admin_uds::build_admin_uds_router(app_state.platform_state());
+    let admin_router = engine.admin_router(&app_state);
     let admin_shutdown = shutdown.clone();
     let (admin_ready_tx, mut admin_ready_rx) =
         tokio::sync::oneshot::channel::<Result<(), String>>();

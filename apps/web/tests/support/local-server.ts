@@ -49,42 +49,42 @@ export const SETUP_TOKEN_RE = /Setup required — token: ([\w-]+)/;
 const LEVELS_THAT_INCLUDE_INFO = new Set(["info", "debug", "trace"]);
 
 /**
- * Build a RUST_LOG value that guarantees mokumo_api emits at INFO level,
- * while preserving the caller's other directives and not downgrading
- * debug/trace levels for mokumo_api.
+ * Build a RUST_LOG value that guarantees the setup-token and
+ * listening-port info lines are visible. The "Listening on…" line is
+ * emitted by `mokumo_api`; the "Setup required — token: X" line now
+ * comes from the `mokumo_server` binary itself.
  *
- * EnvFilter precedence: target-specific directives (mokumo_api=X) override
- * bare global levels (trace, debug). We only inject mokumo_api=info when
+ * EnvFilter precedence: target-specific directives (foo=X) override
+ * bare global levels (trace, debug). We only inject target=info when
  * the effective level for that target would suppress INFO.
  */
 export function ensureRustLogInfoForApi(envRustLog: string | undefined): string {
+  const targets = ["mokumo_api", "mokumo_server"];
   const directives = (envRustLog ?? "").split(",").filter(Boolean);
 
-  // EnvFilter uses last-wins for duplicate targets, so we must process ALL
-  // mokumo_api directives. Strip every one that suppresses INFO; keep those
-  // that include it. If any survive, no injection is needed.
-  let hasSurvivingMokumo = false;
+  const survivingTargets = new Set<string>();
   const filtered = directives.filter((d) => {
-    if (!d.startsWith("mokumo_api=")) return true;
+    const target = targets.find((t) => d.startsWith(`${t}=`));
+    if (!target) return true;
     const level = d.split("=")[1];
     if (LEVELS_THAT_INCLUDE_INFO.has(level)) {
-      hasSurvivingMokumo = true;
+      survivingTargets.add(target);
       return true;
     }
     return false; // strip — this directive suppresses INFO
   });
 
-  if (hasSurvivingMokumo) {
-    return filtered.join(",");
-  }
-
-  // No mokumo_api directive survives. Check if the effective bare global level
-  // covers INFO. EnvFilter uses last-wins, so use findLast.
   const globalLevel = filtered.findLast((d) => !d.includes("="));
-  if (globalLevel && LEVELS_THAT_INCLUDE_INFO.has(globalLevel)) {
+  const globalCoversInfo = !!globalLevel && LEVELS_THAT_INCLUDE_INFO.has(globalLevel);
+
+  const injections = targets
+    .filter((t) => !survivingTargets.has(t) && !globalCoversInfo)
+    .map((t) => `${t}=info`);
+
+  if (injections.length === 0) {
     return filtered.join(",");
   }
-  return ["mokumo_api=info", ...filtered].join(",") || "mokumo_api=info";
+  return [...injections, ...filtered].join(",");
 }
 
 /**

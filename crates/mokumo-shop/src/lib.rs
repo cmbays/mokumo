@@ -24,6 +24,7 @@ pub mod db;
 pub mod graft;
 pub mod lifecycle;
 pub mod migrations;
+pub mod profile_db_init;
 pub mod profile_switch;
 pub mod restore;
 pub mod restore_handler;
