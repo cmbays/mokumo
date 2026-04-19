@@ -39,8 +39,16 @@ tasks:
     inputs:
     - '@group(sources)'
     - '@group(tests)'
+  sidebar-sync:
+    command: pnpm tsx ../../scripts/check-pages-yaml-sync.ts
+    inputs:
+    - src/routes/**
+    - /.claude/routines/daily-qa/pages.yaml
+    - /scripts/check-pages-yaml-sync.ts
   lint:
     command: pnpm oxlint --config ../../.oxlintrc.json src/
+    deps:
+    - sidebar-sync
     inputs:
     - '@group(sources)'
     - /.oxlintrc.json

@@ -1,0 +1,89 @@
+name: Daily Data-Plane QA Routine
+
+on:
+  # ACTIVATION GATE — uncomment the schedule block below only after ALL of the following are true:
+  #   1. At least one M0 dataplane route exists and is reachable via `pnpm dev`
+  #   2. seed-demo.ts is extended for that route's entity fixtures
+  #   3. The routine has been created in the Anthropic web UI (paste PROMPT.md)
+  #   4. CLAUDE_ROUTINE_TOKEN + CLAUDE_ROUTINE_FIRE_URL are set as repo secrets
+  #   5. A manual workflow_dispatch dry-run has passed end-to-end
+  #   6. Christopher has reviewed the first output and confirmed format is useful signal
+  #   7. The corresponding scope is set to `enabled: true` in pages.yaml
+  #   8. Uncomment the schedule: block below to activate the daily trigger
+  #
+  # schedule:
+  #   - cron: '0 12 * * *'   # 07:00 EST (UTC-5) / 08:00 EDT (UTC-4) — DST drift documented, not solved
+
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: >-
+          Scope slug to test (e.g. "customers"). Overrides alphabetical rotation.
+          Leave blank to use today's computed scope.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  fire-routine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Compute scope
+        id: scope
+        env:
+          MANUAL_SCOPE: ${{ inputs.scope }}
+        run: |
+          if [ -n "$MANUAL_SCOPE" ]; then
+            echo "Selected scope (manual override): $MANUAL_SCOPE"
+            { echo 'scope<<GH_EOF'; echo "$MANUAL_SCOPE"; echo 'GH_EOF'; } >> "$GITHUB_OUTPUT"
+          else
+            SELECTED=$(python3 - <<'EOF'
+          import yaml, sys, time
+
+          with open(".claude/routines/daily-qa/pages.yaml") as f:
+              data = yaml.safe_load(f)
+
+          enabled = sorted(p["slug"] for p in data["pages"] if p.get("enabled", False))
+
+          if not enabled:
+              print("NO_ENABLED_SCOPES", end="")
+              sys.exit(0)
+
+          epoch_day = int(time.time() / 86400)
+          idx = epoch_day % len(enabled)
+          print(enabled[idx], end="")
+          EOF
+          )
+            if [ "$SELECTED" = "NO_ENABLED_SCOPES" ]; then
+              echo "No enabled scopes in pages.yaml — nothing to fire."
+              echo "scope=" >> "$GITHUB_OUTPUT"
+            else
+              echo "Selected scope (rotation): $SELECTED"
+              { echo 'scope<<GH_EOF'; echo "$SELECTED"; echo 'GH_EOF'; } >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Fire routine
+        if: steps.scope.outputs.scope != ''
+        env:
+          CLAUDE_ROUTINE_FIRE_URL: ${{ secrets.CLAUDE_ROUTINE_FIRE_URL }}
+          CLAUDE_ROUTINE_TOKEN: ${{ secrets.CLAUDE_ROUTINE_TOKEN }}
+          SCOPE: ${{ steps.scope.outputs.scope }}
+        run: |
+          echo "Firing routine for scope: $SCOPE"
+          PAYLOAD=$(jq -n --arg scope "$SCOPE" '{"text": ("scope: " + $scope)}')
+          curl -f -X POST "$CLAUDE_ROUTINE_FIRE_URL" \
+            -H "Authorization: Bearer $CLAUDE_ROUTINE_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
