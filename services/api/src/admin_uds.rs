@@ -123,9 +123,20 @@ async fn backups_list(
     State(state): State<PlatformState>,
 ) -> Json<kikan_types::BackupStatusResponse> {
     // Reuse the same collection logic as the platform backup-status endpoint.
-    let production =
-        collect_profile_backups(&state.data_dir.join("production").join("mokumo.db")).await;
-    let demo = collect_profile_backups(&state.data_dir.join("demo").join("mokumo.db")).await;
+    let production = collect_profile_backups(
+        &state
+            .data_dir
+            .join(kikan::SetupMode::Production.as_dir_name())
+            .join("mokumo.db"),
+    )
+    .await;
+    let demo = collect_profile_backups(
+        &state
+            .data_dir
+            .join(kikan::SetupMode::Demo.as_dir_name())
+            .join("mokumo.db"),
+    )
+    .await;
     Json(kikan_types::BackupStatusResponse { production, demo })
 }
 
@@ -166,7 +177,10 @@ async fn backups_create(
 async fn collect_profile_backups(db_path: &Path) -> kikan_types::ProfileBackups {
     let backups = match kikan::backup::collect_existing_backups(db_path).await {
         Ok(b) => b,
-        Err(_) => return kikan_types::ProfileBackups { backups: vec![] },
+        Err(e) => {
+            tracing::warn!(path = %db_path.display(), "backup scan failed: {e}");
+            return kikan_types::ProfileBackups { backups: vec![] };
+        }
     };
 
     let entries: Vec<kikan_types::BackupEntry> = backups
@@ -174,8 +188,9 @@ async fn collect_profile_backups(db_path: &Path) -> kikan_types::ProfileBackups 
         .rev()
         .map(|(path, mtime)| {
             let version = path
-                .to_str()
-                .and_then(|s| s.rsplit_once(".backup-v"))
+                .file_name()
+                .and_then(|name| name.to_str())
+                .and_then(|name| name.rsplit_once(".backup-v"))
                 .map(|(_, v)| v.to_owned())
                 .unwrap_or_default();
             let backed_up_at = {

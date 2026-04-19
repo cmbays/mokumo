@@ -475,3 +475,91 @@ async fn admin_uds_profiles_switch_invalid_returns_error() {
     shutdown.cancel();
     let _ = tokio::time::timeout(std::time::Duration::from_secs(2), handle).await;
 }
+
+#[tokio::test]
+#[serial]
+async fn admin_uds_backups_create_produces_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let socket_path = tmp.path().join("admin.sock");
+    let shutdown = CancellationToken::new();
+
+    // Create a real on-disk SQLite DB so create_backup has something to copy.
+    let demo_dir = tmp.path().join("demo");
+    std::fs::create_dir_all(&demo_dir).unwrap();
+    let demo_db_path = demo_dir.join("mokumo.db");
+    {
+        let conn = rusqlite::Connection::open(&demo_db_path).unwrap();
+        conn.execute_batch("CREATE TABLE test (id INTEGER PRIMARY KEY)")
+            .unwrap();
+    }
+
+    // Use the on-disk DB for demo, in-memory for production.
+    let demo_db = kikan::db::initialize_database(&format!("sqlite:{}", demo_db_path.display()))
+        .await
+        .unwrap();
+    let production_db = kikan::db::initialize_database("sqlite::memory:")
+        .await
+        .unwrap();
+
+    let platform = kikan::PlatformState {
+        data_dir: tmp.path().to_path_buf(),
+        demo_db,
+        production_db,
+        active_profile: std::sync::Arc::new(parking_lot::RwLock::new(kikan::SetupMode::Demo)),
+        shutdown: CancellationToken::new(),
+        started_at: std::time::Instant::now(),
+        mdns_status: kikan::MdnsStatus::shared(),
+        demo_install_ok: std::sync::Arc::new(AtomicBool::new(true)),
+        is_first_launch: std::sync::Arc::new(AtomicBool::new(false)),
+        setup_completed: std::sync::Arc::new(AtomicBool::new(false)),
+        profile_db_initializer: std::sync::Arc::new(NoOpInit),
+    };
+    let router = mokumo_api::admin_uds::build_admin_uds_router(platform);
+
+    let socket_path_clone = socket_path.clone();
+    let shutdown_clone = shutdown.clone();
+    let handle = tokio::spawn(async move {
+        kikan_socket::serve_unix_socket(&socket_path_clone, router, shutdown_clone)
+            .await
+            .unwrap();
+    });
+
+    wait_for_socket(&socket_path).await;
+
+    // Create a backup of the demo profile.
+    let req = serde_json::json!({"profile": "demo"});
+    let (status, body) = uds_post(
+        &socket_path,
+        "/backups/create",
+        &serde_json::to_vec(&req).unwrap(),
+    )
+    .await;
+    assert_eq!(
+        status,
+        200,
+        "backup create failed: {}",
+        String::from_utf8_lossy(&body)
+    );
+
+    let resp: kikan_types::admin::BackupCreatedResponse =
+        serde_json::from_slice(&body).expect("valid backup create response");
+    assert!(!resp.path.is_empty());
+    assert!(resp.size > 0);
+    assert_eq!(resp.profile, kikan_types::SetupMode::Demo);
+
+    // Verify the backup file exists on disk.
+    let backup_path = std::path::Path::new(&resp.path);
+    assert!(
+        backup_path.exists(),
+        "backup file should exist at {}",
+        resp.path
+    );
+    assert_eq!(
+        std::fs::metadata(backup_path).unwrap().len(),
+        resp.size,
+        "backup file size should match response"
+    );
+
+    shutdown.cancel();
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), handle).await;
+}

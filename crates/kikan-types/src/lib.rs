@@ -127,6 +127,24 @@ mod tests {
             .expect("Failed to export LanAccessResponse TypeScript bindings");
         settings::LanAccessRequest::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export LanAccessRequest TypeScript bindings");
+        admin::ProfileListResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export ProfileListResponse TypeScript bindings");
+        admin::ProfileInfo::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export ProfileInfo TypeScript bindings");
+        admin::ProfileSwitchAdminRequest::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export ProfileSwitchAdminRequest TypeScript bindings");
+        admin::ProfileSwitchAdminResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export ProfileSwitchAdminResponse TypeScript bindings");
+        admin::MigrationStatusResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export MigrationStatusResponse TypeScript bindings");
+        admin::ProfileMigrationStatus::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export ProfileMigrationStatus TypeScript bindings");
+        admin::AppliedMigration::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export AppliedMigration TypeScript bindings");
+        admin::BackupCreateRequest::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export BackupCreateRequest TypeScript bindings");
+        admin::BackupCreatedResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export BackupCreatedResponse TypeScript bindings");
     }
 
     mod proptest_roundtrips {

@@ -865,8 +865,20 @@ async fn cmd_backup_list(data_dir: PathBuf, json: bool) {
         .join(kikan::SetupMode::Demo.as_dir_name())
         .join("mokumo.db");
 
-    let production = collect_backup_entries(&production_db).await;
-    let demo = collect_backup_entries(&demo_db).await;
+    let production = match collect_backup_entries(&production_db).await {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Warning: cannot scan production backups: {e}");
+            kikan_types::ProfileBackups { backups: vec![] }
+        }
+    };
+    let demo = match collect_backup_entries(&demo_db).await {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Warning: cannot scan demo backups: {e}");
+            kikan_types::ProfileBackups { backups: vec![] }
+        }
+    };
     let resp = kikan_types::BackupStatusResponse { production, demo };
 
     if json {
@@ -896,19 +908,21 @@ fn print_profile_backups(label: &str, backups: &kikan_types::ProfileBackups) {
     }
 }
 
-async fn collect_backup_entries(db_path: &std::path::Path) -> kikan_types::ProfileBackups {
-    let backups = match kikan::backup::collect_existing_backups(db_path).await {
-        Ok(b) => b,
-        Err(_) => return kikan_types::ProfileBackups { backups: vec![] },
-    };
+async fn collect_backup_entries(
+    db_path: &std::path::Path,
+) -> Result<kikan_types::ProfileBackups, String> {
+    let backups = kikan::backup::collect_existing_backups(db_path)
+        .await
+        .map_err(|e| format!("cannot scan backups for {}: {e}", db_path.display()))?;
 
     let entries: Vec<kikan_types::BackupEntry> = backups
         .into_iter()
         .rev()
         .map(|(path, mtime)| {
             let version = path
-                .to_str()
-                .and_then(|s| s.rsplit_once(".backup-v"))
+                .file_name()
+                .and_then(|name| name.to_str())
+                .and_then(|name| name.rsplit_once(".backup-v"))
                 .map(|(_, v)| v.to_owned())
                 .unwrap_or_default();
             let backed_up_at = {
@@ -923,7 +937,7 @@ async fn collect_backup_entries(db_path: &std::path::Path) -> kikan_types::Profi
         })
         .collect();
 
-    kikan_types::ProfileBackups { backups: entries }
+    Ok(kikan_types::ProfileBackups { backups: entries })
 }
 
 // ---------------------------------------------------------------------------

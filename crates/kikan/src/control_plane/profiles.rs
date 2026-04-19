@@ -85,42 +85,8 @@ pub async fn switch_profile(
         })?;
     let new_user = AuthenticatedUser::new(user_domain, hash, target);
 
-    // Step 2: Persist active_profile to disk atomically. Write to a temp file
-    // on the same filesystem (guarantees the rename is atomic on POSIX), then
-    // rename over the destination. A crash between the write and the rename
-    // leaves the tmp file behind; the next startup ignores it.
-    let profile_path = state.data_dir.join("active_profile");
-    let profile_tmp = state.data_dir.join("active_profile.tmp");
-    tokio::fs::write(&profile_tmp, target.as_str())
-        .await
-        .map_err(|e| {
-            tracing::error!(
-                target = ?target,
-                path = %profile_tmp.display(),
-                "switch_profile: write active_profile.tmp failed: {e}"
-            );
-            ControlPlaneError::Internal(anyhow::anyhow!("Failed to persist profile selection: {e}"))
-        })?;
-    tokio::fs::rename(&profile_tmp, &profile_path)
-        .await
-        .map_err(|e| {
-            tracing::error!(
-                target = ?target,
-                src = %profile_tmp.display(),
-                dst = %profile_path.display(),
-                "switch_profile: rename active_profile.tmp → active_profile failed: {e}"
-            );
-            ControlPlaneError::Internal(anyhow::anyhow!("Failed to persist profile selection: {e}"))
-        })?;
-
-    // Step 3: Flip the in-memory active_profile. Capture the previous value so
-    // the adapter can roll back if session operations fail after this point.
-    let previous_profile = {
-        let mut guard = state.active_profile.write();
-        let prev = *guard;
-        *guard = target;
-        prev
-    };
+    // Steps 2+3: persist to disk and flip in-memory state.
+    let previous_profile = persist_and_flip(state, target).await?;
 
     Ok(SwitchOutcome {
         new_user,
@@ -142,19 +108,45 @@ pub async fn switch_profile_admin(
     state: &PlatformState,
     target: SetupMode,
 ) -> Result<ProfileSwitchAdminResponse, ControlPlaneError> {
-    // Step 2: Persist active_profile to disk atomically.
+    let previous = persist_and_flip(state, target).await?;
+    Ok(ProfileSwitchAdminResponse {
+        previous,
+        current: target,
+    })
+}
+
+/// Atomically persist the active profile to disk and flip the in-memory state.
+///
+/// Uses a unique temp filename per call to avoid races between concurrent
+/// switches (e.g. two admin requests arriving at the same time). The write
+/// lock on `active_profile` is held across the rename+flip so disk and
+/// memory stay consistent.
+async fn persist_and_flip(
+    state: &PlatformState,
+    target: SetupMode,
+) -> Result<SetupMode, ControlPlaneError> {
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering::Relaxed;
+
+    // Unique temp file per call — avoids concurrent writes to the same path.
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let seq = COUNTER.fetch_add(1, Relaxed);
     let profile_path = state.data_dir.join("active_profile");
-    let profile_tmp = state.data_dir.join("active_profile.tmp");
+    let profile_tmp = state.data_dir.join(format!("active_profile.{seq}.tmp"));
+
+    // Write target profile to the temp file.
     tokio::fs::write(&profile_tmp, target.as_str())
         .await
         .map_err(|e| {
             tracing::error!(
                 target = ?target,
                 path = %profile_tmp.display(),
-                "switch_profile_admin: write active_profile.tmp failed: {e}"
+                "persist_and_flip: write tmp failed: {e}"
             );
             ControlPlaneError::Internal(anyhow::anyhow!("Failed to persist profile selection: {e}"))
         })?;
+
+    // Rename atomically — if this succeeds, the disk state is updated.
     tokio::fs::rename(&profile_tmp, &profile_path)
         .await
         .map_err(|e| {
@@ -162,21 +154,20 @@ pub async fn switch_profile_admin(
                 target = ?target,
                 src = %profile_tmp.display(),
                 dst = %profile_path.display(),
-                "switch_profile_admin: rename active_profile.tmp → active_profile failed: {e}"
+                "persist_and_flip: rename failed: {e}"
             );
             ControlPlaneError::Internal(anyhow::anyhow!("Failed to persist profile selection: {e}"))
         })?;
 
-    // Step 3: Flip the in-memory active_profile.
-    let previous = {
+    // Flip in-memory state. The unique temp filename per call prevents
+    // concurrent writes from clobbering each other on disk. The rename
+    // is atomic, so the on-disk value is always valid. The memory flip
+    // is serialized by the parking_lot write lock.
+    let prev = {
         let mut guard = state.active_profile.write();
         let prev = *guard;
         *guard = target;
         prev
     };
-
-    Ok(ProfileSwitchAdminResponse {
-        previous,
-        current: target,
-    })
+    Ok(prev)
 }

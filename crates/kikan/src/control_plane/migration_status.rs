@@ -28,7 +28,7 @@ async fn profile_migration_status(
         Err(_) => 0,
     };
 
-    let applied = query_applied_migrations(db).await.unwrap_or_default();
+    let applied = query_applied_migrations(db).await?;
 
     Ok(ProfileMigrationStatus {
         applied,
