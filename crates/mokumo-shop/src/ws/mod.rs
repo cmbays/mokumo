@@ -1,4 +1,4 @@
-pub mod handler;
+mod handler;
 mod manager;
 
 pub use handler::ws_handler;

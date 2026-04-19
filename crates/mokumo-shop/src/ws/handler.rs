@@ -7,7 +7,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures_util::{SinkExt, StreamExt, future::OptionFuture};
+use futures_util::{SinkExt, StreamExt};
 use tokio::sync::broadcast::error::RecvError;
 use tokio_util::sync::CancellationToken;
 
@@ -151,7 +151,12 @@ async fn handle_socket(socket: WebSocket, state: SharedState, ping_ms: Option<u6
                 () = sender_cancel_token.cancelled() => {
                     break;
                 }
-                _ = OptionFuture::from(ping_interval.as_mut().map(|i| i.tick())) => {
+                _ = async {
+                    match ping_interval.as_mut() {
+                        Some(i) => { i.tick().await; }
+                        None => std::future::pending::<()>().await,
+                    }
+                } => {
                     let Ok(hb) = serde_json::to_string(
                         &kikan_types::ws::BroadcastEvent::new(
                             "heartbeat",

@@ -211,13 +211,31 @@ pub async fn profile_switch(
     }
 
     // Persist the production email into the new session for the return trip.
+    // This must succeed: if the carry fails, switch_profile will later fall
+    // back to current_user.user.email (e.g. "admin@demo.local") and 503 on
+    // return. Abort the switch and roll back disk state.
     if let Some(ref prod_email) = production_email_to_carry
         && let Err(e) = auth_session
             .session
             .insert(SESSION_KEY_PRODUCTION_EMAIL, prod_email.clone())
             .await
     {
-        tracing::warn!("Profile switch: failed to persist production_email in session: {e}");
+        tracing::error!("Profile switch: failed to persist production_email in session: {e}");
+        *state.active_profile().write() = previous_profile;
+        if let Err(re) = async {
+            tokio::fs::write(&profile_tmp, previous_profile.as_str()).await?;
+            tokio::fs::rename(&profile_tmp, &profile_path).await
+        }
+        .await
+        {
+            tracing::error!(
+                path = %profile_path.display(),
+                "Profile switch: rollback disk write failed — on-disk profile may be inconsistent: {re}"
+            );
+        }
+        return Err(AppError::InternalError(
+            "Failed to persist profile session state".into(),
+        ));
     }
 
     // When switching to demo, re-validate the demo install so that /api/health

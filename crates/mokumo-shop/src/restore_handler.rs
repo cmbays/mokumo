@@ -229,15 +229,16 @@ pub async fn validate_handler(
     State(state): State<SharedState>,
     req: Request,
 ) -> Result<Json<RestoreValidateResponse>, AppError> {
-    // Rate limit before any I/O.
+    // Acquire guard before reading the body — avoids wasting I/O on rejected state
+    // and prevents non-first-launch traffic from exhausting the rate-limit bucket.
+    let _guard = RestoreGuard::acquire(&state)?;
+
+    // Rate limit only counts attempts that pass the first-launch guard.
     if !state.restore_limiter().check_and_record("restore") {
         return Err(AppError::TooManyRequests(
             "Too many restore attempts. Please wait before trying again.".into(),
         ));
     }
-
-    // Acquire guard before reading the body — avoids wasting I/O on rejected state.
-    let _guard = RestoreGuard::acquire(&state)?;
 
     let content_type = req
         .headers()
@@ -279,14 +280,15 @@ pub async fn restore_handler(
     State(state): State<SharedState>,
     req: Request,
 ) -> Result<Json<RestoreResponse>, AppError> {
+    // Hold the guard for the entire operation — prevents concurrent restores
+    // and keeps the rate-limit bucket scoped to legitimate first-launch traffic.
+    let _guard = RestoreGuard::acquire(&state)?;
+
     if !state.restore_limiter().check_and_record("restore") {
         return Err(AppError::TooManyRequests(
             "Too many restore attempts. Please wait before trying again.".into(),
         ));
     }
-
-    // Hold the guard for the entire operation — prevents concurrent restores.
-    let _guard = RestoreGuard::acquire(&state)?;
 
     let content_type = req
         .headers()
@@ -317,6 +319,9 @@ pub async fn restore_handler(
     let profile_tmp = state.data_dir().join("active_profile.tmp");
     if let Err(e) = tokio::fs::write(&profile_tmp, "production").await {
         tracing::error!("restore: failed to write active_profile.tmp: {e}; rolling back");
+        if let Err(ce) = tokio::fs::remove_file(&profile_tmp).await {
+            tracing::debug!("restore: partial tmp cleanup failed (may not exist): {ce}");
+        }
         if let Err(rb) = tokio::fs::remove_file(production_dir.join("mokumo.db")).await {
             tracing::error!(
                 "restore: CRITICAL — rollback failed, production DB may be orphaned: {rb}"

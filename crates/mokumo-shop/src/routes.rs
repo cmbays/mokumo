@@ -75,7 +75,7 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
             "/api/profile/switch",
             post(crate::profile_switch::profile_switch),
         )
-        .route("/ws", get(crate::ws::handler::ws_handler))
+        .route("/ws", get(crate::ws::ws_handler))
         .merge(protected_auth_routes)
         .merge(shop_upload_router)
         .merge(kikan::platform_protected_routes().with_state(state.platform_state()))
@@ -120,14 +120,8 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
     #[cfg(debug_assertions)]
     {
         router = router
-            .route(
-                "/api/debug/connections",
-                get(crate::ws::handler::debug_connections),
-            )
-            .route(
-                "/api/debug/broadcast",
-                post(crate::ws::handler::debug_broadcast),
-            )
+            .route("/api/debug/connections", get(crate::ws::debug_connections))
+            .route("/api/debug/broadcast", post(crate::ws::debug_broadcast))
             .route("/api/debug/expire-pin", post(debug_expire_pin))
             .route("/api/debug/recovery-dir", get(debug_recovery_dir));
     }
