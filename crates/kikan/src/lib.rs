@@ -24,6 +24,9 @@ pub use app_handle::AppHandleShim;
 pub use boot::{BootConfig, DeploymentMode, RateLimitConfig, RateWindow};
 pub use control_plane::{ControlPlaneState, PendingReset};
 pub use control_plane_error::{ConflictKind, ControlPlaneError};
+pub mod admin {
+    pub use crate::engine::admin::build_admin_router;
+}
 pub use engine::{
     Engine, EngineContext, Sessions, platform_protected_routes, platform_public_routes,
 };

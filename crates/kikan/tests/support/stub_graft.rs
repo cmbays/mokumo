@@ -1,9 +1,20 @@
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 use kikan::migrations::conn::MigrationConn;
 use kikan::{
     BootConfig, Engine, EngineContext, EngineError, Graft, GraftId, Migration, MigrationRef,
     MigrationTarget, Tenancy,
 };
-use std::sync::Arc;
+use parking_lot::RwLock;
+use tokio_util::sync::CancellationToken;
+
+/// Minimal composed state for StubGraft, mirroring the real
+/// MokumoState structure but without domain fields.
+#[derive(Clone)]
+pub struct StubAppState {
+    pub control_plane: kikan::ControlPlaneState,
+}
 
 pub struct StubGraft {
     migrations: Vec<Box<dyn Migration>>,
@@ -25,7 +36,7 @@ impl StubGraft {
 }
 
 impl Graft for StubGraft {
-    type AppState = ();
+    type AppState = StubAppState;
     type DomainState = ();
 
     fn id() -> GraftId {
@@ -53,21 +64,91 @@ impl Graft for StubGraft {
     }
 
     fn compose_state(
-        _control_plane: kikan::ControlPlaneState,
+        control_plane: kikan::ControlPlaneState,
         _domain: Self::DomainState,
     ) -> Self::AppState {
+        StubAppState { control_plane }
     }
 
-    fn platform_state(_state: &Self::AppState) -> &kikan::PlatformState {
-        unimplemented!("StubGraft does not carry PlatformState")
+    fn platform_state(state: &Self::AppState) -> &kikan::PlatformState {
+        &state.control_plane.platform
     }
 
-    fn control_plane_state(_state: &Self::AppState) -> &kikan::ControlPlaneState {
-        unimplemented!("StubGraft does not carry ControlPlaneState")
+    fn control_plane_state(state: &Self::AppState) -> &kikan::ControlPlaneState {
+        &state.control_plane
     }
 
     fn data_plane_routes(_state: &Self::AppState) -> axum::Router<Self::AppState> {
         axum::Router::new()
+    }
+}
+
+/// Build a minimal `StubAppState` for tests that need a real state
+/// (e.g. `build_router`).
+pub fn stub_app_state(
+    demo_db: sea_orm::DatabaseConnection,
+    production_db: sea_orm::DatabaseConnection,
+    data_dir: std::path::PathBuf,
+) -> StubAppState {
+    let platform = kikan::PlatformState {
+        data_dir,
+        demo_db,
+        production_db,
+        active_profile: Arc::new(RwLock::new(kikan::SetupMode::Demo)),
+        shutdown: CancellationToken::new(),
+        started_at: std::time::Instant::now(),
+        mdns_status: kikan::MdnsStatus::shared(),
+        demo_install_ok: Arc::new(AtomicBool::new(true)),
+        is_first_launch: Arc::new(AtomicBool::new(false)),
+        setup_completed: Arc::new(AtomicBool::new(false)),
+        profile_db_initializer: Arc::new(NoOpProfileDbInitializer),
+    };
+    let control_plane = kikan::ControlPlaneState {
+        platform,
+        login_limiter: Arc::new(kikan::rate_limit::RateLimiter::new(
+            10,
+            std::time::Duration::from_secs(900),
+        )),
+        recovery_limiter: Arc::new(kikan::rate_limit::RateLimiter::new(
+            5,
+            std::time::Duration::from_secs(900),
+        )),
+        regen_limiter: Arc::new(kikan::rate_limit::RateLimiter::new(
+            3,
+            std::time::Duration::from_secs(3600),
+        )),
+        switch_limiter: Arc::new(kikan::rate_limit::RateLimiter::new(
+            3,
+            std::time::Duration::from_secs(900),
+        )),
+        reset_pins: Arc::new(dashmap::DashMap::new()),
+        recovery_dir: std::path::PathBuf::from("/tmp/stub-recovery"),
+        setup_token: None,
+        setup_in_progress: Arc::new(AtomicBool::new(false)),
+        activity_writer: Arc::new(kikan::SqliteActivityWriter::new()),
+    };
+    StubAppState { control_plane }
+}
+
+pub struct NoOpProfileDbInitializer;
+
+impl kikan::platform_state::ProfileDbInitializer for NoOpProfileDbInitializer {
+    fn initialize<'a>(
+        &'a self,
+        _database_url: &'a str,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<sea_orm::DatabaseConnection, kikan::db::DatabaseSetupError>,
+                > + Send
+                + 'a,
+        >,
+    > {
+        Box::pin(async {
+            Err(kikan::db::DatabaseSetupError::Migration(
+                sea_orm::DbErr::Custom("not supported in test".to_string()),
+            ))
+        })
     }
 }
 

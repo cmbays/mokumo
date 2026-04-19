@@ -34,9 +34,12 @@ async fn default_lifecycle_hooks_return_ok() {
 #[tokio::test]
 async fn default_spawn_background_tasks_is_noop() {
     use kikan::Graft;
+    use sea_orm::Database;
 
     let graft = StubGraft::diamond();
-    let state = ();
+    let demo_db = Database::connect("sqlite::memory:").await.unwrap();
+    let prod_db = Database::connect("sqlite::memory:").await.unwrap();
+    let state = support::stub_app_state(demo_db, prod_db, "/tmp/test-bg".into());
 
     // Should complete immediately without panicking
     graft.spawn_background_tasks(&state);
