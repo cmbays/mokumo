@@ -1149,17 +1149,10 @@ fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, productio
         std::process::exit(1);
     }
 
-    let recovery_dir = mokumo_shop::startup::resolve_recovery_dir();
     let graft = mokumo_shop::graft::MokumoApp::default();
 
-    match kikan_cli::reset_db::run(&graft, &profile_dir, &recovery_dir, include_backups) {
+    match kikan_cli::reset_db::run(&graft, &profile_dir, include_backups) {
         Ok(report) => {
-            if let Some((path, e)) = &report.recovery_dir_error {
-                eprintln!(
-                    "Warning: could not scan recovery dir {}: {e}",
-                    path.display()
-                );
-            }
             if let Some((path, e)) = &report.backup_dir_error {
                 eprintln!("Warning: could not scan backup dir {}: {e}", path.display());
             }

@@ -300,12 +300,16 @@ impl Graft for MokumoApp {
         Ok(())
     }
 
-    fn on_post_reset_db(
-        &self,
-        profile_dir: &std::path::Path,
-        _recovery_dir: &std::path::Path,
-    ) -> Result<(), String> {
+    fn on_post_reset_db(&self, profile_dir: &std::path::Path) -> Result<(), String> {
         crate::lifecycle::cleanup_domain_artifacts(profile_dir);
+        // Mokumo owns the recovery-file layout (`mokumo-recovery-*.html`
+        // under `recovery_dir`); the cleanup moved out of `kikan-cli` in
+        // Session 3. The hook resolves its own recovery dir via the
+        // same path the engine hook uses.
+        let recovery_dir = self.effective_recovery_dir();
+        if let Err(e) = crate::lifecycle::cleanup_recovery_files(&recovery_dir) {
+            return Err(e.to_string());
+        }
         Ok(())
     }
 

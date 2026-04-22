@@ -113,8 +113,10 @@ pub trait Graft: Sized + 'static {
     }
 
     /// Called after a database reset. Domain grafts can clean up
-    /// domain-specific artifacts from the profile directory.
-    fn on_post_reset_db(&self, _profile_dir: &Path, _recovery_dir: &Path) -> Result<(), String> {
+    /// domain-specific artifacts from the profile directory and any
+    /// vertical-specific adjacent directories (e.g. Mokumo's
+    /// file-drop recovery dir) that the graft resolves internally.
+    fn on_post_reset_db(&self, _profile_dir: &Path) -> Result<(), String> {
         Ok(())
     }
 
