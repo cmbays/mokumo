@@ -171,8 +171,15 @@ fn extract_csrf_cookie<B>(req: &Request<B>) -> Option<String> {
             continue;
         };
         for pair in raw.split(';') {
-            let pair = pair.trim();
-            if let Some(value) = pair.strip_prefix(&format!("{CSRF_COOKIE_NAME}=")) {
+            // Strip the name, then the `=`. Splitting the prefix check in two
+            // avoids allocating `"name="` on every pair, and the `=` step
+            // rejects bare-name cookies (`csrf_token; other=...`) that would
+            // otherwise pass the name check with no value.
+            if let Some(value) = pair
+                .trim()
+                .strip_prefix(CSRF_COOKIE_NAME)
+                .and_then(|rest| rest.strip_prefix('='))
+            {
                 return Some(value.to_owned());
             }
         }
@@ -308,6 +315,38 @@ mod tests {
             b = b.header(CSRF_HEADER_NAME, h);
         }
         b.body(()).unwrap()
+    }
+
+    fn request_with_raw_cookie(raw: &str) -> Request<()> {
+        Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .header(COOKIE, raw)
+            .body(())
+            .unwrap()
+    }
+
+    #[test]
+    fn extract_csrf_cookie_requires_exact_name_and_equals() {
+        // Happy path: the CSRF pair is one of many, surrounded by whitespace.
+        let req = request_with_raw_cookie("csrf_token=tok; other=1");
+        assert_eq!(extract_csrf_cookie(&req), Some("tok".to_owned()));
+
+        // Bare name with no `=` must not match — otherwise an attacker could
+        // satisfy the cookie-presence check without a value and the
+        // double-submit comparison would fall to the `None` branch, which is
+        // already rejected. Belt-and-braces: reject here too.
+        let req = request_with_raw_cookie("csrf_token; other=1");
+        assert_eq!(extract_csrf_cookie(&req), None);
+
+        // Name prefix match (`csrf_token_extra=...`) must not match — the
+        // `=` anchor after the exact name is what rules this out.
+        let req = request_with_raw_cookie("csrf_token_extra=tok; other=1");
+        assert_eq!(extract_csrf_cookie(&req), None);
+
+        // Leading whitespace around each pair is trimmed (RFC 6265 allows it).
+        let req = request_with_raw_cookie("  other=1;   csrf_token=tok2  ");
+        assert_eq!(extract_csrf_cookie(&req), Some("tok2".to_owned()));
     }
 
     #[tokio::test]
