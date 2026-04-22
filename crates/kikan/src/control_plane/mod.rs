@@ -23,6 +23,8 @@
 
 pub mod profiles;
 pub mod state;
+pub mod types;
 pub mod users;
 
 pub use state::{ControlPlaneState, PendingReset};
+pub use types::{PinId, PinIdError, SetupTokenSource};
