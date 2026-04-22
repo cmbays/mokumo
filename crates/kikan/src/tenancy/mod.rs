@@ -1,8 +1,10 @@
 pub mod guards;
 pub mod layout;
+mod profile_dir_name;
 mod profile_id;
 pub mod resolve;
 
+pub use profile_dir_name::ProfileDirName;
 pub use profile_id::{ProfileId, SetupMode};
 
 use parking_lot::RwLock;
