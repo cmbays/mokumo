@@ -256,26 +256,6 @@ jobs:
           path: apps/web/playwright-report
           if-no-files-found: ignore
 
-  mutation-ts:
-    needs: [changes]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.web == 'true'
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22.14.0"
-          cache: pnpm
-      - uses: moonrepo/setup-toolchain@v0
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Mutation testing (Stryker)
-        run: moon run web:test-mutation
-
   bdd-lint:
     needs: [changes]
     if: github.event_name == 'pull_request' && (needs.changes.outputs.rust == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.tooling == 'true')
