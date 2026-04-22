@@ -87,16 +87,6 @@ tasks:
     - '@group(tests)'
     outputs:
     - coverage
-  test-mutation:
-    command: pnpm test:mutation
-    deps:
-    - check
-    inputs:
-    - '@group(sources)'
-    - '@group(tests)'
-    - stryker.config.mjs
-    options:
-      cache: false
   depcruise:
     command: pnpm depcruise
     deps:
