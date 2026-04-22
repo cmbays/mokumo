@@ -4,10 +4,12 @@ use std::sync::atomic::AtomicBool;
 use kikan::migrations::conn::MigrationConn;
 use kikan::{
     BootConfig, Engine, EngineContext, EngineError, Graft, GraftId, Migration, MigrationRef,
-    MigrationTarget, Tenancy,
+    MigrationTarget, SetupMode, Tenancy,
 };
 use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
+
+static STUB_PROFILE_KINDS: &[SetupMode] = &[SetupMode::Demo, SetupMode::Production];
 
 /// Minimal composed state for StubGraft, mirroring the real
 /// MokumoState structure but without domain fields.
@@ -38,9 +40,30 @@ impl StubGraft {
 impl Graft for StubGraft {
     type AppState = StubAppState;
     type DomainState = ();
+    type ProfileKind = SetupMode;
 
     fn id() -> GraftId {
         GraftId::new("stub")
+    }
+
+    fn db_filename(&self) -> &'static str {
+        "mokumo.db"
+    }
+
+    fn all_profile_kinds(&self) -> &'static [SetupMode] {
+        STUB_PROFILE_KINDS
+    }
+
+    fn default_profile_kind(&self) -> SetupMode {
+        SetupMode::Demo
+    }
+
+    fn profile_dir_name(&self, kind: &SetupMode) -> &'static str {
+        kind.as_dir_name()
+    }
+
+    fn requires_setup_wizard(&self, kind: &SetupMode) -> bool {
+        matches!(kind, SetupMode::Production)
     }
 
     fn migrations(&self) -> Vec<Box<dyn Migration>> {

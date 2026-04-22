@@ -11,8 +11,52 @@ pub trait Graft: Sized + 'static {
     type AppState: Clone + Send + Sync + 'static;
     type DomainState: Clone + Send + Sync + 'static;
 
+    /// The vertical's profile discriminator (e.g. Mokumo's `SetupMode`).
+    ///
+    /// Kikan stores and routes `ProfileKind` opaquely — every concrete
+    /// match on profile variants happens on the vertical's side, reached
+    /// through the vocabulary hooks below (`profile_dir_name`,
+    /// `requires_setup_wizard`, …). The `FromStr` + `Display` + serde
+    /// bounds let kikan persist the active profile to disk and over the
+    /// wire without naming the vertical's variants.
+    type ProfileKind: Copy
+        + Eq
+        + std::hash::Hash
+        + Send
+        + Sync
+        + 'static
+        + std::fmt::Display
+        + std::fmt::Debug
+        + std::str::FromStr<Err = String>
+        + serde::Serialize
+        + serde::de::DeserializeOwned;
+
     fn id() -> GraftId;
     fn migrations(&self) -> Vec<Box<dyn Migration>>;
+
+    /// Filename of the per-profile SQLite database (e.g. `"mokumo.db"`).
+    /// Kikan composes paths as `data_dir/{profile_dir_name}/{db_filename}`.
+    fn db_filename(&self) -> &'static str;
+
+    /// Every profile kind the vertical recognizes.
+    ///
+    /// Used by platform handlers that enumerate profiles (backup listing,
+    /// diagnostics). Returning a `'static` slice lets kikan iterate
+    /// without allocation or generics leakage.
+    fn all_profile_kinds(&self) -> &'static [Self::ProfileKind];
+
+    /// The profile kind to fall back to when the on-disk
+    /// `active_profile` file is missing or unparseable.
+    fn default_profile_kind(&self) -> Self::ProfileKind;
+
+    /// The on-disk directory name for a profile kind (e.g.
+    /// `"demo"` or `"production"` for Mokumo's `SetupMode`).
+    fn profile_dir_name(&self, kind: &Self::ProfileKind) -> &'static str;
+
+    /// Whether a profile kind needs the vertical's setup wizard before
+    /// it can serve user traffic. Kikan reads this to gate
+    /// `is_setup_complete` without matching on concrete variants.
+    fn requires_setup_wizard(&self, kind: &Self::ProfileKind) -> bool;
 
     /// Build the domain-specific slice of the application state.
     ///
