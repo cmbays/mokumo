@@ -402,3 +402,80 @@ fn validate_profile_kind<G: Graft>(kind: &G::ProfileKind) -> Result<ProfileDirNa
     }
     Ok(dir)
 }
+
+#[cfg(test)]
+mod resolve_setup_token_tests {
+    use super::{EngineError, SetupTokenSource, resolve_setup_token};
+    use std::sync::Arc;
+
+    #[test]
+    fn disabled_resolves_to_none() {
+        let got = resolve_setup_token(SetupTokenSource::Disabled).unwrap();
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn inline_empty_normalizes_to_none() {
+        let got = resolve_setup_token(SetupTokenSource::Inline(Arc::from(""))).unwrap();
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn inline_whitespace_only_normalizes_to_none() {
+        let got = resolve_setup_token(SetupTokenSource::Inline(Arc::from(" \t\n"))).unwrap();
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn inline_clean_passes_through_without_realloc() {
+        let original: Arc<str> = Arc::from("tok-abc");
+        let got = resolve_setup_token(SetupTokenSource::Inline(original.clone())).unwrap();
+        let Some(resolved) = got else {
+            panic!("expected Some");
+        };
+        assert_eq!(&*resolved, "tok-abc");
+        assert!(Arc::ptr_eq(&original, &resolved));
+    }
+
+    #[test]
+    fn inline_with_surrounding_whitespace_is_trimmed() {
+        let got = resolve_setup_token(SetupTokenSource::Inline(Arc::from("  tok-abc\n"))).unwrap();
+        assert_eq!(&*got.unwrap(), "tok-abc");
+    }
+
+    #[test]
+    fn file_missing_surfaces_boot_error() {
+        let err = resolve_setup_token(SetupTokenSource::File(
+            "/nonexistent/path/for/setup-token".into(),
+        ))
+        .unwrap_err();
+        let EngineError::Boot(msg) = err else {
+            panic!("expected Boot error");
+        };
+        assert!(msg.contains("setup_token_source file"));
+    }
+
+    #[test]
+    fn file_with_content_trims_and_returns_token() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "  file-tok  \n").unwrap();
+        let got = resolve_setup_token(SetupTokenSource::File(tmp.path().to_path_buf())).unwrap();
+        assert_eq!(&*got.unwrap(), "file-tok");
+    }
+
+    #[test]
+    fn file_empty_normalizes_to_none() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "").unwrap();
+        let got = resolve_setup_token(SetupTokenSource::File(tmp.path().to_path_buf())).unwrap();
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn file_whitespace_only_normalizes_to_none() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), " \t\n\n").unwrap();
+        let got = resolve_setup_token(SetupTokenSource::File(tmp.path().to_path_buf())).unwrap();
+        assert!(got.is_none());
+    }
+}
