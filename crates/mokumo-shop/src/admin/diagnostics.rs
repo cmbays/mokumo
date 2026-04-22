@@ -334,12 +334,24 @@ fn collect_system_diagnostics(data_dir: &Path) -> SystemDiagnostics {
 }
 
 /// Wire-shape bridge: resolve the active profile dir-name back to the
-/// `SetupMode` variant the diagnostics DTO expects. Falls back to Demo
-/// when the dir-name does not parse — matches the pre-refactor default.
+/// `SetupMode` variant the diagnostics DTO expects. `Engine::boot`
+/// validates the round-trip for every declared kind — an `Err` here means
+/// the on-disk `active_profile` slot has drifted, which we surface as a
+/// `tracing::error!` before falling back to `Demo` for the DTO.
 fn active_profile_as_setup_mode(state: &PlatformState) -> SetupMode {
     use std::str::FromStr;
     let active = state.active_profile.read();
-    SetupMode::from_str(active.as_str()).unwrap_or(SetupMode::Demo)
+    match SetupMode::from_str(active.as_str()) {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(
+                dir = active.as_str(),
+                "admin diagnostics: kikan-side active dir does not parse to SetupMode: {e}; \
+                 falling back to Demo for DTO response"
+            );
+            SetupMode::Demo
+        }
+    }
 }
 
 async fn read_profile_diagnostics(

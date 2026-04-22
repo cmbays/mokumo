@@ -100,12 +100,35 @@ impl MokumoState {
 
     /// Active profile read lock — returns the `SetupMode` variant after
     /// round-tripping the kikan-side `ProfileDirName` through `FromStr`.
-    /// Removed when mokumo handlers migrate off raw `SetupMode` reads via
-    /// the generic auth cascade.
-    pub fn active_profile_mode(&self) -> SetupMode {
+    ///
+    /// `Engine::boot` validates the round-trip at startup, so a `None`
+    /// return here would signal kikan bookkeeping drift (a stale
+    /// `active_profile` file not matching any declared kind). Callers that
+    /// want a fallible read use this; callers that want the legacy
+    /// "silent fallback to Demo" call [`Self::active_profile_mode_or_demo`]
+    /// — and should prefer the fallible variant in new code.
+    pub fn active_profile_mode_opt(&self) -> Option<SetupMode> {
         use std::str::FromStr;
         let active = self.control_plane.platform.active_profile.read().clone();
-        SetupMode::from_str(active.as_str()).unwrap_or(SetupMode::Demo)
+        match SetupMode::from_str(active.as_str()) {
+            Ok(m) => Some(m),
+            Err(e) => {
+                tracing::error!(
+                    dir = active.as_str(),
+                    "active_profile_mode: kikan-side dir does not parse to SetupMode: {e}"
+                );
+                None
+            }
+        }
+    }
+
+    /// Active profile as `SetupMode`, falling back to `Demo` if the
+    /// kikan-side dir does not round-trip (with a `tracing::error!`).
+    /// Preferred new code uses [`Self::active_profile_mode_opt`]; this
+    /// stays for handlers that need a concrete variant and can accept the
+    /// Demo fallback semantics.
+    pub fn active_profile_mode(&self) -> SetupMode {
+        self.active_profile_mode_opt().unwrap_or(SetupMode::Demo)
     }
 
     /// Write-access to the kikan-side active-profile lock. Callers that

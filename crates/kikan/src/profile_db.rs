@@ -130,12 +130,20 @@ where
 {
     let (mode, db) = if let Some(user) = &auth_session.user {
         let ProfileUserId(m, _) = user.id();
-        let pool = auth_session
-            .backend
-            .db_for(&m)
-            .cloned()
-            .expect("authenticated session references a profile without a pool");
-        (m, pool)
+        match auth_session.backend.db_for(&m).cloned() {
+            Some(pool) => (m, pool),
+            None => {
+                // Middleware must never panic — killing a Tokio worker in
+                // place of returning 500 drops unrelated concurrent work.
+                // Boot validated the pool/kind round-trip, so reaching
+                // here signals kikan bookkeeping drift.
+                tracing::error!(
+                    "profile_db_middleware: authenticated session references a profile without a pool; \
+                     boot invariant violated"
+                );
+                return missing_extension_response();
+            }
+        }
     } else {
         let active = platform.active_profile.read().clone();
         let m = match K::from_str(active.as_str()) {
@@ -148,11 +156,17 @@ where
                 return missing_extension_response();
             }
         };
-        let pool = platform
-            .db_for(active.as_str())
-            .cloned()
-            .expect("active profile references a pool entry");
-        (m, pool)
+        match platform.db_for(active.as_str()).cloned() {
+            Some(pool) => (m, pool),
+            None => {
+                tracing::error!(
+                    dir = active.as_str(),
+                    "profile_db_middleware: active profile has no pool entry; \
+                     boot invariant violated"
+                );
+                return missing_extension_response();
+            }
+        }
     };
 
     request.extensions_mut().insert(ProfileDb(db));

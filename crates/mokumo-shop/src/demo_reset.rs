@@ -25,10 +25,12 @@ pub async fn demo_reset(
     // Close the demo database connection pool before replacing the file.
     // This releases file handles that would block std::fs::rename on Windows.
     // Other in-flight requests will get errors, but the server is about to shut down.
-    let demo_db = state
-        .db_for("demo")
-        .cloned()
-        .expect("demo profile pool present in PlatformState");
+    let demo_db = state.db_for("demo").cloned().ok_or_else(|| {
+        tracing::error!(
+            "demo_reset: demo profile pool missing from PlatformState — boot invariant violated"
+        );
+        AppError::InternalError("demo profile pool missing from PlatformState".into())
+    })?;
     demo_db.get_sqlite_connection_pool().close().await;
 
     // Force-copy fresh sidecar over the demo database.

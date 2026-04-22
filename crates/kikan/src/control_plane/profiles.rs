@@ -194,10 +194,14 @@ where
     // concurrent writes from clobbering each other on disk. The rename
     // is atomic, so the on-disk value is always valid. The memory flip
     // is serialized by the parking_lot write lock.
+    //
+    // `K.to_string()` is a trusted input here: `Engine::boot` validated
+    // that every declared kind produces a path-safe ProfileDirName, and
+    // `target: K` must be one of those kinds.
     let prev_dir: ProfileDirName = {
         let mut guard = state.active_profile.write();
         let prev = guard.clone();
-        *guard = ProfileDirName::new(target_str.clone());
+        *guard = ProfileDirName::new_trusted(target_str.clone());
         prev
     };
     // Parse the previous dir back to `K`. Failure signals corrupt state

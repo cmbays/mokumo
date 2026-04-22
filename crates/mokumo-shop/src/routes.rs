@@ -113,7 +113,10 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
         .route("/api/health", get(health))
         .route("/api/server-info", get(crate::server_info::handler))
         .route("/api/setup-status", get(setup_status))
-        .merge(kikan::platform_public_routes().with_state(state.platform_state()))
+        .route(
+            "/api/backup-status",
+            get(crate::admin::backup_status::handler).with_state(state.platform_state()),
+        )
         .nest(
             "/api/shop",
             crate::shop_logo_public_router().with_state(shop_logo_deps),

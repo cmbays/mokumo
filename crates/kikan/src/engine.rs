@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use axum::Router;
-use axum::routing::get;
 use axum_login::AuthManagerLayerBuilder;
 use dashmap::DashMap;
 use parking_lot::RwLock;
@@ -25,7 +24,6 @@ use crate::middleware::security_headers;
 use crate::middleware::session_layer;
 use crate::migrations;
 use crate::migrations::Migration;
-use crate::platform;
 use crate::platform_state::{MdnsStatus, PlatformState, SharedProfileDbInitializer};
 use crate::rate_limit::RateLimiter;
 use crate::tenancy::{ProfileDirName, Tenancy};
@@ -178,24 +176,26 @@ impl<G: Graft> Engine<G> {
         // as opaque data from here on. `kind.to_string()` (via Display) is
         // the single source of truth for on-disk directory names — see
         // `Graft::ProfileKind` invariant docs.
+        //
+        // Fail-fast invariant check: every declared kind must produce a
+        // path-safe ProfileDirName AND round-trip through FromStr back to
+        // the same kind. A graft whose Display/FromStr are not inverses
+        // would otherwise silently drop profiles from the auth pool or
+        // route to the wrong dir.
         let profile_dir_names: Arc<[ProfileDirName]> = graft
             .all_profile_kinds()
             .iter()
-            .map(|k| ProfileDirName::new(k.to_string()))
-            .collect::<Vec<_>>()
+            .map(|k| validate_profile_kind::<G>(k))
+            .collect::<Result<Vec<_>, _>>()?
             .into();
         let requires_setup_by_dir: HashMap<ProfileDirName, bool> = graft
             .all_profile_kinds()
             .iter()
-            .map(|k| {
-                (
-                    ProfileDirName::new(k.to_string()),
-                    graft.requires_setup_wizard(k),
-                )
-            })
-            .collect();
+            .map(|k| validate_profile_kind::<G>(k).map(|dir| (dir, graft.requires_setup_wizard(k))))
+            .collect::<Result<_, _>>()?;
 
-        let auth_profile_kind_dir = ProfileDirName::new(graft.auth_profile_kind().to_string());
+        let auth_kind = graft.auth_profile_kind();
+        let auth_profile_kind_dir = validate_profile_kind::<G>(&auth_kind)?;
 
         // ── PlatformState ────────────────────────────────────────────
         let platform = PlatformState {
@@ -277,28 +277,21 @@ impl<G: Graft> Engine<G> {
         let platform = G::platform_state(&state);
 
         // Auth backend dispatches by compound user ID across every profile
-        // pool the graft declared. Keys come from `profile_dir_names` — each
-        // dir name parses back to the vertical's `ProfileKind` via
-        // `K::from_str` (enforced by the `Graft::ProfileKind` bounds).
+        // pool the graft declared. Every dir name in `profile_dir_names`
+        // round-trips through `K::from_str` by construction —
+        // `Engine::boot` verified that invariant for every kind, so an
+        // `Err` here signals bookkeeping drift (not a runtime surprise).
         let mut pool_map: HashMap<G::ProfileKind, DatabaseConnection> = HashMap::new();
         for dir in platform.profile_dir_names.iter() {
             let Some(pool) = platform.db_for(dir.as_str()) else {
                 continue;
             };
-            match G::ProfileKind::from_str(dir.as_str()) {
-                Ok(kind) => {
-                    pool_map.insert(kind, pool.clone());
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        dir = dir.as_str(),
-                        "profile dir does not parse to Graft::ProfileKind: {e}; skipping from auth backend"
-                    );
-                }
-            }
+            let kind = G::ProfileKind::from_str(dir.as_str())
+                .expect("boot invariant: profile dir round-trips through K::from_str");
+            pool_map.insert(kind, pool.clone());
         }
         let auth_kind = G::ProfileKind::from_str(platform.auth_profile_kind_dir.as_str())
-            .expect("auth profile kind dir was captured at boot and must parse back");
+            .expect("boot invariant: auth profile kind dir round-trips through K::from_str");
         let backend = crate::auth::Backend::<G::ProfileKind>::new(Arc::new(pool_map), auth_kind);
         let auth_layer =
             AuthManagerLayerBuilder::new(backend, session_layer(&self.ctx.sessions)).build();
@@ -329,13 +322,35 @@ impl<G: Graft> Engine<G> {
     }
 }
 
-/// Public (unauthenticated) platform routes that consume
-/// [`PlatformState`]. Currently:
-/// - `GET /api/backup-status`
+/// Verify a `ProfileKind` satisfies the two invariants kikan relies on at
+/// every request:
 ///
-/// The host crate is responsible for binding the inner state with
-/// `.with_state(...)` (or merging into the outer router when
-/// `PlatformState: FromRef<OuterState>` holds).
-pub fn platform_public_routes() -> Router<PlatformState> {
-    Router::new().route("/api/backup-status", get(platform::backup_status::handler))
+/// 1. `kind.to_string()` produces a path-safe [`ProfileDirName`] (non-empty,
+///    no path separators, no `.`/`..`/leading-dot, no NUL).
+/// 2. The string round-trips through `K::from_str(kind.to_string())` back
+///    to an equal `K`.
+///
+/// Both are required for the vocabulary-neutral design: dir names are the
+/// primary key for per-profile state, and kikan reconstructs `K` from
+/// those strings at request time. Failure = Graft invariant violation;
+/// bubble it up as `EngineError::Boot` so the app refuses to start.
+fn validate_profile_kind<G: Graft>(kind: &G::ProfileKind) -> Result<ProfileDirName, EngineError> {
+    use std::str::FromStr;
+    let dir_string = kind.to_string();
+    let dir = ProfileDirName::new(dir_string.clone()).map_err(|e| {
+        EngineError::Boot(format!(
+            "Graft::ProfileKind `{kind:?}` serializes to invalid profile dir {dir_string:?}: {e}"
+        ))
+    })?;
+    let parsed = G::ProfileKind::from_str(dir.as_str()).map_err(|e| {
+        EngineError::Boot(format!(
+            "Graft::ProfileKind Display/FromStr are not inverses: {kind:?} serializes to {dir_string:?} but FromStr rejects it: {e}"
+        ))
+    })?;
+    if &parsed != kind {
+        return Err(EngineError::Boot(format!(
+            "Graft::ProfileKind Display/FromStr round-trip mismatch: {kind:?} → {dir_string:?} → {parsed:?}"
+        )));
+    }
+    Ok(dir)
 }

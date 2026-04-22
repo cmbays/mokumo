@@ -12,9 +12,11 @@
 //! `mokumo-server` over a Unix domain socket with mode `0600` as the
 //! capability-based admin channel.
 
+pub mod backup_status;
 pub mod diagnostics;
 pub mod diagnostics_bundle_http;
 pub mod diagnostics_http;
+pub mod migration_status;
 pub mod profile_list;
 pub mod profile_switch;
 pub mod router;

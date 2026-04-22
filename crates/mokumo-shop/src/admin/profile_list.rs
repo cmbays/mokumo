@@ -18,7 +18,17 @@ pub async fn list_profiles(
     state: &PlatformState,
 ) -> Result<ProfileListResponse, ControlPlaneError> {
     let active_dir = state.active_profile.read().clone();
-    let active = SetupMode::from_str(active_dir.as_str()).unwrap_or(SetupMode::Demo);
+    let active = match SetupMode::from_str(active_dir.as_str()) {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(
+                dir = active_dir.as_str(),
+                "admin profile_list: kikan-side active dir does not parse to SetupMode: {e}; \
+                 falling back to Demo for DTO response"
+            );
+            SetupMode::Demo
+        }
+    };
 
     let mut profiles = Vec::with_capacity(state.profile_dir_names.len());
     for dir in state.profile_dir_names.iter() {

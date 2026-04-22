@@ -918,7 +918,7 @@ async fn cmd_migrate_status(data_dir: PathBuf, json: bool) {
 
     // Direct DB fallback — open read-only.
     let state = build_readonly_platform_state(&data_dir).await;
-    match kikan::control_plane::migration_status::collect_migration_status(&state).await {
+    match mokumo_shop::admin::migration_status::collect_migration_status(&state).await {
         Ok(resp) => {
             if json {
                 println!(

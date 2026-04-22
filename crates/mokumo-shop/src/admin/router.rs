@@ -101,7 +101,7 @@ async fn profiles_switch(
 async fn migrate_status(
     State(state): State<PlatformState>,
 ) -> Result<Json<kikan_types::admin::MigrationStatusResponse>, StatusCode> {
-    kikan::control_plane::migration_status::collect_migration_status(&state)
+    crate::admin::migration_status::collect_migration_status(&state)
         .await
         .map(Json)
         .map_err(|e| {
@@ -113,24 +113,7 @@ async fn migrate_status(
 async fn backups_list(
     State(state): State<PlatformState>,
 ) -> Json<kikan_types::BackupStatusResponse> {
-    // UDS response DTO names `production` / `demo` — kikan-types wire
-    // shape. Collect per dir_name; the DTO field each entry lands in is
-    // the corresponding wire name derived by string match.
-    let mut production = kikan_types::ProfileBackups { backups: vec![] };
-    let mut demo = kikan_types::ProfileBackups { backups: vec![] };
-    for dir in state.profile_dir_names.iter() {
-        let path = state.data_dir.join(dir.as_str()).join(state.db_filename);
-        let entries = collect_profile_backups(&path).await;
-        match dir.as_str() {
-            "production" => production = entries,
-            "demo" => demo = entries,
-            _ => tracing::debug!(
-                dir = dir.as_str(),
-                "UDS backups_list: dir not represented in BackupStatusResponse DTO"
-            ),
-        }
-    }
-    Json(kikan_types::BackupStatusResponse { production, demo })
+    Json(crate::admin::backup_status::collect(&state).await)
 }
 
 async fn backups_create(
@@ -170,44 +153,22 @@ async fn backups_create(
 }
 
 /// UDS wire-shape bridge: translate the active profile dir-name into
-/// the `SetupMode` variant the admin DTO expects. Falls back to Demo
-/// if the on-disk dir-name does not round-trip.
+/// the `SetupMode` variant the admin DTO expects. `Engine::boot`
+/// validated the round-trip for every declared kind, so a parse failure
+/// here means the `active_profile` slot has drifted — logged as an
+/// error before we fall back to `Demo` for the DTO.
 fn default_profile_from_active(state: &PlatformState) -> SetupMode {
     use std::str::FromStr;
     let active = state.active_profile.read();
-    SetupMode::from_str(active.as_str()).unwrap_or(SetupMode::Demo)
-}
-
-async fn collect_profile_backups(db_path: &std::path::Path) -> kikan_types::ProfileBackups {
-    let backups = match kikan::backup::collect_existing_backups(db_path).await {
-        Ok(b) => b,
+    match SetupMode::from_str(active.as_str()) {
+        Ok(m) => m,
         Err(e) => {
-            tracing::warn!(path = %db_path.display(), "backup scan failed: {e}");
-            return kikan_types::ProfileBackups { backups: vec![] };
+            tracing::error!(
+                dir = active.as_str(),
+                "admin UDS backup create: kikan-side active dir does not parse to SetupMode: {e}; \
+                 defaulting profile to Demo"
+            );
+            SetupMode::Demo
         }
-    };
-
-    let entries: Vec<kikan_types::BackupEntry> = backups
-        .into_iter()
-        .rev()
-        .map(|(path, mtime)| {
-            let version = path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .and_then(|name| name.rsplit_once(".backup-v"))
-                .map(|(_, v)| v.to_owned())
-                .unwrap_or_default();
-            let backed_up_at = {
-                use chrono::{DateTime, Utc};
-                DateTime::<Utc>::from(mtime).to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
-            };
-            kikan_types::BackupEntry {
-                path: path.display().to_string(),
-                version,
-                backed_up_at,
-            }
-        })
-        .collect();
-
-    kikan_types::ProfileBackups { backups: entries }
+    }
 }

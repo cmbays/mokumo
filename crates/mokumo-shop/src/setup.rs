@@ -87,11 +87,12 @@ async fn vertical_setup(
     // Persist shop_name to the shop_settings table (vertical concern).
     // Best-effort — log and continue if it fails; the admin user and
     // setup_completed flag are already committed.
-    let production_db = deps
-        .platform
-        .db_for("production")
-        .cloned()
-        .expect("production profile pool present in PlatformState");
+    let production_db = deps.platform.db_for("production").cloned().ok_or_else(|| {
+        tracing::error!(
+            "setup: production profile pool missing from PlatformState — boot invariant violated"
+        );
+        AppError::InternalError("production profile pool missing from PlatformState".to_string())
+    })?;
     let pool = production_db.get_sqlite_connection_pool();
     if let Err(e) = sqlx::query(
         "INSERT INTO shop_settings (id, shop_name) VALUES (1, ?)

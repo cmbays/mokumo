@@ -41,7 +41,7 @@ pub use app_handle::AppHandleShim;
 pub use boot::{BootConfig, DeploymentMode, RateLimitConfig, RateWindow};
 pub use control_plane::{ControlPlaneState, PendingReset};
 pub use control_plane_error::{ConflictKind, ControlPlaneError};
-pub use engine::{Engine, EngineContext, Sessions, platform_public_routes};
+pub use engine::{Engine, EngineContext, Sessions};
 pub use error::{
     ActivityWriteError, AppHandleError, DagError, EngineError, MigrationError, TenancyError,
 };

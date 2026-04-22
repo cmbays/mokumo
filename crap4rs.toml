@@ -39,7 +39,10 @@ exclude = [
   # UDS HTTP client library; exercised through the admin_uds integration
   # tests (crates/mokumo-shop/tests/admin_uds.rs).
   "crates/kikan-cli/**",
-  # Test helpers have 0% coverage by definition.
+  # Test helpers have 0% coverage by definition. Both `tests/` directories
+  # (integration tests) and sibling `*_tests.rs` files (the pattern kikan
+  # uses when a `#[cfg(test)] mod tests` grew large enough to relocate).
   "**/tests/**",
+  "**/*_tests.rs",
   "**/build.rs",
 ]
