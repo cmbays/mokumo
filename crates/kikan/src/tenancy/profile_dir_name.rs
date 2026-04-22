@@ -2,23 +2,24 @@
 //! profile.
 //!
 //! Kikan stores per-profile resources (database pool, recovery files,
-//! etc.) keyed by a String obtained from `Graft::profile_dir_name(&kind)`.
-//! Using a raw `String` at the API boundary invites mixing up a profile
-//! name with any other string (username, email, password). `ProfileDirName`
-//! wraps an `Arc<str>` so: (a) clone is a refcount bump — no allocation;
+//! etc.) keyed by a String obtained from `kind.to_string()`. Using a raw
+//! `String` at the API boundary invites mixing up a profile name with any
+//! other string (username, email, password). `ProfileDirName` wraps an
+//! `Arc<str>` so: (a) clone is a refcount bump — no allocation;
 //! (b) callers can't accidentally pass an unrelated string where a
 //! profile directory is expected.
 //!
-//! The wrapped value must always be the output of
-//! `Graft::profile_dir_name(&kind)`. Kikan never inspects the string
+//! The wrapped value must always equal `kind.to_string()` for some
+//! `Graft::ProfileKind` variant — the vertical's `Display` + `FromStr`
+//! pair is the single source of truth. Kikan never inspects the string
 //! itself — it only uses it as a HashMap key, a `Display` target, and a
-//! serde field. Mokumo owns the string values via its Graft impl.
+//! serde field.
 
 use std::sync::Arc;
 
 /// Opaque directory-name key for a profile, sourced from
-/// `Graft::profile_dir_name(&kind)`. Kikan never matches on its contents
-/// — only stores/compares/displays it.
+/// `kind.to_string()`. Kikan never matches on its contents — only
+/// stores/compares/displays it.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct ProfileDirName(Arc<str>);

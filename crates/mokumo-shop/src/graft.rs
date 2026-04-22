@@ -49,10 +49,6 @@ impl Graft for MokumoApp {
         SetupMode::Demo
     }
 
-    fn profile_dir_name(&self, kind: &SetupMode) -> &'static str {
-        kind.as_dir_name()
-    }
-
     fn requires_setup_wizard(&self, kind: &SetupMode) -> bool {
         matches!(kind, SetupMode::Production)
     }

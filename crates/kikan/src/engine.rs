@@ -175,11 +175,13 @@ impl<G: Graft> Engine<G> {
         let first_launch = !engine.config.data_dir.join("active_profile").exists();
 
         // Snapshot graft vocabulary answers at boot — kikan consumes these
-        // as opaque data from here on.
+        // as opaque data from here on. `kind.to_string()` (via Display) is
+        // the single source of truth for on-disk directory names — see
+        // `Graft::ProfileKind` invariant docs.
         let profile_dir_names: Arc<[ProfileDirName]> = graft
             .all_profile_kinds()
             .iter()
-            .map(|k| ProfileDirName::from(graft.profile_dir_name(k)))
+            .map(|k| ProfileDirName::new(k.to_string()))
             .collect::<Vec<_>>()
             .into();
         let requires_setup_by_dir: HashMap<ProfileDirName, bool> = graft
@@ -187,14 +189,13 @@ impl<G: Graft> Engine<G> {
             .iter()
             .map(|k| {
                 (
-                    ProfileDirName::from(graft.profile_dir_name(k)),
+                    ProfileDirName::new(k.to_string()),
                     graft.requires_setup_wizard(k),
                 )
             })
             .collect();
 
-        let auth_profile_kind_dir =
-            ProfileDirName::from(graft.profile_dir_name(&graft.auth_profile_kind()));
+        let auth_profile_kind_dir = ProfileDirName::new(graft.auth_profile_kind().to_string());
 
         // ── PlatformState ────────────────────────────────────────────
         let platform = PlatformState {

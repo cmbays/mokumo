@@ -70,13 +70,6 @@ impl Graft for TestGraft {
         TestKind::Alpha
     }
 
-    fn profile_dir_name(&self, kind: &TestKind) -> &'static str {
-        match kind {
-            TestKind::Alpha => "alpha",
-            TestKind::Beta => "beta",
-        }
-    }
-
     fn requires_setup_wizard(&self, _kind: &TestKind) -> bool {
         false
     }
@@ -135,13 +128,6 @@ fn test_graft_exposes_all_profile_kinds() {
 fn test_graft_default_profile_kind_is_alpha() {
     let graft = TestGraft;
     assert_eq!(graft.default_profile_kind(), TestKind::Alpha);
-}
-
-#[test]
-fn test_graft_profile_dir_name_per_kind() {
-    let graft = TestGraft;
-    assert_eq!(graft.profile_dir_name(&TestKind::Alpha), "alpha");
-    assert_eq!(graft.profile_dir_name(&TestKind::Beta), "beta");
 }
 
 #[test]

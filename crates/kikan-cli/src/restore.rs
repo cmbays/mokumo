@@ -63,9 +63,6 @@ mod tests {
         fn default_profile_kind(&self) -> kikan_types::SetupMode {
             kikan_types::SetupMode::Demo
         }
-        fn profile_dir_name(&self, kind: &kikan_types::SetupMode) -> &'static str {
-            kind.as_dir_name()
-        }
         fn requires_setup_wizard(&self, kind: &kikan_types::SetupMode) -> bool {
             matches!(kind, kikan_types::SetupMode::Production)
         }

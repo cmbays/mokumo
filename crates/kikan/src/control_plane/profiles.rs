@@ -200,9 +200,17 @@ where
         *guard = ProfileDirName::new(target_str.clone());
         prev
     };
-    // Round-trip through FromStr — if the previous dir does not parse
-    // to `K`, fall back to the target kind (caller's view). This only
-    // matters if a foreign vertical's dir-name was somehow in the slot.
-    let prev = K::from_str(prev_dir.as_str()).unwrap_or(target);
+    // Parse the previous dir back to `K`. Failure signals corrupt state
+    // (the active_profile slot held a value kikan itself did not write) —
+    // surface it as an error so the HTTP adapter's rollback path sees the
+    // inconsistency instead of silently no-op'ing a rollback to `target`.
+    let prev = K::from_str(prev_dir.as_str()).map_err(|e| {
+        tracing::error!(
+            dir = %prev_dir,
+            target = %target_str,
+            "persist_and_flip: previous profile dir does not parse to ProfileKind: {e}"
+        );
+        ControlPlaneError::Internal(anyhow::anyhow!("previous profile state is corrupt: {e}"))
+    })?;
     Ok(prev)
 }

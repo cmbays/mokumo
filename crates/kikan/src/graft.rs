@@ -14,12 +14,12 @@ pub trait Graft: Sized + 'static {
     /// The vertical's profile discriminator (e.g. a two-variant
     /// `Demo`/`Production` enum).
     ///
-    /// Kikan stores and routes `ProfileKind` opaquely — every concrete
-    /// match on profile variants happens on the vertical's side, reached
-    /// through the vocabulary hooks below (`profile_dir_name`,
-    /// `requires_setup_wizard`, …). The `FromStr` + `Display` + serde
-    /// bounds let kikan persist the active profile to disk and over the
-    /// wire without naming the vertical's variants.
+    /// Kikan stores and routes `ProfileKind` opaquely. The `Display` +
+    /// `FromStr` pair is the single source of truth for the on-disk
+    /// directory name of each kind: kikan persists the active profile as
+    /// `kind.to_string()` and recovers it via `K::from_str(dir)`. A graft
+    /// whose `Display` and `FromStr` impls are not inverses will fail pool
+    /// lookup at request time — this is an invariant, not a style point.
     type ProfileKind: Copy
         + Eq
         + std::hash::Hash
@@ -35,9 +35,9 @@ pub trait Graft: Sized + 'static {
     fn id() -> GraftId;
     fn migrations(&self) -> Vec<Box<dyn Migration>>;
 
-    /// Filename of the per-profile SQLite database (the vertical's DB
-    /// filename, e.g. `"shop.db"`). Kikan composes paths as
-    /// `data_dir/{profile_dir_name}/{db_filename}`.
+    /// Filename of the per-profile SQLite database (vertical-declared,
+    /// e.g. `"{vertical}.db"`). Kikan composes on-disk paths as
+    /// `data_dir/{kind.to_string()}/{db_filename}`.
     fn db_filename(&self) -> &'static str;
 
     /// Every profile kind the vertical recognizes.
@@ -50,10 +50,6 @@ pub trait Graft: Sized + 'static {
     /// The profile kind to fall back to when the on-disk
     /// `active_profile` file is missing or unparseable.
     fn default_profile_kind(&self) -> Self::ProfileKind;
-
-    /// The on-disk directory name for a profile kind (e.g.
-    /// `"demo"` or `"production"`).
-    fn profile_dir_name(&self, kind: &Self::ProfileKind) -> &'static str;
 
     /// Whether a profile kind needs the vertical's setup wizard before
     /// it can serve user traffic. Kikan reads this to gate

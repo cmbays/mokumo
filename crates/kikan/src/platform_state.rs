@@ -103,8 +103,8 @@ pub struct PlatformState {
     /// without naming the vertical file.
     pub db_filename: &'static str,
     /// Per-profile database connections, keyed by the opaque
-    /// [`ProfileDirName`] sourced from `Graft::profile_dir_name`. Lookup
-    /// by `&str` via `db_for`.
+    /// [`ProfileDirName`] (= `kind.to_string()`). Lookup by `&str` via
+    /// `db_for`.
     pub pools: Arc<HashMap<ProfileDirName, DatabaseConnection>>,
     /// Currently active profile (opaque dir name). Non-poisoning `RwLock`.
     pub active_profile: Arc<RwLock<ProfileDirName>>,
@@ -117,8 +117,8 @@ pub struct PlatformState {
     /// `is_setup_complete`.
     pub requires_setup_by_dir: Arc<HashMap<ProfileDirName, bool>>,
     /// Directory name for the profile kind that credentialed login
-    /// authenticates against — sourced from `Graft::auth_profile_kind`
-    /// at boot and passed through `Graft::profile_dir_name`. Consumed by
+    /// authenticates against — sourced from
+    /// `graft.auth_profile_kind().to_string()` at boot. Consumed by
     /// `engine::build_router` to bind `Backend<K>::auth_kind` via
     /// `K::from_str(...)`.
     pub auth_profile_kind_dir: ProfileDirName,
