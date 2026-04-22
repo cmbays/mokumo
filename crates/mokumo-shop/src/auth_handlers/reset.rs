@@ -7,10 +7,11 @@ use kikan_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use kikan_types::error::ErrorCode;
 
 use super::PendingReset;
-use kikan::ControlPlaneState;
 use kikan::auth::password;
 use kikan::auth::{SeaOrmUserRepo, UserRepository};
 use kikan::{AppError, ProfileDb};
+
+use crate::state::SharedMokumoState;
 
 const PIN_EXPIRY: Duration = Duration::from_secs(15 * 60);
 
@@ -46,11 +47,12 @@ fn recovery_html(pin: &str) -> String {
 }
 
 pub async fn forgot_password(
-    State(deps): State<ControlPlaneState>,
+    State(state): State<SharedMokumoState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ForgotPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let repo = SeaOrmUserRepo::new(db.clone());
+    let recovery_dir = state.recovery_dir();
 
     match repo.find_by_email(&req.email).await {
         Ok(Some(_)) => {}
@@ -61,7 +63,7 @@ pub async fn forgot_password(
                 email_hash = %hash_email_for_recovery_file(&req.email),
                 "forgot-password: no account found"
             );
-            let dummy_path = recovery_file_path_for_email(&deps.recovery_dir, &req.email);
+            let dummy_path = recovery_file_path_for_email(recovery_dir, &req.email);
             return Ok(Json(serde_json::json!({
                 "message": "If an account with that email exists, a recovery file has been placed on the server.",
                 "recovery_file_path": dummy_path.to_string_lossy()
@@ -84,18 +86,20 @@ pub async fn forgot_password(
         AppError::InternalError("An internal error occurred".into())
     })?;
 
-    let dir = &deps.recovery_dir;
-    if let Err(e) = tokio::fs::create_dir_all(dir).await {
-        tracing::error!("Failed to create recovery dir {}: {e}", dir.display());
+    if let Err(e) = tokio::fs::create_dir_all(recovery_dir).await {
+        tracing::error!(
+            "Failed to create recovery dir {}: {e}",
+            recovery_dir.display()
+        );
         return Err(AppError::InternalError("An internal error occurred".into()));
     }
-    let file_path = recovery_file_path_for_email(dir, &req.email);
+    let file_path = recovery_file_path_for_email(recovery_dir, &req.email);
     if let Err(e) = tokio::fs::write(&file_path, recovery_html(&pin)).await {
         tracing::error!("Failed to write recovery file {}: {e}", file_path.display());
         return Err(AppError::InternalError("An internal error occurred".into()));
     }
 
-    deps.reset_pins.insert(
+    state.reset_pins().insert(
         req.email.clone(),
         PendingReset {
             pin_hash,
@@ -111,11 +115,12 @@ pub async fn forgot_password(
 }
 
 pub async fn reset_password(
-    State(deps): State<ControlPlaneState>,
+    State(state): State<SharedMokumoState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let entry = deps.reset_pins.get(&req.email).ok_or_else(|| {
+    let reset_pins = state.reset_pins();
+    let entry = reset_pins.get(&req.email).ok_or_else(|| {
         AppError::BadRequest(ErrorCode::ValidationError, "No reset request found".into())
     })?;
     let (pin_hash, created_at) = (entry.pin_hash.clone(), entry.created_at);
@@ -125,7 +130,7 @@ pub async fn reset_password(
         .duration_since(created_at)
         .unwrap_or(Duration::ZERO);
     if elapsed > PIN_EXPIRY {
-        deps.reset_pins.remove(&req.email);
+        reset_pins.remove(&req.email);
         return Err(AppError::BadRequest(
             ErrorCode::ValidationError,
             "PIN expired".into(),
@@ -168,9 +173,16 @@ pub async fn reset_password(
             AppError::InternalError("Failed to update password".into())
         })?;
 
-    deps.reset_pins.remove(&req.email);
-    let file_path = recovery_file_path_for_email(&deps.recovery_dir, &req.email);
-    let _ = std::fs::remove_file(file_path);
+    reset_pins.remove(&req.email);
+    let file_path = recovery_file_path_for_email(state.recovery_dir(), &req.email);
+    if let Err(e) = std::fs::remove_file(&file_path)
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        tracing::warn!(
+            path = %file_path.display(),
+            "reset_password: failed to remove recovery file: {e}"
+        );
+    }
 
     Ok(Json(
         serde_json::json!({"message": "Password reset successfully"}),

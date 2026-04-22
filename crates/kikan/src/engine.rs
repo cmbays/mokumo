@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use axum::Router;
 use axum_login::AuthManagerLayerBuilder;
-use dashmap::DashMap;
 use parking_lot::RwLock;
 use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
@@ -16,6 +14,7 @@ use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::activity::{ActivityWriter, SqliteActivityWriter};
 use crate::boot::BootConfig;
+use crate::control_plane::SetupTokenSource;
 use crate::control_plane::state::ControlPlaneState;
 use crate::error::EngineError;
 use crate::graft::{Graft, SelfGraft, SubGraft};
@@ -131,7 +130,12 @@ impl<G: Graft> Engine<G> {
     ///
     /// Callers prepare database connections and session store beforehand;
     /// `boot` handles migration execution, state composition, and
-    /// setup-token generation.
+    /// setup-token resolution via [`Graft::setup_token_source`].
+    ///
+    /// The vertical's file-drop recovery directory and reset-PIN store
+    /// are no longer boot parameters. The vertical owns those pieces on
+    /// its own state slice and exposes the recovery-dir path through
+    /// [`Graft::recovery_dir`] for any kikan-side caller that needs it.
     #[allow(clippy::too_many_arguments)]
     pub async fn boot(
         config: BootConfig,
@@ -141,9 +145,7 @@ impl<G: Graft> Engine<G> {
         session_store: SqliteStore,
         profile_db_initializer: SharedProfileDbInitializer,
         setup_completed: Arc<AtomicBool>,
-        setup_token: Option<String>,
         demo_install_ok: Arc<AtomicBool>,
-        recovery_dir: PathBuf,
         shutdown: CancellationToken,
     ) -> Result<(Self, G::AppState), EngineError> {
         let activity_writer: Arc<dyn ActivityWriter> = Arc::new(SqliteActivityWriter::new());
@@ -215,6 +217,28 @@ impl<G: Graft> Engine<G> {
             profile_db_initializer,
         };
 
+        // ── Resolve setup_token via Graft hook ───────────────────────
+        //
+        // The vertical declares its token source; kikan reads it once at
+        // boot and stashes the value for the setup_admin pure-fn to
+        // compare against. I/O errors on `File` surface as
+        // `EngineError::Boot` — the engine refuses to start rather than
+        // run with an indeterminate token. (Fail-fast at boot per ADR
+        // amendment 2026-04-22 (a).)
+        let setup_token: Option<Arc<str>> = match graft.setup_token_source() {
+            SetupTokenSource::Disabled => None,
+            SetupTokenSource::Inline(t) => Some(t),
+            SetupTokenSource::File(path) => {
+                let raw = std::fs::read_to_string(&path).map_err(|e| {
+                    EngineError::Boot(format!(
+                        "Graft::setup_token_source file {} could not be read: {e}",
+                        path.display()
+                    ))
+                })?;
+                Some(Arc::from(raw.trim()))
+            }
+        };
+
         // ── ControlPlaneState ────────────────────────────────────────
         let rlc = &engine.config.rate_limit_config;
         let control_plane = ControlPlaneState {
@@ -229,8 +253,6 @@ impl<G: Graft> Engine<G> {
                 rlc.profile_switch.max_attempts,
                 rlc.profile_switch.window,
             )),
-            reset_pins: Arc::new(DashMap::new()),
-            recovery_dir,
             setup_token,
             setup_in_progress: Arc::new(AtomicBool::new(false)),
             activity_writer,

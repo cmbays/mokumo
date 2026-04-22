@@ -26,5 +26,5 @@ pub mod state;
 pub mod types;
 pub mod users;
 
-pub use state::{ControlPlaneState, PendingReset};
+pub use state::ControlPlaneState;
 pub use types::{PinId, PinIdError, SetupTokenSource};
