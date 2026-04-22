@@ -200,11 +200,23 @@ export async function startAxumServer(
   const wsPingArgs =
     wsPingMs !== undefined && binary.includes("/debug/") ? ["--ws-ping-ms", String(wsPingMs)] : [];
 
-  // mokumo-server uses: --data-dir <dir> serve --port <port> --mode loopback
-  const mode = TEST_SERVER_HOST === "127.0.0.1" ? "loopback" : "lan";
+  // mokumo-server takes: --data-dir <dir> serve --port <port>
+  //                      --deployment-mode lan --host <127.0.0.1|0.0.0.0>
+  const host = TEST_SERVER_HOST === "127.0.0.1" ? "127.0.0.1" : "0.0.0.0";
   const server = spawn(
     binary,
-    ["--data-dir", dataDir, "serve", "--port", String(port), "--mode", mode, ...wsPingArgs],
+    [
+      "--data-dir",
+      dataDir,
+      "serve",
+      "--port",
+      String(port),
+      "--deployment-mode",
+      "lan",
+      "--host",
+      host,
+      ...wsPingArgs,
+    ],
     {
       stdio: ["ignore", "pipe", "pipe"],
       cwd: webRoot,

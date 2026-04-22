@@ -2,11 +2,19 @@
 //!
 //! Owns tenancy, per-profile migrations, auth, activity log,
 //! backup/restore, control-plane handlers, SeaORM pool init,
-//! middleware, and the [`Engine`] + [`Graft`] + [`SubGraft`]
+//! data-plane middleware, and the [`Engine`] + [`Graft`] + [`SubGraft`]
 //! composition seam. Depends on nothing else in the workspace
 //! (invariant I4); the Application (`mokumo-shop`) and SubGrafts
 //! (`kikan-events`, `kikan-mail`, `kikan-scheduler`) compose in
 //! through [`Graft`] / [`SubGraft`] at compile time.
+//!
+//! # Data plane
+//!
+//! [`DataPlaneConfig`] + [`DeploymentMode`] (see [`data_plane`]) drive the
+//! HTTP middleware stack. Three postures — `Lan`, `Internet`, `ReverseProxy` —
+//! pick cookie flags, CSRF gating, per-IP rate limiting, and `X-Forwarded-*`
+//! trust. The per-mode matrix and layer order are documented at the
+//! [`data_plane`] module level.
 //!
 //! Place platform-shaped code here. Shop-vertical identifiers belong
 //! in `mokumo-shop` (invariant I1, enforced by
