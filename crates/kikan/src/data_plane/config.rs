@@ -132,21 +132,33 @@ pub enum HostPatternError {
     ContainsScheme,
     ContainsWildcard,
     NonAscii,
+    /// Input is structurally invalid in a way none of the other variants
+    /// describes (e.g. a bracketed IPv6 literal missing its closing bracket).
+    /// `reason` is a static string naming the specific defect.
+    Malformed {
+        reason: &'static str,
+    },
 }
 
 impl std::fmt::Display for HostPatternError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let msg = match self {
-            Self::Empty => "host pattern is empty",
-            Self::ContainsWhitespace => "host pattern contains whitespace",
-            Self::ContainsNul => "host pattern contains NUL byte",
-            Self::ContainsPathSeparator => "host pattern contains path separator (/ or \\)",
-            Self::ContainsPort => "host pattern must not include a port (strip `:PORT`)",
-            Self::ContainsScheme => "host pattern must not include a scheme (strip `http(s)://`)",
-            Self::ContainsWildcard => "host pattern must not include wildcards (`*`)",
-            Self::NonAscii => "host pattern contains non-ASCII characters",
-        };
-        f.write_str(msg)
+        match self {
+            Self::Empty => f.write_str("host pattern is empty"),
+            Self::ContainsWhitespace => f.write_str("host pattern contains whitespace"),
+            Self::ContainsNul => f.write_str("host pattern contains NUL byte"),
+            Self::ContainsPathSeparator => {
+                f.write_str("host pattern contains path separator (/ or \\)")
+            }
+            Self::ContainsPort => {
+                f.write_str("host pattern must not include a port (strip `:PORT`)")
+            }
+            Self::ContainsScheme => {
+                f.write_str("host pattern must not include a scheme (strip `http(s)://`)")
+            }
+            Self::ContainsWildcard => f.write_str("host pattern must not include wildcards (`*`)"),
+            Self::NonAscii => f.write_str("host pattern contains non-ASCII characters"),
+            Self::Malformed { reason } => write!(f, "host pattern is malformed: {reason}"),
+        }
     }
 }
 
@@ -190,8 +202,11 @@ impl HostPattern {
             match lower.find(']') {
                 // `[::1]` — no port. `[::1]:6565` — has port.
                 Some(idx) => idx + 1 < lower.len(),
-                // `[::1` with no closing bracket — treat as malformed.
-                None => return Err(HostPatternError::ContainsPathSeparator),
+                None => {
+                    return Err(HostPatternError::Malformed {
+                        reason: "unclosed bracket",
+                    });
+                }
             }
         } else {
             lower.contains(':')
@@ -379,6 +394,29 @@ mod tests {
         assert_eq!(
             HostPattern::parse("shöp.example.com"),
             Err(HostPatternError::NonAscii)
+        );
+    }
+
+    #[test]
+    fn host_pattern_rejects_unclosed_ipv6_bracket_as_malformed() {
+        // The unclosed-bracket case is structurally invalid but contains no
+        // path separator — it must not borrow `ContainsPathSeparator`'s name.
+        assert_eq!(
+            HostPattern::parse("[::1"),
+            Err(HostPatternError::Malformed {
+                reason: "unclosed bracket"
+            })
+        );
+    }
+
+    #[test]
+    fn host_pattern_malformed_display_includes_reason() {
+        let err = HostPatternError::Malformed {
+            reason: "unclosed bracket",
+        };
+        assert_eq!(
+            err.to_string(),
+            "host pattern is malformed: unclosed bracket"
         );
     }
 }
