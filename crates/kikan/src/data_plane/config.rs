@@ -171,12 +171,11 @@ impl HostPattern {
         if raw.contains('\0') {
             return Err(HostPatternError::ContainsNul);
         }
-        if raw.contains('/') || raw.contains('\\') {
-            // Covers both path separators and the `//` in `http://`.
-            return Err(HostPatternError::ContainsPathSeparator);
-        }
         if raw.contains("://") {
             return Err(HostPatternError::ContainsScheme);
+        }
+        if raw.contains('/') || raw.contains('\\') {
+            return Err(HostPatternError::ContainsPathSeparator);
         }
         if raw.contains('*') {
             return Err(HostPatternError::ContainsWildcard);
@@ -344,13 +343,10 @@ mod tests {
 
     #[test]
     fn host_pattern_rejects_scheme() {
-        // `://` triggers ContainsPathSeparator first because `/` is checked
-        // before `://`; either error is acceptable — both are strict rejects.
-        let err = HostPattern::parse("https://shop.example.com").unwrap_err();
-        assert!(matches!(
-            err,
-            HostPatternError::ContainsScheme | HostPatternError::ContainsPathSeparator
-        ));
+        assert_eq!(
+            HostPattern::parse("https://shop.example.com"),
+            Err(HostPatternError::ContainsScheme)
+        );
     }
 
     #[test]
