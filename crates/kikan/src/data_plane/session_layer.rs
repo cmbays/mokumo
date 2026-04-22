@@ -51,14 +51,33 @@ mod tests {
     // - `HttpOnly` is always set (JS must never read the session cookie).
     // - `Secure` and `SameSite` vary by mode per the doc comment above.
     //
-    // Without `store.migrate()` below, the backing table wouldn't exist, the
-    // flush would error, no `Set-Cookie` would be emitted, and every
-    // substring assertion would trivially pass — masking regressions.
+    // `store.migrate()` creates the `tower_sessions` table the session flush
+    // writes into. `max_connections(1)` pins the pool to a single connection
+    // so migrate + flush share the same `sqlite::memory:` database — without
+    // it, SQLite hands each connection its own private in-memory DB and the
+    // flush hits a "no such table" error on a different connection than
+    // migrate ran on.
     async fn sessions_for_test() -> Sessions {
-        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
         let store = SqliteStore::new(pool);
         store.migrate().await.unwrap();
         Sessions::new(store)
+    }
+
+    /// Split a `Set-Cookie` header into its attribute tokens, skipping the
+    /// opaque `name=value` pair. Whole-token comparison prevents a false pass
+    /// from the session ID happening to contain `Secure` or `HttpOnly` as a
+    /// substring. Attribute names are matched case-insensitively per RFC 6265.
+    fn has_cookie_attr(set_cookie: &str, expected: &str) -> bool {
+        set_cookie
+            .split(';')
+            .skip(1)
+            .map(str::trim)
+            .any(|attr| attr.eq_ignore_ascii_case(expected))
     }
 
     async fn touch_handler(req: Request<Body>) -> Result<Response<Body>, Infallible> {
@@ -92,15 +111,15 @@ mod tests {
     async fn lan_mode_emits_insecure_lax_httponly_cookie() {
         let set_cookie = set_cookie_for(DeploymentMode::Lan).await;
         assert!(
-            set_cookie.contains("HttpOnly"),
+            has_cookie_attr(&set_cookie, "HttpOnly"),
             "HttpOnly invariant: cookie must be HttpOnly in every mode; got: {set_cookie}"
         );
         assert!(
-            !set_cookie.contains("Secure"),
+            !has_cookie_attr(&set_cookie, "Secure"),
             "Lan runs HTTP; Secure would break the cookie on a plain-HTTP LAN; got: {set_cookie}"
         );
         assert!(
-            set_cookie.contains("SameSite=Lax"),
+            has_cookie_attr(&set_cookie, "SameSite=Lax"),
             "Lan uses SameSite=Lax so mDNS-shared / bookmarked links keep working; got: {set_cookie}"
         );
     }
@@ -109,15 +128,15 @@ mod tests {
     async fn internet_mode_emits_secure_strict_httponly_cookie() {
         let set_cookie = set_cookie_for(DeploymentMode::Internet).await;
         assert!(
-            set_cookie.contains("HttpOnly"),
+            has_cookie_attr(&set_cookie, "HttpOnly"),
             "HttpOnly invariant: cookie must be HttpOnly in every mode; got: {set_cookie}"
         );
         assert!(
-            set_cookie.contains("Secure"),
+            has_cookie_attr(&set_cookie, "Secure"),
             "Internet mode assumes HTTPS at the socket; Secure must be set; got: {set_cookie}"
         );
         assert!(
-            set_cookie.contains("SameSite=Strict"),
+            has_cookie_attr(&set_cookie, "SameSite=Strict"),
             "Internet mode uses SameSite=Strict; got: {set_cookie}"
         );
     }
@@ -126,16 +145,29 @@ mod tests {
     async fn reverse_proxy_mode_emits_secure_strict_httponly_cookie() {
         let set_cookie = set_cookie_for(DeploymentMode::ReverseProxy).await;
         assert!(
-            set_cookie.contains("HttpOnly"),
+            has_cookie_attr(&set_cookie, "HttpOnly"),
             "HttpOnly invariant: cookie must be HttpOnly in every mode; got: {set_cookie}"
         );
         assert!(
-            set_cookie.contains("Secure"),
+            has_cookie_attr(&set_cookie, "Secure"),
             "ReverseProxy assumes HTTPS at the proxy; Secure must be set; got: {set_cookie}"
         );
         assert!(
-            set_cookie.contains("SameSite=Strict"),
+            has_cookie_attr(&set_cookie, "SameSite=Strict"),
             "ReverseProxy uses SameSite=Strict; got: {set_cookie}"
         );
+    }
+
+    #[test]
+    fn has_cookie_attr_matches_whole_token_only() {
+        // The opaque `id=<value>` pair is skipped so a value like
+        // `id=Securely-random` cannot satisfy a `Secure` check.
+        let h = "id=Securely-random; HttpOnly; SameSite=Lax";
+        assert!(has_cookie_attr(h, "HttpOnly"));
+        assert!(has_cookie_attr(h, "SameSite=Lax"));
+        assert!(!has_cookie_attr(h, "Secure"));
+        // Attribute names are case-insensitive per RFC 6265.
+        assert!(has_cookie_attr(h, "httponly"));
+        assert!(has_cookie_attr(h, "SAMESITE=Lax"));
     }
 }

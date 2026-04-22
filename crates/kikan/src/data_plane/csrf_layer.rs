@@ -317,6 +317,38 @@ mod tests {
         b.body(()).unwrap()
     }
 
+    fn request_with_raw_cookie(raw: &str) -> Request<()> {
+        Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .header(COOKIE, raw)
+            .body(())
+            .unwrap()
+    }
+
+    #[test]
+    fn extract_csrf_cookie_requires_exact_name_and_equals() {
+        // Happy path: the CSRF pair is one of many, surrounded by whitespace.
+        let req = request_with_raw_cookie("csrf_token=tok; other=1");
+        assert_eq!(extract_csrf_cookie(&req), Some("tok".to_owned()));
+
+        // Bare name with no `=` must not match — otherwise an attacker could
+        // satisfy the cookie-presence check without a value and the
+        // double-submit comparison would fall to the `None` branch, which is
+        // already rejected. Belt-and-braces: reject here too.
+        let req = request_with_raw_cookie("csrf_token; other=1");
+        assert_eq!(extract_csrf_cookie(&req), None);
+
+        // Name prefix match (`csrf_token_extra=...`) must not match — the
+        // `=` anchor after the exact name is what rules this out.
+        let req = request_with_raw_cookie("csrf_token_extra=tok; other=1");
+        assert_eq!(extract_csrf_cookie(&req), None);
+
+        // Leading whitespace around each pair is trimmed (RFC 6265 allows it).
+        let req = request_with_raw_cookie("  other=1;   csrf_token=tok2  ");
+        assert_eq!(extract_csrf_cookie(&req), Some("tok2".to_owned()));
+    }
+
     #[tokio::test]
     async fn lan_mode_is_pass_through() {
         let layer = CsrfLayer::for_mode(DeploymentMode::Lan, vec![]);
