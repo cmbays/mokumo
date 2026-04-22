@@ -1,20 +1,20 @@
-//! Transport-neutral diagnostics collection and bundle export.
+//! Transport-neutral diagnostics collection and bundle export for
+//! Mokumo's admin surface.
 //!
-//! Lifted from `kikan::platform::{diagnostics, diagnostics_bundle}` in
-//! Wave C (PR-B). The HTTP handlers in `platform::*` are now thin
-//! delegations over these pure fns — the same entry points serve the
-//! UDS admin adapter (`kikan-admin-adapter`, PR-D) and one-shot CLI
-//! subcommands (`mokumo-server diagnose`) without re-implementing the
-//! sysinfo refresh, profile-DB inspection, or log redaction logic.
+//! The snapshot constructs the `DiagnosticsResponse` wire DTO — whose
+//! `DatabaseDiagnostics` names Mokumo's `production` + `demo` profiles
+//! and whose `RuntimeDiagnostics::active_profile` field is typed as
+//! `SetupMode` — so this module is Mokumo-specific by contract and lives
+//! next to the admin UDS router that serves it.
 //!
-//! ## Signature choice: `&PlatformState`, not `&ControlPlaneState`
+//! ## Signature choice: `&PlatformState`, not `&MokumoState`
 //!
-//! Diagnostics only reads platform fields (`data_dir`, `production_db`,
-//! `demo_db`, `mdns_status`, `active_profile`, `is_first_launch`,
-//! `started_at`). Taking the narrower slice is honest about the real
-//! dependency and lets the HTTP handler stay mounted on
-//! `PlatformState` without a remount. UDS/CLI callers holding a
-//! `ControlPlaneState` simply pass `&state.platform`.
+//! Diagnostics only reads platform fields (`data_dir`, pool map,
+//! `mdns_status`, `active_profile`, `is_first_launch`, `started_at`).
+//! Taking the narrower slice is honest about the real dependency and
+//! lets the HTTP handler stay mounted on `PlatformState` without a
+//! remount. UDS/CLI callers holding a full app state simply pass
+//! `&state.platform_state()`.
 //!
 //! ## Error mapping seam
 //!
@@ -24,10 +24,12 @@
 //! adapter renders that as 500; UDS renders it identically.
 
 use std::io::{BufRead as _, BufReader, Cursor, Read as _, Write as _};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::OnceLock;
 
 use chrono::Utc;
+use kikan::{ControlPlaneError, PlatformState};
+use kikan_types::SetupMode;
 use kikan_types::diagnostics::{
     AppDiagnostics, DatabaseDiagnostics, DiagnosticsResponse, OsDiagnostics, ProfileDbDiagnostics,
     RuntimeDiagnostics, SystemDiagnostics,
@@ -38,17 +40,26 @@ use sysinfo::{Disks, System};
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
-use crate::{ControlPlaneError, PlatformState, SetupMode};
-
 /// Collect the full diagnostics snapshot. Shared by the HTTP
 /// `GET /api/diagnostics` handler and the bundle export so sysinfo is
 /// refreshed in one place.
 pub async fn collect(state: &PlatformState) -> Result<DiagnosticsResponse, ControlPlaneError> {
-    let production_db_path = profile_db_path(&state.data_dir, SetupMode::Production);
-    let demo_db_path = profile_db_path(&state.data_dir, SetupMode::Demo);
-
-    let production = read_profile_diagnostics(&state.production_db, &production_db_path).await?;
-    let demo = read_profile_diagnostics(&state.demo_db, &demo_db_path).await?;
+    // `DatabaseDiagnostics` names `production` + `demo` in its wire shape,
+    // so resolve each explicitly by dir-name through the graft's pool map.
+    let production_db_path = state.data_dir.join("production").join(state.db_filename);
+    let demo_db_path = state.data_dir.join("demo").join(state.db_filename);
+    let production_db = state.db_for("production").ok_or_else(|| {
+        ControlPlaneError::Internal(anyhow::anyhow!(
+            "production profile pool missing from PlatformState"
+        ))
+    })?;
+    let demo_db = state.db_for("demo").ok_or_else(|| {
+        ControlPlaneError::Internal(anyhow::anyhow!(
+            "demo profile pool missing from PlatformState"
+        ))
+    })?;
+    let production = read_profile_diagnostics(production_db, &production_db_path).await?;
+    let demo = read_profile_diagnostics(demo_db, &demo_db_path).await?;
 
     let mdns = state.mdns_status.read().clone();
     let lan_url = if mdns.active {
@@ -65,7 +76,7 @@ pub async fn collect(state: &PlatformState) -> Result<DiagnosticsResponse, Contr
 
     let runtime = RuntimeDiagnostics {
         uptime_seconds: state.started_at.elapsed().as_secs(),
-        active_profile: *state.active_profile.read(),
+        active_profile: active_profile_as_setup_mode(state),
         setup_complete: state.is_setup_complete(),
         is_first_launch: state
             .is_first_launch
@@ -322,15 +333,32 @@ fn collect_system_diagnostics(data_dir: &Path) -> SystemDiagnostics {
     }
 }
 
-fn profile_db_path(data_dir: &Path, mode: SetupMode) -> PathBuf {
-    data_dir.join(mode.as_dir_name()).join("mokumo.db")
+/// Wire-shape bridge: resolve the active profile dir-name back to the
+/// `SetupMode` variant the diagnostics DTO expects. `Engine::boot`
+/// validates the round-trip for every declared kind — an `Err` here means
+/// the on-disk `active_profile` slot has drifted, which we surface as a
+/// `tracing::error!` before falling back to `Demo` for the DTO.
+fn active_profile_as_setup_mode(state: &PlatformState) -> SetupMode {
+    use std::str::FromStr;
+    let active = state.active_profile.read();
+    match SetupMode::from_str(active.as_str()) {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(
+                dir = active.as_str(),
+                "admin diagnostics: kikan-side active dir does not parse to SetupMode: {e}; \
+                 falling back to Demo for DTO response"
+            );
+            SetupMode::Demo
+        }
+    }
 }
 
 async fn read_profile_diagnostics(
     db: &DatabaseConnection,
     db_path: &Path,
 ) -> Result<ProfileDbDiagnostics, ControlPlaneError> {
-    let rt = crate::db::read_db_runtime_diagnostics(db)
+    let rt = kikan::db::read_db_runtime_diagnostics(db)
         .await
         .map_err(|e| {
             ControlPlaneError::Internal(anyhow::anyhow!("read_db_runtime_diagnostics failed: {e}"))
@@ -348,7 +376,7 @@ async fn read_profile_diagnostics(
 
     let db_path_owned = db_path.to_path_buf();
     let (wal_size_bytes, vacuum_needed) =
-        match tokio::task::spawn_blocking(move || crate::db::diagnose_database(&db_path_owned))
+        match tokio::task::spawn_blocking(move || kikan::db::diagnose_database(&db_path_owned))
             .await
         {
             Ok(Ok(d)) => (d.wal_size_bytes, d.vacuum_needed()),

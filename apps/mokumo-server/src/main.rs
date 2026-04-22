@@ -363,12 +363,25 @@ async fn cmd_serve(data_dir: PathBuf, mode: ServeMode, port: u16, verbose: u8, q
     let boot_config = kikan::BootConfig::new(data_dir.clone()).with_bind_addr(bind_addr);
     let shutdown = CancellationToken::new();
 
+    let mut pools: std::collections::HashMap<
+        kikan::tenancy::ProfileDirName,
+        sea_orm::DatabaseConnection,
+    > = std::collections::HashMap::with_capacity(2);
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Demo.as_dir_name()),
+        demo_db,
+    );
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name()),
+        production_db,
+    );
+    let active_profile_dir = kikan::tenancy::ProfileDirName::from(active_profile.as_dir_name());
+
     let (engine, app_state) = match kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
-        demo_db,
-        production_db,
-        active_profile,
+        pools,
+        active_profile_dir,
         session_store,
         profile_initializer,
         setup_completed,
@@ -441,7 +454,7 @@ async fn cmd_serve(data_dir: PathBuf, mode: ServeMode, port: u16, verbose: u8, q
     // socket can't bind, startup fails rather than silently running
     // without the admin surface.
     let admin_socket = kikan_socket::admin_socket_path(&data_dir);
-    let admin_router = engine.admin_router(&app_state);
+    let admin_router = mokumo_shop::admin::build_admin_router(app_state.platform_state());
     let admin_shutdown = shutdown.clone();
     let (admin_ready_tx, mut admin_ready_rx) =
         tokio::sync::oneshot::channel::<Result<(), String>>();
@@ -524,10 +537,10 @@ async fn cmd_diagnose(data_dir: PathBuf, json: bool) {
 
     // Direct DB fallback — open read-only, no migrations, no server.
     let production_db_path = data_dir
-        .join(kikan::SetupMode::Production.as_dir_name())
+        .join(kikan_types::SetupMode::Production.as_dir_name())
         .join("mokumo.db");
     let demo_db_path = data_dir
-        .join(kikan::SetupMode::Demo.as_dir_name())
+        .join(kikan_types::SetupMode::Demo.as_dir_name())
         .join("mokumo.db");
 
     if !production_db_path.exists() && !demo_db_path.exists() {
@@ -540,7 +553,7 @@ async fn cmd_diagnose(data_dir: PathBuf, json: bool) {
 
     let state = build_readonly_platform_state(&data_dir).await;
 
-    match kikan::control_plane::diagnostics::collect(&state).await {
+    match mokumo_shop::admin::diagnostics::collect(&state).await {
         Ok(diag) => {
             if json {
                 println!(
@@ -670,19 +683,12 @@ async fn cmd_bootstrap(
         };
 
     // Build a minimal ControlPlaneState for bootstrap.
-    let platform = kikan::PlatformState {
-        data_dir: data_dir.clone(),
-        demo_db: _demo_db,
+    let platform = build_bootstrap_platform_state(
+        data_dir.clone(),
+        _demo_db,
         production_db,
-        active_profile: std::sync::Arc::new(parking_lot::RwLock::new(kikan::SetupMode::Production)),
-        shutdown: CancellationToken::new(),
-        started_at: std::time::Instant::now(),
-        mdns_status: kikan::MdnsStatus::shared(),
-        demo_install_ok: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
-        is_first_launch: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
-        setup_completed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
-        profile_db_initializer: std::sync::Arc::new(NoOpProfileDbInitializer),
-    };
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name()),
+    );
     let control_plane = kikan::ControlPlaneState {
         platform,
         login_limiter: std::sync::Arc::new(kikan::rate_limit::RateLimiter::new(
@@ -793,7 +799,7 @@ async fn cmd_bootstrap(
 
 async fn cmd_backup(data_dir: PathBuf, output: Option<PathBuf>, production: bool) {
     let profile = if production {
-        kikan::SetupMode::Production
+        kikan_types::SetupMode::Production
     } else {
         mokumo_shop::startup::resolve_active_profile(&data_dir)
     };
@@ -835,7 +841,7 @@ async fn cmd_profile_list(data_dir: PathBuf, json: bool) {
 
     // Direct DB fallback — open read-only.
     let state = build_readonly_platform_state(&data_dir).await;
-    match kikan::control_plane::profile_list::list_profiles(&state).await {
+    match mokumo_shop::admin::profile_list::list_profiles(&state).await {
         Ok(resp) => {
             if json {
                 println!(
@@ -912,7 +918,7 @@ async fn cmd_migrate_status(data_dir: PathBuf, json: bool) {
 
     // Direct DB fallback — open read-only.
     let state = build_readonly_platform_state(&data_dir).await;
-    match kikan::control_plane::migration_status::collect_migration_status(&state).await {
+    match mokumo_shop::admin::migration_status::collect_migration_status(&state).await {
         Ok(resp) => {
             if json {
                 println!(
@@ -970,10 +976,10 @@ async fn cmd_backup_list(data_dir: PathBuf, json: bool) {
 
     // Direct fallback — scan for backup files on disk.
     let production_db = data_dir
-        .join(kikan::SetupMode::Production.as_dir_name())
+        .join(kikan_types::SetupMode::Production.as_dir_name())
         .join("mokumo.db");
     let demo_db = data_dir
-        .join(kikan::SetupMode::Demo.as_dir_name())
+        .join(kikan_types::SetupMode::Demo.as_dir_name())
         .join("mokumo.db");
 
     let production = match collect_backup_entries(&production_db).await {
@@ -1057,7 +1063,7 @@ async fn collect_backup_entries(
 
 fn cmd_reset_password(data_dir: PathBuf, email: String, password_file: PathBuf, production: bool) {
     let profile = if production {
-        kikan::SetupMode::Production
+        kikan_types::SetupMode::Production
     } else {
         mokumo_shop::startup::resolve_active_profile(&data_dir)
     };
@@ -1111,9 +1117,9 @@ fn cmd_reset_password(data_dir: PathBuf, email: String, password_file: PathBuf, 
 
 fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, production: bool) {
     let profile = if production {
-        kikan::SetupMode::Production
+        kikan_types::SetupMode::Production
     } else {
-        kikan::SetupMode::Demo
+        kikan_types::SetupMode::Demo
     };
     let profile_dir = data_dir.join(profile.as_dir_name());
 
@@ -1197,7 +1203,7 @@ fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, productio
 
 fn cmd_restore(data_dir: PathBuf, backup_file: PathBuf, production: bool) {
     let profile = if production {
-        kikan::SetupMode::Production
+        kikan_types::SetupMode::Production
     } else {
         mokumo_shop::startup::resolve_active_profile(&data_dir)
     };
@@ -1254,20 +1260,55 @@ fn cmd_restore(data_dir: PathBuf, backup_file: PathBuf, production: bool) {
 /// Build a read-only `PlatformState` for CLI fallback paths.
 async fn build_readonly_platform_state(data_dir: &std::path::Path) -> kikan::PlatformState {
     let production_db_path = data_dir
-        .join(kikan::SetupMode::Production.as_dir_name())
+        .join(kikan_types::SetupMode::Production.as_dir_name())
         .join("mokumo.db");
     let demo_db_path = data_dir
-        .join(kikan::SetupMode::Demo.as_dir_name())
+        .join(kikan_types::SetupMode::Demo.as_dir_name())
         .join("mokumo.db");
     let active_profile = mokumo_shop::startup::resolve_active_profile(data_dir);
     let demo_db = open_readonly_db(&demo_db_path).await;
     let production_db = open_readonly_db(&production_db_path).await;
 
-    kikan::PlatformState {
-        data_dir: data_dir.to_path_buf(),
+    build_bootstrap_platform_state(
+        data_dir.to_path_buf(),
         demo_db,
         production_db,
+        kikan::tenancy::ProfileDirName::from(active_profile.as_dir_name()),
+    )
+}
+
+/// Assemble a minimal `PlatformState` for CLI fallback / bootstrap paths —
+/// where we do not run the full `Engine::boot` but still need a
+/// PlatformState slice to reach pure control-plane fns.
+fn build_bootstrap_platform_state(
+    data_dir: PathBuf,
+    demo_db: sea_orm::DatabaseConnection,
+    production_db: sea_orm::DatabaseConnection,
+    active_profile: kikan::tenancy::ProfileDirName,
+) -> kikan::PlatformState {
+    let demo_dir = kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Demo.as_dir_name());
+    let production_dir =
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name());
+
+    let mut pools = std::collections::HashMap::with_capacity(2);
+    pools.insert(demo_dir.clone(), demo_db);
+    pools.insert(production_dir.clone(), production_db);
+
+    let profile_dir_names: std::sync::Arc<[kikan::tenancy::ProfileDirName]> =
+        vec![production_dir.clone(), demo_dir.clone()].into();
+
+    let mut requires_setup_by_dir = std::collections::HashMap::with_capacity(2);
+    requires_setup_by_dir.insert(production_dir.clone(), true);
+    requires_setup_by_dir.insert(demo_dir, false);
+
+    kikan::PlatformState {
+        data_dir,
+        db_filename: "mokumo.db",
+        pools: std::sync::Arc::new(pools),
         active_profile: std::sync::Arc::new(parking_lot::RwLock::new(active_profile)),
+        profile_dir_names,
+        requires_setup_by_dir: std::sync::Arc::new(requires_setup_by_dir),
+        auth_profile_kind_dir: production_dir,
         shutdown: CancellationToken::new(),
         started_at: std::time::Instant::now(),
         mdns_status: kikan::MdnsStatus::shared(),

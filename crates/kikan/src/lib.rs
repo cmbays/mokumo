@@ -41,12 +41,7 @@ pub use app_handle::AppHandleShim;
 pub use boot::{BootConfig, DeploymentMode, RateLimitConfig, RateWindow};
 pub use control_plane::{ControlPlaneState, PendingReset};
 pub use control_plane_error::{ConflictKind, ControlPlaneError};
-pub mod admin {
-    pub use crate::engine::admin::build_admin_router;
-}
-pub use engine::{
-    Engine, EngineContext, Sessions, platform_protected_routes, platform_public_routes,
-};
+pub use engine::{Engine, EngineContext, Sessions};
 pub use error::{
     ActivityWriteError, AppHandleError, DagError, EngineError, MigrationError, TenancyError,
 };
@@ -54,4 +49,9 @@ pub use graft::{Graft, SelfGraft, SubGraft};
 pub use migrations::{GraftId, Migration, MigrationRef, MigrationTarget};
 pub use platform_state::{MdnsStatus, PlatformState, SharedMdnsStatus};
 pub use profile_db::{ActiveProfile, ProfileDb};
-pub use tenancy::{ProfileId, SetupMode, Tenancy};
+pub use tenancy::{ProfileId, Tenancy};
+
+// The graft's `ProfileKind` is the vertical's concern — kikan itself
+// does not name the type in production code (I1 strict). Wire DTOs that
+// embed a concrete variant (test fixtures, shop adapters, CLI) import
+// the type from `kikan-types` or the vertical directly.

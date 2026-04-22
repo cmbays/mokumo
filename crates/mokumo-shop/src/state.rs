@@ -12,8 +12,8 @@ use std::sync::atomic::AtomicBool;
 
 use kikan::platform_state::SharedProfileDbInitializer;
 use kikan::rate_limit::RateLimiter;
-use kikan::tenancy::SetupMode;
 use kikan::{ActivityWriter, ControlPlaneState, PlatformState};
+use kikan_types::SetupMode;
 use parking_lot::RwLock;
 use sea_orm::DatabaseConnection;
 use tokio_util::sync::CancellationToken;
@@ -70,7 +70,10 @@ impl MokumoState {
     }
 
     pub fn db_for(&self, mode: SetupMode) -> &DatabaseConnection {
-        self.control_plane.platform.db_for(mode)
+        self.control_plane
+            .platform
+            .db_for(mode.as_dir_name())
+            .expect("mokumo SetupMode variant always present in PlatformState pools")
     }
 
     pub fn is_setup_complete(&self) -> bool {
@@ -82,14 +85,56 @@ impl MokumoState {
     }
 
     pub fn demo_db(&self) -> &DatabaseConnection {
-        &self.control_plane.platform.demo_db
+        self.control_plane
+            .platform
+            .db_for("demo")
+            .expect("demo profile pool present in PlatformState")
     }
 
     pub fn production_db(&self) -> &DatabaseConnection {
-        &self.control_plane.platform.production_db
+        self.control_plane
+            .platform
+            .db_for("production")
+            .expect("production profile pool present in PlatformState")
     }
 
-    pub fn active_profile(&self) -> &Arc<RwLock<SetupMode>> {
+    /// Active profile read lock — returns the `SetupMode` variant after
+    /// round-tripping the kikan-side `ProfileDirName` through `FromStr`.
+    ///
+    /// `Engine::boot` validates the round-trip at startup, so a `None`
+    /// return here would signal kikan bookkeeping drift (a stale
+    /// `active_profile` file not matching any declared kind). Callers that
+    /// want a fallible read use this; callers that want the legacy
+    /// "silent fallback to Demo" call [`Self::active_profile_mode_or_demo`]
+    /// — and should prefer the fallible variant in new code.
+    pub fn active_profile_mode_opt(&self) -> Option<SetupMode> {
+        use std::str::FromStr;
+        let active = self.control_plane.platform.active_profile.read().clone();
+        match SetupMode::from_str(active.as_str()) {
+            Ok(m) => Some(m),
+            Err(e) => {
+                tracing::error!(
+                    dir = active.as_str(),
+                    "active_profile_mode: kikan-side dir does not parse to SetupMode: {e}"
+                );
+                None
+            }
+        }
+    }
+
+    /// Active profile as `SetupMode`, falling back to `Demo` if the
+    /// kikan-side dir does not round-trip (with a `tracing::error!`).
+    /// Preferred new code uses [`Self::active_profile_mode_opt`]; this
+    /// stays for handlers that need a concrete variant and can accept the
+    /// Demo fallback semantics.
+    pub fn active_profile_mode(&self) -> SetupMode {
+        self.active_profile_mode_opt().unwrap_or(SetupMode::Demo)
+    }
+
+    /// Write-access to the kikan-side active-profile lock. Callers that
+    /// mutate this must set the opaque `ProfileDirName`; kikan no longer
+    /// stores `SetupMode`.
+    pub fn active_profile(&self) -> &Arc<RwLock<kikan::tenancy::ProfileDirName>> {
         &self.control_plane.platform.active_profile
     }
 

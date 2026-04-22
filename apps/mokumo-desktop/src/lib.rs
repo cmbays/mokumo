@@ -94,8 +94,8 @@ async fn init_server(
     // register_mdns_with_consent is a no-op regardless; wired now so that
     // when M1 enables LAN binds the user's consent already gates advertisement.
     let lan_access_db = match active_profile {
-        kikan::SetupMode::Demo => demo_db.clone(),
-        kikan::SetupMode::Production => production_db.clone(),
+        kikan_types::SetupMode::Demo => demo_db.clone(),
+        kikan_types::SetupMode::Production => production_db.clone(),
     };
     let lan_access_enabled = mokumo_shop::settings::read_lan_access_enabled(&lan_access_db)
         .await
@@ -119,12 +119,25 @@ async fn init_server(
     let bind_addr: std::net::SocketAddr = addr;
     let boot_config = kikan::BootConfig::new(data_dir).with_bind_addr(bind_addr);
 
+    let mut pools: std::collections::HashMap<
+        kikan::tenancy::ProfileDirName,
+        sea_orm::DatabaseConnection,
+    > = std::collections::HashMap::with_capacity(2);
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Demo.as_dir_name()),
+        demo_db,
+    );
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name()),
+        production_db,
+    );
+    let active_profile_dir = kikan::tenancy::ProfileDirName::from(active_profile.as_dir_name());
+
     let (engine, app_state) = kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
-        demo_db,
-        production_db,
-        active_profile,
+        pools,
+        active_profile_dir,
         session_store,
         profile_initializer,
         setup_completed,

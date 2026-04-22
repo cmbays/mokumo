@@ -11,8 +11,57 @@ pub trait Graft: Sized + 'static {
     type AppState: Clone + Send + Sync + 'static;
     type DomainState: Clone + Send + Sync + 'static;
 
+    /// The vertical's profile discriminator (e.g. a two-variant
+    /// `Demo`/`Production` enum).
+    ///
+    /// Kikan stores and routes `ProfileKind` opaquely. The `Display` +
+    /// `FromStr` pair is the single source of truth for the on-disk
+    /// directory name of each kind: kikan persists the active profile as
+    /// `kind.to_string()` and recovers it via `K::from_str(dir)`. A graft
+    /// whose `Display` and `FromStr` impls are not inverses will fail pool
+    /// lookup at request time — this is an invariant, not a style point.
+    type ProfileKind: Copy
+        + Eq
+        + std::hash::Hash
+        + Send
+        + Sync
+        + 'static
+        + std::fmt::Display
+        + std::fmt::Debug
+        + std::str::FromStr<Err = String>
+        + serde::Serialize
+        + serde::de::DeserializeOwned;
+
     fn id() -> GraftId;
     fn migrations(&self) -> Vec<Box<dyn Migration>>;
+
+    /// Filename of the per-profile SQLite database (vertical-declared,
+    /// e.g. `"{vertical}.db"`). Kikan composes on-disk paths as
+    /// `data_dir/{kind.to_string()}/{db_filename}`.
+    fn db_filename(&self) -> &'static str;
+
+    /// Every profile kind the vertical recognizes.
+    ///
+    /// Used by platform handlers that enumerate profiles (backup listing,
+    /// diagnostics). Returning a `'static` slice lets kikan iterate
+    /// without allocation or generics leakage.
+    fn all_profile_kinds(&self) -> &'static [Self::ProfileKind];
+
+    /// The profile kind to fall back to when the on-disk
+    /// `active_profile` file is missing or unparseable.
+    fn default_profile_kind(&self) -> Self::ProfileKind;
+
+    /// Whether a profile kind needs the vertical's setup wizard before
+    /// it can serve user traffic. Kikan reads this to gate
+    /// `is_setup_complete` without matching on concrete variants.
+    fn requires_setup_wizard(&self, kind: &Self::ProfileKind) -> bool;
+
+    /// The profile kind that credentialed auth runs against.
+    ///
+    /// Kikan's `Backend::authenticate` path always hits one pool — the
+    /// vertical picks which. Returning the kind here, rather than a
+    /// dir-name, lets kikan build `Backend<K>` without naming variants.
+    fn auth_profile_kind(&self) -> Self::ProfileKind;
 
     /// Build the domain-specific slice of the application state.
     ///

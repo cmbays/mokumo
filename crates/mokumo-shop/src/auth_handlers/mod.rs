@@ -1,25 +1,28 @@
-//! Platform-side auth HTTP handlers — `/api/auth/*`, `/api/setup`, account
-//! recovery flow, and the request-gating middleware.
+//! Mokumo-specific auth HTTP handlers — `/api/auth/*`, `/api/setup`,
+//! account recovery, and the demo-auto-login request-gating middleware.
 //!
-//! Platform concerns — identity, session establishment, recovery codes,
-//! first-admin setup — not shop-vertical logic, so they live under
-//! `kikan::platform` alongside diagnostics / backup-status / demo-reset.
+//! These handlers embed Mokumo product policy (the `admin@demo.local`
+//! literal, auto-login-into-Demo behaviour, `Production` as the
+//! credentialed-auth target), so they live on the Mokumo vertical side
+//! of the kikan/application seam (ADR `adr-kikan-engine-vocabulary`).
+//! The kikan-generic surface exposes `Backend<K>` + `AuthenticatedUser<K>`
+//! and `kikan::control_plane::users::*`; this module binds `K = SetupMode`
+//! and composes the handlers that make up the wire contract.
 //!
 //! ## Composition
 //!
-//! `ControlPlaneState` (from `kikan::control_plane::state`) is the unified
-//! state slice consumed by these Axum handlers and by the pure-fn layer
-//! under `kikan::control_plane::users::*`. The vertical's mount site (in
-//! `mokumo_shop::routes`) binds state once per router via
-//! `.with_state(graft.control_plane_state(&state).clone())` so handlers
-//! extract it as `State<ControlPlaneState>`. The
-//! `require_auth_with_demo_auto_login` middleware only needs
-//! `PlatformState` and is wired with `from_fn_with_state(graft.platform_state(&state).clone(), …)`.
+//! `ControlPlaneState` is consumed by these Axum handlers and by the
+//! pure-fn layer under `kikan::control_plane::users::*`. The mount site
+//! in [`crate::routes`] binds state per router via
+//! `.with_state(state.control_plane_state().clone())` so handlers extract
+//! it as `State<ControlPlaneState>`. The
+//! [`require_auth_with_demo_auto_login`] middleware only needs
+//! `PlatformState`, wired via `from_fn_with_state(state.platform_state(), …)`.
 //!
-//! Handler bodies in this module are thin delegations: Axum extractors →
-//! call `control_plane::users::*` → `.map_err(AppError::from)`. The session
-//! and cookie issuance stay in the HTTP adapter — the pure-fn layer cannot
-//! see `axum_login::AuthSession`.
+//! Handler bodies are thin delegations: Axum extractors → call
+//! `kikan::control_plane::users::*` → `.map_err(AppError::from)`. Session
+//! and cookie issuance stay in the HTTP adapter — the pure-fn layer
+//! cannot see `axum_login::AuthSession`.
 
 pub mod recover;
 pub mod reset;
@@ -32,6 +35,10 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use axum_login::AuthSession;
+use kikan::auth::{Credentials, RoleId, SeaOrmUserRepo, UserId};
+use kikan::control_plane;
+use kikan::{AppError, ControlPlaneError, ControlPlaneState, PlatformState, ProfileDb};
+use kikan_types::SetupMode;
 use kikan_types::auth::{
     LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
 };
@@ -39,20 +46,17 @@ use kikan_types::error::ErrorCode;
 use kikan_types::user::UserResponse;
 use mokumo_core::activity::ActivityAction;
 
-use crate::auth::{AuthenticatedUser, Backend, Credentials, RoleId, SeaOrmUserRepo, UserId};
-use crate::control_plane;
-use crate::{AppError, ControlPlaneError, ControlPlaneState, PlatformState, ProfileDb, SetupMode};
+use crate::auth::{AuthenticatedUser, Backend};
 
 /// Route path for the demo-reset handler. The auth-gate middleware allows
 /// this path through even while the demo profile is mid-install, so shop
 /// owners can always recover a broken demo database.
 pub const DEMO_RESET_PATH: &str = "/api/demo/reset";
 
+/// `axum-login`'s auth-session extractor, pinned to Mokumo's backend.
 pub type AuthSessionType = AuthSession<Backend>;
 
-// `PendingReset` lives under `kikan::control_plane::state`. Re-exported
-// here for callers that reference it via `kikan::platform::auth::PendingReset`.
-pub use crate::control_plane::PendingReset;
+pub use kikan::control_plane::PendingReset;
 
 pub fn auth_router() -> Router<ControlPlaneState> {
     Router::new()
@@ -73,7 +77,7 @@ pub fn setup_router() -> Router<ControlPlaneState> {
     Router::new().route("/", post(setup))
 }
 
-fn user_to_response(user: &crate::auth::User) -> UserResponse {
+fn user_to_response(user: &kikan::auth::User) -> UserResponse {
     UserResponse {
         id: user.id.get(),
         email: user.email.clone(),
@@ -111,7 +115,12 @@ async fn login(
     }
 
     // Login always authenticates against production_db (same as Backend::authenticate).
-    let repo = SeaOrmUserRepo::new(deps.platform.production_db.clone());
+    let repo = SeaOrmUserRepo::new(
+        deps.platform
+            .db_for("production")
+            .cloned()
+            .expect("production profile pool present in PlatformState"),
+    );
 
     // Step 2: run authentication FIRST so argon2 cost is paid on every
     // request, regardless of whether the account is locked. Checking lockout
@@ -129,14 +138,17 @@ async fn login(
         password: req.password,
     };
 
-    let auth_result = match control_plane::users::verify_credentials_struct(&deps, creds).await {
-        Ok(user) => Some(user),
-        Err(ControlPlaneError::PermissionDenied) => None,
-        Err(e) => {
-            tracing::error!("Authentication error: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
-    };
+    let auth_result =
+        match control_plane::users::verify_credentials_struct(&deps, creds, SetupMode::Production)
+            .await
+        {
+            Ok(user) => Some(user),
+            Err(ControlPlaneError::PermissionDenied) => None,
+            Err(e) => {
+                tracing::error!("Authentication error: {e}");
+                return Err(AppError::InternalError("An internal error occurred".into()));
+            }
+        };
 
     // Step 3: fetch current lockout state. Timing of this query is uniform
     // whether the account is locked or not (indexed lookup by email).
@@ -360,7 +372,8 @@ async fn setup(
     if let Err(e) = tokio::fs::write(&profile_path, "production").await {
         tracing::warn!("Failed to persist active_profile after setup: {e}");
     }
-    *deps.platform.active_profile.write() = SetupMode::Production;
+    *deps.platform.active_profile.write() =
+        kikan::tenancy::ProfileDirName::from(SetupMode::Production.as_dir_name());
 
     // Clear the first-launch flag so that GET /api/setup-status returns is_first_launch: false
     // for the lifetime of this server process. The profile_switch handler does the same on a
@@ -373,7 +386,12 @@ async fn setup(
         Ordering::Relaxed,
     );
 
-    let repo = SeaOrmUserRepo::new(deps.platform.production_db.clone());
+    let repo = SeaOrmUserRepo::new(
+        deps.platform
+            .db_for("production")
+            .cloned()
+            .expect("production profile pool present in PlatformState"),
+    );
     auto_login(&repo, &outcome.user, &mut auth_session).await;
 
     Ok((
@@ -422,7 +440,7 @@ fn map_setup_error(err: ControlPlaneError) -> AppError {
 
 async fn auto_login(
     repo: &SeaOrmUserRepo,
-    user: &crate::auth::User,
+    user: &kikan::auth::User,
     auth_session: &mut AuthSessionType,
 ) {
     let hash = match repo.find_by_id_with_hash(&user.id).await {
@@ -463,7 +481,12 @@ pub async fn require_auth_with_demo_auto_login(
     // Exception: /api/demo/reset is the recovery mechanism — it must bypass the entire
     // auth chain (both the 423 guard and the demo auto-login) so it can be called even
     // when admin@demo.local is missing from the database.
-    if *platform.active_profile.read() == SetupMode::Demo
+    // Session 2b bridge: stringly "demo" literal. The demo-gate middleware
+    // is Mokumo-specific (see Session 3 ADR amendment task) — it will be
+    // hoisted to mokumo-shop or replaced with a Graft capability hook in a
+    // follow-up commit. Kikan names the literal only here, not in any
+    // long-lived API.
+    if platform.active_profile.read().as_str() == "demo"
         && !platform.demo_install_ok.load(Ordering::Acquire)
     {
         if request.uri().path() == DEMO_RESET_PATH {
@@ -475,8 +498,13 @@ pub async fn require_auth_with_demo_auto_login(
     // Demo mode auto-login: create a session for the demo admin if not authenticated.
     // Uses find_by_email_with_hash to resolve user + hash in a single DB query
     // (avoids the 2-query path through auto_login → find_by_id_with_hash).
-    if *platform.active_profile.read() == SetupMode::Demo && auth_session.user.is_none() {
-        let repo = SeaOrmUserRepo::new(platform.demo_db.clone());
+    if platform.active_profile.read().as_str() == "demo" && auth_session.user.is_none() {
+        let repo = SeaOrmUserRepo::new(
+            platform
+                .db_for("demo")
+                .cloned()
+                .expect("demo profile pool present in PlatformState"),
+        );
         match repo.find_by_email_with_hash("admin@demo.local").await {
             Ok(Some((user, hash))) => {
                 let auth_user = AuthenticatedUser::new(user, hash, SetupMode::Demo);

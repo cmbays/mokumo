@@ -20,11 +20,34 @@ async fn test_platform_state(data_dir: &Path) -> kikan::PlatformState {
         .await
         .unwrap();
 
+    build_test_platform_state(data_dir.to_path_buf(), demo_db, production_db)
+}
+
+fn build_test_platform_state(
+    data_dir: std::path::PathBuf,
+    demo_db: sea_orm::DatabaseConnection,
+    production_db: sea_orm::DatabaseConnection,
+) -> kikan::PlatformState {
+    let demo_dir = kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Demo.as_dir_name());
+    let production_dir =
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name());
+    let mut pools = std::collections::HashMap::with_capacity(2);
+    pools.insert(demo_dir.clone(), demo_db);
+    pools.insert(production_dir.clone(), production_db);
+    let profile_dir_names: Arc<[kikan::tenancy::ProfileDirName]> =
+        vec![production_dir.clone(), demo_dir.clone()].into();
+    let mut requires_setup_by_dir = std::collections::HashMap::with_capacity(2);
+    requires_setup_by_dir.insert(production_dir.clone(), true);
+    requires_setup_by_dir.insert(demo_dir.clone(), false);
+
     kikan::PlatformState {
-        data_dir: data_dir.to_path_buf(),
-        demo_db,
-        production_db,
-        active_profile: Arc::new(parking_lot::RwLock::new(kikan::SetupMode::Demo)),
+        data_dir,
+        db_filename: "mokumo.db",
+        pools: Arc::new(pools),
+        active_profile: Arc::new(parking_lot::RwLock::new(demo_dir)),
+        profile_dir_names,
+        requires_setup_by_dir: Arc::new(requires_setup_by_dir),
+        auth_profile_kind_dir: production_dir,
         shutdown: CancellationToken::new(),
         started_at: std::time::Instant::now(),
         mdns_status: kikan::MdnsStatus::shared(),
@@ -136,7 +159,7 @@ async fn admin_uds_health_returns_ok() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -164,7 +187,7 @@ async fn admin_uds_diagnostics_returns_json() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -182,8 +205,9 @@ async fn admin_uds_diagnostics_returns_json() {
     let diag: kikan_types::diagnostics::DiagnosticsResponse =
         serde_json::from_slice(&body).expect("valid diagnostics JSON");
     // CARGO_PKG_NAME is resolved at compile time from whichever crate
-    // contains the `collect()` function (kikan), not the test binary.
-    assert_eq!(diag.app.name, "kikan");
+    // contains the `collect()` function (now `mokumo-shop` after the
+    // capability/vocabulary split), not the test binary.
+    assert_eq!(diag.app.name, "mokumo-shop");
     assert!(!diag.os.family.is_empty());
 
     shutdown.cancel();
@@ -198,7 +222,7 @@ async fn admin_uds_socket_permissions_are_0600() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     // Use a oneshot to propagate bind errors instead of panicking in the
     // spawned task (which would cause a misleading timeout in wait_for_socket).
@@ -249,7 +273,7 @@ async fn admin_uds_socket_cleaned_up_on_shutdown() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -282,7 +306,7 @@ async fn admin_uds_refuses_to_overwrite_regular_file() {
 
     let shutdown = CancellationToken::new();
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let result = kikan_socket::serve_unix_socket(&socket_path, router, shutdown).await;
     assert!(result.is_err(), "should refuse to overwrite a regular file");
@@ -298,7 +322,7 @@ async fn admin_uds_profiles_list_returns_two_profiles() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -335,7 +359,7 @@ async fn admin_uds_profiles_switch_changes_active() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -381,7 +405,7 @@ async fn admin_uds_migrate_status_returns_json() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -415,7 +439,7 @@ async fn admin_uds_backups_list_returns_empty_initially() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -447,7 +471,7 @@ async fn admin_uds_profiles_switch_invalid_returns_error() {
     let shutdown = CancellationToken::new();
 
     let platform = test_platform_state(tmp.path()).await;
-    let router = kikan::admin::build_admin_router(platform);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();
@@ -501,20 +525,8 @@ async fn admin_uds_backups_create_produces_file() {
         .await
         .unwrap();
 
-    let platform = kikan::PlatformState {
-        data_dir: tmp.path().to_path_buf(),
-        demo_db,
-        production_db,
-        active_profile: std::sync::Arc::new(parking_lot::RwLock::new(kikan::SetupMode::Demo)),
-        shutdown: CancellationToken::new(),
-        started_at: std::time::Instant::now(),
-        mdns_status: kikan::MdnsStatus::shared(),
-        demo_install_ok: std::sync::Arc::new(AtomicBool::new(true)),
-        is_first_launch: std::sync::Arc::new(AtomicBool::new(false)),
-        setup_completed: std::sync::Arc::new(AtomicBool::new(false)),
-        profile_db_initializer: std::sync::Arc::new(NoOpInit),
-    };
-    let router = kikan::admin::build_admin_router(platform);
+    let platform = build_test_platform_state(tmp.path().to_path_buf(), demo_db, production_db);
+    let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();
     let shutdown_clone = shutdown.clone();

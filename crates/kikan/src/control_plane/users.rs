@@ -36,6 +36,8 @@
 //! general helper — future control-plane modules (backup, profiles)
 //! interpret `DomainError::Conflict` differently and write their own.
 
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
 use std::sync::atomic::Ordering;
 
 use mokumo_core::error::DomainError;
@@ -44,7 +46,37 @@ use sea_orm::DatabaseConnection;
 use crate::auth::{
     AuthenticatedUser, Credentials, RoleId, SeaOrmUserRepo, User, UserId, UserService, password,
 };
-use crate::{ConflictKind, ControlPlaneError, ControlPlaneState, SetupMode};
+use crate::{ConflictKind, ControlPlaneError, ControlPlaneState};
+
+/// Trait bounds common to every `K: Graft::ProfileKind` consumer in
+/// `control_plane::users`. Keeps call-site signatures readable.
+pub trait ProfileKindBounds:
+    Copy
+    + Debug
+    + Display
+    + Eq
+    + Hash
+    + Send
+    + Sync
+    + 'static
+    + serde::Serialize
+    + serde::de::DeserializeOwned
+{
+}
+
+impl<T> ProfileKindBounds for T where
+    T: Copy
+        + Debug
+        + Display
+        + Eq
+        + Hash
+        + Send
+        + Sync
+        + 'static
+        + serde::Serialize
+        + serde::de::DeserializeOwned
+{
+}
 
 /// Input for [`bootstrap_first_admin`].
 #[derive(Debug, Clone)]
@@ -76,7 +108,13 @@ pub async fn bootstrap_first_admin(
     state: &ControlPlaneState,
     input: BootstrapInput,
 ) -> Result<BootstrapOutcome, ControlPlaneError> {
-    let repo = SeaOrmUserRepo::new(state.platform.production_db.clone());
+    let repo = SeaOrmUserRepo::new(
+        state
+            .platform
+            .db_for("production")
+            .cloned()
+            .expect("production profile pool present in PlatformState"),
+    );
     let (user, recovery_codes) = repo
         .bootstrap_admin_with_codes(&input.email, &input.name, &input.password)
         .await?;
@@ -163,7 +201,13 @@ pub async fn setup_admin(
     }
 
     // Create admin user + recovery codes in one transaction.
-    let repo = SeaOrmUserRepo::new(state.platform.production_db.clone());
+    let repo = SeaOrmUserRepo::new(
+        state
+            .platform
+            .db_for("production")
+            .cloned()
+            .expect("production profile pool present in PlatformState"),
+    );
     let (user, recovery_codes) = match repo.create_admin_with_setup(email, name, password).await {
         Ok(result) => result,
         Err(e) => {
@@ -207,12 +251,24 @@ pub async fn setup_admin(
 /// (DB counters, `AccountLocked` response) stays in the HTTP adapter
 /// so the CLI / UDS paths can decide independently whether they want
 /// the same policy.
-pub async fn verify_credentials(
+pub async fn verify_credentials<K: ProfileKindBounds>(
     state: &ControlPlaneState,
     email: &str,
     password: String,
-) -> Result<AuthenticatedUser, ControlPlaneError> {
-    let repo = SeaOrmUserRepo::new(state.platform.production_db.clone());
+    auth_kind: K,
+) -> Result<AuthenticatedUser<K>, ControlPlaneError> {
+    let auth_dir = auth_kind.to_string();
+    let repo = SeaOrmUserRepo::new(
+        state
+            .platform
+            .db_for(auth_dir.as_str())
+            .cloned()
+            .ok_or_else(|| {
+                ControlPlaneError::Internal(anyhow::anyhow!(
+                    "auth profile pool missing from PlatformState"
+                ))
+            })?,
+    );
     let lookup = repo
         .find_by_email_with_hash(email)
         .await
@@ -220,9 +276,7 @@ pub async fn verify_credentials(
 
     // Always run password verification — even when the email is not
     // found or the account is inactive — so the response time does not
-    // leak whether an account exists. Pre-lift `Backend::authenticate`
-    // returned early on the not-found path; this closes the timing
-    // side-channel during the lift.
+    // leak whether an account exists.
     let (user_opt, hash) = match lookup {
         Some((user, hash)) if user.is_active => (Some((user, hash.clone())), hash),
         Some((_, _)) => (None, dummy_hash().to_string()),
@@ -234,7 +288,7 @@ pub async fn verify_credentials(
         .map_err(domain_error_to_control_plane)?;
 
     match (valid, user_opt) {
-        (true, Some((user, hash))) => Ok(AuthenticatedUser::new(user, hash, SetupMode::Production)),
+        (true, Some((user, hash))) => Ok(AuthenticatedUser::new(user, hash, auth_kind)),
         _ => Err(ControlPlaneError::PermissionDenied),
     }
 }
@@ -256,11 +310,12 @@ fn dummy_hash() -> &'static str {
 /// Convenience: pass a `Credentials` struct directly (same semantics as
 /// [`verify_credentials`]). Used by the HTTP `login` adapter which
 /// already owns a `Credentials` value extracted from the request body.
-pub async fn verify_credentials_struct(
+pub async fn verify_credentials_struct<K: ProfileKindBounds>(
     state: &ControlPlaneState,
     creds: Credentials,
-) -> Result<AuthenticatedUser, ControlPlaneError> {
-    verify_credentials(state, &creds.email, creds.password).await
+    auth_kind: K,
+) -> Result<AuthenticatedUser<K>, ControlPlaneError> {
+    verify_credentials(state, &creds.email, creds.password, auth_kind).await
 }
 
 /// Soft-delete a user. Admin-only operation.
@@ -270,11 +325,11 @@ pub async fn verify_credentials_struct(
 /// this fn re-routes to
 /// `ControlPlaneError::Conflict(ConflictKind::LastAdminProtected)`
 /// preserving the original message verbatim on the wire.
-pub async fn soft_delete_user(
+pub async fn soft_delete_user<K>(
     _state: &ControlPlaneState,
     db: &DatabaseConnection,
     target: UserId,
-    caller: &AuthenticatedUser,
+    caller: &AuthenticatedUser<K>,
 ) -> Result<User, ControlPlaneError> {
     if caller.user.role_id != RoleId::ADMIN {
         return Err(ControlPlaneError::PermissionDenied);
@@ -289,12 +344,12 @@ pub async fn soft_delete_user(
 ///
 /// Refuses to demote the last active admin — same
 /// `LastAdminProtected` routing as [`soft_delete_user`].
-pub async fn update_user_role(
+pub async fn update_user_role<K>(
     _state: &ControlPlaneState,
     db: &DatabaseConnection,
     target: UserId,
     new_role: RoleId,
-    caller: &AuthenticatedUser,
+    caller: &AuthenticatedUser<K>,
 ) -> Result<User, ControlPlaneError> {
     if caller.user.role_id != RoleId::ADMIN {
         return Err(ControlPlaneError::PermissionDenied);

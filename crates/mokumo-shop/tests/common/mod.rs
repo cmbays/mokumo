@@ -20,7 +20,7 @@ pub async fn boot_router(
     recovery_dir: PathBuf,
     demo_db: DatabaseConnection,
     production_db: DatabaseConnection,
-    active_profile: kikan::SetupMode,
+    active_profile: kikan_types::SetupMode,
     shutdown_token: CancellationToken,
 ) -> (Router, Option<String>) {
     let session_db_path = data_dir.join("sessions.db");
@@ -39,12 +39,22 @@ pub async fn boot_router(
 
     let boot_config = kikan::BootConfig::new(data_dir);
 
+    let mut pools = std::collections::HashMap::with_capacity(2);
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Demo.as_dir_name()),
+        demo_db,
+    );
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name()),
+        production_db,
+    );
+    let active_profile_dir = kikan::tenancy::ProfileDirName::from(active_profile.as_dir_name());
+
     let (engine, app_state) = kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
-        demo_db,
-        production_db,
-        active_profile,
+        pools,
+        active_profile_dir,
         session_store,
         profile_initializer,
         setup_completed,

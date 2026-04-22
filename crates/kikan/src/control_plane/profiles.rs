@@ -27,21 +27,24 @@
 //! and make a best-effort disk rollback. The adapter owns this recovery path
 //! because session errors are transport-native.
 
-use kikan_types::admin::ProfileSwitchAdminResponse;
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
+use std::str::FromStr;
 
 use crate::auth::{AuthenticatedUser, SeaOrmUserRepo};
-use crate::{ControlPlaneError, PlatformState, SetupMode};
+use crate::tenancy::ProfileDirName;
+use crate::{ControlPlaneError, PlatformState};
 
 /// Result of a successful `switch_profile` call.
 ///
 /// `new_user` is ready to pass to `auth_session.login()` in the HTTP adapter.
 /// `previous_profile` enables the adapter to roll back `active_profile` if the
 /// subsequent session operations fail (see module doc).
-pub struct SwitchOutcome {
+pub struct SwitchOutcome<K> {
     /// The user record the adapter should log in under the new profile.
-    pub new_user: AuthenticatedUser,
+    pub new_user: AuthenticatedUser<K>,
     /// The profile that was active before this switch. Used for rollback only.
-    pub previous_profile: SetupMode,
+    pub previous_profile: K,
 }
 
 /// Resolve the target user, persist the profile selection to disk, and flip
@@ -55,21 +58,44 @@ pub struct SwitchOutcome {
 ///   behaviour.
 /// - `ControlPlaneError::Internal` — DB query failure or filesystem error
 ///   during the atomic rename. Both are unexpected at this call site.
-pub async fn switch_profile(
+pub async fn switch_profile<K>(
     state: &PlatformState,
-    target: SetupMode,
+    target: K,
     email: &str,
-) -> Result<SwitchOutcome, ControlPlaneError> {
+) -> Result<SwitchOutcome<K>, ControlPlaneError>
+where
+    K: Copy
+        + Debug
+        + Display
+        + Eq
+        + Hash
+        + Send
+        + Sync
+        + 'static
+        + FromStr<Err = String>
+        + serde::Serialize
+        + serde::de::DeserializeOwned,
+{
     // Step 1: Look up the target user BEFORE touching disk or memory. If the
     // account does not exist the caller sees an error and the active profile is
     // left unchanged.
-    let repo = SeaOrmUserRepo::new(state.db_for(target).clone());
+    let target_dir = target.to_string();
+    let target_db = state.db_for(target_dir.as_str()).ok_or_else(|| {
+        tracing::error!(
+            dir = %target_dir,
+            "switch_profile: target profile pool missing from PlatformState"
+        );
+        ControlPlaneError::Internal(anyhow::anyhow!(
+            "target profile pool missing from PlatformState"
+        ))
+    })?;
+    let repo = SeaOrmUserRepo::new(target_db.clone());
     let (user_domain, hash) = repo
         .find_by_email_with_hash(email)
         .await
         .map_err(|e| {
             tracing::error!(
-                target = ?target,
+                dir = %target_dir,
                 %email,
                 "switch_profile: DB error during user lookup: {e}"
             );
@@ -77,7 +103,7 @@ pub async fn switch_profile(
         })?
         .ok_or_else(|| {
             tracing::error!(
-                target = ?target,
+                dir = %target_dir,
                 %email,
                 "switch_profile: target user not found in target DB"
             );
@@ -96,23 +122,26 @@ pub async fn switch_profile(
 
 /// Switch the active profile without user lookup — admin-only variant.
 ///
-/// Performs steps 2+3 of `switch_profile` (disk persist + memory flip)
+/// Performs steps 2+3 of [`switch_profile`] (disk persist + memory flip)
 /// without step 1 (user lookup). On the UDS admin surface, filesystem
 /// permissions are the auth layer — there is no session to carry a user.
+///
+/// Returns `(previous, current)` so the HTTP adapter can render the
+/// vertical's wire DTO shape without kikan naming the profile kind.
 ///
 /// # Errors
 ///
 /// - `ControlPlaneError::Internal` — filesystem error during the atomic
 ///   rename (unexpected at this call site).
-pub async fn switch_profile_admin(
+pub async fn switch_profile_admin<K>(
     state: &PlatformState,
-    target: SetupMode,
-) -> Result<ProfileSwitchAdminResponse, ControlPlaneError> {
+    target: K,
+) -> Result<(K, K), ControlPlaneError>
+where
+    K: Copy + Debug + Display + FromStr<Err = String>,
+{
     let previous = persist_and_flip(state, target).await?;
-    Ok(ProfileSwitchAdminResponse {
-        previous,
-        current: target,
-    })
+    Ok((previous, target))
 }
 
 /// Atomically persist the active profile to disk and flip the in-memory state.
@@ -121,10 +150,10 @@ pub async fn switch_profile_admin(
 /// switches (e.g. two admin requests arriving at the same time). The write
 /// lock on `active_profile` is held across the rename+flip so disk and
 /// memory stay consistent.
-async fn persist_and_flip(
-    state: &PlatformState,
-    target: SetupMode,
-) -> Result<SetupMode, ControlPlaneError> {
+async fn persist_and_flip<K>(state: &PlatformState, target: K) -> Result<K, ControlPlaneError>
+where
+    K: Copy + Debug + Display + FromStr<Err = String>,
+{
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering::Relaxed;
 
@@ -134,12 +163,14 @@ async fn persist_and_flip(
     let profile_path = state.data_dir.join("active_profile");
     let profile_tmp = state.data_dir.join(format!("active_profile.{seq}.tmp"));
 
+    let target_str = target.to_string();
+
     // Write target profile to the temp file.
-    tokio::fs::write(&profile_tmp, target.as_str())
+    tokio::fs::write(&profile_tmp, target_str.as_str())
         .await
         .map_err(|e| {
             tracing::error!(
-                target = ?target,
+                target = %target_str,
                 path = %profile_tmp.display(),
                 "persist_and_flip: write tmp failed: {e}"
             );
@@ -151,7 +182,7 @@ async fn persist_and_flip(
         .await
         .map_err(|e| {
             tracing::error!(
-                target = ?target,
+                target = %target_str,
                 src = %profile_tmp.display(),
                 dst = %profile_path.display(),
                 "persist_and_flip: rename failed: {e}"
@@ -163,11 +194,27 @@ async fn persist_and_flip(
     // concurrent writes from clobbering each other on disk. The rename
     // is atomic, so the on-disk value is always valid. The memory flip
     // is serialized by the parking_lot write lock.
-    let prev = {
+    //
+    // `K.to_string()` is a trusted input here: `Engine::boot` validated
+    // that every declared kind produces a path-safe ProfileDirName, and
+    // `target: K` must be one of those kinds.
+    let prev_dir: ProfileDirName = {
         let mut guard = state.active_profile.write();
-        let prev = *guard;
-        *guard = target;
+        let prev = guard.clone();
+        *guard = ProfileDirName::new_trusted(target_str.clone());
         prev
     };
+    // Parse the previous dir back to `K`. Failure signals corrupt state
+    // (the active_profile slot held a value kikan itself did not write) —
+    // surface it as an error so the HTTP adapter's rollback path sees the
+    // inconsistency instead of silently no-op'ing a rollback to `target`.
+    let prev = K::from_str(prev_dir.as_str()).map_err(|e| {
+        tracing::error!(
+            dir = %prev_dir,
+            target = %target_str,
+            "persist_and_flip: previous profile dir does not parse to ProfileKind: {e}"
+        );
+        ControlPlaneError::Internal(anyhow::anyhow!("previous profile state is corrupt: {e}"))
+    })?;
     Ok(prev)
 }

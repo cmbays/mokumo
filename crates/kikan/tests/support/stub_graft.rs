@@ -6,8 +6,11 @@ use kikan::{
     BootConfig, Engine, EngineContext, EngineError, Graft, GraftId, Migration, MigrationRef,
     MigrationTarget, Tenancy,
 };
+use kikan_types::SetupMode;
 use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
+
+static STUB_PROFILE_KINDS: &[SetupMode] = &[SetupMode::Demo, SetupMode::Production];
 
 /// Minimal composed state for StubGraft, mirroring the real
 /// MokumoState structure but without domain fields.
@@ -38,9 +41,30 @@ impl StubGraft {
 impl Graft for StubGraft {
     type AppState = StubAppState;
     type DomainState = ();
+    type ProfileKind = SetupMode;
 
     fn id() -> GraftId {
         GraftId::new("stub")
+    }
+
+    fn db_filename(&self) -> &'static str {
+        "mokumo.db"
+    }
+
+    fn all_profile_kinds(&self) -> &'static [SetupMode] {
+        STUB_PROFILE_KINDS
+    }
+
+    fn default_profile_kind(&self) -> SetupMode {
+        SetupMode::Demo
+    }
+
+    fn requires_setup_wizard(&self, kind: &SetupMode) -> bool {
+        matches!(kind, SetupMode::Production)
+    }
+
+    fn auth_profile_kind(&self) -> SetupMode {
+        SetupMode::Production
     }
 
     fn migrations(&self) -> Vec<Box<dyn Migration>> {
@@ -90,11 +114,26 @@ pub fn stub_app_state(
     production_db: sea_orm::DatabaseConnection,
     data_dir: std::path::PathBuf,
 ) -> StubAppState {
+    let demo_dir = kikan::tenancy::ProfileDirName::from(SetupMode::Demo.as_dir_name());
+    let production_dir = kikan::tenancy::ProfileDirName::from(SetupMode::Production.as_dir_name());
+    let mut pools = std::collections::HashMap::with_capacity(2);
+    pools.insert(demo_dir.clone(), demo_db);
+    pools.insert(production_dir.clone(), production_db);
+    let profile_dir_names: Arc<[kikan::tenancy::ProfileDirName]> =
+        vec![production_dir.clone(), demo_dir.clone()].into();
+    let mut requires_setup_by_dir = std::collections::HashMap::with_capacity(2);
+    requires_setup_by_dir.insert(production_dir, true);
+    requires_setup_by_dir.insert(demo_dir.clone(), false);
     let platform = kikan::PlatformState {
         data_dir,
-        demo_db,
-        production_db,
-        active_profile: Arc::new(RwLock::new(kikan::SetupMode::Demo)),
+        db_filename: "mokumo.db",
+        pools: Arc::new(pools),
+        active_profile: Arc::new(RwLock::new(demo_dir)),
+        profile_dir_names,
+        requires_setup_by_dir: Arc::new(requires_setup_by_dir),
+        auth_profile_kind_dir: kikan::tenancy::ProfileDirName::from(
+            SetupMode::Production.as_dir_name(),
+        ),
         shutdown: CancellationToken::new(),
         started_at: std::time::Instant::now(),
         mdns_status: kikan::MdnsStatus::shared(),

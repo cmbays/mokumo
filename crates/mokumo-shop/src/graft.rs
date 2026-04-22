@@ -14,6 +14,7 @@ use std::sync::atomic::AtomicBool;
 use kikan::migrations::conn::MigrationConn;
 use kikan::rate_limit::RateLimiter;
 use kikan::{EngineContext, EngineError, Graft, GraftId, Migration, MigrationRef, MigrationTarget};
+use kikan_types::SetupMode;
 use sea_orm_migration::MigratorTrait;
 use sea_orm_migration::sea_orm::DbErr;
 
@@ -23,14 +24,37 @@ use crate::ws::ConnectionManager;
 
 const MOKUMO_GRAFT_ID: GraftId = GraftId::new("mokumo");
 
+static MOKUMO_PROFILE_KINDS: &[SetupMode] = &[SetupMode::Demo, SetupMode::Production];
+
 pub struct MokumoApp;
 
 impl Graft for MokumoApp {
     type AppState = SharedMokumoState;
     type DomainState = MokumoShopState;
+    type ProfileKind = SetupMode;
 
     fn id() -> GraftId {
         MOKUMO_GRAFT_ID
+    }
+
+    fn db_filename(&self) -> &'static str {
+        "mokumo.db"
+    }
+
+    fn all_profile_kinds(&self) -> &'static [SetupMode] {
+        MOKUMO_PROFILE_KINDS
+    }
+
+    fn default_profile_kind(&self) -> SetupMode {
+        SetupMode::Demo
+    }
+
+    fn requires_setup_wizard(&self, kind: &SetupMode) -> bool {
+        matches!(kind, SetupMode::Production)
+    }
+
+    fn auth_profile_kind(&self) -> SetupMode {
+        SetupMode::Production
     }
 
     fn migrations(&self) -> Vec<Box<dyn Migration>> {

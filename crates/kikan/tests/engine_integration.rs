@@ -4,7 +4,8 @@ mod support;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use kikan::{BootConfig, Engine, EngineError, SetupMode};
+use kikan::{BootConfig, Engine, EngineError};
+use kikan_types::SetupMode;
 use sea_orm::{Database, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
 use support::{StubGraft, stub_app_state};
 use tower_sessions_sqlx_store::SqliteStore;
@@ -114,7 +115,8 @@ async fn engine_run_migrations_applies_all_to_db() {
 
 #[tokio::test]
 async fn profile_id_display_and_setup_mode_roundtrip() {
-    use kikan::{ProfileId, SetupMode};
+    use kikan::ProfileId;
+    use kikan_types::SetupMode;
 
     let demo = SetupMode::Demo;
     assert_eq!(demo.to_string(), "demo");
@@ -168,7 +170,7 @@ async fn headless_from_args_env_data_dir_contract() {
 
 #[tokio::test]
 async fn setup_mode_serde_wire_format_canary() {
-    use kikan::SetupMode;
+    use kikan_types::SetupMode;
 
     let demo_json = serde_json::to_string(&SetupMode::Demo).unwrap();
     assert_eq!(
@@ -229,12 +231,22 @@ async fn boot_returns_engine_and_app_state() {
     let profile_db_init: kikan::platform_state::SharedProfileDbInitializer =
         Arc::new(support::NoOpProfileDbInitializer);
 
+    let mut pools = std::collections::HashMap::new();
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(SetupMode::Demo.as_dir_name()),
+        demo_db,
+    );
+    pools.insert(
+        kikan::tenancy::ProfileDirName::from(SetupMode::Production.as_dir_name()),
+        production_db,
+    );
+    let active_profile_dir = kikan::tenancy::ProfileDirName::from(SetupMode::Demo.as_dir_name());
+
     let (engine, _state) = Engine::<StubGraft>::boot(
         config,
         &graft,
-        demo_db,
-        production_db,
-        SetupMode::Demo,
+        pools,
+        active_profile_dir,
         session_store,
         profile_db_init,
         Arc::new(AtomicBool::new(false)),

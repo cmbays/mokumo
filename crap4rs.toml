@@ -20,6 +20,14 @@ exclude = [
   "crates/mokumo-shop/src/settings.rs",
   "crates/mokumo-shop/src/server_info.rs",
   "crates/mokumo-shop/src/ws/handler.rs",
+  # Hoisted from kikan::platform/** and kikan::control_plane/** —
+  # HTTP adapters + admin UDS handlers exercised through the api_bdd
+  # and admin_uds integration harnesses, same rationale as the
+  # originally-excluded kikan platform/control_plane paths above.
+  "crates/mokumo-shop/src/admin/**",
+  "crates/mokumo-shop/src/auth_handlers/**",
+  "crates/mokumo-shop/src/demo_reset.rs",
+  "crates/mokumo-shop/src/user_admin.rs",
   # Binary-shell helpers; exercised through the BDD harness and
   # demo-smoke / api-smoke integration tests.
   "crates/mokumo-shop/src/startup.rs",
@@ -31,7 +39,10 @@ exclude = [
   # UDS HTTP client library; exercised through the admin_uds integration
   # tests (crates/mokumo-shop/tests/admin_uds.rs).
   "crates/kikan-cli/**",
-  # Test helpers have 0% coverage by definition.
+  # Test helpers have 0% coverage by definition. Both `tests/` directories
+  # (integration tests) and sibling `*_tests.rs` files (the pattern kikan
+  # uses when a `#[cfg(test)] mod tests` grew large enough to relocate).
   "**/tests/**",
+  "**/*_tests.rs",
   "**/build.rs",
 ]
