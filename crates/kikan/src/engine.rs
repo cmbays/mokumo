@@ -331,27 +331,7 @@ impl<G: Graft> Engine<G> {
         let forwarded_layer = ForwardedLayer::for_mode(dp.deployment_mode);
         let host_allowlist = HostHeaderAllowList::from_config(dp);
 
-        let routes = G::data_plane_routes(&state);
-
-        // SPA fallback registers after API routes, before the middleware
-        // stack — so the SPA inherits every layer (auth, CSRF, security
-        // headers, tracing) but never shadows an explicit API route.
-        //
-        // When an SPA is mounted, a miss on `/api/**` would otherwise serve
-        // the HTML shell; that breaks the API contract (clients expect a
-        // typed JSON 404). Register explicit `/api` and `/api/*rest`
-        // catch-alls ahead of the SPA fallback so unmatched API paths hit
-        // the typed handler. Without an SPA, misses return Axum's default
-        // 404 — the original behavior.
-        let routes = match self.spa_source.as_ref() {
-            Some(spa) => routes
-                .route("/api", axum::routing::any(api_not_found))
-                .route("/api/{*rest}", axum::routing::any(api_not_found))
-                .fallback_service(spa.router()),
-            None => routes,
-        };
-
-        routes
+        self.mount_spa_fallback(G::data_plane_routes(&state))
             .layer(axum::middleware::from_fn_with_state(
                 platform.clone(),
                 crate::profile_db::profile_db_middleware::<G::ProfileKind>,
@@ -364,6 +344,30 @@ impl<G: Graft> Engine<G> {
             .layer(forwarded_layer)
             .layer(host_allowlist)
             .with_state(state)
+    }
+
+    /// Mount the SPA fallback plus the `/api/**` typed-JSON-404 catch-all
+    /// onto the vertical's data-plane routes.
+    ///
+    /// The SPA fallback serves the HTML shell for any non-`/api/**` path
+    /// that the graft did not handle, so SvelteKit's client-side router
+    /// can take over. Explicit `/api` and `/api/*rest` routes ahead of
+    /// the fallback keep unmatched API paths on the JSON error contract
+    /// — axum matches more-specific routes first, so concrete API
+    /// endpoints like `/api/health` still take precedence.
+    ///
+    /// No SPA means no catch-all either: unmatched paths fall through
+    /// to axum's default 404, preserving the pre-SPA behavior for
+    /// consumers that never mount one (CLI tools, tests, API-only
+    /// deployments).
+    fn mount_spa_fallback(&self, routes: Router<G::AppState>) -> Router<G::AppState> {
+        let Some(spa) = self.spa_source.as_ref() else {
+            return routes;
+        };
+        routes
+            .route("/api", axum::routing::any(api_not_found))
+            .route("/api/{*rest}", axum::routing::any(api_not_found))
+            .fallback_service(spa.router())
     }
 
     /// No-shutdown convenience. Binaries needing graceful shutdown use
