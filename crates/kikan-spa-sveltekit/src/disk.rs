@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use axum::Router;
 use axum::extract::Request;
-use axum::http::{HeaderValue, StatusCode, header};
+use axum::http::{HeaderValue, header};
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use kikan::data_plane::spa::SpaSource;
@@ -43,40 +43,41 @@ impl SpaSource for SvelteKitSpaDir {
     }
 }
 
-/// Stamps `Cache-Control` on SPA responses:
+/// Stamps `Cache-Control` on SPA responses.
 ///
-/// - `_app/immutable/*` → 1-year immutable (fingerprinted, safe to pin).
-/// - HTML responses (the SvelteKit shell, served for deep links) →
-///   `no-cache` so shops pick up new builds on reload.
-/// - Non-HTML, non-immutable assets → 1-hour public cache.
-/// - Any 404 (e.g. a file that existed at boot but was removed at
-///   runtime) → `no-store`, since caching a transient 404 would outlive
-///   the underlying cause.
+/// Decision order matters here: HTML responses are detected by
+/// `Content-Type` *before* any path-based match, because `ServeDir`
+/// falls back to `index.html` when an asset is missing — so a request
+/// for `/_app/immutable/missing.js` that fell back to the shell would
+/// otherwise be tagged with the 1-year immutable cache. Classifying by
+/// the rendered body first protects against that.
+///
+/// - 404 (missing file that never resolved to the shell) → `no-store`.
+/// - Non-2xx other than 404 (5xx, 405, …) → `no-store`; pinning a
+///   transient error response would outlive the cause.
+/// - HTML response body → `no-cache`; the SvelteKit shell must refetch
+///   so shops pick up new builds on reload.
+/// - Path under `_app/immutable/*` with a 2xx non-HTML body → 1-year
+///   immutable (fingerprinted asset, safe to pin).
+/// - Everything else with a 2xx body → 1-hour public cache.
 async fn apply_sveltekit_cache_headers(req: Request, next: Next) -> Response {
     let request_path = req.uri().path().trim_start_matches('/').to_owned();
     let response = next.run(req).await;
 
     let (mut parts, body) = response.into_parts();
 
-    let cache = if parts.status == StatusCode::NOT_FOUND {
+    let cache = if !parts.status.is_success() {
+        // 404 / 5xx / 4xx all collapse to `no-store`: transient errors
+        // must not be pinned by intermediaries. A 200 is required for
+        // anything longer-lived.
         "no-store"
-    } else if request_path.starts_with("_app/immutable/") {
-        cache_policy_for(&request_path)
+    } else if is_html_response(&parts) {
+        // Evaluated before the path-based check so a request for a
+        // missing fingerprinted asset that fell back to the shell
+        // doesn't inherit the 1-year immutable policy.
+        "no-cache"
     } else {
-        // When ServeDir falls back to `index.html`, the response is the
-        // SPA shell for a client-side route — the request path looks like
-        // an app route (`/customers/42`) but the body is HTML. Detect
-        // that by content-type so the shell never pins to an hour.
-        let is_html = parts
-            .headers
-            .get(header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .is_some_and(|v| v.starts_with("text/html"));
-        if is_html {
-            "no-cache"
-        } else {
-            cache_policy_for(&request_path)
-        }
+        cache_policy_for(&request_path)
     };
 
     parts
@@ -84,4 +85,12 @@ async fn apply_sveltekit_cache_headers(req: Request, next: Next) -> Response {
         .insert(header::CACHE_CONTROL, HeaderValue::from_static(cache));
 
     Response::from_parts(parts, body)
+}
+
+fn is_html_response(parts: &axum::http::response::Parts) -> bool {
+    parts
+        .headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("text/html"))
 }

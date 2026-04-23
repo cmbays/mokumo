@@ -335,11 +335,19 @@ impl<G: Graft> Engine<G> {
 
         // SPA fallback registers after API routes, before the middleware
         // stack — so the SPA inherits every layer (auth, CSRF, security
-        // headers, tracing) but never shadows an API route. Grafts that
-        // don't serve an SPA (`spa_source` → `None`) fall through to
-        // Axum's default 404 on non-API paths.
+        // headers, tracing) but never shadows an explicit API route.
+        //
+        // When an SPA is mounted, a miss on `/api/**` would otherwise serve
+        // the HTML shell; that breaks the API contract (clients expect a
+        // typed JSON 404). Register explicit `/api` and `/api/*rest`
+        // catch-alls ahead of the SPA fallback so unmatched API paths hit
+        // the typed handler. Without an SPA, misses return Axum's default
+        // 404 — the original behavior.
         let routes = match self.spa_source.as_ref() {
-            Some(spa) => routes.fallback_service(spa.router()),
+            Some(spa) => routes
+                .route("/api", axum::routing::any(api_not_found))
+                .route("/api/{*rest}", axum::routing::any(api_not_found))
+                .fallback_service(spa.router()),
             None => routes,
         };
 
@@ -374,6 +382,29 @@ impl<G: Graft> Engine<G> {
         .await?;
         Ok(())
     }
+}
+
+/// Typed JSON 404 handler for unmatched `/api/**` paths.
+///
+/// Installed as a catch-all in [`Engine::build_router`] only when a
+/// [`SpaSource`] is mounted — otherwise unmatched API paths produce
+/// Axum's default 404 (the pre-SPA behavior). `no-store` prevents
+/// transient 404s from being cached by intermediaries.
+async fn api_not_found() -> axum::response::Response {
+    use axum::Json;
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+    let body = kikan_types::error::ErrorBody {
+        code: kikan_types::error::ErrorCode::NotFound,
+        message: "No API route matches this path".into(),
+        details: None,
+    };
+    (
+        StatusCode::NOT_FOUND,
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        Json(body),
+    )
+        .into_response()
 }
 
 /// Verify a `ProfileKind` satisfies the two invariants kikan relies on at
@@ -445,6 +476,31 @@ fn validate_profile_kind<G: Graft>(kind: &G::ProfileKind) -> Result<ProfileDirNa
         )));
     }
     Ok(dir)
+}
+
+#[cfg(test)]
+mod api_not_found_tests {
+    use super::api_not_found;
+    use axum::body::to_bytes;
+    use axum::http::StatusCode;
+
+    #[tokio::test]
+    async fn returns_typed_json_404_with_no_store() {
+        let response = api_not_found().await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok()),
+            Some("no-store"),
+            "transient API 404s must not be cached by intermediaries",
+        );
+        let bytes = to_bytes(response.into_body(), 1024).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["code"], "not_found");
+        assert!(body["message"].as_str().unwrap().contains("No API route"));
+    }
 }
 
 #[cfg(test)]

@@ -157,3 +157,45 @@ async fn disk_falls_back_to_index_for_unknown_paths() {
     let ct = header_str(&resp, header::CONTENT_TYPE).unwrap();
     assert!(ct.starts_with("text/html"), "got {ct}");
 }
+
+// ── Regression guards ──────────────────────────────────────────────
+
+/// A request for a missing fingerprinted asset (`_app/immutable/...`
+/// that doesn't exist on disk) falls back to `index.html`. The request
+/// path matches the immutable prefix, so a naive path-first middleware
+/// would stamp `public, max-age=31536000, immutable` on the *shell*
+/// HTML — pinning a stale SPA for a year. Gate: cache classification
+/// must look at the rendered body's content-type before the request
+/// path.
+#[tokio::test]
+async fn disk_missing_immutable_asset_does_not_pin_shell_for_one_year() {
+    let tmp = tempfile::tempdir().unwrap();
+    stage_disk_fixture(tmp.path());
+    let resp = call(
+        router_from_disk(tmp.path().to_path_buf()),
+        "/_app/immutable/nonexistent-hash.js",
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        header_str(&resp, header::CACHE_CONTROL),
+        Some("no-cache"),
+        "fallback to index.html must not inherit the 1-year immutable cache",
+    );
+    let ct = header_str(&resp, header::CONTENT_TYPE).unwrap();
+    assert!(ct.starts_with("text/html"), "got {ct}");
+}
+
+/// A direct hit on `/index.html` (not a fallback) must also carry
+/// `no-cache` so reloads reach the newest build. Before the fix,
+/// `cache_policy_for("index.html")` returned the 1-hour default.
+#[tokio::test]
+async fn embedded_serves_index_html_directly_with_no_cache() {
+    let resp = call(router_from_embedded(), "/index.html").await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        header_str(&resp, header::CACHE_CONTROL),
+        Some("no-cache"),
+        "direct hit on the HTML shell must not pin for an hour",
+    );
+}

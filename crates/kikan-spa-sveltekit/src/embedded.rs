@@ -55,17 +55,21 @@ async fn serve_embedded<A: RustEmbed>(uri: Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
 
     if let Some(file) = A::get(path) {
-        return spa_response(
-            StatusCode::OK,
-            file.metadata.mimetype(),
-            cache_policy_for(path),
-            file.data.to_vec(),
-        );
+        // A direct hit on the HTML shell (e.g. `/index.html`) must not
+        // inherit the 1-hour cache; a pinned shell would prevent shops
+        // from picking up rebuilt SPAs on reload. Gate `no-cache` on
+        // content-type so we don't need to enumerate filenames.
+        let mime = file.metadata.mimetype();
+        let cache = if mime.starts_with("text/html") {
+            "no-cache"
+        } else {
+            cache_policy_for(path)
+        };
+        return spa_response(StatusCode::OK, mime, cache, file.data.to_vec());
     }
 
     if let Some(index) = A::get("index.html") {
-        // SPA shell: short-circuit caches so shops see new SvelteKit
-        // builds immediately on reload.
+        // SPA shell fallback for a client-side route — also no-cache.
         return spa_response(
             StatusCode::OK,
             index.metadata.mimetype(),

@@ -509,7 +509,7 @@ async fn cmd_serve(data_dir: PathBuf, args: ServeArgs, verbose: u8, quiet: bool)
     let graft = {
         let base =
             mokumo_shop::graft::MokumoApp::new(setup_token.as_deref().map(std::sync::Arc::from));
-        match spa_dir.clone() {
+        match spa_dir {
             Some(dir) => {
                 base.with_spa_source(move || -> Box<dyn kikan::data_plane::spa::SpaSource> {
                     Box::new(kikan_spa_sveltekit::SvelteKitSpaDir::new(dir.clone()))

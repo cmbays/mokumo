@@ -623,8 +623,11 @@ jobs:
         # `kikan-spa-sveltekit` also has no path into the SvelteKit tree.
         # Both must compile on a fresh checkout without `apps/web/build/`
         # existing — the SPA is built in a separate job path.
+        # `--no-default-features` catches accidental unconditional deps
+        # when kikan grows feature gates later.
         run: |
           test ! -e apps/web/build
+          cargo check -p kikan --no-default-features
           cargo check -p kikan
           cargo check -p kikan-spa-sveltekit
 
