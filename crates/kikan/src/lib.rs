@@ -16,6 +16,31 @@
 //! trust. The per-mode matrix and layer order are documented at the
 //! [`data_plane`] module level.
 //!
+//! # Startup and concurrent safety
+//!
+//! kikan provides **in-process** concurrent-safety for every SeaORM pool
+//! it manages:
+//!
+//! - `PRAGMA journal_mode=WAL` — readers don't block writers; writers
+//!   serialize through a single write lock. Applied by [`db::pragmas`]
+//!   on every connection.
+//! - `PRAGMA busy_timeout=5000` — a 5-second retry window before
+//!   `SQLITE_BUSY` surfaces to the caller, enough for short write
+//!   contention within a single Engine to self-resolve.
+//! - Migrations run in `SqliteTransactionMode::Immediate` (see
+//!   [`migrations::runner`]) — each migration acquires the write lock
+//!   on `BEGIN` rather than upgrading lazily, so concurrent writes from
+//!   application tasks cannot race a boot-time migration.
+//!
+//! **Cross-process** single-Engine-per-data-directory is the caller's
+//! precondition — kikan does not enforce it. Two Engines booted against
+//! the same data directory would still collide on backup-API calls,
+//! sidecar swaps, and migration runs even with WAL on, because those
+//! operations manipulate the database file outside SQLite's locking
+//! protocol. The Application is responsible for single-instance
+//! enforcement; see `ops/decisions/mokumo/adr-process-lock-flock.md`
+//! for the adapter-level mechanism.
+//!
 //! Place platform-shaped code here. Shop-vertical identifiers belong
 //! in `mokumo-shop` (invariant I1, enforced by
 //! `scripts/check-i1-domain-purity.sh`); shell adapters in
