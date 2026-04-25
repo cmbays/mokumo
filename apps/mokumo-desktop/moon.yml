@@ -15,6 +15,7 @@ tasks:
     command: cargo tauri dev
     deps:
     - web:build
+    - kikan-admin-ui:frontend-build
     options:
       cache: false
       persistent: true
@@ -23,11 +24,13 @@ tasks:
     command: cargo tauri build
     deps:
     - web:build
+    - kikan-admin-ui:frontend-build
     inputs:
     - '@group(sources)'
   build-debug:
     command: cargo build -p mokumo-desktop
     deps:
     - web:build
+    - kikan-admin-ui:frontend-build
     inputs:
     - '@group(sources)'
