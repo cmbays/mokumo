@@ -109,7 +109,12 @@ impl Graft for StubGraft {
 
 /// Build a minimal `StubAppState` for tests that need a real state
 /// (e.g. `build_router`).
+///
+/// Callers open the meta-DB pool themselves (typically `:memory:`) and
+/// pass it in — keeps this function synchronous so the existing tests
+/// don't need an async wrapper.
 pub fn stub_app_state(
+    meta_db: sea_orm::DatabaseConnection,
     demo_db: sea_orm::DatabaseConnection,
     production_db: sea_orm::DatabaseConnection,
     data_dir: std::path::PathBuf,
@@ -127,6 +132,7 @@ pub fn stub_app_state(
     let platform = kikan::PlatformState {
         data_dir,
         db_filename: "mokumo.db",
+        meta_db,
         pools: Arc::new(pools),
         active_profile: Arc::new(RwLock::new(demo_dir)),
         profile_dir_names,

@@ -36,9 +36,10 @@ async fn default_spawn_background_tasks_is_noop() {
     use sea_orm::Database;
 
     let graft = StubGraft::diamond();
+    let meta_db = Database::connect("sqlite::memory:").await.unwrap();
     let demo_db = Database::connect("sqlite::memory:").await.unwrap();
     let prod_db = Database::connect("sqlite::memory:").await.unwrap();
-    let state = support::stub_app_state(demo_db, prod_db, "/tmp/test-bg".into());
+    let state = support::stub_app_state(meta_db, demo_db, prod_db, "/tmp/test-bg".into());
 
     // Should complete immediately without panicking
     graft.spawn_background_tasks(&state);

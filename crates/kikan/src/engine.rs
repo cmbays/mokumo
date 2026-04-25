@@ -124,9 +124,45 @@ impl<G: Graft> Engine<G> {
         })
     }
 
+    /// Run every migration in `all_migrations` against `pool`, ignoring
+    /// `Migration::target()` entirely. Suitable for legacy paths that
+    /// haven't been moved onto the target-aware orchestrator yet.
+    ///
+    /// Production boot uses [`Engine::run_meta_migrations`] +
+    /// [`Engine::run_per_profile_migrations`] so each migration lands on
+    /// the pool whose role matches its target — see
+    /// `adr-kikan-upgrade-migration-strategy.md` §"Per-database
+    /// `kikan_migrations` history".
     pub async fn run_migrations(&self, pool: &DatabaseConnection) -> Result<(), EngineError> {
         migrations::runner::run_migrations_with_backfill(pool, &self.all_migrations, Some(G::id()))
             .await
+    }
+
+    /// Run only `MigrationTarget::Meta` migrations against the meta-DB pool.
+    pub async fn run_meta_migrations(
+        &self,
+        meta_pool: &DatabaseConnection,
+    ) -> Result<(), EngineError> {
+        migrations::runner::run_migrations_for_target(
+            meta_pool,
+            &self.all_migrations,
+            crate::migrations::MigrationTarget::Meta,
+        )
+        .await
+    }
+
+    /// Run only `MigrationTarget::PerProfile` migrations against the given
+    /// per-profile pool. Callers loop over each per-profile pool.
+    pub async fn run_per_profile_migrations(
+        &self,
+        profile_pool: &DatabaseConnection,
+    ) -> Result<(), EngineError> {
+        migrations::runner::run_migrations_for_target(
+            profile_pool,
+            &self.all_migrations,
+            crate::migrations::MigrationTarget::PerProfile,
+        )
+        .await
     }
 
     /// Boot the engine: construct the Engine, then assemble the full
@@ -159,6 +195,7 @@ impl<G: Graft> Engine<G> {
     pub async fn boot(
         config: BootConfig,
         graft: &G,
+        meta_db: DatabaseConnection,
         pools: HashMap<ProfileDirName, DatabaseConnection>,
         active_profile: ProfileDirName,
         session_store: SqliteStore,
@@ -186,9 +223,15 @@ impl<G: Graft> Engine<G> {
             activity_writer.clone(),
         )?;
 
-        // Run migrations on every profile database.
+        // Target-aware migration dispatch per
+        // `adr-kikan-upgrade-migration-strategy.md`: meta migrations land
+        // on meta.db (once per install), per-profile migrations land on
+        // each per-profile pool. Cross-target deps (e.g. PerProfile→Meta)
+        // are valid; the DAG resolver returns a single topological order
+        // and each function filters by target.
+        engine.run_meta_migrations(&meta_db).await?;
         for pool in pools.values() {
-            engine.run_migrations(pool).await?;
+            engine.run_per_profile_migrations(pool).await?;
         }
 
         let first_launch = !engine.config.data_dir.join("active_profile").exists();
@@ -222,6 +265,7 @@ impl<G: Graft> Engine<G> {
         let platform = PlatformState {
             data_dir: engine.config.data_dir.clone(),
             db_filename: graft.db_filename(),
+            meta_db,
             pools: Arc::new(pools),
             active_profile: Arc::new(RwLock::new(active_profile)),
             profile_dir_names,

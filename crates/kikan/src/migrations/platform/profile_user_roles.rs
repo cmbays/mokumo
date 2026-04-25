@@ -27,7 +27,7 @@ impl Migration for ProfileUserRoles {
     }
 
     fn target(&self) -> MigrationTarget {
-        MigrationTarget::PerProfile
+        MigrationTarget::Meta
     }
 
     fn dependencies(&self) -> Vec<MigrationRef> {

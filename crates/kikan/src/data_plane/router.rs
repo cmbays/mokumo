@@ -247,12 +247,14 @@ mod compose_router_tests {
     async fn fixture() -> (PlatformState, Sessions, DataPlaneConfig) {
         let dir = ProfileDirName::new("test".to_string()).unwrap();
         let pool = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
+        let meta_db = sea_orm::Database::connect("sqlite::memory:").await.unwrap();
         let mut pools: HashMap<ProfileDirName, sea_orm::DatabaseConnection> = HashMap::new();
         pools.insert(dir.clone(), pool);
 
         let platform = PlatformState {
             data_dir: PathBuf::from("/tmp"),
             db_filename: "test.db",
+            meta_db,
             pools: Arc::new(pools),
             active_profile: Arc::new(parking_lot::RwLock::new(dir.clone())),
             profile_dir_names: Arc::from(vec![dir.clone()]),

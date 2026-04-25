@@ -441,7 +441,12 @@ pub async fn boot_test_server(
     let profile_initializer: kikan::platform_state::SharedProfileDbInitializer =
         std::sync::Arc::new(mokumo_shop::profile_db_init::MokumoProfileDbInitializer);
 
-    let boot_config = kikan::BootConfig::new(data_dir);
+    let boot_config = kikan::BootConfig::new(data_dir.clone());
+    let meta_db_path = data_dir.join("meta.db");
+    let meta_db =
+        sea_orm::Database::connect(format!("sqlite://{}?mode=rwc", meta_db_path.display()))
+            .await
+            .expect("open meta.db for api BDD world");
 
     let mut pools = std::collections::HashMap::with_capacity(2);
     pools.insert(
@@ -457,6 +462,7 @@ pub async fn boot_test_server(
     let (engine, app_state) = kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
+        meta_db,
         pools,
         active_profile_dir,
         session_store,

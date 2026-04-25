@@ -1,5 +1,7 @@
 mod active_integrations;
 mod integration_event_log;
+mod m_0001_create_meta_profiles;
+mod m_0002_partition_legacy_history;
 mod prevent_last_admin_deactivation;
 mod profile_user_roles;
 mod shop_settings;
@@ -10,15 +12,16 @@ use std::sync::Arc;
 use sea_orm::DatabaseConnection;
 
 use crate::error::EngineError;
-use crate::migrations::Migration;
-use crate::migrations::bootstrap::BootstrapMigrations;
 use crate::migrations::runner::run_migrations;
+use crate::migrations::{GraftId, Migration};
 
 pub(crate) struct PlatformMigrations;
 
 impl PlatformMigrations {
     pub(crate) fn migrations() -> Vec<Box<dyn Migration>> {
         vec![
+            Box::new(m_0001_create_meta_profiles::CreateMetaProfiles),
+            Box::new(m_0002_partition_legacy_history::PartitionLegacyHistory),
             Box::new(users_and_roles::UsersAndRoles),
             Box::new(shop_settings::ShopSettings),
             Box::new(profile_user_roles::ProfileUserRoles),
@@ -30,8 +33,13 @@ impl PlatformMigrations {
         ]
     }
 
-    pub(crate) fn graft_id() -> crate::migrations::GraftId {
-        BootstrapMigrations::graft_id()
+    /// Graft id for the engine-platform migration set per
+    /// `adr-kikan-upgrade-migration-strategy.md` §"Existing Mokumo
+    /// migrations partition". Distinct from the bootstrap graft id
+    /// (`kikan`) which marks the two unconditional history-table
+    /// bootstrap migrations.
+    pub(crate) fn graft_id() -> GraftId {
+        GraftId::new("kikan::engine")
     }
 }
 

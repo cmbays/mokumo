@@ -34,7 +34,8 @@ async fn build_router_composes_layers_and_serves_404() {
     let demo_db = in_memory_db().await;
     let engine = Engine::new(config, &graft, pool.clone(), store).unwrap();
 
-    let state = stub_app_state(demo_db, pool, "/tmp/test-engine-router".into());
+    let meta_db = in_memory_db().await;
+    let state = stub_app_state(meta_db, demo_db, pool, "/tmp/test-engine-router".into());
     let router = engine.build_router(state);
     let request = Request::builder()
         .uri("/unknown")
@@ -57,7 +58,13 @@ async fn build_router_rejects_disallowed_host() {
     let demo_db = in_memory_db().await;
     let engine = Engine::new(config, &graft, pool.clone(), store).unwrap();
 
-    let state = stub_app_state(demo_db, pool, "/tmp/test-engine-router-host".into());
+    let meta_db = in_memory_db().await;
+    let state = stub_app_state(
+        meta_db,
+        demo_db,
+        pool,
+        "/tmp/test-engine-router-host".into(),
+    );
     let router = engine.build_router(state);
     let request = Request::builder()
         .uri("/unknown")
@@ -243,9 +250,11 @@ async fn boot_returns_engine_and_app_state() {
     );
     let active_profile_dir = kikan::tenancy::ProfileDirName::from(SetupMode::Demo.as_dir_name());
 
+    let meta_db = in_memory_db().await;
     let (engine, _state) = Engine::<StubGraft>::boot(
         config,
         &graft,
+        meta_db,
         pools,
         active_profile_dir,
         session_store,

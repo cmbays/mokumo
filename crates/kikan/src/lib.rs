@@ -66,12 +66,14 @@ pub mod engine;
 pub mod error;
 pub mod graft;
 pub mod logging;
+pub mod meta;
 pub mod middleware;
 pub mod migrations;
 pub mod platform;
 pub mod platform_state;
 pub mod profile_db;
 pub mod rate_limit;
+pub mod slug;
 pub mod tenancy;
 
 pub use activity::{ActivityLogEntry, ActivityWriter, SqliteActivityWriter};
@@ -86,9 +88,14 @@ pub use error::{
     ActivityWriteError, AppHandleError, DagError, EngineError, MigrationError, TenancyError,
 };
 pub use graft::{Graft, SelfGraft, SubGraft};
+pub use meta::{
+    BootState, BootStateDetectionError, Profile, ProfileRepo, ProfileRepoError, SeaOrmProfileRepo,
+    detect_boot_state,
+};
 pub use migrations::{GraftId, Migration, MigrationRef, MigrationTarget};
 pub use platform_state::{MdnsStatus, PlatformState, SharedMdnsStatus};
 pub use profile_db::{ActiveProfile, ProfileDb};
+pub use slug::{MAX_SLUG_LEN, RESERVED_SLUGS, Slug, SlugError, derive_slug};
 pub use tenancy::{ProfileId, Tenancy};
 
 // The graft's `ProfileKind` is the vertical's concern — kikan itself

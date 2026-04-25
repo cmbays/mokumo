@@ -141,9 +141,11 @@ mod tests {
         }
         let auth_dir = dir_names[0].clone();
         let active = dir_names[0].clone();
+        let meta_db = Database::connect("sqlite::memory:").await.unwrap();
         PlatformState {
             data_dir: PathBuf::from("/tmp"),
             db_filename: "test.db",
+            meta_db,
             pools: Arc::new(pools),
             active_profile: Arc::new(parking_lot::RwLock::new(active)),
             profile_dir_names: Arc::from(dir_names),
