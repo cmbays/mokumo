@@ -46,7 +46,7 @@ tasks:
       outputStyle: stream
       runFromWorkspaceRoot: true
   test:
-    command: cargo nextest run --profile ci --workspace --exclude mokumo-desktop --exclude kikan-tauri
+    command: cargo nextest run --profile ci --workspace --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui
     deps:
     - web:build
     inputs:
@@ -99,7 +99,7 @@ tasks:
     script: |
       set -euo pipefail
       mkdir -p tmp
-      cargo llvm-cov nextest --workspace --exclude mokumo-desktop --exclude kikan-tauri --lcov --output-path tmp/lcov.info
+      cargo llvm-cov nextest --workspace --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui --lcov --output-path tmp/lcov.info
       crap4rs --coverage tmp/lcov.info --src .
     deps:
     - web:build
@@ -112,7 +112,7 @@ tasks:
   coverage:
     # --lib: unit tests only. Integration/BDD coverage excluded intentionally at M0.
     # Add --tests when domain logic in crates/core/ warrants full-stack coverage.
-    command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --exclude kikan-tauri --json --output-path coverage.json
+    command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui --json --output-path coverage.json
     deps:
     - web:build
     inputs:
@@ -123,7 +123,7 @@ tasks:
   coverage-report:
     # Standalone alternative to `coverage` — re-runs tests with instrumentation.
     # Keep command flags in sync with `coverage` above.
-    command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --exclude kikan-tauri --html --output-dir coverage/rust
+    command: cargo llvm-cov nextest --lib --workspace --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui --html --output-dir coverage/rust
     deps:
     - web:build
     inputs:
@@ -132,7 +132,7 @@ tasks:
       cache: false
       runFromWorkspaceRoot: true
   lint:
-    command: cargo clippy --workspace --exclude mokumo-desktop --exclude kikan-tauri --all-targets -- -D warnings
+    command: cargo clippy --workspace --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui --all-targets -- -D warnings
     deps:
     - web:build
     inputs:
@@ -266,7 +266,7 @@ tasks:
       KIKAN_BINDINGS="$(mktemp -d)"
       trap 'rm -rf "$TEMP_BINDINGS" "$SHOP_BINDINGS" "$KIKAN_BINDINGS"' EXIT
 
-      TS_RS_EXPORT_DIR="$TEMP_BINDINGS" cargo test --workspace --exclude mokumo-desktop --exclude kikan-tauri
+      TS_RS_EXPORT_DIR="$TEMP_BINDINGS" cargo test --workspace --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui
 
       # Format generated files so diff ignores stylistic differences (oxfmt vs ts-rs)
       npx oxfmt "$TEMP_BINDINGS"/*.ts 2>/dev/null || true
