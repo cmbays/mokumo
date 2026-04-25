@@ -1,12 +1,9 @@
 <script lang="ts">
-  import { applyTokensToRoot, FALLBACK_BRANDING } from "$lib/branding";
-  import { onMount } from "svelte";
+  import { FALLBACK_BRANDING } from "$lib/branding";
 
   // Body-shell stub. The Get Started checklist + 4-region dashboard land in S5.
-  // The data-testid below is what the branding-token chrome contract test checks.
-  onMount(() => {
-    applyTokensToRoot(FALLBACK_BRANDING.tokens);
-  });
+  // The inline brand-token style satisfies the chrome contract test, which
+  // asserts that overview-body carries --brand-* somewhere on its style chain.
 </script>
 
 <section

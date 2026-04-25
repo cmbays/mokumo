@@ -4,7 +4,6 @@
   import ErrorState from "$lib/components/ErrorState.svelte";
   import EmptyState from "$lib/components/EmptyState.svelte";
   import ConnectionMonitor from "$lib/components/ConnectionMonitor.svelte";
-  import SelfHealingBanner from "$lib/components/SelfHealingBanner.svelte";
   import DestructiveConfirmModal from "$lib/components/DestructiveConfirmModal.svelte";
 
   // Test-only harness: dispatches on `?mode=...` to render shared components

@@ -5,29 +5,6 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <!--
-      First-paint brand-token fallback. Canonical defaults live in src/app.css
-      under :root (Tailwind v4 @theme reads them via var() references). This
-      block exists because Vite dev injects app.css via async <style> tags
-      that arrive AFTER the load event — without it, code that queries
-      :root brand vars before Vite's hydration sees empty strings. In a
-      production build the bundled <link rel="stylesheet"> is request-
-      blocking, so this fallback is redundant but harmless. Keep these
-      values in sync with src/app.css :root.
-    -->
-    <style>
-      :root {
-        --brand-bg: hsl(0 0% 100%);
-        --brand-fg: hsl(222 47% 11%);
-        --brand-primary: hsl(222 47% 11%);
-        --brand-primary-fg: hsl(210 40% 98%);
-        --brand-muted: hsl(210 40% 96%);
-        --brand-muted-fg: hsl(215 16% 47%);
-        --brand-border: hsl(214 32% 91%);
-        --brand-accent: #6366f1;
-        --brand-accent-fg: hsl(210 40% 98%);
-      }
-    </style>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover" class="h-full">

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import SelfHealingBanner from "./SelfHealingBanner.svelte";
 
   interface Props {
@@ -16,32 +15,41 @@
     firstProbeDelayMs = 0,
   }: Props = $props();
 
-  let online = $state(!initiallyOffline);
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let startup: ReturnType<typeof setTimeout> | undefined;
+  // Tri-state: undefined until the first probe completes; then true/false.
+  let probedOnline = $state<boolean | undefined>(undefined);
 
-  async function probe(): Promise<void> {
+  // Show the banner if a probe has confirmed offline OR if we haven't probed
+  // yet and the parent told us to start in the offline state.
+  let showBanner = $derived(
+    probedOnline === false || (probedOnline === undefined && initiallyOffline),
+  );
+
+  async function probe(signal: AbortSignal): Promise<void> {
     try {
-      await fetch("/api/platform/v1/branding", { cache: "no-store" });
-      online = true;
+      await fetch("/api/platform/v1/branding", { cache: "no-store", signal });
+      if (!signal.aborted) probedOnline = true;
     } catch {
-      online = false;
+      if (!signal.aborted) probedOnline = false;
     }
   }
 
-  onMount(() => {
-    startup = setTimeout(() => {
-      void probe();
-      timer = setInterval(probe, pollIntervalMs);
-    }, firstProbeDelayMs);
-  });
+  $effect(() => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setInterval> | undefined;
 
-  onDestroy(() => {
-    if (timer) clearInterval(timer);
-    if (startup) clearTimeout(startup);
+    const startup = setTimeout(() => {
+      void probe(controller.signal);
+      timer = setInterval(() => probe(controller.signal), pollIntervalMs);
+    }, firstProbeDelayMs);
+
+    return () => {
+      controller.abort();
+      clearTimeout(startup);
+      if (timer) clearInterval(timer);
+    };
   });
 </script>
 
-{#if !online}
+{#if showBanner}
   <SelfHealingBanner {nextRetryInSeconds} />
 {/if}

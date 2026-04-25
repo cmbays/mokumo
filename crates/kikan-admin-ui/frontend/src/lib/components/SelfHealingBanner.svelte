@@ -1,29 +1,23 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
-
   interface Props {
-    nextRetryInSeconds: number;
+    nextRetryInSeconds?: number;
   }
 
   let { nextRetryInSeconds = 5 }: Props = $props();
 
-  let displayMs = $state(nextRetryInSeconds * 1000);
-  let interval: ReturnType<typeof setInterval> | undefined;
-
-  onMount(() => {
-    interval = setInterval(() => {
-      displayMs = Math.max(0, displayMs - 100);
-      if (displayMs === 0) {
-        displayMs = nextRetryInSeconds * 1000;
-      }
-    }, 100);
-  });
-
-  onDestroy(() => {
-    if (interval) clearInterval(interval);
-  });
-
+  let displayMs = $state(0);
   let countdownText = $derived(`${(displayMs / 1000).toFixed(1)}s`);
+
+  // Reading nextRetryInSeconds inside the effect makes the timer reset if
+  // the parent changes the cadence after mount.
+  $effect(() => {
+    const totalMs = nextRetryInSeconds * 1000;
+    displayMs = totalMs;
+    const interval = setInterval(() => {
+      displayMs = displayMs <= 100 ? totalMs : displayMs - 100;
+    }, 100);
+    return () => clearInterval(interval);
+  });
 </script>
 
 <div
@@ -32,5 +26,8 @@
   aria-live="polite"
   class="flex items-center justify-between gap-4 rounded bg-amber-100 px-4 py-2 text-sm text-amber-900"
 >
-  <span>Connection lost. Retrying automatically — next attempt in <span data-testid="self-healing-banner-next-retry">{countdownText}</span>.</span>
+  <span
+    >Connection lost. Retrying automatically — next attempt in
+    <span data-testid="self-healing-banner-next-retry">{countdownText}</span>.</span
+  >
 </div>

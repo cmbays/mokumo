@@ -62,6 +62,7 @@
           <Tooltip.Portal>
             <Tooltip.Content
               sideOffset={6}
+              role="tooltip"
               aria-label={tooltipMessage}
               class="z-50 rounded bg-foreground px-3 py-1.5 text-xs text-background shadow"
             >

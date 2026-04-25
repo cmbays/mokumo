@@ -231,9 +231,23 @@ Then("the affordance is disabled", async ({ page }) => {
 Then(
   "the documented branding CSS custom properties are set on the chrome surfaces",
   async ({ page }) => {
-    const root = page.locator(":root");
-    const props = await root.evaluate((el) => {
-      const cs = getComputedStyle(el);
+    // Wait for the chrome to be visually present before sampling :root tokens.
+    // page.goto returns at the load event, but in CSR mode the layout effect
+    // that mirrors branding onto :root runs after hydration, and Vite-dev
+    // injects app.css asynchronously. Once the topbar testid is visible the
+    // layout has rendered and both sources of --brand-* are in place.
+    await expect(page.getByTestId("topbar")).toBeVisible();
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--brand-bg")
+            .trim(),
+        ),
+      )
+      .not.toBe("");
+    const props = await page.evaluate(() => {
+      const cs = getComputedStyle(document.documentElement);
       return {
         bg: cs.getPropertyValue("--brand-bg").trim(),
         fg: cs.getPropertyValue("--brand-fg").trim(),

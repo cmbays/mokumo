@@ -1,37 +1,36 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
   import { page } from "$app/state";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import Topbar from "$lib/components/Topbar.svelte";
-  import { applyTokensToRoot, FALLBACK_BRANDING, loadBranding, type BrandingConfig } from "$lib/branding";
+  import { applyTokensToRoot } from "$lib/branding";
   import { fetchPlatform } from "$lib/platform";
 
-  let { children } = $props();
+  let { data, children } = $props();
 
-  let branding = $state<BrandingConfig>(FALLBACK_BRANDING);
+  let branding = $derived(data.branding);
   let runningShops = $state(1);
-  let appMetaTimer: ReturnType<typeof setInterval> | undefined;
 
-  async function refreshAppMeta(): Promise<void> {
+  async function refreshAppMeta(signal: AbortSignal): Promise<void> {
     try {
-      const meta = await fetchPlatform<{ running_shops: number }>("/app-meta");
-      runningShops = meta.running_shops;
+      const meta = await fetchPlatform<{ running_shops: number }>("/app-meta", { signal });
+      if (!signal.aborted) runningShops = meta.running_shops;
     } catch {
       // Leave the previous value; the chrome still renders.
     }
   }
 
-  onMount(() => {
-    void loadBranding().then((b) => {
-      branding = b;
-      applyTokensToRoot(b.tokens);
-    });
-    void refreshAppMeta();
-    appMetaTimer = setInterval(refreshAppMeta, 1500);
+  $effect(() => {
+    applyTokensToRoot(branding.tokens);
   });
 
-  onDestroy(() => {
-    if (appMetaTimer) clearInterval(appMetaTimer);
+  $effect(() => {
+    const controller = new AbortController();
+    void refreshAppMeta(controller.signal);
+    const timer = setInterval(() => refreshAppMeta(controller.signal), 1500);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
   });
 </script>
 
