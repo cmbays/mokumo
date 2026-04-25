@@ -199,6 +199,53 @@ async fn url10_static_asset_dispatches_to_static_handler() {
     assert_dispatch!("/static/logo.png", "STATIC");
 }
 
+/// Invariant pin: registering the same prefix twice is a composition
+/// bug, not a runtime condition. The constructor uses `debug_assert!`,
+/// which is a no-op in release — gate the panic expectation on
+/// `debug_assertions` and skip the test otherwise.
+#[test]
+#[cfg_attr(debug_assertions, should_panic(expected = "duplicate SpaMount prefix"))]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "debug_assert! is a no-op in release builds"
+)]
+fn with_mount_panics_on_duplicate_prefix() {
+    let _ = CompositeSpaSource::new(Box::new(EchoSpa::new("shop")))
+        .with_mount("/admin", Box::new(EchoSpa::new("admin1")))
+        .with_mount("/admin", Box::new(EchoSpa::new("admin2")));
+}
+
+/// Invariant pin: a mount prefix must start with `/`. Same release-vs-debug
+/// caveat as above.
+#[test]
+#[cfg_attr(
+    debug_assertions,
+    should_panic(expected = "SpaMount prefix must start with /")
+)]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "debug_assert! is a no-op in release builds"
+)]
+fn with_mount_panics_when_prefix_missing_leading_slash() {
+    let _ = CompositeSpaSource::new(Box::new(EchoSpa::new("shop")))
+        .with_mount("admin", Box::new(EchoSpa::new("admin")));
+}
+
+/// Invariant pin: a non-root mount prefix must not end with `/`.
+#[test]
+#[cfg_attr(
+    debug_assertions,
+    should_panic(expected = "SpaMount prefix must not end with /")
+)]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "debug_assert! is a no-op in release builds"
+)]
+fn with_mount_panics_when_prefix_has_trailing_slash() {
+    let _ = CompositeSpaSource::new(Box::new(EchoSpa::new("shop")))
+        .with_mount("/admin/", Box::new(EchoSpa::new("admin")));
+}
+
 #[tokio::test]
 async fn dispatch_summary_sorts_longest_prefix_first() {
     let composite = CompositeSpaSource::new(Box::new(EchoSpa::new("shop")))
