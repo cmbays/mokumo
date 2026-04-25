@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { cn } from "$lib/utils.js";
+
   export interface WizardStep {
     id: string;
     label: string;
@@ -20,27 +23,27 @@
   {#each steps as step, i (step.id)}
     {@const active = step.id === currentId}
     <li data-step data-step-id={step.id} class="flex items-center gap-2">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         data-testid="{stepTestidPrefix}-{step.id}"
         data-active={active ? "true" : "false"}
         onclick={() => onSelect?.(step.id)}
-        class="flex items-center gap-2 rounded px-2 py-1 text-sm"
-        class:font-semibold={active}
-        class:text-primary={active}
-        class:text-muted-foreground={!active}
+        class={cn("gap-2", active ? "font-semibold text-primary" : "text-muted-foreground")}
       >
         <span
-          class="flex h-6 w-6 items-center justify-center rounded-full border text-xs"
-          class:border-primary={active}
-          class:bg-primary={active}
-          class:text-primary-foreground={active}
-          class:border-border={!active}
+          class={cn(
+            "flex h-6 w-6 items-center justify-center rounded-full border text-xs",
+            active
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border",
+          )}
         >
           {i + 1}
         </span>
         <span>{step.label}</span>
-      </button>
+      </Button>
       {#if i < steps.length - 1}
         <span aria-hidden="true" class="h-px w-6 bg-border"></span>
       {/if}

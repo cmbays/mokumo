@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { Tooltip } from "bits-ui";
+  import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+  } from "$lib/components/ui/tooltip/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
   import HelpCircle from "@lucide/svelte/icons/help-circle";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import type { BrandingConfig } from "../branding";
@@ -37,61 +43,51 @@
   </div>
 
   <div class="flex items-center gap-2">
-    <Tooltip.Provider delayDuration={0}>
-      <Tooltip.Root>
-        <Tooltip.Trigger>
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger>
           {#snippet child({ props })}
             {#if canOpenShop}
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 data-testid="topbar-open-shop"
                 {...props}
-                class="flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent"
               >
                 <ExternalLink class="size-4" />
                 Open {branding.shopNounSingular}
-              </button>
+              </Button>
             {:else}
-              <!-- Disabled <button> swallows pointer events, so the focusable
-                   wrapper carries hover + keyboard focus to surface the tooltip. -->
               <span {...props} class="inline-block">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   data-testid="topbar-open-shop"
-                  disabled
                   aria-disabled="true"
                   tabindex={-1}
-                  class="flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm font-medium opacity-50 disabled:cursor-not-allowed"
+                  class="cursor-not-allowed opacity-50"
+                  onclick={(e) => e.preventDefault()}
                 >
                   <ExternalLink class="size-4" />
                   Open {branding.shopNounSingular}
-                </button>
+                </Button>
               </span>
             {/if}
           {/snippet}
-        </Tooltip.Trigger>
+        </TooltipTrigger>
         {#if !canOpenShop}
-          <Tooltip.Portal>
-            <Tooltip.Content
-              sideOffset={6}
-              role="tooltip"
-              aria-label={tooltipMessage}
-              class="z-50 rounded bg-foreground px-3 py-1.5 text-xs text-background shadow"
-            >
-              {tooltipMessage}
-            </Tooltip.Content>
-          </Tooltip.Portal>
+          <TooltipContent sideOffset={6} role="tooltip" aria-label={tooltipMessage}>
+            {tooltipMessage}
+          </TooltipContent>
         {/if}
-      </Tooltip.Root>
-    </Tooltip.Provider>
+      </Tooltip>
+    </TooltipProvider>
 
-    <button
-      type="button"
-      data-testid="topbar-help"
-      class="flex items-center gap-1 rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent"
-    >
+    <Button type="button" variant="outline" size="sm" data-testid="topbar-help">
       <HelpCircle class="size-4" />
       Help
-    </button>
+    </Button>
   </div>
 </header>

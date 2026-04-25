@@ -2,6 +2,9 @@
   import { base } from "$app/paths";
   import { navEntries, isActive } from "../nav";
   import type { BrandingConfig } from "../branding";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Separator } from "$lib/components/ui/separator/index.js";
+  import { cn } from "$lib/utils.js";
 
   interface Props {
     currentPath: string;
@@ -19,6 +22,8 @@
 
   let topEntries = $derived(navEntries.filter((e) => e.group === "TOP"));
   let profileEntries = $derived(navEntries.filter((e) => e.group === "PROFILE"));
+
+  const linkBase = "w-full justify-start gap-2 px-3";
 </script>
 
 <aside
@@ -37,26 +42,25 @@
     {#each topEntries as entry (entry.id)}
       {@const href = `${base}${entry.path}`}
       {@const active = isActive(currentPath, entry, base)}
-      <a
+      <Button
         {href}
+        variant="ghost"
         data-nav-entry
         data-nav-id={entry.id}
         data-nav-label={entry.label}
         data-nav-group={entry.group}
         data-active={active ? "true" : "false"}
-        class="flex items-center gap-2 rounded px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-        class:bg-accent={active}
-        class:font-medium={active}
+        class={cn(linkBase, active && "bg-accent text-accent-foreground font-medium")}
       >
         <entry.icon class="size-4" />
         <span>{entry.label}</span>
-      </a>
+      </Button>
     {/each}
   </nav>
 
   <div data-testid="sidebar-profile-divider" class="mb-2 mt-6 flex items-center gap-2 px-3">
     <span class="text-xs font-semibold tracking-widest text-muted-foreground">PROFILE</span>
-    <hr class="flex-1 border-t border-border" />
+    <Separator class="flex-1" />
   </div>
 
   <div data-testid="sidebar-profile-switcher" class="px-3 py-2">
@@ -64,21 +68,23 @@
       <span class="text-xs uppercase tracking-wide text-muted-foreground">
         Active {branding.shopNounSingular}
       </span>
-      <button
+      <Button
         type="button"
-        class="rounded bg-accent px-3 py-2 text-left text-sm font-medium"
+        variant="secondary"
+        class="justify-start"
         data-profile-state="active"
       >
         {activeProfileName}
-      </button>
+      </Button>
       {#each otherProfileNames as name (name)}
-        <button
+        <Button
           type="button"
-          class="rounded px-3 py-2 text-left text-sm text-muted-foreground"
+          variant="ghost"
+          class="justify-start text-muted-foreground"
           data-profile-state="inactive"
         >
           {name}
-        </button>
+        </Button>
       {/each}
     </div>
   </div>
@@ -87,20 +93,19 @@
     {#each profileEntries as entry (entry.id)}
       {@const href = `${base}${entry.path}`}
       {@const active = isActive(currentPath, entry, base)}
-      <a
+      <Button
         {href}
+        variant="ghost"
         data-nav-entry
         data-nav-id={entry.id}
         data-nav-label={entry.label}
         data-nav-group={entry.group}
         data-active={active ? "true" : "false"}
-        class="flex items-center gap-2 rounded px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-        class:bg-accent={active}
-        class:font-medium={active}
+        class={cn(linkBase, active && "bg-accent text-accent-foreground font-medium")}
       >
         <entry.icon class="size-4" />
         <span>{entry.label}</span>
-      </a>
+      </Button>
     {/each}
   </nav>
 </aside>
