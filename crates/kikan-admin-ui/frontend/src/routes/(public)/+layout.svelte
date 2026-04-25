@@ -31,7 +31,7 @@
   </header>
 
   <div class="px-6 pt-3">
-    <ConnectionMonitor />
+    <ConnectionMonitor pollIntervalMs={1500} />
   </div>
 
   <main class="flex flex-1 items-start justify-center p-8">

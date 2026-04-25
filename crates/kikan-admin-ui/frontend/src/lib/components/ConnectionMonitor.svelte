@@ -9,7 +9,7 @@
   }
 
   let {
-    pollIntervalMs = 400,
+    pollIntervalMs = 5000,
     nextRetryInSeconds = 5,
     initiallyOffline = false,
     firstProbeDelayMs = 0,
@@ -41,17 +41,19 @@
 
   $effect(() => {
     const controller = new AbortController();
-    let timer: ReturnType<typeof setInterval> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const startup = setTimeout(() => {
-      void probe(controller.signal);
-      timer = setInterval(() => probe(controller.signal), pollIntervalMs);
-    }, firstProbeDelayMs);
+    async function loop(): Promise<void> {
+      await probe(controller.signal);
+      if (controller.signal.aborted) return;
+      timer = setTimeout(loop, pollIntervalMs);
+    }
+
+    timer = setTimeout(loop, firstProbeDelayMs);
 
     return () => {
       controller.abort();
-      clearTimeout(startup);
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
     };
   });
 </script>

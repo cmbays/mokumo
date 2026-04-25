@@ -66,7 +66,7 @@ export async function fetchPlatform<T>(path: string, opts: FetchOptions = {}): P
 /** Tiny health probe used by the SelfHealingBanner / ConnectionMonitor. */
 export async function pingPlatform(signal?: AbortSignal): Promise<boolean> {
   try {
-    const r = await fetch(`${PLATFORM_PREFIX}/branding`, { signal });
+    const r = await fetch(`${PLATFORM_PREFIX}/branding`, { signal, cache: "no-store" });
     return r.ok;
   } catch {
     return false;

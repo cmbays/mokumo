@@ -89,7 +89,8 @@
       const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
       if (!anchor) return;
       const href = anchor.getAttribute("href") ?? "";
-      if (!href.startsWith("/admin")) return;
+      if (!href.startsWith("/")) return;
+      if (base !== "" && !(href === base || href.startsWith(`${base}/`))) return;
       if (anchor.dataset.bypassLeaveGuard === "true") return;
       e.preventDefault();
       leaveDialogOpen = true;

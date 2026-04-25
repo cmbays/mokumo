@@ -31,11 +31,19 @@
 
   $effect(() => {
     const controller = new AbortController();
-    void refreshAppMeta(controller.signal);
-    const timer = setInterval(() => refreshAppMeta(controller.signal), 1500);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function loop(): Promise<void> {
+      await refreshAppMeta(controller.signal);
+      if (controller.signal.aborted) return;
+      timer = setTimeout(loop, 10000);
+    }
+
+    void loop();
+
     return () => {
       controller.abort();
-      clearInterval(timer);
+      if (timer) clearTimeout(timer);
     };
   });
 </script>
