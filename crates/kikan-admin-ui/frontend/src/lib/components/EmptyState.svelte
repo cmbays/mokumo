@@ -1,5 +1,14 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+  } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   interface Props {
     title: string;
@@ -12,22 +21,17 @@
   let { title, description, primaryActionLabel, onPrimaryAction, icon }: Props = $props();
 </script>
 
-<div
-  data-testid="empty-state"
-  class="flex flex-col items-center gap-3 rounded border border-dashed border-muted-foreground/30 bg-muted/30 p-12 text-center"
->
-  {#if icon}
-    <span class="text-muted-foreground">{@render icon()}</span>
-  {/if}
-  <h2 class="text-lg font-semibold">{title}</h2>
-  <p class="max-w-md text-sm text-muted-foreground">{description}</p>
+<Card data-testid="empty-state" class="border-dashed text-center">
+  <CardHeader class="items-center">
+    {#if icon}
+      <span class="text-muted-foreground">{@render icon()}</span>
+    {/if}
+    <CardTitle class="text-lg">{title}</CardTitle>
+    <CardDescription class="max-w-md">{description}</CardDescription>
+  </CardHeader>
   {#if primaryActionLabel && onPrimaryAction}
-    <button
-      type="button"
-      onclick={onPrimaryAction}
-      class="mt-3 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-    >
-      {primaryActionLabel}
-    </button>
+    <CardContent class="flex justify-center">
+      <Button type="button" onclick={onPrimaryAction}>{primaryActionLabel}</Button>
+    </CardContent>
   {/if}
-</div>
+</Card>

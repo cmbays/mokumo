@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Alert, AlertDescription, AlertTitle } from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+
   interface Props {
     title?: string;
     description?: string;
@@ -24,21 +27,12 @@
   }
 </script>
 
-<div
-  data-testid="error-state"
-  role="alert"
-  class="flex flex-col items-start gap-3 rounded border border-destructive/30 bg-destructive/5 p-6"
->
-  <h2 class="text-lg font-semibold">{title}</h2>
-  <p class="text-sm text-muted-foreground">{description}</p>
+<Alert data-testid="error-state" variant="destructive" class="flex flex-col items-start gap-3">
+  <AlertTitle class="text-lg font-semibold">{title}</AlertTitle>
+  <AlertDescription>{description}</AlertDescription>
   {#if onRetry}
-    <button
-      type="button"
-      onclick={handleRetry}
-      disabled={retrying}
-      class="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-    >
+    <Button type="button" variant="default" onclick={handleRetry} disabled={retrying}>
       Try again
-    </button>
+    </Button>
   {/if}
-</div>
+</Alert>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
+
   interface Props {
     label?: string;
     regions?: number;
@@ -15,10 +17,10 @@
 >
   <span class="sr-only">{label}</span>
   {#each Array(regions) as _, i (i)}
-    <div
+    <Skeleton
       data-skeleton-region
-      class="h-4 w-full animate-pulse rounded bg-muted"
-      style:width={i === 0 ? "60%" : i === regions - 1 ? "40%" : "100%"}
-    ></div>
+      class="h-4"
+      style="width: {i === 0 ? '60%' : i === regions - 1 ? '40%' : '100%'}"
+    />
   {/each}
 </div>
