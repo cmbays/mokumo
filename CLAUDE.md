@@ -203,6 +203,7 @@ session branches ──PR──→ main ──release──→ GitHub Releases (
 - No separate CSS files — Tailwind only
 - No emoji icons — Lucide only
 - No Svelte 4 patterns — runes only
+- No hand-rolled UI primitives in `apps/web/` or `crates/kikan-admin-ui/frontend/` — when a standard component is needed (button, input, card, dialog, tooltip, alert, skeleton, separator, sonner, etc.) run `pnpm dlx shadcn-svelte@latest add <component>` (or `npx svx add <component>`) and import from `$lib/components/ui/<component>/index.js`. Direct `bits-ui` imports outside `$lib/components/ui/**` are forbidden.
 - No `any` types in TypeScript — infer from ts-rs generated types
 - No floating-point for money — Rust integer-cents or fixed-point
 - No pushing to main directly

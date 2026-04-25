@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button/index.js";
 </script>
 
 <svelte:head>
@@ -11,10 +12,5 @@
     Your account doesn't have administrator permissions. Ask an installation
     administrator to grant you access if you need to manage this deployment.
   </p>
-  <a
-    href="/"
-    class="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-  >
-    Back to shop
-  </a>
+  <Button href="/">Back to shop</Button>
 </main>
