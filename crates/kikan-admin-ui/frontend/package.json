@@ -10,6 +10,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "bddgen": "pnpm exec bddgen",
+    "bdd-pr2a": "pnpm exec bddgen && pnpm exec playwright test --project pr2a --grep @pr2a",
     "screens": "pnpm exec bddgen && pnpm exec playwright test --project screens"
   },
   "devDependencies": {
