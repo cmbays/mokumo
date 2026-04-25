@@ -36,7 +36,10 @@ const POPULATED_OVERVIEW = {
 };
 
 async function gotoSignedInOverview(page: Page): Promise<void> {
-  await mockBranding(page);
+  // Branding is mocked by individual scenarios that care about specific values
+  // (default vs custom shop noun); the chrome falls back to FALLBACK_BRANDING
+  // when /branding 404s, so omitting the mock here lets a custom-noun Given
+  // earlier in the scenario survive without being clobbered by a default mock.
   await mockAuthMe(page, { signed_in: true, install_role: "Admin" });
   await mockProfiles(page, [{ id: "p-1", name: "Default", active: true }]);
   await mockAppMeta(page, {

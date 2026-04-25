@@ -3,6 +3,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --brand-bg: hsl(0 0% 100%);
+  --brand-fg: hsl(222 47% 11%);
+  --brand-primary: hsl(222 47% 11%);
+  --brand-primary-fg: hsl(210 40% 98%);
+  --brand-muted: hsl(210 40% 96%);
+  --brand-muted-fg: hsl(215 16% 47%);
+  --brand-border: hsl(214 32% 91%);
+  --brand-accent: #6366f1;
+  --brand-accent-fg: hsl(210 40% 98%);
+}
+
 @theme {
   --color-background: var(--brand-bg, hsl(0 0% 100%));
   --color-foreground: var(--brand-fg, hsl(222 47% 11%));
