@@ -14,8 +14,10 @@
 use std::path::{Path, PathBuf};
 
 use rusqlite::OpenFlags;
-use sea_orm::{DatabaseBackend, DatabaseConnection, FromQueryResult, Statement};
+use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait};
 use thiserror::Error;
+
+use crate::meta::entity::profile;
 
 /// Why a `production/` folder was classified as abandoned mid-setup.
 ///
@@ -94,11 +96,6 @@ pub enum BootStateDetectionError {
     },
 }
 
-#[derive(Debug, FromQueryResult)]
-struct CountRow {
-    cnt: i64,
-}
-
 /// Inspect `<data_dir>` and return the boot state.
 ///
 /// `meta_pool` is the already-migrated meta DB pool; the function only reads
@@ -143,20 +140,23 @@ pub async fn detect_boot_state(
         Ok(true) => {}
     }
 
-    inspect_legacy_vertical_db(vertical_db_path)
+    // rusqlite is sync; hop onto the blocking pool so probing a slow legacy
+    // disk doesn't stall other boot tasks. join() returns a JoinError only
+    // when the thread panics, so unwrap() forwards an unexpected panic and
+    // never silently swallows a detection failure.
+    tokio::task::spawn_blocking(move || inspect_legacy_vertical_db(vertical_db_path))
+        .await
+        .expect("inspect_legacy_vertical_db panicked")
 }
 
 async fn count_meta_profiles(
     meta_pool: &DatabaseConnection,
 ) -> Result<usize, BootStateDetectionError> {
-    let row = CountRow::find_by_statement(Statement::from_string(
-        DatabaseBackend::Sqlite,
-        "SELECT COUNT(*) AS cnt FROM profiles",
-    ))
-    .one(meta_pool)
-    .await
-    .map_err(BootStateDetectionError::QueryMetaProfiles)?;
-    Ok(row.map(|r| r.cnt).unwrap_or(0).max(0) as usize)
+    let count = profile::Entity::find()
+        .count(meta_pool)
+        .await
+        .map_err(BootStateDetectionError::QueryMetaProfiles)?;
+    Ok(count as usize)
 }
 
 fn inspect_legacy_vertical_db(
@@ -219,9 +219,21 @@ mod tests {
 
     async fn open_meta_pool() -> DatabaseConnection {
         let pool = Database::connect("sqlite::memory:").await.unwrap();
-        pool.execute_unprepared("CREATE TABLE profiles (slug TEXT PRIMARY KEY)")
-            .await
-            .unwrap();
+        // Mirrors `m_0001_create_meta_profiles` so SeaORM's
+        // `Entity::find().count()` (which projects every column inside a
+        // subquery before counting) finds the columns it expects.
+        pool.execute_unprepared(
+            "CREATE TABLE profiles (
+                slug TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT '',
+                archived_at TEXT
+            )",
+        )
+        .await
+        .unwrap();
         pool
     }
 
@@ -274,9 +286,12 @@ mod tests {
     async fn post_upgrade_when_meta_profiles_has_rows() {
         let dir = tempfile::tempdir().unwrap();
         let pool = open_meta_pool().await;
-        pool.execute_unprepared("INSERT INTO profiles (slug) VALUES ('demo'), ('acme-printing')")
-            .await
-            .unwrap();
+        pool.execute_unprepared(
+            "INSERT INTO profiles (slug, display_name, kind) VALUES \
+             ('demo', 'Demo', 'demo'), ('acme-printing', 'Acme Printing', 'production')",
+        )
+        .await
+        .unwrap();
         let state = detect_boot_state(dir.path(), &pool, TEST_DB_FILE)
             .await
             .unwrap();

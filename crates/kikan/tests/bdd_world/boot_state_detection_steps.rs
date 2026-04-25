@@ -66,21 +66,36 @@ async fn fresh_data_dir(w: &mut KikanWorld) {
 #[given("a meta pool with the profiles table created")]
 async fn meta_pool_with_profiles_table(w: &mut KikanWorld) {
     let pool = Database::connect("sqlite::memory:").await.unwrap();
-    pool.execute_unprepared("CREATE TABLE profiles (slug TEXT PRIMARY KEY)")
-        .await
-        .unwrap();
+    // Mirrors `m_0001_create_meta_profiles`. SeaORM 2.x's
+    // `Entity::find().count()` projects every column inside a subquery
+    // before counting, so a slug-only stub would fail with
+    // "no such column: profiles.display_name".
+    pool.execute_unprepared(
+        "CREATE TABLE profiles (
+            slug TEXT PRIMARY KEY,
+            display_name TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT '',
+            archived_at TEXT
+        )",
+    )
+    .await
+    .unwrap();
     w.boot_state.as_mut().unwrap().meta_pool = Some(pool);
 }
 
-#[given(regex = r"^meta\.profiles has (\d+) rows$")]
+#[given(expr = "meta.profiles has {int} rows")]
 async fn meta_profiles_has_rows(w: &mut KikanWorld, n: usize) {
     let ctx = w.boot_state.as_mut().unwrap();
     let pool = ctx.meta_pool.as_ref().unwrap();
     for i in 0..n {
         let slug = format!("profile-{i}");
-        pool.execute_unprepared(&format!("INSERT INTO profiles (slug) VALUES ('{slug}')"))
-            .await
-            .unwrap();
+        pool.execute_unprepared(&format!(
+            "INSERT INTO profiles (slug, display_name, kind) VALUES ('{slug}', '{slug}', 'production')"
+        ))
+        .await
+        .unwrap();
     }
 }
 
@@ -96,7 +111,7 @@ async fn legacy_production_no_admin(w: &mut KikanWorld) {
     seed_legacy_vertical(&ctx.data_path().join("production"), false, "Acme Printing");
 }
 
-#[given(regex = r#"^a legacy production folder with an admin user and shop_name "(.*)"$"#)]
+#[given(expr = "a legacy production folder with an admin user and shop_name {string}")]
 async fn legacy_production_with_admin_and_shop_name(w: &mut KikanWorld, shop_name: String) {
     let ctx = w.boot_state.as_mut().unwrap();
     seed_legacy_vertical(&ctx.data_path().join("production"), true, &shop_name);
@@ -124,7 +139,7 @@ async fn assert_fresh_install(w: &mut KikanWorld) {
     );
 }
 
-#[then(regex = r"^the boot state is PostUpgradeOrSetup with profile_count (\d+)$")]
+#[then(expr = "the boot state is PostUpgradeOrSetup with profile_count {int}")]
 async fn assert_post_upgrade(w: &mut KikanWorld, expected: usize) {
     let state = w
         .boot_state
@@ -161,7 +176,7 @@ fn assert_legacy_abandoned(w: &KikanWorld, expected: AbandonReason) {
     assert_eq!(*reason, expected, "reason mismatch");
 }
 
-#[then(regex = r#"^the boot state is LegacyCompleted with shop_name "(.*)"$"#)]
+#[then(expr = "the boot state is LegacyCompleted with shop_name {string}")]
 async fn assert_legacy_completed(w: &mut KikanWorld, expected_name: String) {
     let state = w
         .boot_state
