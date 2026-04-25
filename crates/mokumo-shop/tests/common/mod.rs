@@ -24,6 +24,11 @@ pub async fn boot_router(
     shutdown_token: CancellationToken,
 ) -> (Router, Option<String>) {
     let session_db_path = data_dir.join("sessions.db");
+    let meta_db_path = data_dir.join("meta.db");
+    let meta_db =
+        kikan::db::initialize_database(&format!("sqlite:{}?mode=rwc", meta_db_path.display()))
+            .await
+            .expect("open meta.db for test boot");
 
     let (session_store, setup_completed, setup_token) =
         mokumo_shop::startup::init_session_and_setup(&production_db, &session_db_path)
@@ -70,6 +75,7 @@ pub async fn boot_router(
     let (engine, app_state) = kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
+        meta_db,
         pools,
         active_profile_dir,
         session_store,

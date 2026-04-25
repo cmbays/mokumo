@@ -5,8 +5,10 @@ use std::sync::Arc;
 
 mod activity_visibility_steps;
 mod control_plane_error_steps;
+mod meta_db_initialization_steps;
 mod migration_execution_steps;
 mod migration_ordering_steps;
+mod migration_target_routing_steps;
 mod user_repo_atomicity_steps;
 
 #[derive(World)]
@@ -31,6 +33,10 @@ pub struct KikanWorld {
     pub cp_error_status: Option<u16>,
     // user_repo_atomicity fixtures
     pub user_repo_ctx: Option<user_repo_atomicity_steps::UserRepoCtx>,
+    // meta_db_initialization fixtures
+    pub meta_init: Option<meta_db_initialization_steps::MetaDbInitCtx>,
+    // migration_target_routing fixtures
+    pub target_routing: Option<migration_target_routing_steps::TargetRoutingCtx>,
 }
 
 impl std::fmt::Debug for KikanWorld {
@@ -64,6 +70,8 @@ impl KikanWorld {
             cp_error_code: None,
             cp_error_status: None,
             user_repo_ctx: None,
+            meta_init: None,
+            target_routing: None,
         }
     }
 }

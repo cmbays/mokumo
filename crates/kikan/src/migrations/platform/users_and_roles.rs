@@ -16,7 +16,7 @@ impl Migration for UsersAndRoles {
     }
 
     fn target(&self) -> MigrationTarget {
-        MigrationTarget::PerProfile
+        MigrationTarget::Meta
     }
 
     fn dependencies(&self) -> Vec<MigrationRef> {

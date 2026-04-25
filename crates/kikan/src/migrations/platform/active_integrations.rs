@@ -32,7 +32,7 @@ impl Migration for ActiveIntegrations {
     }
 
     fn target(&self) -> MigrationTarget {
-        MigrationTarget::PerProfile
+        MigrationTarget::Meta
     }
 
     fn dependencies(&self) -> Vec<MigrationRef> {

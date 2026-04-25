@@ -121,6 +121,13 @@ async fn init_server(
         });
 
     let session_db_path = data_dir.join("sessions.db");
+    let meta_db_path = data_dir.join("meta.db");
+    let meta_db_url = format!("sqlite:{}?mode=rwc", meta_db_path.display());
+    let meta_db = kikan::db::initialize_database(&meta_db_url)
+        .await
+        .map_err(|e| {
+            std::io::Error::other(format!("open meta.db at {}: {e}", meta_db_path.display()))
+        })?;
     let (session_store, setup_completed, setup_token) =
         mokumo_shop::startup::init_session_and_setup(&production_db, &session_db_path).await?;
     let session_store_for_cleanup = session_store.clone();
@@ -170,6 +177,7 @@ async fn init_server(
     let (engine, app_state) = kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
+        meta_db,
         pools,
         active_profile_dir,
         session_store,

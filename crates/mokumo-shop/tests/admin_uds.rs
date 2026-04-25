@@ -13,6 +13,9 @@ use tokio_util::sync::CancellationToken;
 
 /// Build a minimal `PlatformState` for testing with in-memory databases.
 async fn test_platform_state(data_dir: &Path) -> kikan::PlatformState {
+    let meta_db = kikan::db::initialize_database("sqlite::memory:")
+        .await
+        .unwrap();
     let demo_db = kikan::db::initialize_database("sqlite::memory:")
         .await
         .unwrap();
@@ -20,11 +23,12 @@ async fn test_platform_state(data_dir: &Path) -> kikan::PlatformState {
         .await
         .unwrap();
 
-    build_test_platform_state(data_dir.to_path_buf(), demo_db, production_db)
+    build_test_platform_state(data_dir.to_path_buf(), meta_db, demo_db, production_db)
 }
 
 fn build_test_platform_state(
     data_dir: std::path::PathBuf,
+    meta_db: sea_orm::DatabaseConnection,
     demo_db: sea_orm::DatabaseConnection,
     production_db: sea_orm::DatabaseConnection,
 ) -> kikan::PlatformState {
@@ -43,6 +47,7 @@ fn build_test_platform_state(
     kikan::PlatformState {
         data_dir,
         db_filename: "mokumo.db",
+        meta_db,
         pools: Arc::new(pools),
         active_profile: Arc::new(parking_lot::RwLock::new(demo_dir)),
         profile_dir_names,
@@ -525,7 +530,11 @@ async fn admin_uds_backups_create_produces_file() {
         .await
         .unwrap();
 
-    let platform = build_test_platform_state(tmp.path().to_path_buf(), demo_db, production_db);
+    let meta_db = kikan::db::initialize_database("sqlite::memory:")
+        .await
+        .unwrap();
+    let platform =
+        build_test_platform_state(tmp.path().to_path_buf(), meta_db, demo_db, production_db);
     let router = mokumo_shop::admin::build_admin_router(platform);
 
     let socket_path_clone = socket_path.clone();

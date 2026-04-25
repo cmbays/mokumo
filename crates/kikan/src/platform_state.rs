@@ -102,6 +102,12 @@ pub struct PlatformState {
     /// Kikan uses it to construct `{data_dir}/{dir_name}/{db_filename}` paths
     /// without naming the vertical file.
     pub db_filename: &'static str,
+    /// Process-wide meta DB connection. Source of truth for install-level
+    /// state — `meta.profiles` (the runtime profile registry), users,
+    /// roles, integrations. Per
+    /// `adr-kikan-upgrade-migration-strategy.md`, every database has its
+    /// own `kikan_migrations` history; meta migrations are recorded here.
+    pub meta_db: DatabaseConnection,
     /// Per-profile database connections, keyed by the opaque
     /// [`ProfileDirName`] (= `kind.to_string()`). Lookup by `&str` via
     /// `db_for`.

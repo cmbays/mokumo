@@ -23,6 +23,7 @@ use tracing::info;
 use crate::error::{EngineError, MigrationError};
 use crate::migrations::GraftId;
 use crate::migrations::Migration;
+use crate::migrations::MigrationTarget;
 use crate::migrations::bootstrap;
 use crate::migrations::conn::MigrationConn;
 use crate::migrations::dag;
@@ -31,12 +32,54 @@ pub async fn run_migrations(
     pool: &DatabaseConnection,
     all_migrations: &[Arc<dyn Migration>],
 ) -> Result<(), EngineError> {
-    run_migrations_with_backfill(pool, all_migrations, None).await
+    run_migrations_inner(pool, all_migrations, None, None).await
 }
 
 pub async fn run_migrations_with_backfill(
     pool: &DatabaseConnection,
     all_migrations: &[Arc<dyn Migration>],
+    backfill_graft_id: Option<GraftId>,
+) -> Result<(), EngineError> {
+    run_migrations_inner(pool, all_migrations, None, backfill_graft_id).await
+}
+
+/// Run only the migrations whose `target()` matches `target` against `pool`.
+///
+/// Per `adr-kikan-upgrade-migration-strategy.md` the runner dispatches each
+/// migration to a pool whose role matches its target. The orchestrator
+/// (Engine boot) calls this once per (pool, target) pair: meta migrations
+/// against the meta pool, per-profile migrations against each per-profile
+/// pool. Each pool's `kikan_migrations` is the source of truth for what was
+/// applied to that database. Cross-target dependencies (e.g. a PerProfile
+/// migration depending on a Meta migration) resolve through the DAG; the
+/// dependency is satisfied as long as the depended-on migration has been
+/// applied to its own target pool, which the orchestrator ensures by
+/// running Meta first.
+pub async fn run_migrations_for_target(
+    pool: &DatabaseConnection,
+    all_migrations: &[Arc<dyn Migration>],
+    target: MigrationTarget,
+) -> Result<(), EngineError> {
+    run_migrations_inner(pool, all_migrations, Some(target), None).await
+}
+
+/// Like [`run_migrations_for_target`], but additionally backfills any
+/// pre-existing `seaql_migrations` rows on the pool into `kikan_migrations`
+/// under `backfill_graft_id` so migrations applied through SeaORM's
+/// `Migrator::up` are not re-applied by the kikan runner.
+pub async fn run_migrations_for_target_with_backfill(
+    pool: &DatabaseConnection,
+    all_migrations: &[Arc<dyn Migration>],
+    target: MigrationTarget,
+    backfill_graft_id: Option<GraftId>,
+) -> Result<(), EngineError> {
+    run_migrations_inner(pool, all_migrations, Some(target), backfill_graft_id).await
+}
+
+async fn run_migrations_inner(
+    pool: &DatabaseConnection,
+    all_migrations: &[Arc<dyn Migration>],
+    target_filter: Option<MigrationTarget>,
     backfill_graft_id: Option<GraftId>,
 ) -> Result<(), EngineError> {
     bootstrap_tables(pool).await?;
@@ -50,6 +93,7 @@ pub async fn run_migrations_with_backfill(
 
     let unapplied: Vec<_> = ordered
         .into_iter()
+        .filter(|m| target_filter.is_none_or(|t| m.target() == t))
         .filter(|m| !applied.contains(&(m.graft_id().get().to_string(), m.name().to_string())))
         .collect();
 

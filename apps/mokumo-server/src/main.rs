@@ -482,6 +482,7 @@ async fn cmd_serve(data_dir: PathBuf, args: ServeArgs, verbose: u8, quiet: bool)
     // precedes Engine::boot because `setup_completed` and `setup_token`
     // are PlatformState inputs).
     let session_db_path = data_dir.join("sessions.db");
+    let meta_db = open_meta_db_rwc(&data_dir).await;
     let (session_store, setup_completed, setup_token) =
         match mokumo_shop::startup::init_session_and_setup(&production_db, &session_db_path).await {
             Ok(r) => r,
@@ -545,6 +546,7 @@ async fn cmd_serve(data_dir: PathBuf, args: ServeArgs, verbose: u8, quiet: bool)
     let (engine, app_state) = match kikan::Engine::<mokumo_shop::graft::MokumoApp>::boot(
         boot_config,
         &graft,
+        meta_db,
         pools,
         active_profile_dir,
         session_store,
@@ -851,9 +853,19 @@ async fn cmd_bootstrap(
             }
         };
 
+    let bootstrap_meta_db = open_meta_db_rwc(&data_dir).await;
+
+    if let Err(e) =
+        kikan::migrations::platform::run_platform_meta_migrations(&bootstrap_meta_db).await
+    {
+        eprintln!("Failed to apply Meta migrations to meta.db: {e}");
+        std::process::exit(1);
+    }
+
     // Build a minimal ControlPlaneState for bootstrap.
     let platform = build_bootstrap_platform_state(
         data_dir.clone(),
+        bootstrap_meta_db,
         _demo_db,
         production_db,
         kikan::tenancy::ProfileDirName::from(kikan_types::SetupMode::Production.as_dir_name()),
@@ -1429,8 +1441,11 @@ async fn build_readonly_platform_state(data_dir: &std::path::Path) -> kikan::Pla
     let demo_db = open_readonly_db(&demo_db_path).await;
     let production_db = open_readonly_db(&production_db_path).await;
 
+    let meta_db = open_readonly_db(&data_dir.join("meta.db")).await;
+
     build_bootstrap_platform_state(
         data_dir.to_path_buf(),
+        meta_db,
         demo_db,
         production_db,
         kikan::tenancy::ProfileDirName::from(active_profile.as_dir_name()),
@@ -1442,6 +1457,7 @@ async fn build_readonly_platform_state(data_dir: &std::path::Path) -> kikan::Pla
 /// PlatformState slice to reach pure control-plane fns.
 fn build_bootstrap_platform_state(
     data_dir: PathBuf,
+    meta_db: sea_orm::DatabaseConnection,
     demo_db: sea_orm::DatabaseConnection,
     production_db: sea_orm::DatabaseConnection,
     active_profile: kikan::tenancy::ProfileDirName,
@@ -1464,6 +1480,7 @@ fn build_bootstrap_platform_state(
     kikan::PlatformState {
         data_dir,
         db_filename: "mokumo.db",
+        meta_db,
         pools: std::sync::Arc::new(pools),
         active_profile: std::sync::Arc::new(parking_lot::RwLock::new(active_profile)),
         profile_dir_names,
@@ -1511,6 +1528,24 @@ fn resolve_default_data_dir() -> PathBuf {
             );
             PathBuf::from("./data")
         })
+}
+
+/// Open `<data_dir>/meta.db` read-write, creating it if absent.
+///
+/// Centralizes the URL scheme + error/exit handling shared by `cmd_serve`,
+/// `cmd_bootstrap`, and any future entry point that needs a writable
+/// `meta.db` pool.
+async fn open_meta_db_rwc(data_dir: &std::path::Path) -> sea_orm::DatabaseConnection {
+    let path = data_dir.join("meta.db");
+    let url = format!("sqlite:{}?mode=rwc", path.display());
+    match kikan::db::initialize_database(&url).await {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::error!("Failed to open meta.db at {}: {e}", path.display());
+            eprintln!("Failed to open meta.db at {}: {e}", path.display());
+            std::process::exit(1);
+        }
+    }
 }
 
 /// Open a SQLite database in read-only mode for diagnostics.
