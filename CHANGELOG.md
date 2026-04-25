@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Admin overview dashboard** (PR 2A S5, kikan-admin-ui):
+  - `(app)/+page.svelte` now renders three states based on `GET /api/platform/v1/overview`:
+    - **Fresh install**: a `Get Started with {appName}` Card listing three checklist steps from `overview.get_started_steps`, with branding-bound copy (`appName`, `shopNounSingular`).
+    - **Populated**: a four-region grid — At-a-glance stat strip, Recent activity (each entry is a `<a data-activity-entry>` to its source), Backups (last/next timestamps), System health (ok/degraded/down).
+    - **Backend unavailable**: a dashed-border `overview-unavailable` Card explaining the platform isn't reporting yet — replaces the prior misleading "All systems operational" green dot when no overview data is loaded.
+  - `(app)/+page.ts` adds the loader: tries `fetchPlatform<OverviewData>("/overview")`, returns `{ overview: undefined }` on error so the empty-state branch can render.
+  - "You're set up!" completion banner (`youre-set-up-banner` testid): subscribes to `document.body.dataset.youreSetUp` via `MutationObserver` and auto-dismisses after 500 ms; banner is a sibling overlay so the populated dashboard remains visible during and after.
+  - BDD: closes the four `@pr2a` overview scenarios, taking the @pr2a baseline from 36/40 to **40/40**.
+
 - **Meta DB foundation + target-aware migration dispatch** (#540, M00 PR A wave A0.1):
   - Introduce a process-wide `meta.db` at `<data_dir>/meta.db` carrying install-level state (the runtime profile registry and the cross-profile auth surface).
   - `MigrationTarget` now drives dispatch: kikan ships `runner::run_migrations_for_target(pool, migrations, target)` and `Engine::{run_meta_migrations, run_per_profile_migrations}` so each migration lands on the pool whose role matches its target.
