@@ -460,6 +460,59 @@ async fn validate_non_mokumo_db(w: &mut ApiWorld) {
     post_file(w, "/api/shop/restore/validate", &file_path).await;
 }
 
+// ── Body-parse error when-steps (wire-code contract for mokumo#701) ──────────
+
+#[when("a restore request is submitted with an unparseable JSON body")]
+async fn restore_unparseable_json(w: &mut ApiWorld) {
+    w.response = Some(
+        w.server
+            .post("/api/shop/restore")
+            .content_type("application/json")
+            .text("{not valid json")
+            .await,
+    );
+}
+
+#[when(expr = "a restore request is submitted with Content-Type {string}")]
+async fn restore_with_content_type(w: &mut ApiWorld, content_type: String) {
+    w.response = Some(
+        w.server
+            .post("/api/shop/restore")
+            .content_type(&content_type)
+            .text("body")
+            .await,
+    );
+}
+
+#[when("a restore request is submitted with a multipart body that has no file field")]
+async fn restore_multipart_no_file(w: &mut ApiWorld) {
+    let part = axum_test::multipart::Part::text("not the file field");
+    let form = axum_test::multipart::MultipartForm::new().add_part("other", part);
+    w.response = Some(w.server.post("/api/shop/restore").multipart(form).await);
+}
+
+#[when("a validate request is submitted with an unparseable JSON body")]
+async fn validate_unparseable_json(w: &mut ApiWorld) {
+    w.response = Some(
+        w.server
+            .post("/api/shop/restore/validate")
+            .content_type("application/json")
+            .text("{not valid json")
+            .await,
+    );
+}
+
+#[when(expr = "a validate request is submitted with Content-Type {string}")]
+async fn validate_with_content_type(w: &mut ApiWorld, content_type: String) {
+    w.response = Some(
+        w.server
+            .post("/api/shop/restore/validate")
+            .content_type(&content_type)
+            .text("body")
+            .await,
+    );
+}
+
 // ── Then steps ───────────────────────────────────────────────────────────────
 
 #[then(expr = "the request is rejected with status {int}")]
@@ -679,6 +732,7 @@ async fn sixth_request_rejected(w: &mut ApiWorld, status: u16) {
         resp.status_code(),
         resp.text()
     );
+    w.response = Some(resp);
 }
 
 #[then("no production database file exists")]
