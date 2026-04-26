@@ -783,7 +783,11 @@ async fn reset_rejected_expired(w: &mut ApiWorld) {
     let resp = w.response.as_ref().expect("no response");
     resp.assert_status(axum::http::StatusCode::BAD_REQUEST);
     let body: serde_json::Value = resp.json();
-    assert_eq!(body["message"], "PIN expired");
+    // Uniform anti-enumeration message: "Invalid or expired recovery
+    // session" covers expired-session, wrong-PIN, attempts-exhausted,
+    // and unknown-session. The 400 is the load-bearing assertion;
+    // the message text is the same for every rejection reason.
+    assert_eq!(body["message"], "Invalid or expired recovery session");
 }
 
 #[when("the user enters an incorrect PIN")]

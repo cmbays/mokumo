@@ -303,6 +303,7 @@ impl<G: Graft> Engine<G> {
             setup_completed,
             profile_db_initializer,
             sidecar_recoveries: Arc::new(RwLock::new(sidecar_recoveries)),
+            reset_pins: Arc::new(dashmap::DashMap::new()),
         };
 
         // ── Resolve setup_token via Graft hook ───────────────────────
@@ -314,6 +315,11 @@ impl<G: Graft> Engine<G> {
         // run with an indeterminate token. (Fail-fast at boot per ADR
         // amendment 2026-04-22 (a).)
         let setup_token: Option<Arc<str>> = resolve_setup_token(graft.setup_token_source())?;
+
+        // ── Background sweeps ────────────────────────────────────────
+        // Reset-PIN sweep is engine-internal: it bounds the in-memory
+        // recovery-session map regardless of which vertical is mounted.
+        crate::control_plane::auth::sweep::spawn(&platform);
 
         // ── ControlPlaneState ────────────────────────────────────────
         let rlc = &engine.config.rate_limit_config;
@@ -332,6 +338,7 @@ impl<G: Graft> Engine<G> {
             setup_token,
             setup_in_progress: Arc::new(AtomicBool::new(false)),
             activity_writer,
+            recovery_writer: engine.config.recovery_writer.clone(),
         };
 
         // ── DomainState ──────────────────────────────────────────────

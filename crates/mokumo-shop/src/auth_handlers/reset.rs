@@ -1,160 +1,84 @@
-use std::time::{Duration, SystemTime};
+//! Legacy `/api/auth/{forgot-password,reset-password}` compat shim.
+//!
+//! Both routes preserve their pre-existing wire shapes (the shop SPA
+//! still calls them through M0) but route through the kikan recovery-
+//! session core. The legacy `forgot-password` body is `{ email }`, and
+//! the legacy response keeps the original `{ message, recovery_file_path }`
+//! payload for clients that surface the file path to operators. The
+//! legacy `reset-password` body is `{ email, pin, new_password }`; the
+//! email→session_id resolution happens internally via
+//! [`kikan::control_plane::auth::find_session_id_by_email`] (O(n) scan
+//! over `reset_pins`, bounded by `~PIN_EXPIRY × issuance_rate`).
+//!
+//! New code should target the canonical
+//! `/api/platform/v1/auth/recover/{request,complete}` URLs, which expose
+//! the opaque session id directly and skip the email reverse-lookup.
 
 use axum::Json;
 use axum::extract::State;
+use kikan::auth::recovery_artifact::RecoveryArtifactLocation;
+use kikan::auth::{SeaOrmUserRepo, UserRepository};
+use kikan::control_plane::auth::{find_session_id_by_email, recover_complete, recover_request};
+use kikan::{AppError, ControlPlaneError, ControlPlaneState, ProfileDb};
 use kikan_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use kikan_types::error::ErrorCode;
 
-use super::PendingReset;
-use crate::auth::recovery_artifact::{recovery_file_path_for_email, recovery_html};
-use kikan::auth::password;
-use kikan::auth::{SeaOrmUserRepo, UserRepository};
-use kikan::{AppError, ProfileDb};
-
-use crate::state::SharedMokumoState;
-
-const PIN_EXPIRY: Duration = Duration::from_secs(15 * 60);
-
-/// Hash mirror of `recovery_artifact::hash_email_for_recovery_file` for
-/// the enumeration-resistance debug log. Kept here (instead of imported)
-/// because the recovery_artifact module's filename hash is an internal
-/// detail the handler intentionally does not depend on; a debug log of
-/// "which email did we receive" earns its own narrow helper.
-fn email_hash_for_log(email: &str) -> String {
-    let mut hash = 0xcbf29ce484222325u64;
-    for byte in email.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    format!("{hash:016x}")
-}
-
 pub async fn forgot_password(
-    State(state): State<SharedMokumoState>,
+    State(deps): State<ControlPlaneState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ForgotPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let repo = SeaOrmUserRepo::new(db.clone());
-    let recovery_dir = state.recovery_dir();
-
-    match repo.find_by_email(&req.email).await {
-        Ok(Some(_)) => {}
-        Ok(None) => {
-            // Return the same JSON shape as the known-email path to prevent enumeration.
-            // This endpoint will be internet-accessible via Cloudflare Tunnel (M4).
-            tracing::debug!(
-                email_hash = %email_hash_for_log(&req.email),
-                "forgot-password: no account found"
-            );
-            let dummy_path = recovery_file_path_for_email(recovery_dir, &req.email);
-            return Ok(Json(serde_json::json!({
-                "message": "If an account with that email exists, a recovery file has been placed on the server.",
-                "recovery_file_path": dummy_path.to_string_lossy()
-            })));
-        }
-        Err(e) => {
-            tracing::error!("DB error during forgot-password lookup: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
+    if !deps.recovery_limiter.check_and_record(&req.email) {
+        // Anti-enumeration: indistinguishable from any other invalid
+        // recovery state. The legacy SPA flow tolerates a 400 here.
+        return Err(AppError::BadRequest(
+            ErrorCode::ValidationError,
+            "Invalid or expired recovery session".into(),
+        ));
     }
 
-    let pin: String = {
-        use rand::RngExt;
-        let mut rng = rand::rng();
-        format!("{:06}", rng.random_range(0..1_000_000u32))
-    };
+    let writer = deps
+        .recovery_writer
+        .as_ref()
+        .ok_or_else(|| AppError::InternalError("Recovery flow is not configured".into()))?
+        .clone();
 
-    let pin_hash = password::hash_password(pin.clone()).await.map_err(|e| {
-        tracing::error!("PIN hash failed: {e}");
-        AppError::InternalError("An internal error occurred".into())
+    let outcome = recover_request(&deps.platform, &db, &req.email, |email, pin| {
+        writer(email, pin)
+    })
+    .await
+    .map_err(|e| match e {
+        ControlPlaneError::Validation { .. } => AppError::BadRequest(
+            ErrorCode::ValidationError,
+            "Invalid or expired recovery session".into(),
+        ),
+        other => AppError::from(other),
     })?;
 
-    if let Err(e) = tokio::fs::create_dir_all(recovery_dir).await {
-        tracing::error!(
-            "Failed to create recovery dir {}: {e}",
-            recovery_dir.display()
-        );
-        return Err(AppError::InternalError("An internal error occurred".into()));
-    }
-    let file_path = recovery_file_path_for_email(recovery_dir, &req.email);
-    if let Err(e) = tokio::fs::write(&file_path, recovery_html(&pin)).await {
-        tracing::error!("Failed to write recovery file {}: {e}", file_path.display());
-        return Err(AppError::InternalError("An internal error occurred".into()));
-    }
+    let recovery_file_path = match outcome.location {
+        RecoveryArtifactLocation::File { path } => path.to_string_lossy().into_owned(),
+        RecoveryArtifactLocation::External { description } => description,
+        _ => String::new(),
+    };
 
-    state.reset_pins().insert(
-        req.email.clone(),
-        PendingReset {
-            pin_hash,
-            created_at: SystemTime::now(),
-        },
-    );
-
-    let path_str = file_path.to_string_lossy().into_owned();
     Ok(Json(serde_json::json!({
         "message": "If an account with that email exists, a recovery file has been placed on the server.",
-        "recovery_file_path": path_str
+        "recovery_file_path": recovery_file_path
     })))
 }
 
 pub async fn reset_password(
-    State(state): State<SharedMokumoState>,
+    State(deps): State<ControlPlaneState>,
     ProfileDb(db): ProfileDb,
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    // Atomic consume: `DashMap::remove` is the compare-and-swap primitive
-    // for the PIN entry. Two concurrent `reset_password` requests with the
-    // same email each call `remove`; exactly one wins and gets the entry,
-    // the other gets `None` and fails with "No reset request found".
-    //
-    // This makes the reset PIN one-shot by construction — a wrong or
-    // expired PIN consumes the entry just like a successful reset does.
-    // Users who fumble their PIN (or whose PIN is stolen and attempted
-    // first by an attacker) must request a new one via `forgot_password`.
-    // The issuance rate-limiter, not the verifier, is what gates abuse.
-    let reset_pins = state.reset_pins();
-    let Some((_, entry)) = reset_pins.remove(&req.email) else {
-        return Err(AppError::BadRequest(
-            ErrorCode::ValidationError,
-            "No reset request found".into(),
-        ));
-    };
-    let PendingReset {
-        pin_hash,
-        created_at,
-    } = entry;
-
-    let elapsed = SystemTime::now()
-        .duration_since(created_at)
-        .unwrap_or(Duration::ZERO);
-    if elapsed > PIN_EXPIRY {
-        return Err(AppError::BadRequest(
-            ErrorCode::ValidationError,
-            "PIN expired".into(),
-        ));
-    }
-
-    let valid = password::verify_password(req.pin.clone(), pin_hash)
-        .await
-        .map_err(|e| {
-            tracing::error!("PIN verify failed: {e}");
-            AppError::InternalError("An internal error occurred".into())
-        })?;
-
-    if !valid {
-        return Err(AppError::BadRequest(
-            ErrorCode::ValidationError,
-            "Invalid PIN".into(),
-        ));
-    }
-
     let repo = SeaOrmUserRepo::new(db.clone());
-    let user = match repo.find_by_email(&req.email).await {
-        Ok(Some(u)) => u,
+    let user_id = match repo.find_by_email(&req.email).await {
+        Ok(Some(user)) => user.id,
         Ok(None) => {
             return Err(AppError::BadRequest(
                 ErrorCode::ValidationError,
-                "No reset request found".into(),
+                "Invalid or expired recovery session".into(),
             ));
         }
         Err(e) => {
@@ -163,22 +87,22 @@ pub async fn reset_password(
         }
     };
 
-    repo.update_password(&user.id, &req.new_password)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to update password: {e}");
-            AppError::InternalError("Failed to update password".into())
-        })?;
+    let session_id = find_session_id_by_email(&deps.platform, &user_id).ok_or_else(|| {
+        AppError::BadRequest(
+            ErrorCode::ValidationError,
+            "Invalid or expired recovery session".into(),
+        )
+    })?;
 
-    let file_path = recovery_file_path_for_email(state.recovery_dir(), &req.email);
-    if let Err(e) = tokio::fs::remove_file(&file_path).await
-        && e.kind() != std::io::ErrorKind::NotFound
-    {
-        tracing::warn!(
-            path = %file_path.display(),
-            "reset_password: failed to remove recovery file: {e}"
-        );
-    }
+    recover_complete(&deps.platform, &db, &session_id, req.pin, req.new_password)
+        .await
+        .map_err(|e| match e {
+            ControlPlaneError::Validation { .. } => AppError::BadRequest(
+                ErrorCode::ValidationError,
+                "Invalid or expired recovery session".into(),
+            ),
+            other => AppError::from(other),
+        })?;
 
     Ok(Json(
         serde_json::json!({"message": "Password reset successfully"}),

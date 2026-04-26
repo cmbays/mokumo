@@ -19,6 +19,7 @@ use std::sync::atomic::AtomicBool;
 
 use crate::PlatformState;
 use crate::activity::ActivityWriter;
+use crate::auth::recovery_artifact::RecoveryArtifactWriter;
 use crate::rate_limit::RateLimiter;
 
 /// Transport-neutral state for admin-surface control-plane operations.
@@ -48,4 +49,10 @@ pub struct ControlPlaneState {
     pub setup_token: Option<Arc<str>>,
     pub setup_in_progress: Arc<AtomicBool>,
     pub activity_writer: Arc<dyn ActivityWriter>,
+    /// Optional file-drop recovery writer. Populated from
+    /// [`crate::BootConfig::with_recovery_writer`] at boot. `None` means
+    /// the vertical does not expose a file-drop reset flow; the
+    /// recover_request adapter rejects with
+    /// [`crate::ControlPlaneError::Internal`].
+    pub recovery_writer: Option<RecoveryArtifactWriter>,
 }

@@ -61,6 +61,7 @@ fn build_test_platform_state(
         setup_completed: Arc::new(AtomicBool::new(false)),
         profile_db_initializer: Arc::new(NoOpInit),
         sidecar_recoveries: Arc::new(parking_lot::RwLock::new(std::collections::HashMap::new())),
+        reset_pins: Arc::new(dashmap::DashMap::new()),
     }
 }
 

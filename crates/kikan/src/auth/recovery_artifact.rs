@@ -17,6 +17,20 @@
 //! blocking the executor matters.
 
 use std::path::PathBuf;
+use std::sync::Arc;
+
+/// Closure-shaped writer hook installed on
+/// [`crate::ControlPlaneState::recovery_writer`].
+///
+/// The recover_request adapter invokes the closure with the request's
+/// email and a fresh PIN. The vertical's binary builds the closure at
+/// boot time via [`crate::BootConfig::with_recovery_writer`] and
+/// captures whatever path resolution / external-delivery state it
+/// needs in the closure environment. Verticals that do not expose a
+/// file-drop reset flow leave the writer as `None`; the recover_request
+/// adapter rejects with [`crate::AppError::InternalError`].
+pub type RecoveryArtifactWriter =
+    Arc<dyn Fn(&str, &str) -> Result<RecoveryArtifactLocation, RecoveryError> + Send + Sync>;
 
 /// Where the vertical placed the recovery artifact, returned as
 /// human-readable feedback for the operator.

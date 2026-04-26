@@ -156,9 +156,19 @@ async fn init_server(
     // same origin and no cross-origin CSRF config is needed.
     let data_plane = kikan::DataPlaneConfig::lan_default(bind_addr);
     let event_bus = kikan_events::BroadcastEventBus::new();
+    let recovery_dir_for_writer = graft.effective_recovery_dir();
+    let recovery_writer: kikan::auth::recovery_artifact::RecoveryArtifactWriter =
+        std::sync::Arc::new(move |email: &str, pin: &str| {
+            mokumo_shop::auth::recovery_artifact::write_recovery_artifact(
+                email,
+                pin,
+                &recovery_dir_for_writer,
+            )
+        });
     let boot_config = kikan::BootConfig::new(data_dir)
         .with_data_plane(data_plane)
-        .with_subgraft(kikan_events::EventBusSubGraft::new(event_bus.clone()));
+        .with_subgraft(kikan_events::EventBusSubGraft::new(event_bus.clone()))
+        .with_recovery_writer(recovery_writer);
 
     let mut pools: std::collections::HashMap<
         kikan::tenancy::ProfileDirName,

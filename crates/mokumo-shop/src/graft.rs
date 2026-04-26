@@ -11,7 +11,6 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use dashmap::DashMap;
 use kikan::control_plane::SetupTokenSource;
 use kikan::data_plane::spa::SpaSource;
 use kikan::migrations::conn::MigrationConn;
@@ -98,7 +97,11 @@ impl MokumoApp {
 
     /// Resolve the effective recovery directory — the explicit override
     /// if set, otherwise [`crate::startup::resolve_recovery_dir`].
-    fn effective_recovery_dir(&self) -> std::path::PathBuf {
+    ///
+    /// Public so the binary can capture the dir at boot time when
+    /// constructing the kikan `RecoveryArtifactWriter` closure (the
+    /// closure cannot reach into `&self` once boxed).
+    pub fn effective_recovery_dir(&self) -> std::path::PathBuf {
         match &self.recovery_dir_override {
             Some(p) => (**p).clone(),
             None => crate::startup::resolve_recovery_dir(),
@@ -248,7 +251,6 @@ impl Graft for MokumoApp {
             local_ip: Arc::new(parking_lot::RwLock::new(local_ip_address::local_ip().ok())),
             restore_in_progress: Arc::new(AtomicBool::new(false)),
             restore_limiter: Arc::new(RateLimiter::new(5, std::time::Duration::from_secs(3600))),
-            reset_pins: Arc::new(DashMap::new()),
             recovery_dir: Arc::new(self.effective_recovery_dir()),
             #[cfg(debug_assertions)]
             ws_ping_ms: None,
@@ -299,27 +301,6 @@ impl Graft for MokumoApp {
                             if *guard != current {
                                 *guard = current;
                             }
-                        }
-                        _ = token.cancelled() => break,
-                    }
-                }
-            });
-        }
-
-        // Background task: sweep expired reset PINs every 60s.
-        {
-            let pins = state.reset_pins().clone();
-            let token = state.shutdown().clone();
-            tokio::spawn(async move {
-                loop {
-                    tokio::select! {
-                        _ = tokio::time::sleep(std::time::Duration::from_secs(60)) => {
-                            let now = std::time::SystemTime::now();
-                            pins.retain(|_, v| {
-                                now.duration_since(v.created_at)
-                                    .unwrap_or(std::time::Duration::ZERO)
-                                    < std::time::Duration::from_secs(15 * 60)
-                            });
                         }
                         _ = token.cancelled() => break,
                     }

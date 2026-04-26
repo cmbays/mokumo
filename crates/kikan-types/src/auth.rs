@@ -32,6 +32,47 @@ pub struct RecoverRequest {
     pub new_password: String,
 }
 
+/// Body for `POST /api/platform/v1/auth/recover/request`.
+///
+/// Identifies the account by email; the server mints a high-entropy
+/// `recovery_session_id` (returned in the response) plus a 6-digit PIN
+/// the operator reads from a vertical-supplied recovery artifact.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RecoverInitiateRequest {
+    pub email: String,
+}
+
+/// Response shape for `POST /api/platform/v1/auth/recover/request`.
+///
+/// `recovery_session_id` is opaque high-entropy hex (256 bits) and is
+/// always returned regardless of whether `email` matched a known
+/// account (anti-enumeration). `recovery_file_path` is the operator-
+/// readable artifact location the vertical produced; `None` for
+/// verticals that deliver the PIN out-of-band.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RecoverInitiateResponse {
+    pub recovery_session_id: String,
+    pub recovery_file_path: Option<String>,
+}
+
+/// Body for `POST /api/platform/v1/auth/recover/complete`.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RecoverCompleteRequest {
+    pub recovery_session_id: String,
+    pub pin: String,
+    pub new_password: String,
+}
+
+/// Response shape for `POST /api/platform/v1/auth/recover/complete`.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct RecoverCompleteResponse {
+    pub message: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct SetupRequest {
@@ -80,6 +121,14 @@ mod tests {
             .expect("Failed to export ResetPasswordRequest");
         RecoverRequest::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export RecoverRequest");
+        RecoverInitiateRequest::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export RecoverInitiateRequest");
+        RecoverInitiateResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export RecoverInitiateResponse");
+        RecoverCompleteRequest::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export RecoverCompleteRequest");
+        RecoverCompleteResponse::export_all(&ts_rs::Config::from_env())
+            .expect("Failed to export RecoverCompleteResponse");
         RegenerateRecoveryCodesRequest::export_all(&ts_rs::Config::from_env())
             .expect("Failed to export RegenerateRecoveryCodesRequest");
     }

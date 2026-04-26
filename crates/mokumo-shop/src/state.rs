@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use dashmap::DashMap;
 use kikan::platform_state::SharedProfileDbInitializer;
 use kikan::rate_limit::RateLimiter;
 use kikan::{ActivityWriter, ControlPlaneState, PlatformState};
@@ -19,19 +18,17 @@ use parking_lot::RwLock;
 use sea_orm::DatabaseConnection;
 use tokio_util::sync::CancellationToken;
 
-use crate::auth::PendingReset;
 use crate::ws::ConnectionManager;
 
 /// Domain-specific state for the Mokumo shop graft.
 ///
 /// Fields here are shop-vertical concerns that don't belong in
 /// `PlatformState` (kikan-owned) or `ControlPlaneState` (admin surface).
-///
-/// Session 3 absorbs the file-drop-reset-PIN map and recovery-file
-/// directory from `ControlPlaneState`. Both are vertical vocabulary —
-/// kikan exposes the recovery-dir path via `Graft::recovery_dir` but
-/// does not store it. The PIN hash/expiry format (`PendingReset`) is
-/// mokumo's shape.
+/// The recovery-file directory is held here because resolving it
+/// requires shop-side conventions (env var → Desktop → cwd); kikan
+/// asks the graft for the path via `Graft::recovery_dir` but does not
+/// store it. The recovery-session map itself lives kikan-side at
+/// [`kikan::PlatformState::reset_pins`].
 #[derive(Clone)]
 pub struct MokumoShopState {
     /// WebSocket connection manager for real-time broadcast to shop UI.
@@ -42,10 +39,6 @@ pub struct MokumoShopState {
     pub restore_in_progress: Arc<AtomicBool>,
     /// Rate limiter for restore attempts (5 per hour, shared across validate + restore).
     pub restore_limiter: Arc<RateLimiter>,
-    /// In-memory store for file-drop password reset PINs, keyed by email.
-    /// Swept lazily on read and periodically by the PIN-sweep background
-    /// task.
-    pub reset_pins: Arc<DashMap<String, PendingReset>>,
     /// Directory where recovery files are dropped for the file-drop
     /// password reset flow. Resolved via `crate::startup::resolve_recovery_dir`
     /// at `build_domain_state` time. Arc so clone is a refcount bump.
@@ -198,10 +191,6 @@ impl MokumoState {
 
     pub fn switch_limiter(&self) -> &Arc<RateLimiter> {
         &self.control_plane.switch_limiter
-    }
-
-    pub fn reset_pins(&self) -> &Arc<DashMap<String, PendingReset>> {
-        &self.domain.reset_pins
     }
 
     pub fn recovery_dir(&self) -> &PathBuf {

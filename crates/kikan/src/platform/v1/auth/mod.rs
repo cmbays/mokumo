@@ -21,6 +21,7 @@
 pub mod login;
 pub mod logout;
 pub mod me;
+pub mod recover;
 
 use axum::Router;
 use axum::routing::{get, post};
@@ -68,5 +69,13 @@ where
         .route("/api/platform/v1/auth/login", post(login::login::<K>))
         .route("/api/platform/v1/auth/logout", post(logout::logout::<K>))
         .route("/api/platform/v1/auth/me", get(me::me::<K>))
+        .route(
+            "/api/platform/v1/auth/recover/request",
+            post(recover::recover_request),
+        )
+        .route(
+            "/api/platform/v1/auth/recover/complete",
+            post(recover::recover_complete),
+        )
         .with_state(control_plane)
 }

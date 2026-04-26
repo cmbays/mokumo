@@ -159,7 +159,9 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
         )
         .nest(
             "/api/auth",
-            public_auth_router.merge(crate::auth_handlers::reset_router()),
+            public_auth_router.merge(
+                crate::auth_handlers::reset_router().with_state(control_plane_state.clone()),
+            ),
         )
         .nest(
             "/api/setup",
@@ -316,10 +318,24 @@ async fn debug_expire_pin(
     State(state): State<SharedState>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
+    use kikan::auth::UserRepository;
     let email = body["email"].as_str().unwrap_or_default();
-    if let Some(mut entry) = state.reset_pins().get_mut(email) {
-        let past = std::time::SystemTime::now() - std::time::Duration::from_secs(20 * 60);
-        entry.created_at = past;
+    let repo = kikan::auth::SeaOrmUserRepo::new(state.production_db().clone());
+    let user_id = match repo.find_by_email(email).await {
+        Ok(Some(user)) => user.id,
+        _ => return StatusCode::NOT_FOUND,
+    };
+    let pins = &state.platform_state().reset_pins;
+    let session_id = match pins
+        .iter()
+        .find(|entry| entry.value().user_id == user_id)
+        .map(|entry| entry.key().clone())
+    {
+        Some(id) => id,
+        None => return StatusCode::NOT_FOUND,
+    };
+    if let Some(mut entry) = pins.get_mut(&session_id) {
+        entry.created_at = std::time::SystemTime::now() - std::time::Duration::from_secs(20 * 60);
         StatusCode::OK
     } else {
         StatusCode::NOT_FOUND

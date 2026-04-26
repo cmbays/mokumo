@@ -13,3 +13,12 @@
 //! `http::*`, `axum_login::*`, or downstream-vertical imports may
 //! appear in this tree. Lockout escalation, rate-limiting, and session
 //! issuance stay in the adapter.
+
+pub mod pending_reset;
+pub mod recover;
+pub mod sweep;
+
+pub use pending_reset::{MAX_PIN_ATTEMPTS, PIN_EXPIRY, PendingReset, RecoverySessionId};
+pub use recover::{
+    RecoverRequestOutcome, find_session_id_by_email, recover_complete, recover_request,
+};
