@@ -59,7 +59,7 @@ while IFS= read -r f; do
         || true)
     if [ -n "$leaks" ]; then
         echo "::error::I1/strict vocab purity violation in $f:" >&2
-        echo "$leaks" | sed 's|^|  |' >&2
+        echo "  ${leaks//$'\n'/$'\n  '}" >&2
         violations=$((violations + 1))
     fi
 done < <(find "$TARGET" -name '*.rs' -not -name '*_tests.rs' -not -name 'tests.rs' | sort)
