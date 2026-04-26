@@ -415,6 +415,109 @@ jobs:
       - name: CRAP delta gate
         run: scripts/check-crap-delta.sh "origin/$PR_BASE_REF"
 
+  crap-scorecard:
+    # CRAP scorecard PR comment via the breezy-bays-labs/crap4rs scorecard
+    # action. Posts a sticky comment with analysis + delta vs. the PR base.
+    # Replaces the manual jq orchestration in `scripts/check-crap-delta.sh`
+    # using crap4rs v0.2.1's native `--baseline` support.
+    #
+    # Runs on every Rust-touching PR — informational by default (no gate).
+    # Once stable, fold this into mokumo#650's metrics-delta aggregator
+    # comment by switching `comment-mode` from `sticky` to `none` and
+    # consuming `steps.crap.outputs.markdown` from the aggregator job.
+    #
+    # NOTE (draft): pinned to feat/scorecard-action while crap4rs#99 is
+    # in review. Will move to a release tag once #99 merges.
+    needs: [changes]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    env:
+      CARGO_TARGET_DIR: target
+      PR_BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          cache: pnpm
+      - uses: moonrepo/setup-toolchain@v0
+      - uses: moonrepo/setup-rust@v1
+        with:
+          bins: cargo-nextest,cargo-llvm-cov,crap4rs
+          cache: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "mokumo-rust"
+          save-if: "false"
+
+      - name: Install JS dependencies (HEAD)
+        run: pnpm install --frozen-lockfile
+      - name: Build SvelteKit frontend (HEAD)
+        run: moon run web:build
+      - name: Capture HEAD coverage
+        run: |
+          mkdir -p tmp
+          cargo llvm-cov nextest \
+            --workspace \
+            --exclude mokumo-desktop \
+            --exclude kikan-tauri \
+            --lcov --output-path tmp/lcov.info
+
+      - name: Capture baseline coverage on PR base
+        run: |
+          set -euo pipefail
+          mkdir -p tmp
+          git fetch --no-tags --depth=1000 origin "$PR_BASE_REF"
+          git switch --detach "origin/$PR_BASE_REF"
+          pnpm install --frozen-lockfile
+          moon run web:build
+          cargo llvm-cov nextest \
+            --workspace \
+            --exclude mokumo-desktop \
+            --exclude kikan-tauri \
+            --lcov --output-path tmp/base-lcov.info
+          crap4rs \
+            --coverage tmp/base-lcov.info \
+            --src . \
+            --config crap4rs.toml \
+            --format json \
+            --no-fail \
+            > tmp/baseline.json
+          git switch -
+
+      - name: Run scorecard action
+        id: crap
+        uses: breezy-bays-labs/crap4rs/.github/actions/scorecard@feat/scorecard-action
+        with:
+          coverage: tmp/lcov.info
+          src: .
+          baseline: tmp/baseline.json
+          config: crap4rs.toml
+          # mokumo's crap4rs.toml uses preset = "strict" (threshold 15);
+          # passing 15 explicitly keeps the action consistent with the
+          # config. Future: action could read from the config directly.
+          threshold: '15'
+          # Informational only during validation. Promote to true after
+          # one sprint of clean signal — same stabilization playbook as
+          # the original crap-delta job.
+          delta-gate: 'false'
+          comment-mode: 'sticky'
+          comment-header: 'crap-scorecard'
+
+      - name: Upload baseline JSON for downstream tooling
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crap-baseline
+          path: tmp/baseline.json
+          if-no-files-found: ignore
+
   api-smoke:
     needs: [changes]
     if: github.event_name == 'pull_request' && (needs.changes.outputs.rust == 'true' || needs.changes.outputs.smoke == 'true')
