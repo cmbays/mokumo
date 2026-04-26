@@ -615,10 +615,10 @@ async fn handle_sidecar_outcome(
             );
             None
         }
-        Err(SidecarRecoveryError::Failed { message }) => {
+        Err(SidecarRecoveryError::Failed { source }) => {
             tracing::warn!(
                 profile_dir = %dir_name,
-                error = %message,
+                error = %source,
                 "sidecar recovery: hook reported failure; continuing boot",
             );
             None
@@ -831,7 +831,7 @@ mod sidecar_recovery_tests {
         let got = handle_sidecar_outcome(
             &dir(),
             Err(SidecarRecoveryError::Failed {
-                message: "synthetic".into(),
+                source: "synthetic".into(),
             }),
             &meta,
         )

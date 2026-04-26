@@ -23,6 +23,19 @@ pub struct SidecarRecoveryCtx {
     pub boot_result: Option<Result<(), EngineError>>,
 }
 
+impl Drop for SidecarRecoveryCtx {
+    fn drop(&mut self) {
+        // The given-steps set MOKUMO_DEMO_SIDECAR; unset it so the path
+        // (which points into a TempDir that's about to be deleted) does
+        // not leak into later cucumber scenarios in the same process.
+        // SAFETY: cucumber serial harness — see set_var rationale in
+        // `given_sidecar_present_db_missing`.
+        unsafe {
+            std::env::remove_var("MOKUMO_DEMO_SIDECAR");
+        }
+    }
+}
+
 fn write_kikan_seed_db(path: &std::path::Path) {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).unwrap();

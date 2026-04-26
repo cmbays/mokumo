@@ -231,7 +231,12 @@ pub trait Graft: Sized + 'static {
 /// diagnostic on `PlatformState::sidecar_recoveries` only for the
 /// `Recreated` arm — `NotNeeded` is the silent healthy path and produces
 /// no map entry.
+///
+/// Marked `#[non_exhaustive]` so kikan can add new outcome variants
+/// (e.g. `RestoredFromBackup`) post-1.0 without a breaking change for
+/// downstream verticals.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum SidecarRecovery {
     /// The on-disk database for this kind is healthy; no copy was made.
     NotNeeded,
@@ -245,7 +250,11 @@ pub enum SidecarRecovery {
 }
 
 /// Failure modes for [`Graft::recover_profile_sidecar`].
+///
+/// Marked `#[non_exhaustive]` for the same reason as
+/// [`SidecarRecovery`].
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum SidecarRecoveryError {
     /// The vertical does not bundle a sidecar for this kind. Default
     /// impl on [`Graft::recover_profile_sidecar`] returns this; the
@@ -254,9 +263,13 @@ pub enum SidecarRecoveryError {
     NotSupported,
     /// I/O or integrity-check failure during the recovery attempt. The
     /// engine logs the error and continues boot — recovery is best-effort
-    /// and never blocks startup.
-    #[error("sidecar recovery failed: {message}")]
-    Failed { message: String },
+    /// and never blocks startup. The boxed source preserves the underlying
+    /// error chain so operators can diagnose root cause via the audit log.
+    #[error("sidecar recovery failed: {source}")]
+    Failed {
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync + 'static>,
+    },
 }
 
 #[async_trait::async_trait]

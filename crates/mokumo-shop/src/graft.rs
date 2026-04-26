@@ -166,30 +166,26 @@ impl Graft for MokumoApp {
             return Ok(kikan::SidecarRecovery::NotNeeded);
         }
 
-        // crate::demo_reset::force_copy_sidecar resolves the source via
-        // the MOKUMO_DEMO_SIDECAR env var or the binary-adjacent
-        // `demo.db` file. Returning `Failed` here preserves the
+        // `force_copy_sidecar` resolves the source via MOKUMO_DEMO_SIDECAR or
+        // the binary-adjacent `demo.db`, copies it over the destination, and
+        // returns the *resolved source path* — so the diagnostic below
+        // describes the exact file the copy consumed (no double-resolution,
+        // no TOCTOU window). Returning `Failed` here preserves the
         // best-effort contract: a missing sidecar means we couldn't
         // self-repair, but boot continues and the operator sees the
         // existing-but-corrupt file (which the per-profile setup will
         // surface separately).
-        crate::demo_reset::force_copy_sidecar(data_dir).map_err(|e| {
+        let source = crate::demo_reset::force_copy_sidecar(data_dir, db_filename).map_err(|e| {
             kikan::SidecarRecoveryError::Failed {
-                message: format!("force_copy_sidecar({}): {e}", data_dir.display()),
+                source: Box::new(e),
             }
         })?;
 
         let bytes = std::fs::metadata(&dest).map(|m| m.len()).map_err(|e| {
             kikan::SidecarRecoveryError::Failed {
-                message: format!("stat {}: {e}", dest.display()),
+                source: Box::new(e),
             }
         })?;
-
-        // Re-use the same resolver `force_copy_sidecar` consulted, so
-        // the diagnostic always reports the actual source path (even if
-        // resolution rules grow new fallback locations later).
-        let source = crate::demo_reset::find_sidecar()
-            .unwrap_or_else(|| std::path::PathBuf::from("<unknown>"));
 
         Ok(kikan::SidecarRecovery::Recreated {
             source,
