@@ -277,17 +277,89 @@ tasks:
       #     Tracked: PR 2 (auth bootstrap) of mokumo#383 — once the harness
       #     can carry an authenticated admin session, these flip to 404.
       #
+      #   tests/api/auth/forgot-password.hurl
+      #   tests/api/auth/login-rate-limit.hurl
+      #   tests/api/auth/reset-password.hurl
+      #     Pre-existing — not yet in shop:smoke. These pass against the
+      #     demo profile today (auto-login carries them, or they exercise
+      #     the validation/rate-limit paths directly), but they touch the
+      #     auth surface that mokumo#685 (auth-handler promotion to the
+      #     kikan platform) is moving to /api/platform/v1/auth/*.
+      #     Deferred from PR 1 → PR 2 to avoid mid-flight conflict; PR 2's
+      #     auth bootstrap will absorb whatever the auth surface looks
+      #     like post-#685.
+      #     Tracked: PR 2 of mokumo#383, coordinates with mokumo#685.
+      #
+      #   tests/api/auth/login-success.hurl
+      #     Failure: requires `admin_email` and `admin_password` variables
+      #     in tests/api/envs/ci.env that the smoke harness does not yet
+      #     thread. Demo auto-login does not satisfy the explicit POST
+      #     /api/auth/login + cookie-capture step.
+      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #
+      #   tests/api/auth/me.hurl
+      #     Failure: asserts a specific user identity that demo auto-login
+      #     (admin@demo.local) does not match. Needs production-profile
+      #     harness with seeded credentials.
+      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #
+      #   tests/api/customers/get.hurl
+      #     Failure: references a specific customer id that the demo seed
+      #     does not contain. Needs the harness to either seed a known
+      #     customer or capture an id from a prior step.
+      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #
+      #   tests/api/session_continuity.hurl
+      #     Failure: requires a pre-Stage-3 session-snapshot fixture and
+      #     a harness that boots the post-Stage-3 binary against it,
+      #     injecting `pre_stage3_session`, `alice_email`,
+      #     `alice_password`, `expected_session_name`. Not a smoke-suite
+      #     test — belongs in a dedicated continuity Moon task.
+      #     Tracked: mokumo#702.
+      #
+      #   tests/api/shop/logo-upload.hurl
+      #   tests/api/shop/logo-upload-errors.hurl
+      #   tests/api/shop/logo-delete.hurl
+      #     Failure: stale `---` request separator (Hurl uses blank-line
+      #     separators; `---` parses as an HTTP method) AND the test does
+      #     its own POST /api/auth/login that needs admin credentials in
+      #     ci.env that PR 2 will introduce. Both blockers resolve under
+      #     PR 2's auth bootstrap pass.
+      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #
+      # Coverage notes — files in the active list with known structural-only
+      # coverage that requires a Rust-side backstop per the G3 split:
+      #
+      #   tests/api/shop/restore.hurl
+      #   tests/api/shop/restore-validate.hurl
+      #     Under the smoke harness, `RestoreGuard::acquire` always returns
+      #     409 `production_db_exists` before body parsing, so the 400
+      #     `parse_error` and 429 `rate_limited` paths are unreachable here.
+      #     Per-variant Rust unit tests for those wire shapes are tracked in
+      #     mokumo#701.
+      #
       # ---------------------------------------------------------------------
       hurl --variables-file tests/api/envs/ci.env --test \
         tests/api/_prelude/healthy-demo.hurl \
         tests/api/routing/api-prefix-boundary.hurl \
         tests/api/routing/method-rejection.hurl \
         tests/api/health/health.hurl \
+        tests/api/health/security-headers.hurl \
         tests/api/offline/boot.hurl \
+        tests/api/bind/ephemeral-loopback.hurl \
+        tests/api/security/host-allowlist.hurl \
+        tests/api/kikan-version/kikan-version.hurl \
         tests/api/auth/login-bad-credentials.hurl \
         tests/api/customers/not-found.hurl \
+        tests/api/customers/list.hurl \
+        tests/api/customers/create.hurl \
         tests/api/settings/lan-access.hurl \
-        tests/api/shop/logo-get.hurl
+        tests/api/shop/logo-get.hurl \
+        tests/api/shop/restore-validate.hurl \
+        tests/api/shop/restore.hurl \
+        tests/api/backup/status.hurl \
+        tests/api/diagnostics/diagnostics.hurl \
+        tests/api/diagnostics/bundle.hurl
     deps:
     - web:build
     - web:seed-demo
