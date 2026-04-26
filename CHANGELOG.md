@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Fixed
+
+- **Shop logo 404 now returns vertical error code** (`mokumo-shop`): `GET /api/shop/logo` and `DELETE /api/shop/logo` when no logo is set now return `{"code":"shop_logo_not_found","..."}` instead of the platform-wide `{"code":"not_found","..."}`. Fixes #695 — the frontend, BDD spec, and Hurl smoke test all expected the vertical code.
+
 ### Added
 
 - **Bundle backup with strict-atomic restore** (M00 PR A wave A2.2, kikan):

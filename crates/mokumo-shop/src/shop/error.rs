@@ -46,6 +46,11 @@ pub enum ShopLogoHandlerError {
         code: ShopErrorCode,
         message: String,
     },
+    /// 404 with a shop-vertical code (e.g. `ShopLogoNotFound`).
+    ShopNotFound {
+        code: ShopErrorCode,
+        message: String,
+    },
     Internal(String),
 }
 
@@ -148,6 +153,14 @@ impl IntoResponse for ShopLogoHandlerError {
             ),
             Self::ShopUnprocessable { code, message } => shop_body(
                 StatusCode::UNPROCESSABLE_ENTITY,
+                ShopErrorBody {
+                    code,
+                    message,
+                    details: None,
+                },
+            ),
+            Self::ShopNotFound { code, message } => shop_body(
+                StatusCode::NOT_FOUND,
                 ShopErrorBody {
                     code,
                     message,
@@ -266,6 +279,24 @@ mod tests {
         let json = std::str::from_utf8(&body).unwrap();
         assert!(
             json.contains("\"code\":\"logo_too_large\""),
+            "unexpected wire shape: {json}"
+        );
+    }
+
+    #[tokio::test]
+    async fn shop_not_found_wire_shape_uses_vertical_code() {
+        let err = ShopLogoHandlerError::ShopNotFound {
+            code: ShopErrorCode::ShopLogoNotFound,
+            message: "no logo".into(),
+        };
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json = std::str::from_utf8(&body).unwrap();
+        assert!(
+            json.contains("\"code\":\"shop_logo_not_found\""),
             "unexpected wire shape: {json}"
         );
     }
