@@ -72,6 +72,10 @@ pub struct ShopErrorBody {
 mod tests {
     use super::*;
 
+    // Canonical gate: every ShopErrorCode variant must appear here so the
+    // display_matches_serde_for_all_variants test below catches any future
+    // variant whose Display and serde representations diverge before it
+    // reaches the wire. Update the array size when adding variants.
     fn all_shop_error_codes() -> [ShopErrorCode; 7] {
         [
             ShopErrorCode::ShopLogoRequiresProductionProfile,

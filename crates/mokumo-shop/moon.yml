@@ -277,14 +277,6 @@ tasks:
       #     Tracked: PR 2 (auth bootstrap) of mokumo#383 — once the harness
       #     can carry an authenticated admin session, these flip to 404.
       #
-      #   tests/api/shop/logo-get.hurl
-      #     Failure: server returns code=`not_found`, test expects
-      #     code=`shop_logo_not_found`. Genuine contract drift; one side
-      #     is wrong. Test was authored when the handler returned a
-      #     domain-specific error code; the handler now returns the
-      #     generic `not_found`.
-      #     Tracked: mokumo#695 (logo-get contract drift — fix in PR 3 of
-      #     mokumo#383 endpoint backfill).
       # ---------------------------------------------------------------------
       hurl --variables-file tests/api/envs/ci.env --test \
         tests/api/_prelude/healthy-demo.hurl \
@@ -293,7 +285,8 @@ tasks:
         tests/api/offline/boot.hurl \
         tests/api/auth/login-bad-credentials.hurl \
         tests/api/customers/not-found.hurl \
-        tests/api/settings/lan-access.hurl
+        tests/api/settings/lan-access.hurl \
+        tests/api/shop/logo-get.hurl
     deps:
     - web:build
     - web:seed-demo

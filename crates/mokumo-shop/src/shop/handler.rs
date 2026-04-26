@@ -18,7 +18,6 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use kikan::actor::Actor;
-use kikan::error::DomainError;
 use kikan::rate_limit::RateLimiter;
 use kikan_types::error::ErrorCode;
 use tokio::fs;
@@ -99,12 +98,13 @@ pub(crate) async fn get_logo_impl(
     deps: &ShopLogoRouterDeps,
 ) -> Result<axum::response::Response, ShopLogoHandlerError> {
     let svc = build_service(deps.production_db.clone(), deps);
-    let info = svc.get_logo_info().await?.ok_or_else(|| {
-        ShopLogoHandlerError::from(DomainError::NotFound {
-            entity: "shop_logo",
-            id: "1".into(),
-        })
-    })?;
+    let info = svc
+        .get_logo_info()
+        .await?
+        .ok_or_else(|| ShopLogoHandlerError::ShopNotFound {
+            code: ShopErrorCode::ShopLogoNotFound,
+            message: "Shop logo has not been uploaded".into(),
+        })?;
 
     let content_type = match info.extension.as_str() {
         "png" => "image/png",
@@ -126,10 +126,10 @@ pub(crate) async fn get_logo_impl(
 
     let data = fs::read(&path).await.map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
-            ShopLogoHandlerError::from(DomainError::NotFound {
-                entity: "shop_logo",
-                id: "1".into(),
-            })
+            ShopLogoHandlerError::ShopNotFound {
+                code: ShopErrorCode::ShopLogoNotFound,
+                message: "Shop logo has not been uploaded".into(),
+            }
         } else {
             tracing::error!("get_logo: failed to read logo file {path:?}: {e}");
             ShopLogoHandlerError::Internal("Failed to read logo file".into())
@@ -249,12 +249,13 @@ pub(crate) async fn delete_logo_impl(
     require_production(mode)?;
 
     let svc = build_service(db, deps);
-    let info = svc.get_logo_info().await?.ok_or_else(|| {
-        ShopLogoHandlerError::from(DomainError::NotFound {
-            entity: "shop_logo",
-            id: "1".into(),
-        })
-    })?;
+    let info = svc
+        .get_logo_info()
+        .await?
+        .ok_or_else(|| ShopLogoHandlerError::ShopNotFound {
+            code: ShopErrorCode::ShopLogoNotFound,
+            message: "Shop logo has not been uploaded".into(),
+        })?;
 
     let actor = Actor::user(actor_id);
     svc.delete_logo(&actor).await?;
