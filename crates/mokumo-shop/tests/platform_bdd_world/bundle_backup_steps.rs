@@ -250,7 +250,12 @@ async fn given_destinations_exist(w: &mut PlatformBddWorld) {
 #[when("the bundle group is restored to the data directory")]
 async fn when_bundle_restored(w: &mut PlatformBddWorld) {
     let ctx = w.bundle_backup.as_mut().unwrap();
-    let targets: Vec<RestoreTarget> = ctx
+    // `ctx.destinations` is a HashMap — sort by logical name so the
+    // RestoreTarget order handed to the primitive is deterministic
+    // across runs. Failure attribution (which file is reported in
+    // PartialCorruption / SnapshotMissing) depends on iteration
+    // order, so this avoids future-flake.
+    let mut targets: Vec<RestoreTarget> = ctx
         .destinations
         .iter()
         .map(|(name, dest)| RestoreTarget {
@@ -258,6 +263,7 @@ async fn when_bundle_restored(w: &mut PlatformBddWorld) {
             dest: dest.clone(),
         })
         .collect();
+    targets.sort_by(|a, b| a.logical_name.cmp(&b.logical_name));
     ctx.restore_result = Some(restore_bundle(&ctx.snapshot_root, GROUP_ID, &targets).await);
 }
 

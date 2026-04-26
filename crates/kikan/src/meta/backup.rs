@@ -139,6 +139,9 @@ pub enum BundleRestoreError {
     #[error("restore target `{logical_name}` has no matching manifest entry")]
     UnknownTarget { logical_name: String },
 
+    #[error("restore target list contains duplicate logical name `{logical_name}`")]
+    DuplicateTarget { logical_name: String },
+
     #[error("manifest entry `{logical_name}` has no matching restore target")]
     UnmatchedManifestEntry { logical_name: String },
 
@@ -276,10 +279,10 @@ fn validate_logical_name(name: &str) -> Result<(), BundleBackupError> {
             reason: "empty",
         });
     }
-    if name == "." || name == ".." || name.contains('/') || name.contains('\\') {
+    if name.starts_with('.') || name.contains('/') || name.contains('\\') {
         return Err(BundleBackupError::InvalidLogicalName {
             name: name.to_string(),
-            reason: "must not contain path separators or be `.`/`..`",
+            reason: "must not start with `.` or contain path separators",
         });
     }
     let ok = name
@@ -448,6 +451,18 @@ fn pair_targets_with_entries(
                 logical_name: target.logical_name.clone(),
             }
         })?;
+        // Reject duplicate target names BEFORE staging anything for
+        // rename. Two targets pointing at the same snapshot would
+        // otherwise pass integrity verification (same file checked
+        // twice) and then partially apply at the rename step — the
+        // first rename succeeds, the second fails with ENOENT, and
+        // R6's "we refused, no destination touched" guarantee is
+        // broken.
+        if !matched.insert(entry.logical_name.as_str()) {
+            return Err(BundleRestoreError::DuplicateTarget {
+                logical_name: target.logical_name.clone(),
+            });
+        }
         let snapshot_path = group_dir.join(&entry.snapshot_filename);
         if !snapshot_path.exists() {
             return Err(BundleRestoreError::SnapshotMissing {
@@ -455,7 +470,6 @@ fn pair_targets_with_entries(
                 path: snapshot_path,
             });
         }
-        matched.insert(entry.logical_name.as_str());
         pairs.push((snapshot_path, target.dest.clone()));
     }
     if let Some(entry) = manifest
@@ -496,10 +510,13 @@ async fn verify_snapshot_integrity(snapshot_path: &Path) -> Result<(), BundleRes
     })
 }
 
-/// Pre-create every destination's parent directory. Doing this in
-/// the verify pass (before any rename) means a directory permission
-/// or disk-full error surfaces while the on-disk state is still
-/// strictly the pre-restore tree.
+/// Pre-create every destination's parent directory. Running this
+/// before the rename loop means a directory permission or disk-full
+/// error surfaces while no destination *file* has been mutated. The
+/// R6 contract is "no destination file is touched" — `create_dir_all`
+/// is itself an observable disk mutation (new empty parent dirs may
+/// appear), but those are benign and idempotent and do not violate
+/// the file-level guarantee operators rely on.
 fn precreate_destination_dirs(pairs: &[(PathBuf, PathBuf)]) -> Result<(), BundleRestoreError> {
     for (_, dest) in pairs {
         if let Some(parent) = dest.parent() {
@@ -881,6 +898,77 @@ mod tests {
             err,
             BundleRestoreError::UnmatchedManifestEntry { .. }
         ));
+    }
+
+    #[tokio::test]
+    async fn restore_rejects_duplicate_target_before_touching_disk() {
+        let work = tempfile::tempdir().unwrap();
+        let snaps = work.path().join("snaps");
+        let src = work.path().join("src.db");
+        write_seed_db(&src);
+        create_bundle(
+            &snaps,
+            "g1",
+            &[DbInBundle {
+                logical_name: "data",
+                source: &src,
+            }],
+        )
+        .await
+        .unwrap();
+
+        let dest_a = work.path().join("dest_a.db");
+        let dest_b = work.path().join("dest_b.db");
+        write_seed_db(&dest_a);
+        write_seed_db(&dest_b);
+        let pre_a = read_bytes(&dest_a);
+        let pre_b = read_bytes(&dest_b);
+
+        let err = restore_bundle(
+            &snaps,
+            "g1",
+            &[
+                RestoreTarget {
+                    logical_name: "data".into(),
+                    dest: dest_a.clone(),
+                },
+                RestoreTarget {
+                    logical_name: "data".into(),
+                    dest: dest_b.clone(),
+                },
+            ],
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            matches!(err, BundleRestoreError::DuplicateTarget { ref logical_name } if logical_name == "data"),
+            "got {err:?}"
+        );
+        assert_eq!(read_bytes(&dest_a), pre_a, "dest_a touched on refusal");
+        assert_eq!(read_bytes(&dest_b), pre_b, "dest_b touched on refusal");
+    }
+
+    #[tokio::test]
+    async fn create_bundle_rejects_dot_prefixed_logical_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("a.db");
+        write_seed_db(&src);
+        for bad in [".tmp", "..bar", "...", ".hidden"] {
+            let err = create_bundle(
+                dir.path(),
+                "g1",
+                &[DbInBundle {
+                    logical_name: bad,
+                    source: &src,
+                }],
+            )
+            .await
+            .unwrap_err();
+            assert!(
+                matches!(err, BundleBackupError::InvalidLogicalName { .. }),
+                "expected InvalidLogicalName for `{bad}`, got {err:?}",
+            );
+        }
     }
 
     #[tokio::test]
