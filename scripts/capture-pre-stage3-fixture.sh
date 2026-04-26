@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Regenerates tests/fixtures/pre-stage3.sqlite + session_continuity.env from
-# commit bfae58e (Stage 1b merged). Must run on a host session — container
-# workspaces cannot create git worktrees inside /workspace (see AGENTS.md).
+# Regenerates tests/fixtures/pre-stage3.sqlite from commit bfae58e
+# (Stage 1b merged). Must run on a host session — container workspaces
+# cannot create git worktrees inside /workspace (see AGENTS.md).
 set -euo pipefail
 
 CAPTURE_COMMIT="bfae58e"
@@ -74,13 +74,6 @@ curl -sf -c "$JAR" -b "$JAR" -H 'Content-Type: application/json' \
   -d '{"display_name":"Pre-Stage-3 Capture Customer"}' \
   "http://127.0.0.1:${PORT}/api/customers" > /dev/null
 
-SESSION_COOKIE="$(awk '/HttpOnly_127.0.0.1.*\tid\t/ { print $NF }' "$JAR")"
-if [[ -z "$SESSION_COOKIE" ]]; then
-  echo "!! failed to scrape session cookie from $JAR" >&2
-  cat "$JAR" >&2 || true
-  exit 1
-fi
-
 echo "== shutting down server"
 kill -INT "$API_PID"
 wait "$API_PID" 2>/dev/null || true
@@ -101,13 +94,6 @@ fi
 echo "== copying fixture to $FIXTURE_DIR"
 mkdir -p "$FIXTURE_DIR"
 cp "$DATA_DIR/production/mokumo.db" "$FIXTURE_DIR/pre-stage3.sqlite"
-cat > "$FIXTURE_DIR/session_continuity.env" <<EOF
-host=127.0.0.1:${PORT}
-pre_stage3_session=${SESSION_COOKIE}
-alice_email=${EMAIL}
-alice_password=${PASSWORD}
-expected_session_name=id
-EOF
 
 cat > "$FIXTURE_DIR/README.md" <<EOF
 # Pre-Stage-3 capture fixtures
@@ -123,7 +109,6 @@ Contents of \`pre-stage3.sqlite\`:
 
 Used by:
 - \`crates/kikan/tests/migration_replay_snapshot.rs\` — proves the runner backfills seaql into kikan_migrations and re-applies none of the pre-Stage-3 migrations.
-- Future \`tests/api/session_continuity.hurl\` — proves session cookies minted by pre-Stage-3 code remain valid after the platform lift.
 EOF
 
 echo "== fixture regenerated"

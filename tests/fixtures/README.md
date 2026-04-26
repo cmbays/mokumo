@@ -17,9 +17,6 @@ Used by:
   migrations. Any net-new migrations added after the capture (e.g.
   `m20260416_000000_login_lockout`) apply normally on top of the
   backfilled set.
-- Future `tests/api/session_continuity.hurl` — proves session cookies
-  minted by pre-Stage-3 code remain valid after the platform lift (see
-  `session_continuity.env` for the captured cookie + credentials).
 
 ## Regeneration
 

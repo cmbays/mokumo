@@ -309,13 +309,19 @@ tasks:
       #     customer or capture an id from a prior step.
       #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
       #
-      #   tests/api/session_continuity.hurl
-      #     Failure: requires a pre-Stage-3 session-snapshot fixture and
-      #     a harness that boots the post-Stage-3 binary against it,
-      #     injecting `pre_stage3_session`, `alice_email`,
-      #     `alice_password`, `expected_session_name`. Not a smoke-suite
-      #     test — belongs in a dedicated continuity Moon task.
-      #     Tracked: mokumo#702.
+      #   tests/api/session_continuity.hurl  [retired]
+      #     Resolved/retired: premise overtaken by PR A wave (meta-DB
+      #     split landed 2026-04-26). The pre-Stage-3 fixture's
+      #     seaql_migrations layout is incompatible with the current
+      #     binary's migration runner — empirically verified that boot
+      #     against the bfae58e fixture rejects with `Database
+      #     preparation failed: ... created by a newer version of
+      #     Mokumo`. The cross-version-continuity property the file
+      #     was authored to test cannot be reconstructed without
+      #     regenerating the fixture against a more recent commit,
+      #     which would defeat the test's purpose. Closed: mokumo#702.
+      #     The pre-stage3.sqlite fixture stays in-tree for
+      #     `crates/kikan/tests/migration_replay_snapshot.rs`.
       #
       #   tests/api/shop/logo-upload.hurl
       #   tests/api/shop/logo-upload-errors.hurl

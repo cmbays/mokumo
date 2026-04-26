@@ -130,6 +130,44 @@ Feature: Shop restore from backup
     Given a running server on first launch with no production database
     When 5 restore or validate requests are submitted within one hour
     Then the 6th request is rejected with status 429
+    And the error code is "rate_limited"
+
+  # --- Body parse errors (wire-code contract — see mokumo#701) ---
+  #
+  # The Hurl smoke suite cannot reach these paths under the demo harness
+  # because RestoreGuard fires before body parsing. These BDD scenarios
+  # boot a first-launch server (no production DB), so the guard passes and
+  # extract_candidate executes — letting us pin the parse_error wire shape.
+
+  Scenario: Restore endpoint rejects unparseable JSON body with parse_error
+    Given a running server on first launch with no production database
+    When a restore request is submitted with an unparseable JSON body
+    Then the request is rejected with status 400
+    And the error code is "parse_error"
+
+  Scenario: Restore endpoint rejects unsupported Content-Type with parse_error
+    Given a running server on first launch with no production database
+    When a restore request is submitted with Content-Type "text/plain"
+    Then the request is rejected with status 400
+    And the error code is "parse_error"
+
+  Scenario: Restore endpoint rejects multipart with no file field
+    Given a running server on first launch with no production database
+    When a restore request is submitted with a multipart body that has no file field
+    Then the request is rejected with status 400
+    And the error code is "parse_error"
+
+  Scenario: Validate endpoint rejects unparseable JSON body with parse_error
+    Given a running server on first launch with no production database
+    When a validate request is submitted with an unparseable JSON body
+    Then the request is rejected with status 400
+    And the error code is "parse_error"
+
+  Scenario: Validate endpoint rejects unsupported Content-Type with parse_error
+    Given a running server on first launch with no production database
+    When a validate request is submitted with Content-Type "text/plain"
+    Then the request is rejected with status 400
+    And the error code is "parse_error"
 
   # --- Rollback on partial failure ---
 
