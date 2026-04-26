@@ -17,9 +17,17 @@ const VERTICAL_DB_FILE: &str = "mokumo.db";
 /// after A's `Given` set it but before A's `When` reads it. This mutex
 /// serializes any scenario that mutates the env var for its full
 /// lifetime (acquired in the `Given`, released when the ctx drops).
-fn sidecar_env_lock() -> &'static parking_lot::Mutex<()> {
-    static LOCK: std::sync::OnceLock<parking_lot::Mutex<()>> = std::sync::OnceLock::new();
-    LOCK.get_or_init(|| parking_lot::Mutex::new(()))
+///
+/// Uses `tokio::sync::Mutex` (not `parking_lot::Mutex`) because cucumber
+/// schedules scenarios as tokio tasks: a sync mutex held across `.await`
+/// blocks the worker thread, and with enough contention every worker
+/// thread can end up parked on the lock with nobody left to run the
+/// holding task to completion (deadlock). The async mutex yields the
+/// task instead.
+fn sidecar_env_lock() -> Arc<tokio::sync::Mutex<()>> {
+    static LOCK: std::sync::OnceLock<Arc<tokio::sync::Mutex<()>>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
 }
 
 pub struct SidecarRecoveryCtx {
@@ -33,8 +41,9 @@ pub struct SidecarRecoveryCtx {
     pub boot_result: Option<Result<(), EngineError>>,
     /// Held for the lifetime of the scenario; dropped together with the
     /// env-var reset so the lock is released only after this scenario's
-    /// stale path is gone.
-    _env_guard: parking_lot::MutexGuard<'static, ()>,
+    /// stale path is gone. `OwnedMutexGuard` keeps the guard `'static`
+    /// so it can live as a struct field on the World-owned ctx.
+    _env_guard: tokio::sync::OwnedMutexGuard<()>,
 }
 
 // Cucumber's `World` derive needs `Debug`; `MutexGuard` doesn't impl it.
@@ -82,7 +91,7 @@ async fn given_sidecar_present_db_missing(w: &mut PlatformBddWorld) {
     // acquiring the lock again — otherwise we'd deadlock with our own
     // World's prior scenario remnant.
     w.sidecar_recovery = None;
-    let env_guard = sidecar_env_lock().lock();
+    let env_guard = sidecar_env_lock().lock_owned().await;
     let dir = tempfile::tempdir().unwrap();
     let sidecar = dir.path().join("seed-demo.db");
     write_kikan_seed_db(&sidecar);
@@ -104,7 +113,7 @@ async fn given_sidecar_present_db_missing(w: &mut PlatformBddWorld) {
 #[given("a fresh data directory with a bundled demo sidecar and a healthy demo database file")]
 async fn given_sidecar_and_healthy_db(w: &mut PlatformBddWorld) {
     w.sidecar_recovery = None;
-    let env_guard = sidecar_env_lock().lock();
+    let env_guard = sidecar_env_lock().lock_owned().await;
     let dir = tempfile::tempdir().unwrap();
     let sidecar = dir.path().join("seed-demo.db");
     write_kikan_seed_db(&sidecar);
