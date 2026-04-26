@@ -3,8 +3,8 @@
 //! (`AuthenticatedUser` / `ProfileUserId`).
 //!
 //! Domain-pure (no shop-vertical identifiers, I1). The HTTP handler layer
-//! (`login`/`logout`/`me`/`recover`/`reset`/`regen`) lives in
-//! [`crate::platform::auth`]; route composition is in `mokumo_shop::routes`.
+//! lives in [`crate::platform::v1::auth`]; route composition is in the
+//! vertical's `data_plane_routes` (mokumo-shop's `routes::data_plane_routes`).
 
 pub mod backend;
 pub mod domain;

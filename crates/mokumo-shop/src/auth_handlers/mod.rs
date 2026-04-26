@@ -1,13 +1,15 @@
-//! Mokumo-specific auth HTTP handlers — `/api/auth/*`, `/api/setup`,
-//! account recovery, and the demo-auto-login request-gating middleware.
+//! Mokumo-specific auth surface — the legacy `/api/auth/*` alias router,
+//! `/api/setup`, account recovery, and the demo-auto-login request-gating
+//! middleware.
 //!
 //! These handlers embed Mokumo product policy (the `admin@demo.local`
 //! literal, auto-login-into-Demo behaviour, `Production` as the
 //! credentialed-auth target), so they live on the Mokumo vertical side
 //! of the kikan/application seam (ADR `adr-kikan-engine-vocabulary`).
-//! The kikan-generic surface exposes `Backend<K>` + `AuthenticatedUser<K>`
-//! and `kikan::control_plane::users::*`; this module binds `K = SetupMode`
-//! and composes the handlers that make up the wire contract.
+//! Login / logout / me are kikan-canonical and live in
+//! [`kikan::platform::v1::auth`]; this module mounts the legacy
+//! `/api/auth/{login,logout,me}` URLs against the same kikan handlers
+//! so the shop SPA can keep its existing wire contract through M0.
 //!
 //! ## Composition
 //!
@@ -18,11 +20,6 @@
 //! it as `State<ControlPlaneState>`. The
 //! [`require_auth_with_demo_auto_login`] middleware only needs
 //! `PlatformState`, wired via `from_fn_with_state(state.platform_state(), …)`.
-//!
-//! Handler bodies are thin delegations: Axum extractors → call
-//! `kikan::control_plane::users::*` → `.map_err(AppError::from)`. Session
-//! and cookie issuance stay in the HTTP adapter — the pure-fn layer
-//! cannot see `axum_login::AuthSession`.
 
 pub mod recover;
 pub mod reset;
@@ -32,19 +29,15 @@ use std::sync::atomic::Ordering;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::post;
 use axum::{Json, Router};
 use axum_login::AuthSession;
-use kikan::auth::{Credentials, RoleId, SeaOrmUserRepo, UserId};
+use kikan::auth::SeaOrmUserRepo;
 use kikan::control_plane;
-use kikan::{AppError, ControlPlaneError, ControlPlaneState, PlatformState, ProfileDb};
+use kikan::{AppError, ControlPlaneError, ControlPlaneState, PlatformState};
 use kikan_types::SetupMode;
-use kikan_types::activity::ActivityAction;
-use kikan_types::auth::{
-    LoginRequest, MeResponse, RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse,
-};
+use kikan_types::auth::{RegenerateRecoveryCodesRequest, SetupRequest, SetupResponse};
 use kikan_types::error::ErrorCode;
-use kikan_types::user::UserResponse;
 
 use crate::auth::{AuthenticatedUser, Backend};
 
@@ -58,13 +51,6 @@ pub type AuthSessionType = AuthSession<Backend>;
 
 pub use crate::auth::PendingReset;
 
-pub fn auth_router() -> Router<ControlPlaneState> {
-    Router::new()
-        .route("/login", post(login))
-        .route("/logout", post(logout))
-        .route("/recover", post(recover::recover))
-}
-
 /// File-drop password-reset sub-router, mounted on the shop-side state
 /// slice because the reset handlers need access to `MokumoShopState`'s
 /// `reset_pins` DashMap and `recovery_dir` — vertical vocabulary that
@@ -75,224 +61,8 @@ pub fn reset_router() -> Router<crate::state::SharedMokumoState> {
         .route("/reset-password", post(reset::reset_password))
 }
 
-/// Separate router for /api/auth/me — must be behind the demo auto-login
-/// middleware so that demo mode sessions are created before the auth check.
-pub fn auth_me_router() -> Router<ControlPlaneState> {
-    Router::new().route("/me", get(me))
-}
-
 pub fn setup_router() -> Router<ControlPlaneState> {
     Router::new().route("/", post(setup))
-}
-
-fn user_to_response(user: &kikan::auth::User) -> UserResponse {
-    UserResponse {
-        id: user.id.get(),
-        email: user.email.clone(),
-        name: user.name.clone(),
-        role_name: match user.role_id {
-            RoleId::ADMIN => "Admin".into(),
-            RoleId::STAFF => "Staff".into(),
-            RoleId::GUEST => "Guest".into(),
-            _ => "Unknown".into(),
-        },
-        is_active: user.is_active,
-        last_login_at: user.last_login_at.clone(),
-        created_at: user.created_at.clone(),
-        updated_at: user.updated_at.clone(),
-        deleted_at: user.deleted_at.clone(),
-    }
-}
-
-/// Login thresholds (LAN-mode policy per adr-kikan-deployment-modes).
-/// In-memory limiter: 10 attempts / 15 min per email.
-/// DB lockout: after 10 consecutive fails, lock for 15 min.
-const LOGIN_LOCKOUT_THRESHOLD: i32 = 10;
-const LOGIN_LOCKOUT_SECS: i64 = 15 * 60;
-
-async fn login(
-    State(deps): State<ControlPlaneState>,
-    mut auth_session: AuthSessionType,
-    Json(req): Json<LoginRequest>,
-) -> Result<Json<UserResponse>, AppError> {
-    // Step 1: in-memory rate limit (fast, per-email).
-    if !deps.login_limiter.check_and_record(&req.email) {
-        return Err(AppError::TooManyRequests(
-            "Too many login attempts. Try again later.".into(),
-        ));
-    }
-
-    // Login always authenticates against production_db (same as Backend::authenticate).
-    let repo = SeaOrmUserRepo::new(
-        deps.platform
-            .db_for("production")
-            .cloned()
-            .expect("production profile pool present in PlatformState"),
-    );
-
-    // Step 2: run authentication FIRST so argon2 cost is paid on every
-    // request, regardless of whether the account is locked. Checking lockout
-    // before argon2 leaks account state via response-time side-channel
-    // (locked accounts return ~instantly while unlocked accounts wait on
-    // password hashing). The lockout decision is applied after auth below.
-    //
-    // Delegates the credential-verification slice (lookup + active-check +
-    // argon2 compare) to the pure-fn layer. `PermissionDenied` from the
-    // pure fn conflates "unknown email" / "inactive user" / "bad password"
-    // — the same Ok(None) shape `Backend::authenticate` used to return —
-    // so the downstream lockout + handle_failed_login logic is unchanged.
-    let creds = Credentials {
-        email: req.email.clone(),
-        password: req.password,
-    };
-
-    let auth_result =
-        match control_plane::users::verify_credentials_struct(&deps, creds, SetupMode::Production)
-            .await
-        {
-            Ok(user) => Some(user),
-            Err(ControlPlaneError::PermissionDenied) => None,
-            Err(e) => {
-                tracing::error!("Authentication error: {e}");
-                return Err(AppError::InternalError("An internal error occurred".into()));
-            }
-        };
-
-    // Step 3: fetch current lockout state. Timing of this query is uniform
-    // whether the account is locked or not (indexed lookup by email).
-    let lockout_state = match repo.find_lockout_state_by_email(&req.email).await {
-        Ok(state) => state,
-        Err(e) => {
-            tracing::error!("Failed to check lockout state: {e}");
-            return Err(AppError::InternalError("An internal error occurred".into()));
-        }
-    };
-
-    // Step 4: if the account is currently locked, reject regardless of auth
-    // outcome. We do NOT create a session and do NOT clear the failed-attempt
-    // counter — the lock must expire naturally or be cleared by an admin.
-    if let Some((_, Some(ref locked_until))) = lockout_state
-        && is_still_locked(locked_until)
-    {
-        return Err(AppError::AccountLocked(
-            "Account locked due to too many failed login attempts. Try again later.".into(),
-        ));
-    }
-
-    // Step 5: apply the auth result now that we know the account is not locked.
-    let user = match auth_result {
-        Some(user) => user,
-        None => {
-            return handle_failed_login(&repo, lockout_state.map(|(id, _)| id)).await;
-        }
-    };
-
-    // Step 6: auth succeeded and account is not locked — clear failed-attempt
-    // counter and create session. A clear failure here must abort the login so
-    // we don't leave stale lockout state behind while still minting a session.
-    if let Err(e) = repo.clear_failed_attempts(user.user.id).await {
-        tracing::error!(user_id = %user.user.id, "Failed to clear lockout state: {e}");
-        return Err(AppError::InternalError("Failed to finalize login".into()));
-    }
-
-    if let Err(e) = auth_session.login(&user).await {
-        tracing::error!("Session login error: {e}");
-        return Err(AppError::InternalError("Failed to create session".into()));
-    }
-
-    let _ = repo
-        .log_auth_activity(&user.user, ActivityAction::LoginSuccess)
-        .await;
-
-    Ok(Json(user_to_response(&user.user)))
-}
-
-/// Return true if `locked_until` (ISO-8601 UTC string) is still in the future.
-fn is_still_locked(locked_until: &str) -> bool {
-    use chrono::{DateTime, Utc};
-    match locked_until.parse::<DateTime<Utc>>() {
-        Ok(expiry) => Utc::now() < expiry,
-        Err(_) => false, // malformed timestamp — treat as expired
-    }
-}
-
-/// Handle a failed authentication attempt.
-///
-/// If `user_id` is Some (the email matched a user), increment the failed-attempt
-/// counter. When the counter reaches the lockout threshold, the account is locked
-/// and HTTP 423 is returned. Otherwise HTTP 401 is returned. Audit logging
-/// (LoginFailed / AccountLocked) is handled atomically inside
-/// `record_failed_attempt` within the same DB transaction as the counter update.
-///
-/// If `user_id` is None (email not found), return 401 without revealing that the
-/// account doesn't exist.
-async fn handle_failed_login(
-    repo: &SeaOrmUserRepo,
-    user_id: Option<UserId>,
-) -> Result<Json<UserResponse>, AppError> {
-    let Some(uid) = user_id else {
-        return Err(AppError::Unauthorized(
-            ErrorCode::InvalidCredentials,
-            "Invalid email or password".into(),
-        ));
-    };
-
-    match repo
-        .record_failed_attempt(uid, LOGIN_LOCKOUT_THRESHOLD, LOGIN_LOCKOUT_SECS)
-        .await
-    {
-        Ok((_, Some(_))) => Err(AppError::AccountLocked(
-            "Account locked due to too many failed login attempts. Try again later.".into(),
-        )),
-        Ok((_, None)) => Err(AppError::Unauthorized(
-            ErrorCode::InvalidCredentials,
-            "Invalid email or password".into(),
-        )),
-        Err(e) => {
-            tracing::error!("Failed to record failed login attempt: {e}");
-            // Return generic 401 — don't expose internal errors.
-            Err(AppError::Unauthorized(
-                ErrorCode::InvalidCredentials,
-                "Invalid email or password".into(),
-            ))
-        }
-    }
-}
-
-async fn logout(mut auth_session: AuthSessionType) -> Result<StatusCode, AppError> {
-    match auth_session.logout().await {
-        Ok(_) => Ok(StatusCode::NO_CONTENT),
-        Err(e) => {
-            tracing::error!("Logout error: {e}");
-            Err(AppError::InternalError("Failed to destroy session".into()))
-        }
-    }
-}
-
-async fn me(
-    State(deps): State<ControlPlaneState>,
-    auth_session: AuthSessionType,
-    ProfileDb(db): ProfileDb,
-) -> Result<Json<MeResponse>, AppError> {
-    let user = auth_session.user.as_ref().ok_or_else(|| {
-        AppError::Unauthorized(ErrorCode::Unauthorized, "Not authenticated".into())
-    })?;
-
-    let setup_complete = deps.platform.is_setup_complete();
-    let repo = SeaOrmUserRepo::new(db.clone());
-    let recovery_codes_remaining = match repo.recovery_codes_remaining(&user.user.id).await {
-        Ok(count) => count,
-        Err(e) => {
-            tracing::warn!(user_id = %user.user.id, "Failed to read recovery code count: {e}");
-            0
-        }
-    };
-
-    Ok(Json(MeResponse {
-        user: user_to_response(&user.user),
-        setup_complete,
-        recovery_codes_remaining,
-    }))
 }
 
 /// Regenerate recovery codes for the authenticated user.
@@ -309,7 +79,7 @@ async fn me(
 pub async fn regenerate_recovery_codes(
     State(deps): State<ControlPlaneState>,
     auth_session: AuthSessionType,
-    ProfileDb(db): ProfileDb,
+    kikan::ProfileDb(db): kikan::ProfileDb,
     Json(req): Json<RegenerateRecoveryCodesRequest>,
 ) -> Result<Json<SetupResponse>, AppError> {
     let caller = auth_session
@@ -489,11 +259,6 @@ pub async fn require_auth_with_demo_auto_login(
     // Exception: /api/demo/reset is the recovery mechanism — it must bypass the entire
     // auth chain (both the 423 guard and the demo auto-login) so it can be called even
     // when admin@demo.local is missing from the database.
-    // Session 2b bridge: stringly "demo" literal. The demo-gate middleware
-    // is Mokumo-specific (see Session 3 ADR amendment task) — it will be
-    // hoisted to mokumo-shop or replaced with a Graft capability hook in a
-    // follow-up commit. Kikan names the literal only here, not in any
-    // long-lived API.
     if platform.active_profile.read().as_str() == "demo"
         && !platform.demo_install_ok.load(Ordering::Acquire)
     {
