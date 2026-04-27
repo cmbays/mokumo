@@ -56,9 +56,10 @@ pub fn recovery_html(pin: &str) -> String {
 /// Synchronous file write for the recovery-writer closure.
 ///
 /// Creates `recovery_dir` if missing and writes a Mokumo-branded HTML
-/// page containing `pin` to a deterministic per-email path. Returns
-/// the file's location for the response payload, or surfaces I/O
-/// failure as [`RecoveryError::Io`].
+/// page containing `pin` to a deterministic per-email path. Uses an
+/// atomic write-then-rename so a crash mid-write cannot leave a partial
+/// or corrupted file at the final path. Returns the file's location for
+/// the response payload, or surfaces I/O failure as [`RecoveryError::Io`].
 pub fn write_recovery_artifact(
     email: &str,
     pin: &str,
@@ -66,7 +67,9 @@ pub fn write_recovery_artifact(
 ) -> Result<RecoveryArtifactLocation, RecoveryError> {
     std::fs::create_dir_all(recovery_dir)?;
     let path = recovery_file_path_for_email(recovery_dir, email);
-    std::fs::write(&path, recovery_html(pin))?;
+    let tmp_path = path.with_extension("html.tmp");
+    std::fs::write(&tmp_path, recovery_html(pin))?;
+    std::fs::rename(&tmp_path, &path)?;
     Ok(RecoveryArtifactLocation::File { path })
 }
 

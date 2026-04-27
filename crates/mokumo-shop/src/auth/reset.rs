@@ -18,7 +18,9 @@ use axum::Json;
 use axum::extract::State;
 use kikan::auth::recovery_artifact::RecoveryArtifactLocation;
 use kikan::auth::{SeaOrmUserRepo, UserRepository};
-use kikan::control_plane::auth::{find_session_id_by_email, recover_complete, recover_request};
+use kikan::control_plane::auth::{
+    RecoverySessionId, find_session_id_by_email, recover_complete, recover_request,
+};
 use kikan::{AppError, ControlPlaneError, ControlPlaneState, ProfileDb};
 use kikan_types::auth::{ForgotPasswordRequest, ResetPasswordRequest};
 use kikan_types::error::ErrorCode;
@@ -69,27 +71,24 @@ pub async fn reset_password(
     ProfileDb(db): ProfileDb,
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Always resolve to a concrete RecoverySessionId — synthesise a fresh
+    // random one when the email is unknown or no pending session exists.
+    // The downstream `recover_complete` runs an Argon2id KDF
+    // unconditionally, so this path collapses unknown-email,
+    // missing-session, expired, and wrong-PIN into a single uniform
+    // timing profile. Returning early on lookup miss (the previous shape)
+    // leaked a ~300ms timing oracle that an attacker could exploit for
+    // email enumeration after a paired `forgot-password` call.
     let repo = SeaOrmUserRepo::new(db.clone());
-    let user_id = match repo.find_by_email(&req.email).await {
-        Ok(Some(user)) => user.id,
-        Ok(None) => {
-            return Err(AppError::BadRequest(
-                ErrorCode::ValidationError,
-                "Invalid or expired recovery session".into(),
-            ));
-        }
+    let session_id = match repo.find_by_email(&req.email).await {
+        Ok(Some(user)) => find_session_id_by_email(&deps.platform, &user.id)
+            .unwrap_or_else(RecoverySessionId::generate),
+        Ok(None) => RecoverySessionId::generate(),
         Err(e) => {
             tracing::error!("DB error during reset-password lookup: {e}");
             return Err(AppError::InternalError("An internal error occurred".into()));
         }
     };
-
-    let session_id = find_session_id_by_email(&deps.platform, &user_id).ok_or_else(|| {
-        AppError::BadRequest(
-            ErrorCode::ValidationError,
-            "Invalid or expired recovery session".into(),
-        )
-    })?;
 
     recover_complete(&deps.platform, &db, &session_id, req.pin, req.new_password)
         .await

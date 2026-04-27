@@ -101,7 +101,18 @@ where
 
     let session_id = RecoverySessionId::generate();
 
+    let artifact_path = match &location {
+        RecoveryArtifactLocation::File { path } => Some(path.clone()),
+    };
+
     if let Some(user) = user {
+        // Invalidate any prior session minted for the same user. Without
+        // this, repeated `recover_request` calls for one user accumulate
+        // entries; the legacy `reset-password` shim's
+        // `find_session_id_by_email` returns the first match and may
+        // pick a stale session whose PIN no longer matches the artifact
+        // (since the latest write overwrote the file at the same path).
+        state.reset_pins.retain(|_, entry| entry.user_id != user.id);
         state.reset_pins.insert(
             session_id.clone(),
             PendingReset {
@@ -109,14 +120,27 @@ where
                 user_id: user.id,
                 created_at: SystemTime::now(),
                 attempts: 0,
+                artifact_path,
             },
         );
+    } else {
+        // Unknown email: synthesised session, no DashMap entry. The
+        // throwaway artifact written above for timing uniformity has no
+        // owner and would otherwise accumulate one file per unique
+        // unknown email. Best-effort delete it now — the response is
+        // already shaped, and deletion is a microsecond syscall (well
+        // below the Argon2id-dominated response time).
+        if let Some(path) = &artifact_path {
+            if let Err(e) = std::fs::remove_file(path) {
+                if e.kind() != std::io::ErrorKind::NotFound {
+                    tracing::debug!(
+                        path = %path.display(),
+                        "recover_request: failed to clean up unknown-email artifact: {e}"
+                    );
+                }
+            }
+        }
     }
-    // Unknown email: pin_hash is dropped, no DashMap entry. Any future
-    // recover_complete against this synthesised session_id fails
-    // uniformly via the same `Validation` mapping that wrong-PIN /
-    // expired-session take. Response time matches the known-email path
-    // because both `write_artifact` and `hash_password` ran above.
 
     Ok(RecoverRequestOutcome {
         session_id,
@@ -134,7 +158,9 @@ where
 /// - `Err(Internal)` on infrastructure failure.
 ///
 /// The DashMap entry is consumed atomically — see module-level
-/// "Concurrency".
+/// "Concurrency". An Argon2id KDF runs unconditionally so timing is
+/// uniform between "session exists" and "session synthesised by an
+/// anti-enumeration `recover_request` call against an unknown email".
 pub async fn recover_complete(
     state: &PlatformState,
     db: &DatabaseConnection,
@@ -142,7 +168,27 @@ pub async fn recover_complete(
     pin: String,
     new_password: String,
 ) -> Result<(), ControlPlaneError> {
-    let Some((_, entry)) = state.reset_pins.remove(session_id) else {
+    let entry_opt = state.reset_pins.remove(session_id);
+
+    // Run an Argon2id KDF unconditionally. The success path verifies
+    // the user-supplied PIN against the stored hash; the missing-session
+    // path burns the same KDF cost via a throwaway `hash_password` so a
+    // synthesised session_id (for an unknown email) cannot be
+    // distinguished by response time from a known-session-wrong-PIN
+    // attempt.
+    let valid = match entry_opt.as_ref() {
+        Some((_, e)) => password::verify_password(pin, e.pin_hash.clone())
+            .await
+            .map_err(|err| ControlPlaneError::Internal(anyhow::anyhow!(err)))?,
+        None => {
+            password::hash_password(pin)
+                .await
+                .map_err(|err| ControlPlaneError::Internal(anyhow::anyhow!(err)))?;
+            false
+        }
+    };
+
+    let Some((_, entry)) = entry_opt else {
         return Err(invalid_session());
     };
 
@@ -154,10 +200,6 @@ pub async fn recover_complete(
     {
         return Err(invalid_session());
     }
-
-    let valid = password::verify_password(pin, entry.pin_hash.clone())
-        .await
-        .map_err(|e| ControlPlaneError::Internal(anyhow::anyhow!(e)))?;
 
     if !valid {
         let next_attempts = entry.attempts.saturating_add(1);
@@ -177,6 +219,22 @@ pub async fn recover_complete(
     repo.update_password(&entry.user_id, &new_password)
         .await
         .map_err(|e| ControlPlaneError::Internal(anyhow::anyhow!(e)))?;
+
+    // Best-effort cleanup of the recovery artifact on success. Matches
+    // the pre-promotion behavior the legacy reset_password handler had,
+    // and avoids leaving a plaintext PIN file on disk after the operator
+    // has consumed it. Failures are logged at warn — the redemption has
+    // already succeeded and the response should not surface I/O noise.
+    if let Some(path) = entry.artifact_path.as_ref() {
+        if let Err(e) = std::fs::remove_file(path) {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                tracing::warn!(
+                    path = %path.display(),
+                    "recover_complete: failed to remove recovery artifact: {e}"
+                );
+            }
+        }
+    }
 
     Ok(())
 }

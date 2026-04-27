@@ -23,6 +23,7 @@
 //!    `~PIN_EXPIRY × issuance_rate` for sessions never redeemed by the
 //!    operator.
 
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::auth::UserId;
@@ -106,6 +107,13 @@ pub struct PendingReset {
     pub created_at: SystemTime,
     /// Incorrect-PIN counter. Eviction trigger at `MAX_PIN_ATTEMPTS`.
     pub attempts: u8,
+    /// On-disk path the recovery-writer placed the artifact at, when it
+    /// returned [`crate::auth::recovery_artifact::RecoveryArtifactLocation::File`].
+    /// `recover_complete` removes this file on successful redemption so
+    /// the plaintext PIN does not linger after the operator consumes it.
+    /// `None` for verticals whose writer delivers the artifact
+    /// out-of-band (e.g. email, push) — no filesystem cleanup needed.
+    pub artifact_path: Option<PathBuf>,
 }
 
 #[cfg(test)]
