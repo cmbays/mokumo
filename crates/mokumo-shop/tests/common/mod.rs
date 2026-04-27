@@ -52,14 +52,18 @@ pub async fn boot_router(
 
     let graft =
         mokumo_shop::graft::MokumoApp::new(setup_token.as_deref().map(std::sync::Arc::from))
-            .with_recovery_dir(recovery_dir)
+            .with_recovery_dir(recovery_dir.clone())
             .with_spa_source(|| -> Box<dyn kikan::data_plane::spa::SpaSource> {
                 Box::new(NoopSpa)
             });
     let profile_initializer: kikan::platform_state::SharedProfileDbInitializer =
         std::sync::Arc::new(mokumo_shop::profile_db_init::MokumoProfileDbInitializer);
 
-    let boot_config = kikan::BootConfig::new(data_dir);
+    let recovery_writer: kikan::auth::recovery_artifact::RecoveryArtifactWriter =
+        std::sync::Arc::new(move |email: &str, pin: &str| {
+            mokumo_shop::auth::recovery_artifact::write_recovery_artifact(email, pin, &recovery_dir)
+        });
+    let boot_config = kikan::BootConfig::new(data_dir).with_recovery_writer(recovery_writer);
 
     let mut pools = std::collections::HashMap::with_capacity(2);
     pools.insert(

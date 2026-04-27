@@ -524,9 +524,19 @@ async fn cmd_serve(data_dir: PathBuf, args: ServeArgs, verbose: u8, quiet: bool)
                 std::process::exit(2);
             });
     let event_bus = kikan_events::BroadcastEventBus::new();
+    let recovery_dir_for_writer = graft.effective_recovery_dir();
+    let recovery_writer: kikan::auth::recovery_artifact::RecoveryArtifactWriter =
+        std::sync::Arc::new(move |email: &str, pin: &str| {
+            mokumo_shop::auth::recovery_artifact::write_recovery_artifact(
+                email,
+                pin,
+                &recovery_dir_for_writer,
+            )
+        });
     let boot_config = kikan::BootConfig::new(data_dir.clone())
         .with_data_plane(data_plane)
-        .with_subgraft(kikan_events::EventBusSubGraft::new(event_bus.clone()));
+        .with_subgraft(kikan_events::EventBusSubGraft::new(event_bus.clone()))
+        .with_recovery_writer(recovery_writer);
     let shutdown = CancellationToken::new();
 
     let mut pools: std::collections::HashMap<
@@ -891,6 +901,7 @@ async fn cmd_bootstrap(
         setup_token: None,
         setup_in_progress: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         activity_writer: std::sync::Arc::new(kikan::SqliteActivityWriter::new()),
+        recovery_writer: None,
     };
 
     let input = kikan::control_plane::users::BootstrapInput {
@@ -1496,6 +1507,7 @@ fn build_bootstrap_platform_state(
         sidecar_recoveries: std::sync::Arc::new(parking_lot::RwLock::new(
             std::collections::HashMap::new(),
         )),
+        reset_pins: std::sync::Arc::new(dashmap::DashMap::new()),
     }
 }
 

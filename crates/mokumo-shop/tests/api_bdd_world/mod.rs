@@ -441,7 +441,17 @@ pub async fn boot_test_server(
     let profile_initializer: kikan::platform_state::SharedProfileDbInitializer =
         std::sync::Arc::new(mokumo_shop::profile_db_init::MokumoProfileDbInitializer);
 
-    let boot_config = kikan::BootConfig::new(data_dir.clone());
+    let recovery_dir_for_writer = graft.effective_recovery_dir();
+    let recovery_writer: kikan::auth::recovery_artifact::RecoveryArtifactWriter =
+        std::sync::Arc::new(move |email: &str, pin: &str| {
+            mokumo_shop::auth::recovery_artifact::write_recovery_artifact(
+                email,
+                pin,
+                &recovery_dir_for_writer,
+            )
+        });
+    let boot_config =
+        kikan::BootConfig::new(data_dir.clone()).with_recovery_writer(recovery_writer);
     let meta_db_path = data_dir.join("meta.db");
     let meta_db =
         kikan::db::initialize_database(&format!("sqlite:{}?mode=rwc", meta_db_path.display()))

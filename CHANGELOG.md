@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Changed
+
+- **Auth HTTP handlers promoted to kikan platform layer** (#685, M00):
+  - `POST /api/platform/v1/auth/{login, logout, me, recover/request, recover/complete}` are now the canonical kikan-served URLs, served by adapters in `kikan::platform::v1::auth` over the pure-fn core in `kikan::control_plane::auth`. Legacy `/api/auth/*` URLs (including `/forgot-password`, `/reset-password`, `/recover` recovery-code variant) continue to route to the same handlers through M0 so the shop SPA is unchanged.
+  - **Recovery-session redesign (Recovery Session Token pattern):** the storage key for a pending password reset is now an opaque 256-bit hex `RecoverySessionId` minted at issuance, not the user's email. The user-facing PIN remains the secret. Anti-enumeration: "unknown email", "wrong PIN", "expired session", and "attempts exhausted" all emit the same `400 Invalid or expired recovery session` body. TOCTOU-safe attempts counter via atomic `DashMap::remove → check → conditional reinsert`; two-tier eviction (lazy on every redeem + 60s background sweep cancelled on shutdown).
+  - `BootConfig::with_recovery_writer` runtime hook lets verticals own where their recovery artifact lands (file, email, push, …) without leaking branding into kikan. Mokumo wires the existing branded HTML writer at the hash-derived path.
+  - kikan-admin-ui login form retargeted from the dead `/api/platform/v1/auth/sign-in` URL to the canonical `/api/platform/v1/auth/login`.
+  - In-PR fix: legacy `forgot-password` now runs the recovery-rate-limit gate before issuing a session (the pre-promotion handler skipped it).
+  - Closes #271 (cross-crate `SeaOrmUserRepo::new` anti-pattern dissolves naturally — handlers now live in the same crate as the repo). F1 follow-up #698 tracks shop-SPA retargeting `/api/auth/*` → canonical URLs.
+
 ### Fixed
 
 - **Legacy install upgrade migrates `users`/`roles` to meta.db with crash-recovery semantics** (#705, kikan): pre-PR-A installs (binaries from before mokumo#679) carry `users` and `roles` tables on the per-profile DB; the post-PR-A schema places them on `meta.db`. The legacy upgrade now (1) extends `kikan::db::check_schema_compatibility` to recognise platform-owned migration rows so the binary stops rejecting legitimate legacy fixtures as "newer-version" databases, and (2) runs a state-machine data move ahead of the existing `meta.profiles` insert that observes physical state on each boot — fresh upgrade (insert + drop), crash recovery (drop only when prior commit reached meta but not the per-profile drop), or no-op when the upgrade already completed. TOCTOU is closed via a SeaORM transaction whose first statement upserts `meta.legacy_upgrade_locks` (new platform migration) to force `RESERVED` immediately. Multi-legacy-profile collisions on user IDs or custom role IDs (id > 3) are detected pre-mutation and abort with a privilege-escalation diagnostic; partial email intersections (indicating external mutation of meta.db) abort as anomalous. 22 new tests across `kikan/src/meta/upgrade.rs` (13) and `kikan/tests/features/legacy_upgrade.feature` (9 scenarios).

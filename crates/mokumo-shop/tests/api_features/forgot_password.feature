@@ -37,6 +37,23 @@ Feature: PIN-Based Password Recovery
     When the user enters an incorrect PIN
     Then the reset is rejected
 
+  # Exercises the atomic remove-check-reinsert primitive in
+  # kikan::control_plane::auth::recover_complete: every wrong PIN
+  # increments the in-memory attempts counter (DashMap reinsert with
+  # attempts += 1); on the 3rd consecutive wrong PIN the entry is
+  # consumed and not reinserted, so the original valid PIN can no
+  # longer redeem the session.
+  Scenario: Three wrong PINs exhaust attempts and destroy the session
+    Given a recovery PIN has been generated
+    When the user enters an incorrect PIN 3 times
+    Then the original valid PIN no longer redeems the session
+
+  Scenario: Two wrong PINs leave the valid PIN usable
+    Given a recovery PIN has been generated
+    When the user enters an incorrect PIN 2 times
+    And the user enters the correct PIN with a new password
+    Then the password is updated
+
   @wip
   Scenario: Excessive reset requests are rate limited
     Given an admin user exists

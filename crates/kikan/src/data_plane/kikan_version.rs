@@ -159,6 +159,7 @@ mod tests {
             setup_completed: Arc::new(AtomicBool::new(true)),
             profile_db_initializer: Arc::new(UnreachableInitializer),
             sidecar_recoveries: Arc::new(parking_lot::RwLock::new(HashMap::new())),
+            reset_pins: Arc::new(dashmap::DashMap::new()),
         }
     }
 

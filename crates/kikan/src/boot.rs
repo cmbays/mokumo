@@ -1,4 +1,5 @@
 use crate::app_handle::AppHandleShim;
+use crate::auth::recovery_artifact::RecoveryArtifactWriter;
 use crate::data_plane::{DataPlaneConfig, DeploymentMode};
 use crate::graft::SubGraft;
 use std::net::SocketAddr;
@@ -66,6 +67,11 @@ pub struct BootConfig {
     pub rate_limit_config: RateLimitConfig,
     pub(crate) subgrafts: Vec<Box<dyn SubGraft>>,
     pub(crate) app_handle: Option<Box<dyn AppHandleShim>>,
+    /// Optional file-drop reset writer. Verticals that expose a recovery
+    /// flow install one via [`Self::with_recovery_writer`]; verticals
+    /// that don't leave it as `None`. See
+    /// [`crate::auth::recovery_artifact::RecoveryArtifactWriter`].
+    pub(crate) recovery_writer: Option<RecoveryArtifactWriter>,
 }
 
 impl BootConfig {
@@ -92,6 +98,7 @@ impl BootConfig {
             rate_limit_config: RateLimitConfig::default(),
             subgrafts: Vec::new(),
             app_handle: None,
+            recovery_writer: None,
         })
     }
 
@@ -102,6 +109,7 @@ impl BootConfig {
             rate_limit_config: RateLimitConfig::default(),
             subgrafts: Vec::new(),
             app_handle: None,
+            recovery_writer: None,
         }
     }
 
@@ -156,7 +164,16 @@ impl BootConfig {
             rate_limit_config: RateLimitConfig::default(),
             subgrafts: Vec::new(),
             app_handle: Some(Box::new(handle)),
+            recovery_writer: None,
         }
+    }
+
+    /// Install the file-drop recovery writer (vertical-supplied closure)
+    /// the kikan recover_request adapter calls after issuing a session.
+    /// See [`RecoveryArtifactWriter`] for the signature.
+    pub fn with_recovery_writer(mut self, writer: RecoveryArtifactWriter) -> Self {
+        self.recovery_writer = Some(writer);
+        self
     }
 }
 

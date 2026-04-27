@@ -14,7 +14,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 
 use kikan::AppError;
-use kikan_types::HealthResponse;
+use kikan_types::{HealthResponse, SetupMode};
 
 use crate::state::SharedMokumoState;
 
@@ -46,11 +46,21 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
     );
 
     // ── Protected auth sub-router ───────────────────────────────────
+    //
+    // Legacy `/api/auth/me` alias is mounted here behind
+    // `require_auth_with_demo_auto_login` so demo-mode sessions auto-issue
+    // before the auth check (Mokumo-specific policy — see ADR
+    // `adr-platform-auth-handler-placement`). The canonical
+    // `/api/platform/v1/auth/me` mount is kikan-side and does NOT pass
+    // through demo-auto-login: admin-UI sessions are always explicit.
     let protected_auth_routes = Router::new()
-        .nest("/api/auth", crate::auth_handlers::auth_me_router())
+        .route(
+            "/api/auth/me",
+            get(kikan::platform::v1::auth::me::me::<SetupMode>),
+        )
         .route(
             "/api/account/recovery-codes/regenerate",
-            post(crate::auth_handlers::regenerate_recovery_codes),
+            post(crate::auth::regenerate_recovery_codes),
         )
         .with_state(control_plane_state.clone());
 
@@ -93,7 +103,7 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
         .merge(shop_upload_router)
         .route_layer(axum::middleware::from_fn_with_state(
             state.platform_state(),
-            crate::auth_handlers::require_auth_with_demo_auto_login,
+            crate::auth::require_auth_with_demo_auto_login,
         ));
 
     // ── Restore routes (unauthenticated, large body limit) ──────────
@@ -108,12 +118,35 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
         )
         .layer(axum::extract::DefaultBodyLimit::max(500 * 1024 * 1024));
 
+    // ── Public auth: legacy /api/auth alias + recover ───────────────
+    //
+    // Legacy `/api/auth/{login,logout}` route to the same kikan handlers
+    // as the canonical `/api/platform/v1/auth/{login,logout}` mount; the
+    // shop SPA continues to call the alias through M0. `/api/auth/recover`
+    // is shop-vertical (it depends on Mokumo's recovery-code wire shape)
+    // and stays here.
+    let public_auth_router = Router::new()
+        .route(
+            "/login",
+            post(kikan::platform::v1::auth::login::login::<SetupMode>),
+        )
+        .route(
+            "/logout",
+            post(kikan::platform::v1::auth::logout::logout::<SetupMode>),
+        )
+        .route("/recover", post(crate::auth::recover::recover))
+        .with_state(control_plane_state.clone());
+
     // ── Public routes ───────────────────────────────────────────────
     let mut router = Router::new()
         .route("/api/health", get(health))
         .merge(kikan::data_plane::kikan_version::kikan_version_router::<
             SharedState,
         >(state.platform_state()))
+        .merge(kikan::platform::v1::auth::auth_router::<
+            SharedState,
+            SetupMode,
+        >(control_plane_state.clone()))
         .route("/api/server-info", get(crate::server_info::handler))
         .route("/api/setup-status", get(setup_status))
         .route(
@@ -126,9 +159,8 @@ pub fn data_plane_routes(state: &SharedState) -> Router<SharedState> {
         )
         .nest(
             "/api/auth",
-            crate::auth_handlers::auth_router()
-                .with_state(control_plane_state.clone())
-                .merge(crate::auth_handlers::reset_router()),
+            public_auth_router
+                .merge(crate::auth::reset_router().with_state(control_plane_state.clone())),
         )
         .nest(
             "/api/setup",
@@ -285,10 +317,24 @@ async fn debug_expire_pin(
     State(state): State<SharedState>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
+    use kikan::auth::UserRepository;
     let email = body["email"].as_str().unwrap_or_default();
-    if let Some(mut entry) = state.reset_pins().get_mut(email) {
-        let past = std::time::SystemTime::now() - std::time::Duration::from_secs(20 * 60);
-        entry.created_at = past;
+    let repo = kikan::auth::SeaOrmUserRepo::new(state.production_db().clone());
+    let user_id = match repo.find_by_email(email).await {
+        Ok(Some(user)) => user.id,
+        _ => return StatusCode::NOT_FOUND,
+    };
+    let pins = &state.platform_state().reset_pins;
+    let session_id = match pins
+        .iter()
+        .find(|entry| entry.value().user_id == user_id)
+        .map(|entry| entry.key().clone())
+    {
+        Some(id) => id,
+        None => return StatusCode::NOT_FOUND,
+    };
+    if let Some(mut entry) = pins.get_mut(&session_id) {
+        entry.created_at = std::time::SystemTime::now() - std::time::Duration::from_secs(20 * 60);
         StatusCode::OK
     } else {
         StatusCode::NOT_FOUND

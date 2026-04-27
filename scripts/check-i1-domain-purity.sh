@@ -37,12 +37,12 @@ echo "I1/classic ok: ${TARGET} contains no garment-domain identifiers"
 # Patterns:
 # - `SetupMode`        — Mokumo's concrete profile-kind enum variant.
 # - `"mokumo.db"`      — Mokumo's per-profile DB filename literal.
-# - `PendingReset`     — Mokumo's file-drop password-reset shape
-#                        (lifted in Session 3 per adr-kikan-engine-vocabulary
-#                        amendment 2026-04-22 (b)); this pattern prevents
-#                        the type or a `DashMap<.., PendingReset>` from
-#                        being re-introduced into kikan.
-PATTERN_STRICT='\bSetupMode\b|"mokumo\.db"|\bPendingReset\b'
+#
+# `PendingReset` is no longer in the strict pattern: the type was
+# lifted into kikan (kikan::control_plane::auth::PendingReset) per
+# adr-kikan-engine-vocabulary amendment 2026-04-22 (b) and is now a
+# vocabulary-neutral storage primitive owned by the platform crate.
+PATTERN_STRICT='\bSetupMode\b|"mokumo\.db"'
 set +e
 rg -n --color=never \
     -g '!**/tests.rs' \
@@ -61,4 +61,4 @@ case "$rc" in
         exit "$rc"
         ;;
 esac
-echo "I1/strict ok: ${TARGET} contains no SetupMode, \"mokumo.db\", or PendingReset in production code"
+echo "I1/strict ok: ${TARGET} contains no SetupMode or \"mokumo.db\" in production code"

@@ -303,6 +303,7 @@ impl<G: Graft> Engine<G> {
             setup_completed,
             profile_db_initializer,
             sidecar_recoveries: Arc::new(RwLock::new(sidecar_recoveries)),
+            reset_pins: Arc::new(dashmap::DashMap::new()),
         };
 
         // ── Resolve setup_token via Graft hook ───────────────────────
@@ -314,6 +315,11 @@ impl<G: Graft> Engine<G> {
         // run with an indeterminate token. (Fail-fast at boot per ADR
         // amendment 2026-04-22 (a).)
         let setup_token: Option<Arc<str>> = resolve_setup_token(graft.setup_token_source())?;
+
+        // ── Background sweeps ────────────────────────────────────────
+        // Reset-PIN sweep is engine-internal: it bounds the in-memory
+        // recovery-session map regardless of which vertical is mounted.
+        crate::control_plane::auth::sweep::spawn(&platform);
 
         // ── ControlPlaneState ────────────────────────────────────────
         let rlc = &engine.config.rate_limit_config;
@@ -332,6 +338,7 @@ impl<G: Graft> Engine<G> {
             setup_token,
             setup_in_progress: Arc::new(AtomicBool::new(false)),
             activity_writer,
+            recovery_writer: engine.config.recovery_writer.clone(),
         };
 
         // ── DomainState ──────────────────────────────────────────────
@@ -905,5 +912,114 @@ mod sidecar_recovery_tests {
         let got = handle_sidecar_outcome(&dir(), outcome, &meta).await;
         let diag = got.expect("Recreated yields a diagnostic even when audit insert fails");
         assert_eq!(diag.bytes, 7);
+    }
+}
+
+#[cfg(test)]
+mod legacy_completed_branch_tests {
+    //! Drive the boot-failure path of [`run_legacy_completed_branch`]
+    //! without standing up a full Engine. The orchestrator returns early
+    //! when no pool entry is registered for the auth profile kind — that
+    //! invariant guards against a Graft that declared a kind but the
+    //! engine failed to open its pool.
+    use super::*;
+    use crate::GraftId;
+    use crate::migrations::Migration;
+    use sea_orm::Database;
+    use std::str::FromStr;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+    struct LegacyKind;
+
+    impl std::fmt::Display for LegacyKind {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("legacy")
+        }
+    }
+
+    impl FromStr for LegacyKind {
+        type Err = String;
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            if s == "legacy" {
+                Ok(LegacyKind)
+            } else {
+                Err(format!("unknown kind: {s}"))
+            }
+        }
+    }
+
+    static LEGACY_KINDS: &[LegacyKind] = &[LegacyKind];
+
+    struct LegacyTestGraft;
+
+    impl Graft for LegacyTestGraft {
+        type AppState = ();
+        type DomainState = ();
+        type ProfileKind = LegacyKind;
+
+        fn id() -> GraftId {
+            GraftId::new("legacy-test")
+        }
+        fn db_filename(&self) -> &'static str {
+            "legacy.db"
+        }
+        fn all_profile_kinds(&self) -> &'static [LegacyKind] {
+            LEGACY_KINDS
+        }
+        fn default_profile_kind(&self) -> LegacyKind {
+            LegacyKind
+        }
+        fn requires_setup_wizard(&self, _kind: &LegacyKind) -> bool {
+            false
+        }
+        fn auth_profile_kind(&self) -> LegacyKind {
+            LegacyKind
+        }
+        fn migrations(&self) -> Vec<Box<dyn Migration>> {
+            Vec::new()
+        }
+        async fn build_domain_state(
+            &self,
+            _ctx: &EngineContext,
+        ) -> Result<Self::DomainState, EngineError> {
+            Ok(())
+        }
+        fn compose_state(_cp: ControlPlaneState, _domain: ()) -> Self::AppState {}
+        fn platform_state(_state: &Self::AppState) -> &PlatformState {
+            unreachable!("not exercised in this test")
+        }
+        fn control_plane_state(_state: &Self::AppState) -> &ControlPlaneState {
+            unreachable!("not exercised in this test")
+        }
+        fn data_plane_routes(_state: &Self::AppState) -> Router<Self::AppState> {
+            Router::new()
+        }
+    }
+
+    /// `run_legacy_completed_branch` returns an `EngineError::Boot` when
+    /// the auth-profile pool isn't registered, instead of dereferencing a
+    /// missing entry. This is the failure mode that hides bad Engine boot
+    /// wiring behind a clear message rather than a panic.
+    #[tokio::test]
+    async fn missing_auth_pool_surfaces_boot_error() {
+        let meta = Database::connect("sqlite::memory:").await.unwrap();
+        let pools: HashMap<ProfileDirName, DatabaseConnection> = HashMap::new();
+        let path = std::path::PathBuf::from("/tmp/legacy.db");
+
+        let result =
+            run_legacy_completed_branch(&meta, &LegacyTestGraft, &pools, &path, "test-shop").await;
+
+        let err = result.expect_err("missing pool must surface as Boot error");
+        let EngineError::Boot(msg) = err else {
+            panic!("expected EngineError::Boot, got {err:?}");
+        };
+        assert!(
+            msg.contains("no pool entry"),
+            "boot error message should explain the missing pool: {msg}"
+        );
+        assert!(
+            msg.contains("legacy"),
+            "boot error message should name the auth profile kind: {msg}"
+        );
     }
 }

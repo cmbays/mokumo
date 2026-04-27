@@ -148,6 +148,7 @@ pub fn stub_app_state(
         setup_completed: Arc::new(AtomicBool::new(false)),
         profile_db_initializer: Arc::new(NoOpProfileDbInitializer),
         sidecar_recoveries: Arc::new(RwLock::new(std::collections::HashMap::new())),
+        reset_pins: Arc::new(dashmap::DashMap::new()),
     };
     let control_plane = kikan::ControlPlaneState {
         platform,
@@ -170,6 +171,7 @@ pub fn stub_app_state(
         setup_token: None,
         setup_in_progress: Arc::new(AtomicBool::new(false)),
         activity_writer: Arc::new(kikan::SqliteActivityWriter::new()),
+        recovery_writer: None,
     };
     StubAppState { control_plane }
 }

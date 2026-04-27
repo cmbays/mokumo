@@ -152,6 +152,22 @@ pub struct PlatformState {
     /// `GET /admin/v1/diagnostics/sidecar-recoveries`.
     pub sidecar_recoveries:
         Arc<RwLock<HashMap<ProfileDirName, crate::meta::SidecarRecoveryDiagnostic>>>,
+    /// In-memory recovery-session store for the file-drop password-reset
+    /// flow. Keyed by the opaque [`crate::control_plane::auth::RecoverySessionId`]
+    /// minted at `recover_request` time and consumed at `recover_complete`
+    /// time. The 60s background sweep in
+    /// [`crate::control_plane::auth::sweep`] retains by
+    /// [`crate::control_plane::auth::PIN_EXPIRY`] so abandoned sessions
+    /// don't grow the map without bound.
+    ///
+    /// Empty by default; populated only on the file-drop reset code path.
+    /// Verticals that never call `recover_request` see this stay empty.
+    pub reset_pins: Arc<
+        dashmap::DashMap<
+            crate::control_plane::auth::RecoverySessionId,
+            crate::control_plane::auth::PendingReset,
+        >,
+    >,
 }
 
 impl PlatformState {
