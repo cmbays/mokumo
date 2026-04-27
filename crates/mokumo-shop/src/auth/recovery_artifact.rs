@@ -65,9 +65,17 @@ pub fn write_recovery_artifact(
     pin: &str,
     recovery_dir: &Path,
 ) -> Result<RecoveryArtifactLocation, RecoveryError> {
+    use rand::RngExt;
+
     std::fs::create_dir_all(recovery_dir)?;
     let path = recovery_file_path_for_email(recovery_dir, email);
-    let tmp_path = path.with_extension("html.tmp");
+    // Per-call unique tmp suffix so two concurrent issuances for the same
+    // email cannot overwrite each other's staged content before the
+    // rename. Without this, an interleaving like
+    // `A.write → B.write → A.rename → B.rename` would let A's rename
+    // observe B's PIN bytes.
+    let nonce: u64 = rand::rng().random();
+    let tmp_path = path.with_extension(format!("html.tmp.{nonce:016x}"));
     std::fs::write(&tmp_path, recovery_html(pin))?;
     std::fs::rename(&tmp_path, &path)?;
     Ok(RecoveryArtifactLocation::File { path })

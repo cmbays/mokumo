@@ -43,11 +43,21 @@ pub async fn recover_request(
         ));
     }
 
-    let writer = deps
-        .recovery_writer
-        .as_ref()
-        .ok_or_else(|| AppError::InternalError("Recovery flow is not configured".into()))?
-        .clone();
+    // Anti-enumeration: when no recovery writer is wired (vertical
+    // misconfiguration), surface the same 400 shape the rest of this
+    // surface uses. A 500 here would let a probe distinguish "recovery
+    // unconfigured" from "valid request" without the operator ever
+    // hearing about it. The tracing::error! is the operator-side signal.
+    let Some(writer) = deps.recovery_writer.as_ref().cloned() else {
+        tracing::error!(
+            "recover_request: BootConfig::with_recovery_writer not set; \
+             returning uniform 400 to preserve anti-enumeration shape"
+        );
+        return Err(AppError::BadRequest(
+            ErrorCode::ValidationError,
+            "Invalid or expired recovery session".into(),
+        ));
+    };
 
     let outcome = recover::recover_request(&deps.platform, &db, &req.email, |email, pin| {
         writer(email, pin)
