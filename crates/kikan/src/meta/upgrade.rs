@@ -36,13 +36,14 @@
 //! [`ActivityAction::LegacyUpgradeMigrated`]: kikan_types::activity::ActivityAction::LegacyUpgradeMigrated
 
 use std::collections::HashSet;
+use std::hash::Hash;
 use std::path::Path;
 
 use kikan_types::activity::ActivityAction;
-use sea_orm::sea_query::{Alias, Expr, ExprTrait, OnConflict, Query, SqliteQueryBuilder};
+use sea_orm::sea_query::{Alias, Expr, ExprTrait, OnConflict, Query, SqliteQueryBuilder, Value};
 use sea_orm::{
     ConnectionTrait, DatabaseConnection, DatabaseTransaction, DbBackend, Statement,
-    TransactionTrait,
+    TransactionTrait, TryGetable,
 };
 use serde_json::json;
 use thiserror::Error;
@@ -320,7 +321,7 @@ async fn classify_and_maybe_insert(
     // State B (crash recovery) from Anomalous (partial mutation).
     let legacy_emails: Vec<String> = legacy_users.iter().map(|u| u.email.clone()).collect();
     let present_emails: HashSet<String> =
-        intersect_strings_chunked(txn, "users", "email", &legacy_emails).await?;
+        intersect_chunked(txn, "users", "email", &legacy_emails).await?;
 
     let n_legacy = legacy_emails.len();
     let n_present = present_emails.len();
@@ -340,7 +341,7 @@ async fn classify_and_maybe_insert(
             .filter(|&id| id > 3)
             .collect();
         let role_collisions: HashSet<i64> =
-            intersect_i64s_chunked(txn, "roles", "id", &custom_role_ids).await?;
+            intersect_chunked(txn, "roles", "id", &custom_role_ids).await?;
         if !role_collisions.is_empty() {
             let mut sorted: Vec<i64> = role_collisions.into_iter().collect();
             sorted.sort_unstable();
@@ -356,7 +357,7 @@ async fn classify_and_maybe_insert(
 
         let user_ids: Vec<i64> = legacy_users.iter().map(|u| u.id).collect();
         let user_collisions: HashSet<i64> =
-            intersect_i64s_chunked(txn, "users", "id", &user_ids).await?;
+            intersect_chunked(txn, "users", "id", &user_ids).await?;
         if !user_collisions.is_empty() {
             let mut sorted: Vec<i64> = user_collisions.into_iter().collect();
             sorted.sort_unstable();
@@ -399,66 +400,44 @@ async fn classify_and_maybe_insert(
 /// newer builds — 900 is the conservative floor that works against any
 /// libsqlite3 version we might link).
 ///
-/// Two flavours (`intersect_strings_chunked`, `intersect_i64s_chunked`)
-/// rather than a single generic helper because sea_query's
-/// [`sea_orm::sea_query::Value`] / [`sea_orm::sea_query::SimpleExpr`]
-/// trait bounds for `T: Into<Value>` are awkward to express through a
-/// generic `T: Hash + Eq + Clone + Into<Value>` constraint while also
-/// letting `FromQueryResult` produce them on the read side.
-async fn intersect_strings_chunked(
+/// Generic over `T: Into<Value> + TryGetable + Hash + Eq + Clone` —
+/// the standard SeaORM idiom for "anything that can both bind into a
+/// statement and decode out of a row". `String` and `i64` are the only
+/// in-tree call sites; `&'static str` would also work if a column ever
+/// needed it.
+async fn intersect_chunked<T>(
     txn: &DatabaseTransaction,
     table: &'static str,
     column: &'static str,
-    needles: &[String],
-) -> Result<HashSet<String>, UpgradeError> {
+    needles: &[T],
+) -> Result<HashSet<T>, UpgradeError>
+where
+    T: Clone + Hash + Eq + Send + Sync + Into<Value> + TryGetable + 'static,
+{
     const CHUNK: usize = 900;
-    let mut found: HashSet<String> = HashSet::with_capacity(needles.len());
+    let mut found: HashSet<T> = HashSet::with_capacity(needles.len());
     if needles.is_empty() {
         return Ok(found);
     }
     for chunk in needles.chunks(CHUNK) {
-        let stmt = build_intersect_stmt(table, column, chunk.iter().map(|s| s.as_str().into()));
-        let rows = txn.query_all_raw(stmt).await?;
+        let stmt = Query::select()
+            .column(Alias::new(column))
+            .from(Alias::new(table))
+            .and_where(Expr::col(Alias::new(column)).is_in(chunk.iter().cloned().map(Into::into)))
+            .to_owned();
+        let (sql, params) = stmt.build(SqliteQueryBuilder);
+        let rows = txn
+            .query_all_raw(Statement::from_sql_and_values(
+                DbBackend::Sqlite,
+                sql,
+                params,
+            ))
+            .await?;
         for r in rows {
-            found.insert(r.try_get_by_index::<String>(0)?);
+            found.insert(r.try_get_by_index::<T>(0)?);
         }
     }
     Ok(found)
-}
-
-async fn intersect_i64s_chunked(
-    txn: &DatabaseTransaction,
-    table: &'static str,
-    column: &'static str,
-    needles: &[i64],
-) -> Result<HashSet<i64>, UpgradeError> {
-    const CHUNK: usize = 900;
-    let mut found: HashSet<i64> = HashSet::with_capacity(needles.len());
-    if needles.is_empty() {
-        return Ok(found);
-    }
-    for chunk in needles.chunks(CHUNK) {
-        let stmt = build_intersect_stmt(table, column, chunk.iter().map(|&v| v.into()));
-        let rows = txn.query_all_raw(stmt).await?;
-        for r in rows {
-            found.insert(r.try_get_by_index::<i64>(0)?);
-        }
-    }
-    Ok(found)
-}
-
-fn build_intersect_stmt(
-    table: &'static str,
-    column: &'static str,
-    values: impl IntoIterator<Item = sea_orm::sea_query::Value>,
-) -> Statement {
-    let stmt = Query::select()
-        .column(Alias::new(column))
-        .from(Alias::new(table))
-        .and_where(Expr::col(Alias::new(column)).is_in(values))
-        .to_owned();
-    let (sql, params) = stmt.build(SqliteQueryBuilder);
-    Statement::from_sql_and_values(DbBackend::Sqlite, sql, params)
 }
 
 async fn insert_legacy_into_meta(
