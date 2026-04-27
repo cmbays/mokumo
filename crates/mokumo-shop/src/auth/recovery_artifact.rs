@@ -1,4 +1,6 @@
-//! Mokumo's implementation of [`kikan::Graft::write_recovery_artifact`].
+//! Mokumo's recovery-writer body. Wired into the engine via the closure
+//! built at boot in `apps/mokumo-{server,desktop}` and registered on
+//! [`kikan::BootConfig::with_recovery_writer`].
 //!
 //! Writes a Mokumo-branded HTML file containing the 6-digit PIN to a
 //! known directory the operator can open locally. The filename derives
@@ -51,7 +53,7 @@ pub fn recovery_html(pin: &str) -> String {
     )
 }
 
-/// Synchronous file write for [`kikan::Graft::write_recovery_artifact`].
+/// Synchronous file write for the recovery-writer closure.
 ///
 /// Creates `recovery_dir` if missing and writes a Mokumo-branded HTML
 /// page containing `pin` to a deterministic per-email path. Returns
@@ -92,14 +94,10 @@ mod tests {
     fn write_recovery_artifact_creates_file_at_expected_path() {
         let dir = tempfile::tempdir().unwrap();
         let location = write_recovery_artifact("admin@shop.local", "123456", dir.path()).unwrap();
-        match location {
-            RecoveryArtifactLocation::File { path } => {
-                let body = std::fs::read_to_string(&path).unwrap();
-                assert!(body.contains("123456"));
-                assert!(body.contains("Mokumo Password Reset"));
-            }
-            other => panic!("expected File variant, got {other:?}"),
-        }
+        let RecoveryArtifactLocation::File { path } = location;
+        let body = std::fs::read_to_string(&path).unwrap();
+        assert!(body.contains("123456"));
+        assert!(body.contains("Mokumo Password Reset"));
     }
 
     #[test]

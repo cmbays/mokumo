@@ -15,4 +15,5 @@ HTTP 400
 [Asserts]
 header "Content-Type" contains "application/json"
 jsonpath "$.code" == "validation_error"
-jsonpath "$.message" exists
+# Legacy alias hits the same kikan core; uniform anti-enum message.
+jsonpath "$.message" == "Invalid or expired recovery session"

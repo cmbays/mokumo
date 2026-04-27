@@ -13,13 +13,19 @@
 //!
 //! ## Anti-enumeration
 //!
-//! [`recover_request`] always returns a [`RecoverSessionId`] and a
+//! [`recover_request`] always returns a [`RecoverySessionId`] and a
 //! [`RecoveryArtifactLocation`] regardless of whether `email` matches a
 //! known user. On unknown emails the engine synthesises a session id
 //! with no DashMap entry; any later [`recover_complete`] against that
 //! token fails uniformly with [`ControlPlaneError::Validation`] and the
 //! same wire shape as a wrong PIN. Callers cannot distinguish
 //! "unknown email" from "wrong PIN" from "expired session".
+//!
+//! Both the artifact write and the Argon2id PIN hash run on every
+//! request — known and unknown — so the response time profile is
+//! identical regardless of whether the email matches a user. The
+//! Argon2id work for unknown emails is discarded; that wasted CPU is
+//! the cost of flattening the timing oracle.
 //!
 //! ## Concurrency
 //!
@@ -59,18 +65,17 @@ pub struct RecoverRequestOutcome {
 }
 
 /// Mint a recovery session for `email` and write the operator-facing
-/// recovery artifact via the graft hook.
+/// recovery artifact via the configured writer closure.
 ///
-/// `write_artifact` is the closure adapter that captures the active
-/// `Graft::write_recovery_artifact` reference; passing a closure instead
-/// of `&dyn Graft` keeps `control_plane` free of the trait import (and
-/// the trait import is the only one that would couple the pure layer
-/// to the vertical extension surface).
+/// `write_artifact` is the closure installed at boot via
+/// [`crate::BootConfig::with_recovery_writer`]; passing a closure
+/// rather than `&dyn Graft` keeps `control_plane` free of the trait
+/// import that would otherwise couple the pure layer to the vertical
+/// extension surface.
 ///
-/// On unknown email the engine still calls `write_artifact` with a
-/// throw-away PIN to preserve the response time profile and give the
-/// vertical a chance to write a dummy artifact if it chooses. (Mokumo
-/// declines via the `None` short-circuit at the call site.)
+/// Both `write_artifact` and the Argon2id PIN hash run unconditionally
+/// — see "Anti-enumeration" in the module docs. The hash is discarded
+/// when no user matches.
 pub async fn recover_request<F>(
     state: &PlatformState,
     db: &DatabaseConnection,
@@ -90,12 +95,13 @@ where
     let location =
         write_artifact(email, &pin).map_err(|e| ControlPlaneError::Internal(anyhow::anyhow!(e)))?;
 
+    let pin_hash = password::hash_password(pin)
+        .await
+        .map_err(|e| ControlPlaneError::Internal(anyhow::anyhow!(e)))?;
+
     let session_id = RecoverySessionId::generate();
 
     if let Some(user) = user {
-        let pin_hash = password::hash_password(pin)
-            .await
-            .map_err(|e| ControlPlaneError::Internal(anyhow::anyhow!(e)))?;
         state.reset_pins.insert(
             session_id.clone(),
             PendingReset {
@@ -106,9 +112,11 @@ where
             },
         );
     }
-    // Unknown email: no DashMap entry; any future recover_complete
-    // against this synthesised session_id fails uniformly via the same
-    // `Validation` mapping that wrong-PIN / expired-session take.
+    // Unknown email: pin_hash is dropped, no DashMap entry. Any future
+    // recover_complete against this synthesised session_id fails
+    // uniformly via the same `Validation` mapping that wrong-PIN /
+    // expired-session take. Response time matches the known-email path
+    // because both `write_artifact` and `hash_password` ran above.
 
     Ok(RecoverRequestOutcome {
         session_id,

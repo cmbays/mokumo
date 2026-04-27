@@ -55,11 +55,8 @@ pub async fn forgot_password(
         other => AppError::from(other),
     })?;
 
-    let recovery_file_path = match outcome.location {
-        RecoveryArtifactLocation::File { path } => path.to_string_lossy().into_owned(),
-        RecoveryArtifactLocation::External { description } => description,
-        _ => String::new(),
-    };
+    let RecoveryArtifactLocation::File { path } = outcome.location;
+    let recovery_file_path = path.to_string_lossy().into_owned();
 
     Ok(Json(serde_json::json!({
         "message": "If an account with that email exists, a recovery file has been placed on the server.",

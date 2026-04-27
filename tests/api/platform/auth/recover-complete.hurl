@@ -24,4 +24,7 @@ HTTP 400
 [Asserts]
 header "Content-Type" contains "application/json"
 jsonpath "$.code" == "validation_error"
-jsonpath "$.message" exists
+# Uniform anti-enum message — any future regression that branches the
+# wire shape on rejection reason (unknown session vs wrong PIN vs
+# expired vs attempts exhausted) breaks this assertion.
+jsonpath "$.message" == "Invalid or expired recovery session"

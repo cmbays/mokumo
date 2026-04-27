@@ -823,6 +823,48 @@ async fn valid_pin_remains_usable(w: &mut ApiWorld) {
     );
 }
 
+#[when(expr = "the user enters an incorrect PIN {int} times")]
+async fn enter_incorrect_pin_n_times(w: &mut ApiWorld, count: usize) {
+    for _ in 0..count {
+        let resp = w
+            .server
+            .post("/api/auth/reset-password")
+            .json(&serde_json::json!({
+                "email": "admin@shop.local",
+                "pin": "000000",
+                "new_password": "newpassword123"
+            }))
+            .await;
+        assert_eq!(
+            resp.status_code(),
+            400,
+            "wrong PIN should return uniform 400, got {}",
+            resp.text()
+        );
+    }
+}
+
+#[then("the original valid PIN no longer redeems the session")]
+async fn original_valid_pin_no_longer_redeems(w: &mut ApiWorld) {
+    let pin = w.last_pin.as_ref().expect("PIN should be set").clone();
+    let resp = w
+        .server
+        .post("/api/auth/reset-password")
+        .json(&serde_json::json!({
+            "email": "admin@shop.local",
+            "pin": pin,
+            "new_password": "shouldNotApply!"
+        }))
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        400,
+        "session should be consumed after attempts exhausted"
+    );
+    let body: serde_json::Value = resp.json();
+    assert_eq!(body["message"], "Invalid or expired recovery session");
+}
+
 // ---- Recovery Code Password Reset steps ----
 
 #[given("an admin user has unused recovery codes")]

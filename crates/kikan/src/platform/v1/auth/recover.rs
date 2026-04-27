@@ -21,25 +21,11 @@ use kikan_types::auth::{
 use kikan_types::error::ErrorCode;
 
 use crate::ControlPlaneError;
+use crate::auth::recovery_artifact::RecoveryArtifactLocation;
 use crate::control_plane::auth::pending_reset::RecoverySessionId;
 use crate::control_plane::auth::recover;
 use crate::profile_db::ProfileDb;
 use crate::{AppError, ControlPlaneState};
-
-/// Synthesise an "anti-enumeration uniform 200" response when the
-/// vertical declines to write an artifact for an unknown email.
-///
-/// Currently unused — the pure-fn layer always invokes the writer (so
-/// the response time profile stays uniform); the vertical's writer
-/// chooses the no-op path on its own. Kept here as documentation of
-/// the intended fallback shape.
-#[allow(dead_code)]
-fn synthesised_uniform_response() -> RecoverInitiateResponse {
-    RecoverInitiateResponse {
-        recovery_session_id: RecoverySessionId::generate().into_string(),
-        recovery_file_path: None,
-    }
-}
 
 pub async fn recover_request(
     State(deps): State<ControlPlaneState>,
@@ -75,19 +61,10 @@ pub async fn recover_request(
         other => AppError::from(other),
     })?;
 
-    let recovery_file_path = match outcome.location {
-        crate::auth::recovery_artifact::RecoveryArtifactLocation::File { path } => {
-            Some(path.to_string_lossy().into_owned())
-        }
-        crate::auth::recovery_artifact::RecoveryArtifactLocation::External { description } => {
-            Some(description)
-        }
-        _ => None,
-    };
-
+    let RecoveryArtifactLocation::File { path } = outcome.location;
     Ok(Json(RecoverInitiateResponse {
         recovery_session_id: outcome.session_id.into_string(),
-        recovery_file_path,
+        recovery_file_path: Some(path.to_string_lossy().into_owned()),
     }))
 }
 

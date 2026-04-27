@@ -4,7 +4,8 @@
 //! the operator-facing PIN, and inserts a [`PendingReset`] keyed by the
 //! session id into [`crate::PlatformState::reset_pins`]. The session id
 //! is returned to the caller; the PIN is written to the operator-visible
-//! recovery artifact via the `Graft::write_recovery_artifact` hook.
+//! recovery artifact via the recovery-writer closure installed at boot
+//! through [`crate::BootConfig::with_recovery_writer`].
 //!
 //! Single-tenant lookup is by session id, never by email. The user-facing
 //! secret is the 6-digit PIN; the session id is an opaque high-entropy
