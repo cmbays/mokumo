@@ -216,13 +216,32 @@ tasks:
     # crates/mokumo-shop/src/graft.rs copies the seeded data into the demo
     # profile and validates. That flips `demo_install_ok=true` from t0 so
     # the data-plane boot guard in
-    # crates/mokumo-shop/src/auth_handlers/mod.rs lifts before any test
+    # crates/mokumo-shop/src/auth/handlers.rs lifts before any test
     # runs. Without this seed, every protected route returns 423
     # `demo_setup_required`.
     #
     # tests/api/_prelude/healthy-demo.hurl runs first as a fail-fast gate
     # on the seed; if the sidecar didn't take, we abort with a clear
     # assertion failure instead of cascading 423s downstream.
+    #
+    # Single-phase coverage scope (mokumo#383 PR 2):
+    #
+    #   The active list below covers every endpoint reachable without an
+    #   explicit-admin session — i.e. routes that are either unauthenticated
+    #   or whose auth is carried by the demo profile's auto-login middleware
+    #   (`require_auth_with_demo_auto_login` in `crates/mokumo-shop/src/auth/handlers.rs`).
+    #
+    #   Endpoints that strictly resolve `auth_session.user` via
+    #   `Backend::get_user(user_id)` (e.g. `/api/platform/v1/auth/me`,
+    #   `/api/users/*`, the `shop/logo-*` write trio) are NOT in the active
+    #   list. Demo auto-login mints a session whose `user_id` exists only in
+    #   the demo profile DB, but `Backend::get_user` queries the auth
+    #   profile (`SetupMode::Production` per `crates/mokumo-shop/src/graft.rs`),
+    #   so strict handlers see `auth_session.user == None` and reject 401.
+    #   Re-attach requires a production-profile harness — tracked in PR-2.5
+    #   (`kikan-cli seed-admin` subcommand seeds production_db before boot,
+    #   then standard POST /login with --cookie-jar). See the deferral
+    #   ledger below for the candidate file list.
     #
     # Local run: moon run shop:smoke
     # Env file: copy tests/api/envs/local.env.example → tests/api/envs/local.env (gitignored)
@@ -249,9 +268,12 @@ tasks:
         exit 1
       fi
       # ---------------------------------------------------------------------
-      # Documented exclusions — files kept on disk, intentionally NOT in this
-      # smoke list. Each entry names the failure mode and the work-item that
-      # restores it. Update this block (NOT delete entries) when un-darking.
+      # Documented exclusions / retirements — files kept on disk and
+      # intentionally NOT in the active list, plus tombstones for files
+      # whose premise is structurally impossible against the current harness.
+      # Each entry names the failure mode and the work-item that restores
+      # it (or the canonical equivalent for retired files). Update this
+      # block (NOT delete entries) when un-darking.
       #
       #   tests/api/routing/api-prefix-boundary.hurl
       #     Resolved (mokumo#694): the regression was on `GET /api/`
@@ -262,82 +284,64 @@ tasks:
       #     forms in `kikan/src/data_plane/router.rs::mount_spa_fallback`.
       #     Re-attached to the active list below.
       #
-      #   tests/api/auth/me-unauthenticated.hurl
-      #     Failure: GET /api/auth/me returns 200 in demo profile because the
-      #     demo auto-login middleware (auth_handlers/mod.rs:468) logs
-      #     anonymous callers in as the demo user, so 401 cannot be asserted
-      #     here.
-      #     Tracked: requires the production-profile harness landed by PR 2
-      #     (auth bootstrap) of mokumo#383. Test is correct as written.
+      #   tests/api/auth/me-unauthenticated.hurl  [retired — file removed]
+      #     Premise (assert 401 on `GET /api/auth/me` without a session)
+      #     is structurally impossible against the demo profile because
+      #     the legacy `/api/auth/me` mount is behind
+      #     `require_auth_with_demo_auto_login` (see `routes.rs`
+      #     `protected_auth_routes`), which auto-issues a session for
+      #     anonymous callers. The 401 wire shape is exercised by the
+      #     canonical mount via `tests/api/platform/auth/me-unauthenticated.hurl`,
+      #     which is mounted OUTSIDE the demo-auto-login layer.
+      #     Re-attach would require a separate production-profile smoke
+      #     task; deferred indefinitely (no current track).
       #
-      #   tests/api/customers/list-unauthenticated.hurl
-      #     Same demo auto-login asymmetry as above.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
-      #   tests/api/users/soft-delete-not-found.hurl
-      #   tests/api/users/update-role-not-found.hurl
-      #     Failure: 401 instead of expected 404. Routes are admin-gated;
-      #     unauthenticated callers fail at the auth layer before reaching
-      #     the route's not-found logic. Tests are correct — they verify
-      #     the 404 path of the handler, not the 401 of the gate.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383 — once the harness
-      #     can carry an authenticated admin session, these flip to 404.
-      #
-      #   tests/api/auth/forgot-password.hurl
-      #   tests/api/auth/login-rate-limit.hurl
-      #   tests/api/auth/reset-password.hurl
-      #     Pre-existing — not yet in shop:smoke. These pass against the
-      #     demo profile today (auto-login carries them, or they exercise
-      #     the validation/rate-limit paths directly), but they touch the
-      #     auth surface that mokumo#685 (auth-handler promotion to the
-      #     kikan platform) is moving to /api/platform/v1/auth/*.
-      #     Deferred from PR 1 → PR 2 to avoid mid-flight conflict; PR 2's
-      #     auth bootstrap will absorb whatever the auth surface looks
-      #     like post-#685.
-      #     Tracked: PR 2 of mokumo#383, coordinates with mokumo#685.
+      #   tests/api/customers/list-unauthenticated.hurl  [retired — file removed]
+      #     Same structural impossibility as `auth/me-unauthenticated`:
+      #     `/api/customers` is behind `require_auth_with_demo_auto_login`
+      #     so anonymous callers get auto-issued a session. The 401-on-
+      #     missing-cookie wire shape is exercised by
+      #     `tests/api/platform/auth/me-unauthenticated.hurl`. Re-attach
+      #     would require a production-profile harness; deferred.
       #
       #   tests/api/auth/login-success.hurl
-      #     Failure: requires `admin_email` and `admin_password` variables
-      #     in tests/api/envs/ci.env that the smoke harness does not yet
-      #     thread. Demo auto-login does not satisfy the explicit POST
-      #     /api/auth/login + cookie-capture step.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #   tests/api/platform/auth/login-success.hurl
+      #     Failure: 401 `invalid_credentials`. Both endpoints route
+      #     through the canonical kikan login handler, which authenticates
+      #     against `Graft::auth_profile_kind()` — `SetupMode::Production`
+      #     for Mokumo (`crates/mokumo-shop/src/graft.rs`). The demo
+      #     sidecar seeds `admin@demo.local` into the demo profile DB
+      #     only; the production profile DB is empty in the smoke harness,
+      #     so login as admin@demo.local cannot resolve to a user record.
+      #     Demo-mode session bootstrap relies on the auto-login
+      #     middleware (which bypasses the production-DB lookup), not on
+      #     an explicit POST /login. Re-attach requires a production-
+      #     profile smoke harness that runs the setup wizard before login.
+      #     Deferred to PR-2.5 (mokumo#723 — kikan-cli seed-admin).
       #
       #   tests/api/auth/me.hurl
-      #     Failure: asserts a specific user identity that demo auto-login
-      #     (admin@demo.local) does not match. Needs production-profile
-      #     harness with seeded credentials.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
+      #   tests/api/platform/auth/me.hurl
       #   tests/api/customers/get.hurl
-      #     Failure: references a specific customer id that the demo seed
-      #     does not contain. Needs the harness to either seed a known
-      #     customer or capture an id from a prior step.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
-      #   tests/api/session_continuity.hurl  [retired]
-      #     Resolved/retired: premise overtaken by PR A wave (meta-DB
-      #     split landed 2026-04-26). The pre-Stage-3 fixture's
-      #     seaql_migrations layout is incompatible with the current
-      #     binary's migration runner — empirically verified that boot
-      #     against the bfae58e fixture rejects with `Database
-      #     preparation failed: ... created by a newer version of
-      #     Mokumo`. The cross-version-continuity property the file
-      #     was authored to test cannot be reconstructed without
-      #     regenerating the fixture against a more recent commit,
-      #     which would defeat the test's purpose. Closed: mokumo#702.
-      #     The pre-stage3.sqlite fixture stays in-tree for
-      #     `crates/kikan/tests/migration_replay_snapshot.rs`.
-      #
+      #   tests/api/users/soft-delete-not-found.hurl
+      #   tests/api/users/update-role-not-found.hurl
       #   tests/api/shop/logo-upload.hurl
       #   tests/api/shop/logo-upload-errors.hurl
       #   tests/api/shop/logo-delete.hurl
-      #     Failure: stale `---` request separator (Hurl uses blank-line
-      #     separators; `---` parses as an HTTP method) AND the test does
-      #     its own POST /api/auth/login that needs admin credentials in
-      #     ci.env that PR 2 will introduce. Both blockers resolve under
-      #     PR 2's auth bootstrap pass.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #     [Phase-2 candidates] All eight target handlers strictly resolve
+      #     `auth_session.user` via `Backend::get_user(user_id)`. Demo
+      #     auto-login mints a session whose `user_id` exists only in the
+      #     demo profile DB, but `Backend::get_user` queries the auth
+      #     profile (`SetupMode::Production`), so the user lookup returns
+      #     `None` and strict handlers reject with 401. Re-attach requires
+      #     seeding an admin into production_db before login — deferred to
+      #     PR-2.5 (mokumo#723). PR-2.5 introduces a `kikan-cli seed-admin`
+      #     subcommand that opens production_db directly (matching the
+      #     existing `kikan-cli reset_password` pattern), invokes a
+      #     refactored-out `create_initial_admin` domain fn shared with the
+      #     setup-wizard API path, then marks setup complete. Smoke harness
+      #     calls the CLI before `mokumo-server serve`, then standard
+      #     `POST /api/platform/v1/auth/login` with `--cookie-jar` is
+      #     fed via `--cookie` to the eight files above.
       #
       # Coverage notes — files in the active list with known structural-only
       # coverage that requires a Rust-side backstop per the G3 split:
@@ -351,6 +355,7 @@ tasks:
       #     mokumo#701.
       #
       # ---------------------------------------------------------------------
+      # Active list — unauthenticated paths and demo-auto-login-carried tests.
       hurl --variables-file tests/api/envs/ci.env --test \
         tests/api/_prelude/healthy-demo.hurl \
         tests/api/routing/api-prefix-boundary.hurl \
@@ -362,9 +367,13 @@ tasks:
         tests/api/security/host-allowlist.hurl \
         tests/api/kikan-version/kikan-version.hurl \
         tests/api/auth/login-bad-credentials.hurl \
+        tests/api/auth/login-rate-limit.hurl \
+        tests/api/auth/forgot-password.hurl \
+        tests/api/auth/reset-password.hurl \
         tests/api/platform/auth/login-bad-credentials.hurl \
         tests/api/platform/auth/login-rate-limit.hurl \
         tests/api/platform/auth/me-unauthenticated.hurl \
+        tests/api/platform/auth/logout.hurl \
         tests/api/platform/auth/recover-request.hurl \
         tests/api/platform/auth/recover-complete.hurl \
         tests/api/platform/auth/recover-rate-limit.hurl \
