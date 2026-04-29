@@ -27,4 +27,4 @@ header "Content-Type" contains "application/json"
 jsonpath "$.id" == "{{customer_id}}"
 jsonpath "$.display_name" == "Hurl Updated Shop"
 jsonpath "$.phone" == "555-0199"
-jsonpath "$.updated_at" exists
+jsonpath "$.updated_at" matches /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/

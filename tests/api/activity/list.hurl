@@ -12,3 +12,4 @@ jsonpath "$.items" isCollection
 jsonpath "$.total" exists
 jsonpath "$.page" exists
 jsonpath "$.per_page" exists
+jsonpath "$.total_pages" exists
