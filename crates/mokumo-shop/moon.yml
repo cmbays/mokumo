@@ -216,13 +216,39 @@ tasks:
     # crates/mokumo-shop/src/graft.rs copies the seeded data into the demo
     # profile and validates. That flips `demo_install_ok=true` from t0 so
     # the data-plane boot guard in
-    # crates/mokumo-shop/src/auth_handlers/mod.rs lifts before any test
+    # crates/mokumo-shop/src/auth/handlers.rs lifts before any test
     # runs. Without this seed, every protected route returns 423
     # `demo_setup_required`.
     #
     # tests/api/_prelude/healthy-demo.hurl runs first as a fail-fast gate
     # on the seed; if the sidecar didn't take, we abort with a clear
     # assertion failure instead of cascading 423s downstream.
+    #
+    # Two-phase auth bootstrap (mokumo#383 PR 2):
+    #
+    #   Phase 1 — `hurl --test <file…>` over everything that either
+    #     does not need auth, or whose auth is carried by the demo profile's
+    #     auto-login middleware (`require_auth_with_demo_auto_login` in
+    #     `crates/mokumo-shop/src/auth/handlers.rs`).
+    #
+    #   Phase 1.5 — `hurl --cookie-jar "$COOKIE_JAR" --test
+    #     tests/api/_prelude/admin-login.hurl` posts a single
+    #     `admin@demo.local` / `demo1234` login and writes the
+    #     `mokumo_session` cookie to a temp file.
+    #
+    #   Phase 2 — `hurl --cookie "$COOKIE_JAR" --test <file…>` runs the
+    #     explicit-admin suite (admin-gated `/api/users/*`, the canonical
+    #     `/api/platform/v1/auth/me` outside demo-auto-login, the
+    #     `shop/logo-*` write trio, and chained read tests).
+    #
+    # Why a shared cookie jar instead of per-file embedded login: the
+    # in-memory rate limiter in `kikan::rate_limit::RateLimiter` allows
+    # 10 attempts per email per 15-minute sliding window. With the
+    # explicit-admin suite as it stands today, per-file embedded login
+    # would issue 10 admin@demo.local logins per smoke run, hitting the
+    # absolute edge — adding any new explicit-admin test would trip the
+    # 11th-attempt 429. The shared cookie jar keeps the count at one
+    # regardless of how many explicit-cookie tests are added later.
     #
     # Local run: moon run shop:smoke
     # Env file: copy tests/api/envs/local.env.example → tests/api/envs/local.env (gitignored)
@@ -238,7 +264,8 @@ tasks:
       fi
       "$TARGET_DIR/debug/mokumo-server" serve --deployment-mode lan --host 127.0.0.1 &
       SERVER_PID=$!
-      trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+      COOKIE_JAR=$(mktemp -t mokumo-smoke-cookies.XXXXXX)
+      trap 'kill $SERVER_PID 2>/dev/null || true; rm -f "$COOKIE_JAR" 2>/dev/null || true' EXIT
       ready=0
       for i in $(seq 1 30); do
         if curl -sf http://localhost:6565/api/health > /dev/null 2>&1; then ready=1; break; fi
@@ -249,9 +276,12 @@ tasks:
         exit 1
       fi
       # ---------------------------------------------------------------------
-      # Documented exclusions — files kept on disk, intentionally NOT in this
-      # smoke list. Each entry names the failure mode and the work-item that
-      # restores it. Update this block (NOT delete entries) when un-darking.
+      # Documented exclusions / retirements — files kept on disk and
+      # intentionally NOT in either smoke phase, plus tombstones for files
+      # whose premise is structurally impossible against the current harness.
+      # Each entry names the failure mode and the work-item that restores
+      # it (or the canonical equivalent for retired files). Update this
+      # block (NOT delete entries) when un-darking.
       #
       #   tests/api/routing/api-prefix-boundary.hurl
       #     Resolved (mokumo#694): the regression was on `GET /api/`
@@ -262,82 +292,25 @@ tasks:
       #     forms in `kikan/src/data_plane/router.rs::mount_spa_fallback`.
       #     Re-attached to the active list below.
       #
-      #   tests/api/auth/me-unauthenticated.hurl
-      #     Failure: GET /api/auth/me returns 200 in demo profile because the
-      #     demo auto-login middleware (auth_handlers/mod.rs:468) logs
-      #     anonymous callers in as the demo user, so 401 cannot be asserted
-      #     here.
-      #     Tracked: requires the production-profile harness landed by PR 2
-      #     (auth bootstrap) of mokumo#383. Test is correct as written.
+      #   tests/api/auth/me-unauthenticated.hurl  [retired — file removed]
+      #     Premise (assert 401 on `GET /api/auth/me` without a session)
+      #     is structurally impossible against the demo profile because
+      #     the legacy `/api/auth/me` mount is behind
+      #     `require_auth_with_demo_auto_login` (see `routes.rs`
+      #     `protected_auth_routes`), which auto-issues a session for
+      #     anonymous callers. The 401 wire shape is exercised by the
+      #     canonical mount via `tests/api/platform/auth/me-unauthenticated.hurl`,
+      #     which is mounted OUTSIDE the demo-auto-login layer.
+      #     Re-attach would require a separate production-profile smoke
+      #     task; deferred indefinitely (no current track).
       #
-      #   tests/api/customers/list-unauthenticated.hurl
-      #     Same demo auto-login asymmetry as above.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
-      #   tests/api/users/soft-delete-not-found.hurl
-      #   tests/api/users/update-role-not-found.hurl
-      #     Failure: 401 instead of expected 404. Routes are admin-gated;
-      #     unauthenticated callers fail at the auth layer before reaching
-      #     the route's not-found logic. Tests are correct — they verify
-      #     the 404 path of the handler, not the 401 of the gate.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383 — once the harness
-      #     can carry an authenticated admin session, these flip to 404.
-      #
-      #   tests/api/auth/forgot-password.hurl
-      #   tests/api/auth/login-rate-limit.hurl
-      #   tests/api/auth/reset-password.hurl
-      #     Pre-existing — not yet in shop:smoke. These pass against the
-      #     demo profile today (auto-login carries them, or they exercise
-      #     the validation/rate-limit paths directly), but they touch the
-      #     auth surface that mokumo#685 (auth-handler promotion to the
-      #     kikan platform) is moving to /api/platform/v1/auth/*.
-      #     Deferred from PR 1 → PR 2 to avoid mid-flight conflict; PR 2's
-      #     auth bootstrap will absorb whatever the auth surface looks
-      #     like post-#685.
-      #     Tracked: PR 2 of mokumo#383, coordinates with mokumo#685.
-      #
-      #   tests/api/auth/login-success.hurl
-      #     Failure: requires `admin_email` and `admin_password` variables
-      #     in tests/api/envs/ci.env that the smoke harness does not yet
-      #     thread. Demo auto-login does not satisfy the explicit POST
-      #     /api/auth/login + cookie-capture step.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
-      #   tests/api/auth/me.hurl
-      #     Failure: asserts a specific user identity that demo auto-login
-      #     (admin@demo.local) does not match. Needs production-profile
-      #     harness with seeded credentials.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
-      #   tests/api/customers/get.hurl
-      #     Failure: references a specific customer id that the demo seed
-      #     does not contain. Needs the harness to either seed a known
-      #     customer or capture an id from a prior step.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
-      #
-      #   tests/api/session_continuity.hurl  [retired]
-      #     Resolved/retired: premise overtaken by PR A wave (meta-DB
-      #     split landed 2026-04-26). The pre-Stage-3 fixture's
-      #     seaql_migrations layout is incompatible with the current
-      #     binary's migration runner — empirically verified that boot
-      #     against the bfae58e fixture rejects with `Database
-      #     preparation failed: ... created by a newer version of
-      #     Mokumo`. The cross-version-continuity property the file
-      #     was authored to test cannot be reconstructed without
-      #     regenerating the fixture against a more recent commit,
-      #     which would defeat the test's purpose. Closed: mokumo#702.
-      #     The pre-stage3.sqlite fixture stays in-tree for
-      #     `crates/kikan/tests/migration_replay_snapshot.rs`.
-      #
-      #   tests/api/shop/logo-upload.hurl
-      #   tests/api/shop/logo-upload-errors.hurl
-      #   tests/api/shop/logo-delete.hurl
-      #     Failure: stale `---` request separator (Hurl uses blank-line
-      #     separators; `---` parses as an HTTP method) AND the test does
-      #     its own POST /api/auth/login that needs admin credentials in
-      #     ci.env that PR 2 will introduce. Both blockers resolve under
-      #     PR 2's auth bootstrap pass.
-      #     Tracked: PR 2 (auth bootstrap) of mokumo#383.
+      #   tests/api/customers/list-unauthenticated.hurl  [retired — file removed]
+      #     Same structural impossibility as `auth/me-unauthenticated`:
+      #     `/api/customers` is behind `require_auth_with_demo_auto_login`
+      #     so anonymous callers get auto-issued a session. The 401-on-
+      #     missing-cookie wire shape is exercised by
+      #     `tests/api/platform/auth/me-unauthenticated.hurl`. Re-attach
+      #     would require a production-profile harness; deferred.
       #
       # Coverage notes — files in the active list with known structural-only
       # coverage that requires a Rust-side backstop per the G3 split:
@@ -351,6 +324,7 @@ tasks:
       #     mokumo#701.
       #
       # ---------------------------------------------------------------------
+      # Phase 1 — unauthenticated paths and demo-auto-login-carried tests.
       hurl --variables-file tests/api/envs/ci.env --test \
         tests/api/_prelude/healthy-demo.hurl \
         tests/api/routing/api-prefix-boundary.hurl \
@@ -362,9 +336,15 @@ tasks:
         tests/api/security/host-allowlist.hurl \
         tests/api/kikan-version/kikan-version.hurl \
         tests/api/auth/login-bad-credentials.hurl \
+        tests/api/auth/login-success.hurl \
+        tests/api/auth/login-rate-limit.hurl \
+        tests/api/auth/forgot-password.hurl \
+        tests/api/auth/reset-password.hurl \
         tests/api/platform/auth/login-bad-credentials.hurl \
+        tests/api/platform/auth/login-success.hurl \
         tests/api/platform/auth/login-rate-limit.hurl \
         tests/api/platform/auth/me-unauthenticated.hurl \
+        tests/api/platform/auth/logout.hurl \
         tests/api/platform/auth/recover-request.hurl \
         tests/api/platform/auth/recover-complete.hurl \
         tests/api/platform/auth/recover-rate-limit.hurl \
@@ -378,6 +358,22 @@ tasks:
         tests/api/backup/status.hurl \
         tests/api/diagnostics/diagnostics.hurl \
         tests/api/diagnostics/bundle.hurl
+      # Phase 1.5 — populate the cookie jar with a single admin session.
+      hurl --variables-file tests/api/envs/ci.env --cookie-jar "$COOKIE_JAR" --test \
+        tests/api/_prelude/admin-login.hurl
+      # Phase 2 — explicit-admin tests reading the shared cookie jar.
+      # Order within the shop/logo set: logo-upload first (leaves a logo),
+      # logo-upload-errors next (validation rejects, no state change),
+      # logo-delete last (uploads + deletes; ends with no logo on disk).
+      hurl --variables-file tests/api/envs/ci.env --cookie "$COOKIE_JAR" --test \
+        tests/api/auth/me.hurl \
+        tests/api/platform/auth/me.hurl \
+        tests/api/customers/get.hurl \
+        tests/api/users/soft-delete-not-found.hurl \
+        tests/api/users/update-role-not-found.hurl \
+        tests/api/shop/logo-upload.hurl \
+        tests/api/shop/logo-upload-errors.hurl \
+        tests/api/shop/logo-delete.hurl
     deps:
     - web:build
     - web:seed-demo
