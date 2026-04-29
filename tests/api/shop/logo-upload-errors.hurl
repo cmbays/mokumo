@@ -1,6 +1,20 @@
-# POST /api/shop/logo — validation error codes.
-# Reads admin session via --cookie from the cookie jar populated by
-# tests/api/_prelude/admin-login.hurl.
+# POST /api/shop/logo — validation error codes
+# Requires authentication. Run after setup or with a seeded server.
+# Uses variables: host, admin_email, admin_password
+
+# Step 1: Login
+POST http://{{host}}/api/auth/login
+Content-Type: application/json
+{
+    "email": "{{admin_email}}",
+    "password": "{{admin_password}}"
+}
+
+HTTP 200
+[Asserts]
+cookie "mokumo_session" exists
+
+---
 
 # GIF upload → 422 logo_format_unsupported
 POST http://{{host}}/api/shop/logo
@@ -14,6 +28,7 @@ jsonpath "$.code" == "logo_format_unsupported"
 jsonpath "$.message" isString
 jsonpath "$.details" == null
 
+---
 
 # Oversized upload (2MiB + 1 byte) → 422 logo_too_large
 POST http://{{host}}/api/shop/logo
@@ -27,6 +42,7 @@ jsonpath "$.code" == "logo_too_large"
 jsonpath "$.message" isString
 jsonpath "$.details" == null
 
+---
 
 # Empty multipart body (no logo field) → 400 missing_field
 POST http://{{host}}/api/shop/logo

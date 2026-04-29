@@ -1,7 +1,6 @@
 # PATCH /api/users/:id/role — 404 when user does not exist.
 # Verifies route is registered and NotFound error maps to 404.
-# Reads admin session via --cookie from the cookie jar populated by
-# tests/api/_prelude/admin-login.hurl.
+# Runs in demo mode (auto-login as admin).
 PATCH http://{{host}}/api/users/99999/role
 Content-Type: application/json
 {
