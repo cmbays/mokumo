@@ -453,10 +453,16 @@ tasks:
       hurl --variables-file tests/api/envs/ci.env --cookie-jar "$COOKIE_JAR" --test \
         tests/api/_prelude/admin-login.hurl
       # Phase 2 — explicit-admin tests reading the shared cookie jar.
-      # Order within the shop/logo set: logo-upload first (leaves a logo),
+      # `--jobs 1` is required: hurl --test runs files in parallel by
+      # default (one job per CPU), but the shop/logo-* trio mutates the
+      # same `shop_settings WHERE id = 1` row. Without serialization,
+      # logo-delete.hurl's DELETE can land between logo-upload.hurl's
+      # POST and its follow-up `/api/setup-status` read, blanking
+      # logo_extension/logo_epoch and turning logo_url back to null
+      # under hurl. Order: logo-upload first (leaves a logo),
       # logo-upload-errors next (validation rejects, no state change),
       # logo-delete last (uploads + deletes; ends with no logo on disk).
-      hurl --variables-file tests/api/envs/ci.env --cookie "$COOKIE_JAR" --test \
+      hurl --variables-file tests/api/envs/ci.env --cookie "$COOKIE_JAR" --jobs 1 --test \
         tests/api/auth/me.hurl \
         tests/api/platform/auth/me.hurl \
         tests/api/customers/get.hurl \
