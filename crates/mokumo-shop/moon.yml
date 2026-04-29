@@ -253,8 +253,10 @@ tasks:
     #   Phase 1.5b — `hurl --cookie-jar "$COOKIE_JAR" --test
     #     tests/api/_prelude/admin-login.hurl` POSTs the canonical
     #     `/api/platform/v1/auth/login` with admin creds. The Set-Cookie
-    #     response carries `mokumo_session` for the auth profile DB, so
-    #     subsequent `Backend::get_user(user_id)` lookups succeed.
+    #     response carries the `id` session cookie (the `tower-sessions`
+    #     default, pinned in `kikan::data_plane::session_layer::SESSION_COOKIE_NAME`)
+    #     for the auth profile DB, so subsequent `Backend::get_user(user_id)`
+    #     lookups succeed.
     #
     #   Phase 2 — `hurl --cookie "$COOKIE_JAR" --test <file…>` runs the
     #     explicit-admin suite (canonical and legacy `/auth/me`, admin
@@ -291,10 +293,12 @@ tasks:
       fi
       # Isolated data dir so each run boots into setup_required state. The
       # trap also removes the cookie jar and the captured stderr.
-      MOKUMO_DATA_DIR=$(mktemp -d -t mokumo-smoke.XXXXXX)
+      # mktemp invocations use a positional template (not `-t`) for portability
+      # across GNU and BSD mktemp — `-t` semantics differ between them.
+      MOKUMO_DATA_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mokumo-smoke.XXXXXX")
       export MOKUMO_DATA_DIR
-      COOKIE_JAR=$(mktemp -t mokumo-smoke-cookies.XXXXXX)
-      SERVER_STDERR=$(mktemp -t mokumo-smoke-stderr.XXXXXX)
+      COOKIE_JAR=$(mktemp "${TMPDIR:-/tmp}/mokumo-smoke-cookies.XXXXXX")
+      SERVER_STDERR=$(mktemp "${TMPDIR:-/tmp}/mokumo-smoke-stderr.XXXXXX")
       cleanup() {
         # Surface server stderr so failures (auth setup, boot guards) are
         # diagnosable from CI logs. Direct redirect above means none of it
@@ -422,21 +426,24 @@ tasks:
         tests/api/backup/status.hurl \
         tests/api/diagnostics/diagnostics.hurl \
         tests/api/diagnostics/bundle.hurl
-      # Setup wizard — capture the `Setup token: <uuid>` line from stderr
-      # and POST /api/setup. Creates admin@demo.local in the auth profile
-      # DB (production), writes shop_settings.shop_name, and atomically
+      # Setup wizard — extract the `Setup token: <uuid>` line from stderr
+      # (anchor on the literal prefix so unrelated UUIDs in trace/request
+      # logs cannot collide), then run tests/api/_prelude/setup-wizard.hurl
+      # which POSTs /api/setup with the captured token plus admin creds
+      # and shop_name from ci.env. The wizard creates the admin user in
+      # the auth profile DB, writes shop_settings.shop_name, and atomically
       # flips `<data_dir>/active_profile` to production. From this point
       # demo auto-login is disabled; cookie-bearing requests are required.
-      SETUP_TOKEN=$(grep -m1 -oE '[a-f0-9-]{36}' "$SERVER_STDERR")
+      SETUP_TOKEN=$(grep -m1 -oE 'Setup token: [0-9a-fA-F-]{36}' "$SERVER_STDERR" \
+        | sed -E 's/^Setup token: //')
       if [ -z "$SETUP_TOKEN" ]; then
         echo "setup token not found in server stderr" >&2
         cat "$SERVER_STDERR" >&2
         exit 1
       fi
-      curl -sf -X POST "http://localhost:6565/api/setup" \
-        -H 'Content-Type: application/json' \
-        -d "{\"setup_token\":\"$SETUP_TOKEN\",\"admin_email\":\"admin@demo.local\",\"admin_name\":\"Smoke Admin\",\"admin_password\":\"demo1234\",\"shop_name\":\"Smoke Test Shop\"}" \
-        > /dev/null
+      hurl --variables-file tests/api/envs/ci.env \
+        --variable "setup_token=$SETUP_TOKEN" \
+        --test tests/api/_prelude/setup-wizard.hurl
       # Phase 1.5a — login-success files. Admin now exists in the auth
       # profile DB; both endpoints (legacy alias + canonical) resolve.
       hurl --variables-file tests/api/envs/ci.env --test \

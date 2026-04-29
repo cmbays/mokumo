@@ -6,7 +6,7 @@
 # Step 1: Upload a logo so we have something to delete
 POST http://{{host}}/api/shop/logo
 [MultipartFormData]
-logo: file,tests/api/shop/fixtures/logo-100x100.png; image/png
+logo: file,fixtures/logo-100x100.png; image/png
 
 HTTP 204
 

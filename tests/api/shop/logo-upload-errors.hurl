@@ -5,7 +5,7 @@
 # GIF upload → 422 logo_format_unsupported
 POST http://{{host}}/api/shop/logo
 [MultipartFormData]
-logo: file,tests/api/shop/fixtures/logo.gif; image/gif
+logo: file,fixtures/logo.gif; image/gif
 
 HTTP 422
 [Asserts]
@@ -18,7 +18,7 @@ jsonpath "$.details" == null
 # Oversized upload (2MiB + 1 byte) → 422 logo_too_large
 POST http://{{host}}/api/shop/logo
 [MultipartFormData]
-logo: file,tests/api/shop/fixtures/logo-too-large.bin; application/octet-stream
+logo: file,fixtures/logo-too-large.bin; application/octet-stream
 
 HTTP 422
 [Asserts]
@@ -28,11 +28,14 @@ jsonpath "$.message" isString
 jsonpath "$.details" == null
 
 
-# Empty multipart body (no logo field) → 400 missing_field
+# Empty multipart body (no logo field) → 400 missing_field.
+# Body uses a raw multiline string so hurl does not try to parse the
+# closing `--boundary123--` line as a new request method.
 POST http://{{host}}/api/shop/logo
 Content-Type: multipart/form-data; boundary=boundary123
-
+```
 --boundary123--
+```
 
 HTTP 400
 [Asserts]
