@@ -453,9 +453,6 @@ tasks:
         tests/api/customers/not-found.hurl \
         tests/api/customers/list.hurl \
         tests/api/customers/create.hurl \
-        tests/api/customers/update.hurl \
-        tests/api/customers/delete.hurl \
-        tests/api/customers/restore.hurl \
         tests/api/activity/list.hurl \
         tests/api/settings/lan-access.hurl \
         tests/api/shop/logo-get.hurl \
@@ -492,12 +489,18 @@ tasks:
         tests/api/_prelude/admin-login.hurl
       # Phase 2 — explicit-admin tests reading the shared cookie jar.
       # `--jobs 1` is required: hurl --test runs files in parallel by
-      # default (one job per CPU), but the shop/logo-* trio mutates the
-      # same `shop_settings WHERE id = 1` row. Without serialization,
-      # logo-delete.hurl's DELETE can land between logo-upload.hurl's
-      # POST and its follow-up `/api/setup-status` read, blanking
-      # logo_extension/logo_epoch and turning logo_url back to null
-      # under hurl. Order: logo-upload first (leaves a logo),
+      # default (one job per CPU), but two collisions need serialization:
+      #   1. shop/logo-* mutate the same `shop_settings WHERE id = 1`
+      #      row; logo-delete.hurl's DELETE can land between logo-upload's
+      #      POST and its follow-up `/api/setup-status` read, blanking
+      #      logo_extension/logo_epoch and turning logo_url back to null.
+      #   2. customers/{update,delete,restore}.hurl each open a write
+      #      transaction that includes an activity_log INSERT; running
+      #      them concurrently with each other (and with customers/get's
+      #      seeding POST) starves the SeaORM transaction coordinator
+      #      and surfaces SQLITE_BUSY before the 5s busy_timeout retry
+      #      window can drain (PR 3 CI evidence).
+      # Order within the logo trio: logo-upload first (leaves a logo),
       # logo-upload-errors next (validation rejects, no state change),
       # logo-delete last (uploads + deletes; ends with no logo on disk).
       hurl --variables-file tests/api/envs/ci.env --cookie "$COOKIE_JAR" --jobs 1 --test \
@@ -505,6 +508,9 @@ tasks:
         tests/api/platform/auth/me.hurl \
         tests/api/account/recovery-codes-regenerate.hurl \
         tests/api/customers/get.hurl \
+        tests/api/customers/update.hurl \
+        tests/api/customers/delete.hurl \
+        tests/api/customers/restore.hurl \
         tests/api/users/soft-delete-not-found.hurl \
         tests/api/users/update-role-not-found.hurl \
         tests/api/shop/logo-upload.hurl \
