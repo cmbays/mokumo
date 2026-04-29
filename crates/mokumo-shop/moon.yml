@@ -317,7 +317,7 @@ tasks:
       #     middleware (which bypasses the production-DB lookup), not on
       #     an explicit POST /login. Re-attach requires a production-
       #     profile smoke harness that runs the setup wizard before login.
-      #     Deferred to PR-2.5 (mokumo#NNN — kikan-cli seed-admin).
+      #     Deferred to PR-2.5 (mokumo#723 — kikan-cli seed-admin).
       #
       #   tests/api/auth/me.hurl
       #   tests/api/platform/auth/me.hurl
@@ -334,7 +334,7 @@ tasks:
       #     profile (`SetupMode::Production`), so the user lookup returns
       #     `None` and strict handlers reject with 401. Re-attach requires
       #     seeding an admin into production_db before login — deferred to
-      #     PR-2.5 (mokumo#NNN). PR-2.5 introduces a `kikan-cli seed-admin`
+      #     PR-2.5 (mokumo#723). PR-2.5 introduces a `kikan-cli seed-admin`
       #     subcommand that opens production_db directly (matching the
       #     existing `kikan-cli reset_password` pattern), invokes a
       #     refactored-out `create_initial_admin` domain fn shared with the
