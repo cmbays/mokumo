@@ -420,6 +420,19 @@ tasks:
       #     `cfg(debug_assertions)` only — the release binary the smoke
       #     harness boots does not register these routes.
       #
+      #   DELETE /api/users/{id} (happy-path)
+      #     The seeded admin is the only user, and the kikan service-layer
+      #     last-admin guard (`crates/kikan/src/auth/service.rs:28`)
+      #     blocks deleting the only admin. Mokumo has no public
+      #     user-creation API and no test-only seed mechanism, so a
+      #     non-admin subject cannot be brought into existence from a
+      #     hurl-only harness. The 404 contract is covered by
+      #     `tests/api/users/soft-delete-not-found.hurl`; the happy-path
+      #     wire shape is covered by Rust unit tests in
+      #     `crates/kikan/src/auth/service.rs` (`soft_delete_user_*`).
+      #     Re-attach when a user-seeding harness lands (mokumo#729
+      #     Piece 3 follow-up).
+      #
       # ---------------------------------------------------------------------
       # Phase 1 — unauthenticated paths and demo-auto-login-carried tests.
       # Excludes login-success.hurl: admin doesn't exist yet (setup wizard
@@ -513,6 +526,7 @@ tasks:
         tests/api/customers/restore.hurl \
         tests/api/users/soft-delete-not-found.hurl \
         tests/api/users/update-role-not-found.hurl \
+        tests/api/users/update-role-success.hurl \
         tests/api/shop/logo-upload.hurl \
         tests/api/shop/logo-upload-errors.hurl \
         tests/api/shop/logo-delete.hurl
