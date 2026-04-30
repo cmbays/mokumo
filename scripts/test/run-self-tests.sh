@@ -98,9 +98,9 @@ assert_exit "route-coverage ledger substring rejected" 1 \
         LEDGER_FILE="${FIX}/route-coverage-ledger-substring/ledger-only-subpath.yml" \
     bash scripts/check-route-coverage.sh
 
-# v2 — nested-mount resolver. A relative route added inside `customer_router()`
+# Nested-mount resolver. A relative route added inside `customer_router()`
 # must be resolved to /api/customers/<rel> by walking routes.rs `.nest(...)`.
-assert_exit "route-coverage v2 nested-mount pass" 0 \
+assert_exit "route-coverage nested-mount pass" 0 \
     env DIFF_OVERRIDE="${FIX}/route-coverage-nested-mount/diff.txt" \
         HURL_TREE="${FIX}/route-coverage-nested-mount/api" \
         LEDGER_FILE="${FIX}/route-coverage-nested-mount/empty-ledger.yml" \
@@ -108,12 +108,30 @@ assert_exit "route-coverage v2 nested-mount pass" 0 \
         ROUTER_FN_OVERRIDE="${FIX}/route-coverage-nested-mount/fn-overrides.txt" \
     bash scripts/check-route-coverage.sh
 
-# v2 — per-method gap. Adding POST to a route where only GET is hurl-covered
-# must FAIL even though the domain `/api/customers/` has hurl coverage.
-assert_exit "route-coverage v2 per-method gap fails" 1 \
+# Per-method gap. Adding POST to a route where only GET is hurl-covered must
+# FAIL even though the domain `/api/customers/` has hurl coverage.
+assert_exit "route-coverage per-method gap fails" 1 \
     env DIFF_OVERRIDE="${FIX}/route-coverage-per-method-gap/diff.txt" \
         HURL_TREE="${FIX}/route-coverage-per-method-gap/api" \
         LEDGER_FILE="${FIX}/route-coverage-per-method-gap/empty-ledger.yml" \
+    bash scripts/check-route-coverage.sh
+
+# Multi-line `.route(\n  "<path>",\n  ...,\n)` block — the dominant style in
+# routes.rs. The script must detect the route by joining consecutive added
+# lines per file before applying the route-extraction regex.
+assert_exit "route-coverage multi-line route pass" 0 \
+    env DIFF_OVERRIDE="${FIX}/route-coverage-multi-line/diff.txt" \
+        HURL_TREE="${FIX}/route-coverage-multi-line/api" \
+        LEDGER_FILE="${FIX}/route-coverage-multi-line/empty-ledger.yml" \
+    bash scripts/check-route-coverage.sh
+
+# Regex-meta in literal path segment (`/api/foo.bar`) must NOT be matched by
+# a hurl request line that has any other character in the same position
+# (`/api/fooXbar`). path_to_regex must escape `.` correctly.
+assert_exit "route-coverage dot-escape rejects fuzzy match" 1 \
+    env DIFF_OVERRIDE="${FIX}/route-coverage-dot-escape/diff.txt" \
+        HURL_TREE="${FIX}/route-coverage-dot-escape/api" \
+        LEDGER_FILE="${FIX}/route-coverage-dot-escape/empty-ledger.yml" \
     bash scripts/check-route-coverage.sh
 
 echo

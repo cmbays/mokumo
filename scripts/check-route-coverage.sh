@@ -2,29 +2,35 @@
 # Guard: every newly-introduced API route in the diff requires hurl coverage
 # for each HTTP method, OR a matching entry in the moon.yml exclusion ledger.
 #
-# Scope (v2):
-#   - Detects added `.route("...", <method>(...))` and `.nest("/api/...", ...)`
-#     calls under `crates/**/src/**/*.rs`.
+# How it works:
+#   - Detects added `.route("...", <method>(...))` calls under
+#     `crates/**/src/**/*.rs`. Multi-line `.route(\n  "<path>",\n  ...,\n)`
+#     blocks are recognised by joining consecutive `+`-prefixed diff lines
+#     per file before applying the route-extraction regex.
 #   - Resolves relative paths in sub-routers: a `.route("/{id}/restore", ...)`
-#     added inside a function whose name appears as the second arg of an
-#     existing `.nest("/api/<prefix>", <fn>())` is treated as
+#     added inside a function whose name appears as the second arg of a
+#     `.nest("/api/<prefix>", <fn>())` call in `routes.rs` is treated as
 #     `/api/<prefix>/{id}/restore`.
-#   - Per-method coverage: each HTTP method on a route (`get(...).post(...)`
-#     yields two endpoints) is checked independently. Coverage matches when a
-#     hurl file has a request line `<METHOD> http(s)?://<host><path>` with
-#     `{id}`-style segments treated as `[^/]+`.
-#
-# v1 false-negatives this version closes (mokumo#729 Piece 2):
-#   - Sub-router relative-path routes (was the largest known v1 gap).
-#   - Adding additional methods to an already-covered domain (per-method).
+#   - Per-method coverage: each HTTP method on a route (`get(h).post(h)`
+#     yields two endpoints) is checked independently. Coverage matches when
+#     a hurl file has a request line `<METHOD> http(s)?://<host><path>`
+#     with `{id}`-style segments treated as `[^/]+`.
 #
 # Background: mokumo CLAUDE.md mandates per-endpoint hurl coverage:
 #   "New API endpoints require a `.hurl` file — add
 #   `tests/api/<domain>/<endpoint>.hurl` in the same PR."
 #
-# Diff base: `origin/main`. Local hooks rely on the user having fetched
-# recently; stale base is acceptable for local checks because CI is the
-# source of truth (CI sets STRICT_BASE_REF=1 to fail loudly on missing ref).
+# Diff base: `origin/main`. Local hooks tolerate a stale base ref because
+# CI is the source of truth (CI sets STRICT_BASE_REF=1 to fail loudly on
+# missing ref).
+#
+# Known residual gaps (out of scope for this guard):
+#   - Mounting a pre-existing router under a new `.nest("/api/X", ...)`
+#     prefix without inline `.route(...)` changes is not flagged.
+#   - Routes added via `MethodRouter::new().on(MethodFilter::*, ...)` form
+#     (axum supports it; mokumo does not currently use it) are not detected.
+#   - Cosmetic re-emissions of an unchanged `.route(...)` line are treated
+#     as new endpoints; harmless when the existing hurl is unchanged.
 
 set -euo pipefail
 
@@ -57,7 +63,9 @@ else
         echo "::warning::route-coverage: base ref '$BASE_REF' not found locally; skipping (run \`git fetch origin main\` to enable)" >&2
         exit 0
     fi
-    DIFF=$(git diff --unified=0 "${BASE_REF}...HEAD" -- 'crates/**/src/**/*.rs' 2>/dev/null || true)
+    # Allow git diff to surface real failures (corrupt index, lock contention)
+    # — only the missing-ref case is silenced above.
+    DIFF=$(git diff --unified=0 "${BASE_REF}...HEAD" -- 'crates/**/src/**/*.rs')
 fi
 
 if [[ -z "$DIFF" ]]; then
@@ -65,97 +73,99 @@ if [[ -z "$DIFF" ]]; then
     exit 0
 fi
 
-# === Phase A: prefix map ==================================================
-# Walk routes.rs (or the configured ROUTES_FILES) for `.nest("/api/<prefix>", ... ::<fn>())`
-# patterns and build a map: <fn_name> → /api/<prefix>.
-# Multi-line .nest() chains are common; we collapse whitespace before matching.
+# === Phase A: file → /api/<prefix> map ====================================
+# Walk routes.rs (or the configured ROUTES_FILES) for `.nest("/api/<prefix>",
+# ... ::<fn>())` patterns to map function names to mount prefixes, then join
+# with the workspace router-fn directory to get a single file → prefix map.
+# Multi-line .nest() chains are handled by collapsing whitespace before
+# matching.
 
-build_prefix_map() {
+build_fn_to_prefix_map() {
     local f
     for f in $ROUTES_FILES; do
         [[ -f "$f" ]] || continue
-        # Collapse to single line with single-space gaps so a multi-line
-        # `.nest(\n    "/api/...",\n    crate::fn(),\n)` becomes greppable.
         tr '\n' ' ' < "$f" | sed -E 's/[[:space:]]+/ /g' \
-            | grep -oE '\.nest\( *"/api/[^"]+", *([a-zA-Z_][a-zA-Z0-9_]*::)*[a-zA-Z_][a-zA-Z0-9_]*\(\)' \
-            | sed -E 's|^\.nest\( *"(/api/[^"]+)", *([a-zA-Z_][a-zA-Z0-9_]*::)*([a-zA-Z_][a-zA-Z0-9_]*)\(\)$|\3 \1|'
+            | sed -nE 's|.*\.nest\( *"(/api/[^"]+)", *([a-zA-Z_][a-zA-Z0-9_]*::)*([a-zA-Z_][a-zA-Z0-9_]*)\(\).*$|\3 \1|p'
     done | sort -u
 }
-
-PREFIX_MAP=$(build_prefix_map)
-
-# === Phase B: router-fn → file map ========================================
-# `pub fn <name>(...) -> Router<...>` definitions across the source tree.
-# Output: lines of "<fn_name> <file_path>".
 
 build_fn_to_file_map() {
     if [[ -n "$ROUTER_FN_OVERRIDE" ]]; then
         cat "$ROUTER_FN_OVERRIDE"
         return
     fi
-    grep -rE '^[[:space:]]*pub fn [a-zA-Z_][a-zA-Z0-9_]*\(' \
+    grep -rE '^[[:space:]]*pub fn [a-zA-Z_][a-zA-Z0-9_]*\(.*\)[^{]+->[[:space:]]*Router' \
         --include='*.rs' \
-        $ROUTER_FN_SEARCH_DIRS 2>/dev/null \
-        | grep -E '\->[[:space:]]*Router' \
-        | sed -E 's|^([^:]+):[[:space:]]*pub fn ([a-zA-Z_][a-zA-Z0-9_]*)\(.*$|\2 \1|' \
+        $ROUTER_FN_SEARCH_DIRS \
+        | sed -nE 's|^([^:]+):[[:space:]]*pub fn ([a-zA-Z_][a-zA-Z0-9_]*)\(.*$|\2 \1|p' \
         | sort -u
 }
 
-FN_TO_FILE_MAP=$(build_fn_to_file_map)
-
-# === Phase C: walk diff for added .route(...) lines =======================
-# Extract (METHOD, full_path) pairs. Resolve relative paths via prefix map.
-
-resolve_prefix_for_file() {
-    local file="$1"
-    [[ -z "$file" ]] && return 1
-    while IFS=' ' read -r fn fnfile; do
-        [[ "$fnfile" == "$file" ]] || continue
-        local prefix
-        prefix=$(printf '%s\n' "$PREFIX_MAP" | awk -v fn="$fn" '$1==fn{print $2; exit}')
-        if [[ -n "$prefix" ]]; then
-            printf '%s' "$prefix"
-            return 0
-        fi
-    done <<< "$FN_TO_FILE_MAP"
-    return 1
+# Emits "<file_path> <prefix>" lines by joining the two intermediate maps.
+# Empty output when no nest mappings are found — that's fine; relative
+# routes simply won't resolve and will be skipped (see Phase C).
+build_file_to_prefix_map() {
+    local fn_to_prefix
+    fn_to_prefix=$(build_fn_to_prefix_map || true)
+    local fn_to_file
+    fn_to_file=$(build_fn_to_file_map || true)
+    [[ -z "$fn_to_prefix" || -z "$fn_to_file" ]] && return 0
+    awk 'NR==FNR { prefix[$1]=$2; next } $1 in prefix { print $2, prefix[$1] }' \
+        <(printf '%s\n' "$fn_to_prefix") \
+        <(printf '%s\n' "$fn_to_file") \
+        | sort -u
 }
 
-extract_added_routes() {
-    local current_file=""
-    local line
-    while IFS= read -r line; do
-        if [[ "$line" =~ ^\+\+\+\ b/(.+)$ ]]; then
-            current_file="${BASH_REMATCH[1]}"
-            continue
-        fi
+FILE_TO_PREFIX_MAP=$(build_file_to_prefix_map)
 
-        # Only added lines (skip removed, context, and metadata).
-        [[ "$line" =~ ^\+[^+] ]] || continue
+# Look up the /api/<prefix> a router fn defined in `<file>` is mounted under.
+# Echoes the prefix on hit (returns 0); returns 1 on miss.
+resolve_prefix_for_file() {
+    local file="$1"
+    [[ -z "$file" || -z "$FILE_TO_PREFIX_MAP" ]] && return 1
+    awk -v file="$file" '$1==file { print $2; found=1; exit } END { exit found?0:1 }' \
+        <<< "$FILE_TO_PREFIX_MAP"
+}
 
-        # Match `.route("<path>", ...)`. Path is everything between the first
-        # quoted pair following `.route(`.
-        if [[ "$line" =~ \.route\(\"([^\"]+)\" ]]; then
+# === Phase B: walk diff for added .route(...) calls =======================
+# Per-file buffer accumulation handles multi-line route blocks. Inside a
+# buffer we split at each `.route(` so each segment carries one route's
+# path + chained methods.
+
+# Sentinel = ASCII Unit Separator (0x1F). Won't appear in Rust source.
+SENTINEL=$'\x1f'
+
+emit_endpoints_for_buffer() {
+    local file="$1"
+    local buffer="$2"
+    [[ -z "$buffer" ]] && return 0
+
+    # Split at each `.route(` so each line (after the first, which is
+    # pre-`.route(` junk) starts with `.route(<args>...`.
+    local split
+    split=$(printf '%s' "$buffer" | sed "s|\\.route(|${SENTINEL}.route(|g" | tr "$SENTINEL" '\n')
+
+    local seg
+    while IFS= read -r seg; do
+        # Match `.route( "<path>" , <body…>` — body runs until the next
+        # `.route(` (i.e. end of segment) and contains the method chain.
+        if [[ "$seg" =~ \.route\([[:space:]]*\"([^\"]+)\"[[:space:]]*,(.*) ]]; then
             local path="${BASH_REMATCH[1]}"
+            local body="${BASH_REMATCH[2]}"
 
-            # Extract methods on this line. Common forms:
-            #   .route("/x", get(h))                 → GET
-            #   .route("/x", get(h).post(j))         → GET, POST
-            #   .route("/x", post(create))           → POST
             local methods
-            methods=$(printf '%s' "$line" \
+            methods=$(printf '%s' "$body" \
                 | grep -oE '\b(get|post|put|patch|delete|head|options)\(' \
                 | sed 's/(//' \
                 | sort -u)
             [[ -z "$methods" ]] && continue
 
-            # Resolve full path.
             local full_path=""
             if [[ "$path" == /api/* ]]; then
                 full_path="$path"
             else
                 local prefix
-                if prefix=$(resolve_prefix_for_file "$current_file"); then
+                if prefix=$(resolve_prefix_for_file "$file"); then
                     if [[ "$path" == "/" ]]; then
                         full_path="$prefix"
                     else
@@ -163,33 +173,54 @@ extract_added_routes() {
                     fi
                 else
                     # Out of scope: relative path with no resolvable parent
-                    # mount. Skip (don't fail) — the route may be intentionally
-                    # mounted at a non-`/api/` path, or the mounting site is
-                    # added in the same PR (not a v2 case we resolve).
+                    # mount. Skip — the route may be intentionally mounted
+                    # at a non-`/api/` path, or the mounting site is added
+                    # in the same PR and lives outside ROUTES_FILES.
                     continue
                 fi
             fi
 
             local m
             for m in $methods; do
-                # ${m^^} is bash 4+; explicit upper-case for portability.
-                printf '%s %s\n' "$(printf '%s' "$m" | tr '[:lower:]' '[:upper:]')" "$full_path"
+                printf '%s %s\n' \
+                    "$(printf '%s' "$m" | tr '[:lower:]' '[:upper:]')" \
+                    "$full_path"
             done
         fi
-    done <<< "$DIFF" | sort -u
+    done <<< "$split"
 }
 
-NEW_ENDPOINTS=$(extract_added_routes)
+extract_added_routes() {
+    local current_file=""
+    local buffer=""
+    local line
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^\+\+\+\ b/(.+)$ ]]; then
+            emit_endpoints_for_buffer "$current_file" "$buffer"
+            current_file="${BASH_REMATCH[1]}"
+            buffer=""
+            continue
+        fi
+        # Accumulate added lines into the current file's buffer (drop the
+        # leading `+`). Removed and context lines are ignored.
+        if [[ "$line" =~ ^\+[^+] ]]; then
+            buffer+="${line:1} "
+        fi
+    done <<< "$DIFF"
+    emit_endpoints_for_buffer "$current_file" "$buffer"
+}
+
+NEW_ENDPOINTS=$(extract_added_routes | sort -u)
 
 if [[ -z "$NEW_ENDPOINTS" ]]; then
     echo "route-coverage ok: no new (method, /api/...) endpoints introduced in diff"
     exit 0
 fi
 
-# === Phase D: coverage check per (METHOD, PATH) ===========================
+# === Phase C: coverage check per (METHOD, PATH) ===========================
 
 if [[ -z "$DIFF_OVERRIDE" ]]; then
-    NEW_HURL=$(git diff --name-only --diff-filter=A "${BASE_REF}...HEAD" -- "${HURL_TREE}/**/*.hurl" 2>/dev/null || true)
+    NEW_HURL=$(git diff --name-only --diff-filter=A "${BASE_REF}...HEAD" -- "${HURL_TREE}/**/*.hurl")
 else
     NEW_HURL=""
 fi
@@ -200,17 +231,25 @@ else
     LEDGER=""
 fi
 
+# Helper: extract /api/<domain> top-level segment from a path. Pure bash —
+# no subshell.
+domain_of() {
+    local p="${1#/api/}"
+    printf '%s' "${p%%/*}"
+}
+
 # Convert /api/users/{id}/role → /api/users/[^/]+/role for grep -E.
-# Escape regex meta-characters in literal segments first, then replace
-# `{<word>}` placeholders with `[^/]+`.
+# Step 1 escapes regex metas in literal segments. The character class places
+# `]` first (POSIX-portable trick — a literal `]` at the start of a class
+# is part of the class, not its terminator); without that, GNU sed -E
+# truncates the class at the first unescaped `]`, silently leaving the
+# downstream metas (`.`, `*`, …) unescaped. Step 2 swaps `{<word>}` with
+# `[^/]+`; the single-char classes `[{]`/`[}]` dodge ERE's quantifier-
+# interval (`\{m,n\}`) parsing under strict EREs.
 path_to_regex() {
     local p="$1"
-    # Escape every regex meta (except { }) so literal segments match
-    # themselves. We use single-char character classes `[{]` / `[}]` in the
-    # placeholder substitution below to dodge quantifier-interval parsing
-    # (`\{m,n\}`) under strict EREs (e.g. GNU sed -E).
     local escaped
-    escaped=$(printf '%s' "$p" | sed -E 's|[.*+?^$()\[\]\\]|\\&|g')
+    escaped=$(printf '%s' "$p" | sed -E 's|[].*+?^$()[\\]|\\&|g')
     printf '%s' "$escaped" | sed -E 's|[{][a-zA-Z_][a-zA-Z0-9_]*[}]|[^/]+|g'
 }
 
@@ -230,32 +269,25 @@ method_covered() {
     local method="$1"
     local path="$2"
     local domain
-    domain=$(printf '%s' "$path" | sed -E 's|^/api/([^/]+).*$|\1|')
+    domain=$(domain_of "$path")
     local path_regex
     path_regex=$(path_to_regex "$path")
 
-    # (a) existing hurl files in domain dir
-    if [[ -d "${HURL_TREE}/${domain}" ]]; then
-        local f
-        while IFS= read -r f; do
-            [[ -z "$f" ]] && continue
-            if hurl_has_request "$method" "$path_regex" "$f"; then
-                printf 'covered by %s' "$f"
-                return 0
-            fi
-        done < <(find "${HURL_TREE}/${domain}" -type f -name '*.hurl' 2>/dev/null)
-    fi
-    # (a') sibling file at <HURL_TREE>/<domain>.hurl
-    if [[ -f "${HURL_TREE}/${domain}.hurl" ]]; then
-        if hurl_has_request "$method" "$path_regex" "${HURL_TREE}/${domain}.hurl"; then
-            printf 'covered by %s' "${HURL_TREE}/${domain}.hurl"
+    # (a) any hurl file under <HURL_TREE>/<domain>/ or sibling <domain>.hurl
+    local f
+    while IFS= read -r f; do
+        [[ -z "$f" ]] && continue
+        if hurl_has_request "$method" "$path_regex" "$f"; then
+            printf 'covered by %s' "$f"
             return 0
         fi
-    fi
+    done < <(
+        find "${HURL_TREE}/${domain}" -type f -name '*.hurl' 2>/dev/null
+        [[ -f "${HURL_TREE}/${domain}.hurl" ]] && printf '%s\n' "${HURL_TREE}/${domain}.hurl"
+    )
 
     # (b) newly-added hurl files in the same diff
     if [[ -n "$NEW_HURL" ]]; then
-        local f
         while IFS= read -r f; do
             [[ -z "$f" ]] && continue
             if hurl_has_request "$method" "$path_regex" "$f"; then
@@ -284,7 +316,7 @@ while IFS=' ' read -r method path; do
     if COVERAGE_MSG=$(method_covered "$method" "$path"); then
         echo "route-coverage ok: ${method} ${path} (${COVERAGE_MSG})"
     else
-        domain=$(printf '%s' "$path" | sed -E 's|^/api/([^/]+).*$|\1|')
+        domain=$(domain_of "$path")
         cat <<EOF >&2
 ::error::route-coverage violation: ${method} ${path}
 

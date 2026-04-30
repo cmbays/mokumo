@@ -1,4 +1,4 @@
-// Synthetic fixture for v2 nested-mount resolution. The script reads .nest()
+// Synthetic fixture for nested-mount resolution. The script reads .nest()
 // patterns from this file (via ROUTES_FILES env override) to build the
 // `customer_router → /api/customers` mapping.
 
