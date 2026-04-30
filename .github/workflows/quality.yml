@@ -709,6 +709,12 @@ jobs:
       CARGO_TARGET_DIR: target    # Override .cargo/config.toml's absolute path
     steps:
       - uses: actions/checkout@v4
+        with:
+          # G2 (route-coverage) needs `git diff origin/main...HEAD`, which
+          # requires the merge-base to be reachable. Default depth=1 fetches
+          # only the merge ref, so the merge-base lookup fails on PRs whose
+          # branch heads aren't in local history.
+          fetch-depth: 0
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep
       - name: shellcheck
