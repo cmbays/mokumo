@@ -23,6 +23,7 @@ GET http://{{host}}/api/auth/me
 HTTP 200
 [Captures]
 admin_id: jsonpath "$.user.id"
+admin_email: jsonpath "$.user.email"
 
 
 PATCH http://{{host}}/api/users/{{admin_id}}/role
@@ -34,8 +35,8 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 header "Content-Type" contains "application/json"
-jsonpath "$.id" isInteger
-jsonpath "$.email" exists
+jsonpath "$.id" == {{admin_id}}
+jsonpath "$.email" == "{{admin_email}}"
 jsonpath "$.role_name" == "Admin"
 jsonpath "$.is_active" == true
 jsonpath "$.updated_at" matches /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
