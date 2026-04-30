@@ -98,6 +98,24 @@ assert_exit "route-coverage ledger substring rejected" 1 \
         LEDGER_FILE="${FIX}/route-coverage-ledger-substring/ledger-only-subpath.yml" \
     bash scripts/check-route-coverage.sh
 
+# v2 — nested-mount resolver. A relative route added inside `customer_router()`
+# must be resolved to /api/customers/<rel> by walking routes.rs `.nest(...)`.
+assert_exit "route-coverage v2 nested-mount pass" 0 \
+    env DIFF_OVERRIDE="${FIX}/route-coverage-nested-mount/diff.txt" \
+        HURL_TREE="${FIX}/route-coverage-nested-mount/api" \
+        LEDGER_FILE="${FIX}/route-coverage-nested-mount/empty-ledger.yml" \
+        ROUTES_FILES="${FIX}/route-coverage-nested-mount/routes.rs" \
+        ROUTER_FN_OVERRIDE="${FIX}/route-coverage-nested-mount/fn-overrides.txt" \
+    bash scripts/check-route-coverage.sh
+
+# v2 — per-method gap. Adding POST to a route where only GET is hurl-covered
+# must FAIL even though the domain `/api/customers/` has hurl coverage.
+assert_exit "route-coverage v2 per-method gap fails" 1 \
+    env DIFF_OVERRIDE="${FIX}/route-coverage-per-method-gap/diff.txt" \
+        HURL_TREE="${FIX}/route-coverage-per-method-gap/api" \
+        LEDGER_FILE="${FIX}/route-coverage-per-method-gap/empty-ledger.yml" \
+    bash scripts/check-route-coverage.sh
+
 echo
 echo "self-tests: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]]
