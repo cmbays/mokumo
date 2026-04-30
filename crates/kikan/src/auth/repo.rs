@@ -249,10 +249,15 @@ async fn generate_recovery_codes_n(n: u32) -> Result<(Vec<String>, String), Doma
 /// in the same `setup_complete=true` state. Calling this inside the same
 /// transaction that creates the admin keeps the two writes atomic — a crash
 /// cannot leave an admin row without the matching settings row.
+///
+/// Idempotent (`INSERT OR REPLACE`): a stray pre-existing `setup_complete`
+/// row from a partial setup, restore-from-backup, or manual DB edit converges
+/// to the intended state instead of failing the transaction with a UNIQUE
+/// constraint violation.
 async fn mark_setup_complete<C: ConnectionTrait>(c: &C) -> Result<(), sea_orm::DbErr> {
     c.execute_raw(sea_orm::Statement::from_sql_and_values(
         sea_orm::DbBackend::Sqlite,
-        "INSERT INTO settings (key, value) VALUES ('setup_complete', 'true')",
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('setup_complete', 'true')",
         vec![],
     ))
     .await
