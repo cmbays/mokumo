@@ -125,6 +125,21 @@ assert_exit "route-coverage multi-line route pass" 0 \
         LEDGER_FILE="${FIX}/route-coverage-multi-line/empty-ledger.yml" \
     bash scripts/check-route-coverage.sh
 
+# Multi-nest routes.rs — every .nest("/api/<prefix>", ...) call must register
+# in the prefix map. A pre-fix script (greedy `.*\.nest\(` matches only the
+# LAST nest in a file) silently skips routes mounted under earlier nests.
+# This fixture adds a route in BOTH nests (quotes + invoices) but only
+# provides hurl coverage for the LAST one. A pre-fix script would consider
+# only the invoice route, find it covered, and exit 0 spuriously. The fixed
+# script enumerates both nests and reports the missing quote-route coverage.
+assert_exit "route-coverage multi-nest first-of-many fails" 1 \
+    env DIFF_OVERRIDE="${FIX}/route-coverage-multi-nest/diff.txt" \
+        HURL_TREE="${FIX}/route-coverage-multi-nest/api" \
+        LEDGER_FILE="${FIX}/route-coverage-multi-nest/empty-ledger.yml" \
+        ROUTES_FILES="${FIX}/route-coverage-multi-nest/routes.rs" \
+        ROUTER_FN_OVERRIDE="${FIX}/route-coverage-multi-nest/fn-overrides.txt" \
+    bash scripts/check-route-coverage.sh
+
 # Regex-meta in literal path segment (`/api/foo.bar`) must NOT be matched by
 # a hurl request line that has any other character in the same position
 # (`/api/fooXbar`). path_to_regex must escape `.` correctly.

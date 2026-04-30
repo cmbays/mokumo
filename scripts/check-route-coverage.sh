@@ -31,6 +31,13 @@
 #     (axum supports it; mokumo does not currently use it) are not detected.
 #   - Cosmetic re-emissions of an unchanged `.route(...)` line are treated
 #     as new endpoints; harmless when the existing hurl is unchanged.
+#   - Adding a method to a multi-line `.route(\n  "<path>",\n  <chain>,\n)`
+#     block where the path line is unchanged: the `--unified=0` diff buffer
+#     captures only the chain delta, so the route's path can't be resolved
+#     and the new method is missed. Single-line chain edits (where path +
+#     chain share a line) and whole-route additions ARE caught. Closing
+#     this case requires post-image vs pre-image parsing — tracked
+#     separately.
 
 set -euo pipefail
 
@@ -85,7 +92,8 @@ build_fn_to_prefix_map() {
     for f in $ROUTES_FILES; do
         [[ -f "$f" ]] || continue
         tr '\n' ' ' < "$f" | sed -E 's/[[:space:]]+/ /g' \
-            | sed -nE 's|.*\.nest\( *"(/api/[^"]+)", *([a-zA-Z_][a-zA-Z0-9_]*::)*([a-zA-Z_][a-zA-Z0-9_]*)\(\).*$|\3 \1|p'
+            | sed 's|\.nest(|\n.nest(|g' \
+            | sed -nE 's|^\.nest\( *"(/api/[^"]+)", *([a-zA-Z_][a-zA-Z0-9_]*::)*([a-zA-Z_][a-zA-Z0-9_]*)\(\).*$|\3 \1|p'
     done | sort -u
 }
 

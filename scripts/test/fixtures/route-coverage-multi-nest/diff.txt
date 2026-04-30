@@ -1,0 +1,18 @@
+diff --git a/crates/mokumo-shop/src/quote/handler.rs b/crates/mokumo-shop/src/quote/handler.rs
+index 1111111..2222222 100644
+--- a/crates/mokumo-shop/src/quote/handler.rs
++++ b/crates/mokumo-shop/src/quote/handler.rs
+@@ -10,3 +10,4 @@ pub fn quote_router() -> Router<QuoteRouterDeps> {
+     Router::new()
+         .route("/", get(list).post(create))
++        .route("/{id}/clone", post(clone_quote))
+ }
+diff --git a/crates/mokumo-shop/src/invoice/handler.rs b/crates/mokumo-shop/src/invoice/handler.rs
+index 3333333..4444444 100644
+--- a/crates/mokumo-shop/src/invoice/handler.rs
++++ b/crates/mokumo-shop/src/invoice/handler.rs
+@@ -10,3 +10,4 @@ pub fn invoice_router() -> Router<InvoiceRouterDeps> {
+     Router::new()
+         .route("/", get(list).post(create))
++        .route("/{id}/void", post(void_invoice))
+ }
