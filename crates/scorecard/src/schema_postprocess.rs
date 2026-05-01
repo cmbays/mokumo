@@ -267,15 +267,21 @@ mod tests {
         assert!(!variant_defines_failure_detail(&outer));
     }
 
-    #[test]
-    fn tighten_url_fields_sets_format_and_pattern_on_top_level_url() {
-        let mut root = RootSchema::default();
-        root.schema = schema_with_property("all_check_runs_url");
+    fn url_test_root() -> RootSchema {
+        let mut root = RootSchema {
+            schema: schema_with_property("all_check_runs_url"),
+            ..Default::default()
+        };
         root.definitions.insert(
             "GateRun".into(),
             Schema::Object(schema_with_property("url")),
         );
+        root
+    }
 
+    #[test]
+    fn tighten_url_fields_sets_format_and_pattern_on_top_level_url() {
+        let mut root = url_test_root();
         tighten_url_fields(&mut root);
 
         let prop = root
@@ -298,13 +304,7 @@ mod tests {
 
     #[test]
     fn tighten_url_fields_sets_format_and_pattern_on_gate_run_url() {
-        let mut root = RootSchema::default();
-        root.schema = schema_with_property("all_check_runs_url");
-        root.definitions.insert(
-            "GateRun".into(),
-            Schema::Object(schema_with_property("url")),
-        );
-
+        let mut root = url_test_root();
         tighten_url_fields(&mut root);
 
         let Schema::Object(gate_run) = root.definitions.get("GateRun").unwrap() else {
