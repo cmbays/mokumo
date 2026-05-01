@@ -31,7 +31,3 @@ cli = ["dep:toml", "dep:walkdir", "dep:clap", "dep:jsonschema"]
 # `required-features` so the drift-check workflow can run it without `--features cli`.
 [[bin]]
 name = "emit-schema"
-
-# aggregate.rs lands in V1 PR2 (Session 2, closes mokumo#763); the [[bin]]
-# table is intentionally absent here — adding it now without the source file
-# would error on `cargo build -p scorecard --bins`.

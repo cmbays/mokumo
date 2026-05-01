@@ -32,20 +32,20 @@
       ]
     },
     "rows": {
-      "description": "Scorecard rows. V1 has one (`CoverageDelta`); V4 has all eight.",
+      "description": "Scorecard rows.",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Row"
       }
     },
     "schema_version": {
-      "description": "Schema version. v0 ships at `1`; future row variants bump per the migration playbook in `decisions/mokumo/adr-scorecard-crate-shape.md`.",
+      "description": "Schema version. Future row variants bump per the migration playbook in `decisions/mokumo/adr-scorecard-crate-shape.md`.",
       "type": "integer",
       "format": "uint32",
       "minimum": 0.0
     },
     "top_failures": {
-      "description": "Top-failing gate Check Run links (max three per the two-click rule). Present even when empty so the renderer can render a stable shape.",
+      "description": "Top-failing gate Check Run links (max three per the two-click rule). May be omitted on the wire; deserialization fills `vec![]`. Producers SHOULD emit explicitly so the wire contract is unambiguous.",
       "default": [],
       "type": "array",
       "items": {
@@ -105,12 +105,15 @@
       }
     },
     "Row": {
-      "description": "Tagged-union of scorecard row variants.\n\nV1 ships with `CoverageDelta` only; V4 expands to all eight variants. The `#[serde(tag = \"type\")]` discriminator lands in the JSON Schema as a `oneOf` with per-variant `type` constants, which the Layer 2 post-processor walks to inject the `failure_detail_md` invariant.",
+      "description": "Tagged-union of scorecard row variants.\n\n`#[serde(tag = \"type\")]` lands in the JSON Schema as a `oneOf` with per-variant `type` constants, which the Layer 2 post-processor walks to inject the `failure_detail_md` invariant.\n\n`#[non_exhaustive]` on both the enum and each variant blocks external crates from struct-literal construction (variant-level) and from non-wildcard pattern matches (enum-level). Within this crate, both remain reachable so the producer binary can construct rows and the renderer-side dest types can match exhaustively.",
       "oneOf": [
         {
-          "description": "Code coverage delta vs. base. V1 stub variant.",
+          "description": "Code coverage delta vs. base.",
           "type": "object",
           "if": {
+            "required": [
+              "status"
+            ],
             "properties": {
               "status": {
                 "const": "Red"
@@ -120,7 +123,12 @@
           "then": {
             "required": [
               "failure_detail_md"
-            ]
+            ],
+            "properties": {
+              "failure_detail_md": {
+                "type": "string"
+              }
+            }
           },
           "required": [
             "anchor",
@@ -140,7 +148,7 @@
               "type": "string"
             },
             "failure_detail_md": {
-              "description": "Inline failure detail rendered below the row when status is Red. Layer 2 JSON Schema requires this when `status == \"Red\"`. Layer 1 constructors enforce the same invariant at compile time.",
+              "description": "Inline failure detail rendered below the row when status is Red. JSON Schema requires this when `status == \"Red\"`; the Red constructor enforces the same invariant at compile time for external callers.",
               "type": [
                 "string",
                 "null"
@@ -155,7 +163,7 @@
               "type": "string"
             },
             "status": {
-              "description": "Resolved status (Green/Yellow/Red). The producer computes this from raw values + `quality.toml` thresholds per ADR §\"Threshold resolution lives in the producer\".",
+              "description": "Resolved status (Green/Yellow/Red). Set by the constructor — callers cannot supply this directly because `Row::CoverageDelta` is `#[non_exhaustive]`.",
               "allOf": [
                 {
                   "$ref": "#/definitions/Status"
@@ -173,7 +181,7 @@
       ]
     },
     "Status": {
-      "description": "Status icon shown on the banner and per-row.\n\nString-tagged so the Layer 2 JSON Schema `if/then` post-processing (in `bin/emit-schema.rs`) can match against `{ \"const\": \"Red\" }` to require `failure_detail_md` on Red rows.",
+      "description": "Status icon shown on the banner and per-row.\n\nString-tagged so JSON Schema post-processors can match against `{ \"const\": \"Red\" }` to require `failure_detail_md` on Red rows.",
       "type": "string",
       "enum": [
         "Green",

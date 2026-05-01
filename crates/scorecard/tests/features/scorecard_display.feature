@@ -1,3 +1,4 @@
+# tracked: mokumo#650 — scenarios get step-defined incrementally as later slices land their behaviors; @future blanket-defers the file from BDD staleness checks until then
 @future
 Feature: Sticky PR scorecard display contract
 
@@ -8,11 +9,6 @@ Feature: Sticky PR scorecard display contract
   spec defines the behaviors the scorecard MUST exhibit — both the comment
   surface itself and the build-time invariants that protect it.
 
-  # Schema lock is mokumo#735 (Wave 1, Quality & CI Overhaul epic #370).
-  # Implementation lands under #650. Decisions live in
-  # ~/Github/ops/workspace/mokumo/20260430-735-scorecard-schema-lock/shaping.md
-  # (Decision Log entries 1-19) and breadboard.md (BB1-BB11).
-  #
   # Canonical step-phrase vocabulary:
   #   - "the ci-scorecard comment" — the single sticky comment identified by
   #     the HTML marker <!-- ci-scorecard -->
@@ -20,9 +16,9 @@ Feature: Sticky PR scorecard display contract
   #   - "the drift-check job runs" — single job within the pipeline
   #   - "the scorecard artifact" — the producer-emitted scorecard.json + pr-meta.json
   #
-  # Out of scope (deferred):
-  #   - PR rebase/squash-merge comment migration (G-BB7 candidate; #650 acceptance)
-  #   - Renderer retry under GitHub API rate-limit (G-BB8 candidate; #650 acceptance)
+  # Out of scope (deferred — see ADR for current disposition):
+  #   - PR rebase/squash-merge comment migration
+  #   - Renderer retry under GitHub API rate-limit
 
   # --- Sticky comment lifecycle ---
 

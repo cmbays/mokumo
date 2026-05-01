@@ -1,14 +1,13 @@
-//! Layer 1 typestate: constructing a Red row without `failure_detail_md` MUST
-//! fail to compile. This file calls `Row::coverage_delta_red` with the
-//! `failure_detail_md` argument missing — rustc must reject it.
+//! Layer 1 typestate: constructing a Red row without `failure_detail_md`
+//! MUST fail to compile. This file calls `Row::coverage_delta_red` with
+//! the `failure_detail_md` argument missing — rustc must reject it.
 
-use scorecard::{Row, RowCommon, Status};
+use scorecard::{Row, RowCommon};
 
 fn main() {
     let common = RowCommon {
         id: "coverage".into(),
         label: "Coverage".into(),
-        status: Status::Red,
         anchor: "coverage".into(),
     };
 
