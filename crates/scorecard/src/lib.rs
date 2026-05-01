@@ -72,10 +72,61 @@ pub struct Scorecard {
     pub all_check_runs_url: String,
 }
 
+/// GitHub PR number. Newtype rather than `u64` so a method that wants
+/// "the PR number" cannot accept a raw `RunId`, and a future migration
+/// (e.g. recording the PR by node id rather than number) is a single
+/// type-system change instead of a sweep across renderer + producer
+/// surfaces. Transparent on the wire and in the JSON Schema, so the
+/// renderer reads it as a plain integer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(transparent)]
+#[schemars(transparent)]
+pub struct PrNumber(pub u64);
+
+impl From<u64> for PrNumber {
+    fn from(n: u64) -> Self {
+        Self(n)
+    }
+}
+
+/// GitHub Check Run id. Same rationale as [`PrNumber`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(transparent)]
+#[schemars(transparent)]
+pub struct RunId(pub u64);
+
+impl From<u64> for RunId {
+    fn from(n: u64) -> Self {
+        Self(n)
+    }
+}
+
+/// Stable scorecard row id. A short slug (e.g. `"coverage"`,
+/// `"mutation"`) used as the renderer's anchor key. Newtype so a
+/// `String` parameter can't accidentally land in the `id` slot, and
+/// constructors that accept `impl Into<RowId>` get the ergonomics of
+/// raw string literals at call sites.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(transparent)]
+#[schemars(transparent)]
+pub struct RowId(pub String);
+
+impl From<&str> for RowId {
+    fn from(s: &str) -> Self {
+        Self(s.to_owned())
+    }
+}
+
+impl From<String> for RowId {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
 /// Pull request metadata — the renderer's identity for the sticky comment.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrMeta {
-    pub pr_number: u64,
+    pub pr_number: PrNumber,
     pub head_sha: String,
     pub base_sha: String,
     /// Whether the PR was opened from a fork. Renderer uses this to scope
@@ -104,7 +155,7 @@ pub enum Status {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RowCommon {
     /// Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
-    pub id: String,
+    pub id: RowId,
     /// Human-readable label (e.g. `"Coverage"`).
     pub label: String,
     /// Anchor fragment for jump-linking from the comment.
@@ -196,7 +247,7 @@ impl Row {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GateRun {
     pub gate_name: String,
-    pub run_id: u64,
+    pub run_id: RunId,
     /// Absolute https:// URL to the Check Run page.
     pub url: String,
 }
