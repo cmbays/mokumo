@@ -36,6 +36,9 @@ use serde::{Deserialize, Serialize};
 pub mod emit_schema;
 pub mod schema_postprocess;
 
+#[cfg(feature = "cli")]
+pub mod aggregate;
+
 /// Top-level scorecard artifact.
 ///
 /// Serializes as `scorecard.json` and is the trust boundary for the

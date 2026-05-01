@@ -70,3 +70,48 @@ cargo run -p scorecard --bin emit-schema -- --out .config/scorecard/schema.json
 drift-check workflow can regenerate the schema cheaply. The integration
 test `tests/schema_drift.rs` enforces byte-identity between the binary's
 output and the committed file on every `cargo test` run.
+
+## Vendored ajv bundle
+
+The renderer in `.github/workflows/scorecard-comment.yml` validates the
+scorecard artifact against `.config/scorecard/schema.json` via a
+**vendored** ajv bundle at `.github/scripts/scorecard/ajv-bundle.js`.
+Bundling (with esbuild `--platform=node --format=cjs`) keeps the
+renderer step network-free at CI runtime and pins the validator to an
+exact version reviewed at regen-time.
+
+The bundle is committed verbatim alongside a `.VERSIONS` sidecar that
+captures the pinned ajv version, the bundle date, and the bundler tag
+so any operator can audit the supply chain without rebuilding.
+
+### Regenerate the bundle
+
+```bash
+tools/update-vendored-ajv.sh
+```
+
+The script:
+
+1. Installs the pinned ajv version (currently `8.16.0`) into a temp dir.
+2. Runs `esbuild` with `--bundle --platform=node --format=cjs` to
+   produce a single CommonJS file the renderer can `require()`.
+3. Writes `.github/scripts/scorecard/ajv-bundle.js` and
+   `.github/scripts/scorecard/.VERSIONS`.
+
+To bump the pinned version, edit `AJV_VERSION` at the top of
+`tools/update-vendored-ajv.sh`, run the script, review the diff, and
+commit both the new bundle and the updated `.VERSIONS` sidecar in the
+same PR.
+
+### Cadence
+
+Per ADR `decisions/mokumo/adr-scorecard-crate-shape.md`, the vendored
+bundle is refreshed on a **quarterly cadence** (or sooner for security
+advisories affecting ajv). Open a tracking issue at the start of each
+quarter to regenerate; the regen PR also bumps `.VERSIONS` and (if
+ajv published a new minor) updates `AJV_VERSION` in the script.
+
+The renderer's vitest suite at
+`.github/scripts/scorecard/__tests__/` exercises the validator + the
+sticky-comment poster against the committed schema, so any regression
+in the bundled ajv API surface fails CI before merge.

@@ -3,6 +3,7 @@ packages:
   - 'crates/kikan-admin-ui/frontend'
   - 'tools/*'
   - 'tests/desktop'
+  - '.github/scripts/scorecard'
 
 # Supply chain protection: refuse packages published less than 5 days ago.
 # Most compromised releases (e.g. the March 2026 Axios attack) are caught within hours.
