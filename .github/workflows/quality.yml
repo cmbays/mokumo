@@ -858,16 +858,16 @@ jobs:
           if-no-files-found: error
 
   scorecard-drift:
-    # V2 drift gate (mokumo#767). Cross-process complement to the in-process
+    # Cross-process complement to the in-process
     # `crates/scorecard/tests/schema_drift.rs` byte-identity test:
     # regenerates the committed `.config/scorecard/schema.json` and the
     # renderer's `.github/scripts/scorecard/types.d.ts` from source, then
     # `git diff --exit-code` fails on any uncommitted drift. Catches direct
     # edits to either file that the path-filtered `test-rust` job would
-    # skip. The final `tsc --noEmit` step locks the renderer JS's JSDoc
-    # `@param {import("./types").X}` annotations to the generated types
-    # (Layer 3 wire-shape lock, complementing Layer 1 typestate + Layer 2
-    # `if/then` schema invariant).
+    # otherwise skip. The trailing `tsc --noEmit` step locks the renderer
+    # JS's JSDoc annotations to the generated types — see ADR
+    # `decisions/mokumo/adr-scorecard-crate-shape.md` for the full
+    # three-layer enforcement story.
     needs: [changes]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

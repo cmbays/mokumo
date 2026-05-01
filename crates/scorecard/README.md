@@ -159,7 +159,7 @@ this closes four desync paths:
 |---|---|
 | Rust source change without schema regen | `schema_drift.rs` (in-process) |
 | Hand-edit `.config/scorecard/schema.json` | `scorecard-drift` (also `schema_drift.rs`) |
-| Hand-edit `.github/scripts/scorecard/types.d.ts` | `scorecard-drift` only (V2's new capability) |
+| Hand-edit `.github/scripts/scorecard/types.d.ts` | `scorecard-drift` only |
 | JSDoc disagrees with `types.d.ts` | `scorecard-drift` `tsc --noEmit` step |
 
 The `json-schema-to-typescript` and `typescript` versions are pinned
