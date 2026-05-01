@@ -8,9 +8,10 @@ is the validator's contract, and a Node renderer in
 `.github/workflows/scorecard-comment.yml` reads the artifact and posts/updates
 the sticky comment.
 
-The crate is governed by
-[`decisions/mokumo/adr-scorecard-crate-shape.md`](../../decisions/mokumo/adr-scorecard-crate-shape.md)
-(in `~/Github/ops`). The ADR's four-forcing-functions framework chose a
+The crate is governed by the ADR
+`decisions/mokumo/adr-scorecard-crate-shape.md` (in the `ops` repo —
+this product repo links to it via the `pipelines/mokumo/` workflow,
+not via a relative path). The ADR's four-forcing-functions framework chose a
 **single crate** over a multi-crate split; the lib stays mokumo-deps-zero
 (`serde + schemars + serde_json` only) and binary tooling lives behind
 the optional `cli` feature so downstream consumers don't transitively pull

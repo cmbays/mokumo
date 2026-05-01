@@ -3,16 +3,9 @@
 # snapshots rustc's stderr exactly, and stable's six-week cadence drifts the
 # wording across runners.
 #
-# Note on version selection: the impl-plan called for `1.85.0` to match
-# `workspace.package.rust-version = "1.85"` (MSRV), but that pin breaks the
-# workspace — `sysinfo 0.38.4`, `time 0.3.47`, and `zip 8.5.1` all require
-# ≥1.88 in their pre-existing locked versions. `channel = "stable"` was
-# resolving to 1.95.0 prior to this pin (verified via `rustc --version`),
-# so 1.95.0 is the "least surprise" pin: same toolchain CI was already using,
-# just nailed down so the trybuild .stderr snapshot stops moving.
-#
-# The MSRV declaration in `Cargo.toml` (`rust-version = "1.85"`) is now out
-# of sync with reality (deps require ≥1.88). That's a workspace-wide
-# concern — tracked separately, not fixed in this PR.
+# Version is kept in lockstep with `workspace.package.rust-version` in the
+# workspace `Cargo.toml`. Both are currently `1.95`. Bumping either is a
+# synchronized change with the trybuild .stderr snapshots — see
+# `crates/scorecard/README.md` for the regeneration procedure.
 channel = "1.95.0"
 components = ["clippy", "rustfmt", "llvm-tools-preview"]
