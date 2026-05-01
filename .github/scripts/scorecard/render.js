@@ -90,12 +90,40 @@ function renderFailClosedMarkdown(prMeta, result) {
   ].join("\n");
 }
 
-/** Sticky-comment poster. List comments on the PR, find one containing
- *  the marker, update it; otherwise create a new comment.
+/** List PR comments and return the first marker-anchored sticky comment.
+ *  Returns `undefined` if no sticky comment exists yet.
+ *
+ *  Marker matching is anchored to the start of the body (`startsWith`),
+ *  not `includes`, so a user comment that *quotes* the marker text in
+ *  prose cannot hijack the sticky slot. */
+async function findStickyComment({ octokit, owner, repo, prNumber, marker }) {
+  // Pagination: PRs can accumulate >100 comments on long-lived branches.
+  const comments = await octokit.paginate(octokit.rest.issues.listComments, {
+    owner,
+    repo,
+    issue_number: prNumber,
+    per_page: 100,
+  });
+  return comments.find((c) => c.body && c.body.startsWith(marker));
+}
+
+/** Sticky-comment poster. List comments on the PR, find one starting
+ *  with the marker, update it; otherwise create a new comment.
  *
  *  `octokit` must be the `actions/github-script` octokit shape (or a
- *  test mock). The function is idempotent: a second invocation with the
- *  same marker hits `update`, never `create`. */
+ *  test mock). The function is idempotent under the common case: a
+ *  second invocation with the same marker hits `update`, never `create`.
+ *
+ *  Concurrency: between the initial list and the create call there is a
+ *  TOCTOU window — two `scorecard-comment` runs racing for the same PR
+ *  could both observe "no sticky" and both call `createComment`. We
+ *  defend with a re-check immediately before create; if a sticky landed
+ *  in the interim we route to update instead. The producer workflow
+ *  (`Quality Loop`) sets `cancel-in-progress: true`, so racing upstream
+ *  runs are rare in practice; this guard handles the edge case. The
+ *  workflow also sets a per-branch `concurrency` group on the comment
+ *  workflow itself so two scorecard-comment jobs never run in parallel
+ *  for the same PR head. */
 async function postStickyComment({
   octokit,
   owner,
@@ -104,19 +132,13 @@ async function postStickyComment({
   body,
   marker = STICKY_MARKER,
 }) {
-  // Pagination: PRs can accumulate >100 comments on long-lived branches.
-  // `paginate` resolves the iteration boundary for us.
-  const comments = await octokit.paginate(
-    octokit.rest.issues.listComments,
-    {
-      owner,
-      repo,
-      issue_number: prNumber,
-      per_page: 100,
-    },
-  );
-
-  const existing = comments.find((c) => c.body && c.body.includes(marker));
+  const existing = await findStickyComment({
+    octokit,
+    owner,
+    repo,
+    prNumber,
+    marker,
+  });
   if (existing) {
     await octokit.rest.issues.updateComment({
       owner,
@@ -125,6 +147,27 @@ async function postStickyComment({
       body,
     });
     return { action: "updated", comment_id: existing.id };
+  }
+
+  // Re-check immediately before create: closes the read-then-write
+  // window from the initial list. Cheap (one paginated list per
+  // post) and bounds the duplicate-comment risk to one extra API call
+  // landing in the same millisecond.
+  const recheck = await findStickyComment({
+    octokit,
+    owner,
+    repo,
+    prNumber,
+    marker,
+  });
+  if (recheck) {
+    await octokit.rest.issues.updateComment({
+      owner,
+      repo,
+      comment_id: recheck.id,
+      body,
+    });
+    return { action: "updated", comment_id: recheck.id };
   }
 
   const created = await octokit.rest.issues.createComment({
@@ -141,4 +184,5 @@ module.exports = {
   renderScorecardMarkdown,
   renderFailClosedMarkdown,
   postStickyComment,
+  findStickyComment,
 };

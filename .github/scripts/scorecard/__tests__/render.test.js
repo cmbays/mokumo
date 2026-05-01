@@ -217,4 +217,59 @@ describe("postStickyComment", () => {
     expect(octokit._spies.updateComment).toHaveBeenCalledTimes(2);
     expect(octokit._spies.createComment).not.toHaveBeenCalled();
   });
+
+  it("ignores user comments that quote the marker mid-body (anchored startsWith match)", async () => {
+    // A user replied to the bot quoting the marker text inline. The
+    // sticky poster must NOT update the user's comment — only update or
+    // create one that *starts* with the marker.
+    const octokit = makeOctokit({
+      existing: [
+        {
+          id: 77,
+          body: `> ${STICKY_MARKER}\n> our scorecard says we're red — fixing now`,
+        },
+      ],
+    });
+    const result = await postStickyComment({
+      octokit,
+      owner: "x",
+      repo: "y",
+      prNumber: 1,
+      body: `${STICKY_MARKER}\nnew body`,
+    });
+    expect(result.action).toBe("created");
+    expect(octokit._spies.createComment).toHaveBeenCalledTimes(1);
+    expect(octokit._spies.updateComment).not.toHaveBeenCalled();
+  });
+
+  it("re-checks before create: if a sticky lands in the TOCTOU window, route to update", async () => {
+    // Simulate two paginate calls: the first returns nothing, the
+    // second returns a sticky (i.e. a racing run created it between
+    // our list and our intended create).
+    const updateComment = vi.fn().mockResolvedValue({ data: {} });
+    const createComment = vi.fn().mockResolvedValue({ data: { id: 999 } });
+    const listComments = vi.fn();
+    const paginate = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 1, body: "unrelated" }])
+      .mockResolvedValueOnce([
+        { id: 88, body: `${STICKY_MARKER}\nracer-posted body` },
+      ]);
+    const octokit = {
+      rest: { issues: { listComments, createComment, updateComment } },
+      paginate,
+    };
+    const result = await postStickyComment({
+      octokit,
+      owner: "x",
+      repo: "y",
+      prNumber: 1,
+      body: `${STICKY_MARKER}\nour body`,
+    });
+    expect(result.action).toBe("updated");
+    expect(result.comment_id).toBe(88);
+    expect(updateComment).toHaveBeenCalledTimes(1);
+    expect(createComment).not.toHaveBeenCalled();
+    expect(paginate).toHaveBeenCalledTimes(2);
+  });
 });

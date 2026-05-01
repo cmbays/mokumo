@@ -137,13 +137,43 @@ fn render_scorecard(scorecard: &Scorecard) -> Result<String, String> {
     Ok(pretty)
 }
 
-/// Serialize the scorecard to `--out`, creating parent dirs as needed,
-/// after passing the schema check.
+/// Serialize the scorecard to `--out` atomically (write to a temp
+/// sibling + rename), creating parent dirs as needed, after passing
+/// the schema check.
+///
+/// Atomicity matters because the artifact is consumed by the renderer
+/// out-of-process; a partial write from an interrupted run (CI cancel,
+/// disk full, signal) would otherwise leave the renderer parsing
+/// truncated JSON and posting a confusing fail-closed comment.
 pub fn write_scorecard(scorecard: &Scorecard, out_path: &Path) -> Result<(), String> {
     let content = render_scorecard(scorecard)?;
     ensure_parent_dir(out_path)?;
-    fs::write(out_path, content)
-        .map_err(|e| format!("aggregate: failed to write {}: {e}", out_path.display()))
+    let tmp_path = tmp_sibling(out_path);
+    fs::write(&tmp_path, content)
+        .map_err(|e| format!("aggregate: failed to write {}: {e}", tmp_path.display()))?;
+    fs::rename(&tmp_path, out_path).map_err(|e| {
+        // Best-effort tmp cleanup; ignore errors (the rename failure is
+        // the actionable signal).
+        let _ = fs::remove_file(&tmp_path);
+        format!(
+            "aggregate: failed to rename {} -> {}: {e}",
+            tmp_path.display(),
+            out_path.display()
+        )
+    })
+}
+
+/// Compute the temp-file sibling path used by [`write_scorecard`]. We
+/// keep the same parent dir so `rename` stays on the same filesystem
+/// (cross-device renames silently fall back to copy+delete on some
+/// kernels — atomicity is lost). Suffix is `.tmp` plus the process id
+/// so two parallel `aggregate` invocations writing different `--out`
+/// paths sharing a parent don't collide.
+fn tmp_sibling(out_path: &Path) -> PathBuf {
+    let pid = std::process::id();
+    let mut tmp = out_path.as_os_str().to_owned();
+    tmp.push(format!(".tmp.{pid}"));
+    PathBuf::from(tmp)
 }
 
 /// Parse CLI args from raw OS args. Returns the parsed [`Cli`] or an
@@ -281,6 +311,32 @@ mod tests {
         let parsed: Value = serde_json::from_str(&content).expect("valid json");
         assert_eq!(parsed["overall_status"], "Green");
         assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(1));
+    }
+
+    #[test]
+    fn write_scorecard_leaves_no_tmp_file_after_success() {
+        // The atomic-write pattern (write tmp + rename) must not leave
+        // .tmp.<pid> sidecars on the happy path.
+        let dir = tempdir();
+        let out = dir.path.join("scorecard.json");
+        let sc = build_stub_scorecard(pr_meta());
+        write_scorecard(&sc, &out).expect("write");
+        let entries: Vec<_> = fs::read_dir(&dir.path)
+            .expect("read tmpdir")
+            .filter_map(|e| e.ok().map(|e| e.file_name().into_string().ok()))
+            .flatten()
+            .collect();
+        assert_eq!(entries, vec!["scorecard.json".to_string()]);
+    }
+
+    #[test]
+    fn tmp_sibling_keeps_same_parent_and_is_distinct() {
+        let out = Path::new("/tmp/work/scorecard.json");
+        let tmp = tmp_sibling(out);
+        assert_eq!(tmp.parent(), out.parent());
+        assert_ne!(tmp, out);
+        let name = tmp.file_name().unwrap().to_str().unwrap();
+        assert!(name.starts_with("scorecard.json.tmp."), "got: {name}");
     }
 
     #[test]

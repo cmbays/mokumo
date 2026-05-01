@@ -18,18 +18,43 @@ permissions:
   contents: read
   actions: read
 
+# Serialize sticky-comment runs per PR head so two racing upstream
+# `Quality Loop` completions cannot both reach `createComment` in the
+# read-then-write window of `postStickyComment`. The render.js poster
+# also re-checks before create as a belt-and-suspenders guard.
+concurrency:
+  group: scorecard-comment-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
 jobs:
   post-scorecard:
-    # Only post on PR-triggered runs. The producing workflow
-    # (`quality.yml`) gates `scorecard-aggregate` on
-    # `github.event_name == 'pull_request'` so the artifact only exists
-    # for PRs anyway, but skipping early avoids a wasted runner.
-    if: github.event.workflow_run.event == 'pull_request'
+    # Only post on PR-triggered runs whose upstream Quality Loop did not
+    # cancel — `cancel-in-progress: true` on the producer means superseded
+    # runs fire `workflow_run.completed` with `conclusion: cancelled` and
+    # never upload the `mokumo-scorecard-v0` artifact, which would make
+    # the download step fail noisily for no reason.
+    #
+    # We allow `success` AND `failure` (and `timed_out`/`action_required`)
+    # because the producer is designed to upload its artifact even when
+    # OTHER quality.yml jobs fail — the whole point of a sticky comment
+    # is to render the failed gates back to the PR author.
+    if: |
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion != 'cancelled' &&
+      github.event.workflow_run.conclusion != 'skipped'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (for scripts + schema)
+        # `workflow_run` triggers default `actions/checkout` to the
+        # default-branch HEAD, not the upstream run's head SHA. That
+        # would mean we validate `tmp/scorecard.json` against a newer
+        # copy of `.config/scorecard/schema.json` (and run a newer
+        # `validate.js`/`render.js`) than the producer used — silent
+        # drift after unrelated merges land. Pin to the producer's
+        # exact revision.
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 1
 
       - name: Download scorecard artifact
