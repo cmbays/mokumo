@@ -10,5 +10,5 @@ fn main() {
         anchor: "coverage".into(),
     };
 
-    let _row = Row::coverage_delta_green(common, "+0.3 pp".to_string());
+    let _row = Row::coverage_delta_green(common, 0.3, "+0.3 pp".to_string());
 }

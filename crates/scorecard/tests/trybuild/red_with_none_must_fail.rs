@@ -14,7 +14,7 @@ fn main() {
         anchor: "coverage".into(),
     };
 
-    // Third argument is `Option<String>::None`; the constructor takes
+    // Fourth argument is `Option<String>::None`; the constructor takes
     // `String`. rustc must reject with E0308 (mismatched types).
-    let _row = Row::coverage_delta_red(common, "-4.2 pp".to_string(), None);
+    let _row = Row::coverage_delta_red(common, -4.2, "-4.2 pp".to_string(), None);
 }

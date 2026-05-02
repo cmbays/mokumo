@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod emit_schema;
 pub mod schema_postprocess;
+pub mod threshold;
 
 #[cfg(feature = "cli")]
 pub mod aggregate;
@@ -73,6 +74,21 @@ pub struct Scorecard {
     /// the comment can satisfy "every failing gate is one click away" even
     /// when more than three gates fail.
     pub all_check_runs_url: String,
+
+    /// `true` when the producer resolved row statuses using the
+    /// hardcoded [`threshold::ThresholdConfig::fallback`] thresholds
+    /// because the operator `quality.toml` was absent or empty. A
+    /// present-but-malformed or unreadable `quality.toml` is a loud
+    /// failure (non-zero exit, no artifact written), not a silent
+    /// fallback — so this flag is `true` only for the deliberate
+    /// "operator hasn't tuned thresholds yet" case.
+    ///
+    /// The renderer keys off this flag to emit
+    /// [`threshold::STARTER_PREAMBLE`] +
+    /// [`threshold::FALLBACK_MARKER`] + [`threshold::PATH_HINT_COMMENT`]
+    /// so operators can tell at a glance that the verdict came from
+    /// starter-wheel defaults rather than their tuned thresholds.
+    pub fallback_thresholds_active: bool,
 }
 
 /// GitHub PR number. Newtype rather than `u64` so a method that wants
@@ -189,6 +205,13 @@ pub enum Row {
         /// callers cannot supply this directly because `Row::CoverageDelta`
         /// is `#[non_exhaustive]`.
         status: Status,
+        /// Raw coverage delta in percentage points vs. the base
+        /// branch. The constructor records this alongside the
+        /// status that was minted from it; the renderer keeps using
+        /// `delta_text` for display, but downstream tooling (and
+        /// future trend dashboards) can read `delta_pp` without
+        /// reparsing the formatted string.
+        delta_pp: f64,
         /// Display string for the delta (e.g. `"+0.3 pp"` or `"-4.2 pp"`).
         delta_text: String,
         /// Inline failure detail rendered below the row when status is Red.
@@ -203,10 +226,11 @@ pub enum Row {
 impl Row {
     /// Construct a Green `CoverageDelta` row. No `failure_detail_md`
     /// because the row is not Red. Status is minted internally.
-    pub fn coverage_delta_green(common: RowCommon, delta_text: String) -> Self {
+    pub fn coverage_delta_green(common: RowCommon, delta_pp: f64, delta_text: String) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Green,
+            delta_pp,
             delta_text,
             failure_detail_md: None,
         }
@@ -216,10 +240,11 @@ impl Row {
     /// because the row is not Red. Yellow surfaces as a regression but
     /// not a hard failure per the empty-quality.toml fallback rule.
     /// Status is minted internally.
-    pub fn coverage_delta_yellow(common: RowCommon, delta_text: String) -> Self {
+    pub fn coverage_delta_yellow(common: RowCommon, delta_pp: f64, delta_text: String) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Yellow,
+            delta_pp,
             delta_text,
             failure_detail_md: None,
         }
@@ -233,12 +258,14 @@ impl Row {
     /// internally; callers cannot supply a wrong status.
     pub fn coverage_delta_red(
         common: RowCommon,
+        delta_pp: f64,
         delta_text: String,
         failure_detail_md: String,
     ) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Red,
+            delta_pp,
             delta_text,
             failure_detail_md: Some(failure_detail_md),
         }
@@ -269,37 +296,64 @@ mod tests {
 
     #[test]
     fn red_constructor_sets_status_and_failure_detail() {
-        let row = Row::coverage_delta_red(common(), "-4.2 pp".into(), "detail".into());
+        let row = Row::coverage_delta_red(common(), -4.2, "-4.2 pp".into(), "detail".into());
         let Row::CoverageDelta {
             status,
+            delta_pp,
             failure_detail_md,
             ..
         } = row;
         assert_eq!(status, Status::Red);
+        assert_eq!(delta_pp, -4.2);
         assert_eq!(failure_detail_md.as_deref(), Some("detail"));
     }
 
     #[test]
     fn green_constructor_sets_status_and_omits_failure_detail() {
-        let row = Row::coverage_delta_green(common(), "+0.3 pp".into());
+        let row = Row::coverage_delta_green(common(), 0.3, "+0.3 pp".into());
         let Row::CoverageDelta {
             status,
+            delta_pp,
             failure_detail_md,
             ..
         } = row;
         assert_eq!(status, Status::Green);
+        assert_eq!(delta_pp, 0.3);
         assert!(failure_detail_md.is_none());
     }
 
     #[test]
     fn yellow_constructor_sets_status_and_omits_failure_detail() {
-        let row = Row::coverage_delta_yellow(common(), "-0.6 pp".into());
+        let row = Row::coverage_delta_yellow(common(), -0.6, "-0.6 pp".into());
         let Row::CoverageDelta {
             status,
+            delta_pp,
             failure_detail_md,
             ..
         } = row;
         assert_eq!(status, Status::Yellow);
+        assert_eq!(delta_pp, -0.6);
         assert!(failure_detail_md.is_none());
+    }
+
+    #[test]
+    fn scorecard_round_trips_with_fallback_thresholds_active_flag() {
+        let sc = Scorecard {
+            schema_version: 0,
+            pr: PrMeta {
+                pr_number: 1.into(),
+                head_sha: "deadbeef".into(),
+                base_sha: "cafefeed".into(),
+                is_fork: false,
+            },
+            overall_status: Status::Yellow,
+            rows: vec![Row::coverage_delta_yellow(common(), -2.5, "-2.5 pp".into())],
+            top_failures: Vec::new(),
+            all_check_runs_url: "https://example.test/x/checks".into(),
+            fallback_thresholds_active: true,
+        };
+        let json = serde_json::to_string(&sc).expect("serialize");
+        let parsed: Scorecard = serde_json::from_str(&json).expect("round-trip");
+        assert!(parsed.fallback_thresholds_active);
     }
 }

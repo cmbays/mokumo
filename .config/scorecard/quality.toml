@@ -1,0 +1,24 @@
+# Operator-tuned thresholds for the sticky PR scorecard.
+#
+# When this file is present the producer consumes it for per-row
+# warn/fail thresholds and resolves each row's status (Green / Yellow /
+# Red) accordingly. Removing or renaming the file falls back to the
+# starter-wheel defaults compiled into the producer; the renderer flags
+# fallback runs explicitly so verdicts cannot silently come from
+# defaults.
+#
+# Schema lives at `.config/scorecard/quality.config.schema.json` and is
+# kept in lockstep with this file by the `scorecard-drift` CI gate.
+#
+# Boundary semantics: `delta_pp == warn_pp_delta` resolves Yellow;
+# `delta_pp == fail_pp_delta` resolves Red. Both fields are signed
+# percentage points — a coverage drop is a negative number, so the
+# default warn/fail values are negative.
+
+[rows.coverage]
+# Coverage delta vs. base, in percentage points.
+#   delta_pp >  -1.0   → Green (within typical instrumentation noise)
+#   delta_pp <= -1.0   → Yellow (visible regression worth a soft signal)
+#   delta_pp <= -5.0   → Red (hard fail)
+warn_pp_delta = -1.0
+fail_pp_delta = -5.0

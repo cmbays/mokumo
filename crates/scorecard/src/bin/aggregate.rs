@@ -1,4 +1,4 @@
-//! `aggregate` — V1 walking-skeleton producer for `scorecard.json`.
+//! `aggregate` — producer binary that emits `scorecard.json`.
 //!
 //! All testable logic (CLI parsing, scorecard construction, schema
 //! validation, file writing) lives in [`scorecard::aggregate`]. This

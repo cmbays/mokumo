@@ -15,6 +15,7 @@ fn main() {
 
     let _row = Row::coverage_delta_red(
         common,
+        -4.2,
         "-4.2 pp".to_string(),
         "coverage dropped 4.2% on crate kikan".to_string(),
     );

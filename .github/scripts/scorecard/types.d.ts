@@ -24,6 +24,10 @@ export type Row = {
    */
   anchor: string;
   /**
+   * Raw coverage delta in percentage points vs. the base branch. The constructor records this alongside the status that was minted from it; the renderer keeps using `delta_text` for display, but downstream tooling (and future trend dashboards) can read `delta_pp` without reparsing the formatted string.
+   */
+  delta_pp: number;
+  /**
    * Display string for the delta (e.g. `"+0.3 pp"` or `"-4.2 pp"`).
    */
   delta_text: string;
@@ -57,6 +61,12 @@ export interface Scorecard {
    * External link to the full Check Runs page on the head commit, so the comment can satisfy "every failing gate is one click away" even when more than three gates fail.
    */
   all_check_runs_url: string;
+  /**
+   * `true` when the producer resolved row statuses using the hardcoded [`threshold::ThresholdConfig::fallback`] thresholds because the operator `quality.toml` was absent or empty. A present-but-malformed or unreadable `quality.toml` is a loud failure (non-zero exit, no artifact written), not a silent fallback — so this flag is `true` only for the deliberate "operator hasn't tuned thresholds yet" case.
+   *
+   * The renderer keys off this flag to emit [`threshold::STARTER_PREAMBLE`] + [`threshold::FALLBACK_MARKER`] + [`threshold::PATH_HINT_COMMENT`] so operators can tell at a glance that the verdict came from starter-wheel defaults rather than their tuned thresholds.
+   */
+  fallback_thresholds_active: boolean;
   /**
    * Resolved status across all rows. The renderer's banner reads this directly; per the .feature spec the banner status is the worst status across all rows.
    */
