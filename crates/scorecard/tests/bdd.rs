@@ -31,9 +31,16 @@ async fn main() {
                 && rule.is_none_or(|r| !is_exempt(&r.tags))
                 && !is_exempt(&scenario.tags)
         })
-        .filter_run_and_exit("tests/features", |feature, _, sc| {
-            let dominated_by_wip =
-                feature.tags.iter().any(|t| t == "wip") || sc.tags.iter().any(|t| t == "wip");
+        .filter_run_and_exit("tests/features", |feature, rule, sc| {
+            // `@wip` is honoured at all three Gherkin nesting levels —
+            // feature, rule, scenario — so a `Rule: @wip` tag silently
+            // skips its scenarios the same way `Feature: @wip` and
+            // `Scenario: @wip` do. The `fail_on_skipped_with` predicate
+            // above uses the same rule-tag logic for the skip-fail
+            // exemption, so the two checks stay in lockstep.
+            let dominated_by_wip = feature.tags.iter().any(|t| t == "wip")
+                || rule.is_some_and(|r| r.tags.iter().any(|t| t == "wip"))
+                || sc.tags.iter().any(|t| t == "wip");
             !dominated_by_wip
         })
         .await;

@@ -110,8 +110,10 @@ pub fn format_delta_text(delta_pp: f64) -> String {
 /// reported in absolute magnitude (operators read "6.0 pp drop" more
 /// fluently than "-6.0 pp delta").
 fn coverage_failure_detail(delta_pp: f64, fail_pp_delta: f64) -> String {
+    // "at or below" matches the resolver's inclusive boundary: a delta
+    // exactly at `fail_pp_delta` lands Red.
     format!(
-        "Coverage dropped {drop:.1} pp — below the {fail:.1} pp fail threshold.",
+        "Coverage dropped {drop:.1} pp — at or below the {fail:.1} pp fail threshold.",
         drop = -delta_pp,
         fail = -fail_pp_delta,
     )
@@ -238,6 +240,12 @@ pub fn resolve_threshold_source(path: &Path) -> Result<ThresholdSource, String> 
                     path.display()
                 )
             })?;
+            validate_threshold_config(&config).map_err(|e| {
+                format!(
+                    "aggregate: --quality-toml {} has invalid thresholds: {e}",
+                    path.display()
+                )
+            })?;
             Ok(ThresholdSource::Configured {
                 config,
                 path: path.to_path_buf(),
@@ -251,6 +259,46 @@ pub fn resolve_threshold_source(path: &Path) -> Result<ThresholdSource, String> 
             path.display()
         )),
     }
+}
+
+/// Reject operator-tuned threshold configs that would silently break
+/// the verdict surface even though they parse cleanly.
+///
+/// TOML's `nan` / `inf` / `-inf` literals all deserialize into `f64`
+/// without complaint, but a non-finite warn or fail threshold makes
+/// the comparison rules in [`threshold::resolve_coverage_delta`]
+/// nonsensical: NaN comparisons are always false (everything resolves
+/// Green) and infinity collapses one of the two transitions.
+///
+/// Likewise, `fail_pp_delta` greater than `warn_pp_delta` is logically
+/// inverted: the resolver's `delta_pp <= warn_pp_delta` first arm
+/// would catch the Red case before the Yellow check ran, making
+/// Yellow unreachable and turning ordinary regressions Red.
+///
+/// Both cases produce a verdict the operator did not ask for. Loud-fail
+/// at config-load time keeps the producer honest.
+fn validate_threshold_config(config: &ThresholdConfig) -> Result<(), String> {
+    let coverage = &config.rows.coverage;
+    if !coverage.warn_pp_delta.is_finite() {
+        return Err(format!(
+            "rows.coverage.warn_pp_delta must be finite, got {}",
+            coverage.warn_pp_delta
+        ));
+    }
+    if !coverage.fail_pp_delta.is_finite() {
+        return Err(format!(
+            "rows.coverage.fail_pp_delta must be finite, got {}",
+            coverage.fail_pp_delta
+        ));
+    }
+    if coverage.fail_pp_delta > coverage.warn_pp_delta {
+        return Err(format!(
+            "rows.coverage.fail_pp_delta ({}) must be <= warn_pp_delta ({}); \
+             with fail above warn, Yellow is unreachable and ordinary regressions land Red",
+            coverage.fail_pp_delta, coverage.warn_pp_delta
+        ));
+    }
+    Ok(())
 }
 
 /// Read + parse `--pr-meta`. Returns a clear error message on missing
@@ -536,6 +584,10 @@ mod tests {
         let detail = coverage_failure_detail(-6.2, -5.0);
         assert!(detail.contains("6.2 pp"), "got: {detail}");
         assert!(detail.contains("5.0 pp"), "got: {detail}");
+        // The wording must match the resolver's inclusive boundary —
+        // a delta exactly at `fail_pp_delta` lands Red, so the detail
+        // says "at or below" rather than "below".
+        assert!(detail.contains("at or below"), "got: {detail}");
     }
 
     // ── --quality-toml resolution ──────────────────────────────────
@@ -593,6 +645,66 @@ mod tests {
         let cfg = source.config();
         assert_eq!(cfg.rows.coverage.warn_pp_delta, -0.5);
         assert_eq!(cfg.rows.coverage.fail_pp_delta, -3.0);
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_inverted_thresholds() {
+        // fail above warn would make Yellow unreachable; loud-fail.
+        let dir = tempdir();
+        let path = dir.path.join("inverted.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -5.0\nfail_pp_delta = -1.0\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(err.contains("inverted.toml"), "got: {err}");
+        assert!(err.contains("Yellow is unreachable"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_non_finite_warn() {
+        let dir = tempdir();
+        let path = dir.path.join("nan.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = nan\nfail_pp_delta = -5.0\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(err.contains("warn_pp_delta must be finite"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_non_finite_fail() {
+        let dir = tempdir();
+        let path = dir.path.join("inf.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -inf\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(err.contains("fail_pp_delta must be finite"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_accepts_equal_warn_and_fail() {
+        // `fail == warn` is allowed: the resolver's `delta_pp <= warn`
+        // arm fires first, so a delta exactly at the threshold lands
+        // Yellow, never Red. That's a degenerate but legal config —
+        // it collapses Yellow into a single tripwire point and skips
+        // straight to Red below it. Operators may want this for tight
+        // gates; reject only the strict-inversion case.
+        let dir = tempdir();
+        let path = dir.path.join("equal.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -2.0\nfail_pp_delta = -2.0\n",
+        )
+        .expect("write");
+        let source = resolve_threshold_source(&path).expect("equal thresholds are legal");
+        assert!(!source.fallback_active());
     }
 
     #[test]

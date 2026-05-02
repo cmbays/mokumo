@@ -149,10 +149,17 @@ async fn then_no_rust_modified(_world: &mut ThresholdWorld) {
 
 #[given(expr = "quality.toml is empty or absent")]
 async fn given_quality_toml_absent(world: &mut ThresholdWorld) {
-    // Allocate the tempdir but never write `quality.toml` in it —
-    // `resolve_threshold_source` will hit `io::ErrorKind::NotFound`
-    // and produce `ThresholdSource::Fallback`.
-    world.tmp = Some(tempfile::tempdir().expect("scenario tempdir must allocate"));
+    // Write a zero-byte `quality.toml` so the scenario exercises the
+    // empty-file branch of `resolve_threshold_source`, not just the
+    // absent-file (`io::ErrorKind::NotFound`) branch. The two unit
+    // tests in `aggregate::tests` cover absent + whitespace-only;
+    // pinning the empty-file path through the BDD scenario means a
+    // regression on that branch fails the acceptance test, not just
+    // the unit suite.
+    let tmp = tempfile::tempdir().expect("scenario tempdir must allocate");
+    std::fs::write(tmp.path().join("quality.toml"), b"")
+        .expect("must be able to write empty quality.toml inside the scenario tempdir");
+    world.tmp = Some(tmp);
 }
 
 #[when(expr = "CI completes")]

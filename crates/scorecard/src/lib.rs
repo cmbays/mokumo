@@ -77,8 +77,13 @@ pub struct Scorecard {
 
     /// `true` when the producer resolved row statuses using the
     /// hardcoded [`threshold::ThresholdConfig::fallback`] thresholds
-    /// (no operator `quality.toml` was present or readable). The
-    /// renderer keys off this flag to emit
+    /// because the operator `quality.toml` was absent or empty. A
+    /// present-but-malformed or unreadable `quality.toml` is a loud
+    /// failure (non-zero exit, no artifact written), not a silent
+    /// fallback — so this flag is `true` only for the deliberate
+    /// "operator hasn't tuned thresholds yet" case.
+    ///
+    /// The renderer keys off this flag to emit
     /// [`threshold::STARTER_PREAMBLE`] +
     /// [`threshold::FALLBACK_MARKER`] + [`threshold::PATH_HINT_COMMENT`]
     /// so operators can tell at a glance that the verdict came from

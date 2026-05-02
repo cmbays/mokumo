@@ -221,39 +221,76 @@ pub fn strip_nonstandard_number_formats(schema: &mut RootSchema) {
 }
 
 fn strip_nonstandard_number_formats_in(obj: &mut SchemaObject) {
-    let is_numeric = matches!(
-        obj.instance_type.as_ref(),
-        Some(schemars::schema::SingleOrVec::Single(boxed))
-            if matches!(**boxed, schemars::schema::InstanceType::Number | schemars::schema::InstanceType::Integer)
-    );
-    if is_numeric
-        && let Some(format) = obj.format.as_deref()
-        && !STANDARD_STRING_FORMATS.contains(&format)
-    {
-        obj.format = None;
+    strip_format_if_nonstandard_numeric(obj);
+    recurse_into_object_properties(obj);
+    recurse_into_subschema_branches(obj);
+}
+
+/// Returns true when this schema's `instance_type` is a single
+/// numeric type (`Number` or `Integer`). Composite/array types are
+/// left alone — the strip targets schemars' default per-numeric-leaf
+/// `format` annotation, not synthetic union types.
+fn is_single_numeric_type(obj: &SchemaObject) -> bool {
+    use schemars::schema::{InstanceType, SingleOrVec};
+    let Some(SingleOrVec::Single(boxed)) = obj.instance_type.as_ref() else {
+        return false;
+    };
+    matches!(**boxed, InstanceType::Number | InstanceType::Integer)
+}
+
+/// Drop the `format` field on this schema when it carries a schemars
+/// numeric-type idiom (`double`, `uint32`, …). Standard string formats
+/// listed in [`STANDARD_STRING_FORMATS`] are preserved unconditionally
+/// so a string-typed leaf with `format: "uri"` is never disturbed by
+/// this pass.
+fn strip_format_if_nonstandard_numeric(obj: &mut SchemaObject) {
+    if !is_single_numeric_type(obj) {
+        return;
     }
-    if let Some(object_validation) = obj.object.as_mut() {
-        for prop in object_validation.properties.values_mut() {
-            if let Schema::Object(child) = prop {
-                strip_nonstandard_number_formats_in(child);
-            }
+    let Some(format) = obj.format.as_deref() else {
+        return;
+    };
+    if STANDARD_STRING_FORMATS.contains(&format) {
+        return;
+    }
+    obj.format = None;
+}
+
+/// Recurse into `obj.properties.*` and run the strip on each child
+/// `SchemaObject`. `Schema::Bool` properties are skipped — they carry
+/// no `format` field and nothing to recurse into.
+fn recurse_into_object_properties(obj: &mut SchemaObject) {
+    let Some(object_validation) = obj.object.as_mut() else {
+        return;
+    };
+    for prop in object_validation.properties.values_mut() {
+        if let Schema::Object(child) = prop {
+            strip_nonstandard_number_formats_in(child);
         }
     }
-    if let Some(subs) = obj.subschemas.as_mut() {
-        for branch in subs.all_of.iter_mut().flatten() {
-            if let Schema::Object(child) = branch {
-                strip_nonstandard_number_formats_in(child);
-            }
-        }
-        for branch in subs.one_of.iter_mut().flatten() {
-            if let Schema::Object(child) = branch {
-                strip_nonstandard_number_formats_in(child);
-            }
-        }
-        for branch in subs.any_of.iter_mut().flatten() {
-            if let Schema::Object(child) = branch {
-                strip_nonstandard_number_formats_in(child);
-            }
+}
+
+/// Recurse into `obj.subschemas.{all_of, one_of, any_of}` and run the
+/// strip on every `Schema::Object` branch. The three keywords are
+/// walked uniformly via [`recurse_into_subschema_branch_list`]; a new
+/// subschema keyword would just need one more call site here.
+fn recurse_into_subschema_branches(obj: &mut SchemaObject) {
+    let Some(subs) = obj.subschemas.as_mut() else {
+        return;
+    };
+    recurse_into_subschema_branch_list(subs.all_of.as_mut());
+    recurse_into_subschema_branch_list(subs.one_of.as_mut());
+    recurse_into_subschema_branch_list(subs.any_of.as_mut());
+}
+
+/// Run the strip on every `Schema::Object` entry in a single subschema
+/// branch list (i.e. one of `all_of`, `one_of`, `any_of`). `None` means
+/// the keyword is absent from the parent; nothing to do.
+fn recurse_into_subschema_branch_list(branches: Option<&mut Vec<Schema>>) {
+    let Some(list) = branches else { return };
+    for branch in list {
+        if let Schema::Object(child) = branch {
+            strip_nonstandard_number_formats_in(child);
         }
     }
 }
