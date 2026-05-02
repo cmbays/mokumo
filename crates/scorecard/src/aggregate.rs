@@ -45,6 +45,16 @@ struct Cli {
     #[arg(long, allow_hyphen_values = true)]
     coverage_delta_pp: f64,
 
+    /// Path to the operator-tuned `quality.toml`. When the file is
+    /// absent the producer falls back to the hardcoded
+    /// [`ThresholdConfig::fallback`] thresholds and marks
+    /// `fallback_thresholds_active = true` on the artifact. When the
+    /// file is present but cannot be parsed, the producer fails with
+    /// a non-zero exit so an operator typo never silently slides into
+    /// fallback mode and produces a different verdict than intended.
+    #[arg(long, default_value = ".config/scorecard/quality.toml")]
+    quality_toml: PathBuf,
+
     /// Path to write the resulting scorecard.json artifact. Parent
     /// directories are created if missing.
     #[arg(long)]
@@ -130,6 +140,81 @@ pub fn build_scorecard(
         top_failures: Vec::new(),
         all_check_runs_url,
         fallback_thresholds_active: fallback_active,
+    }
+}
+
+/// Outcome of resolving operator thresholds from a `--quality-toml` path.
+///
+/// The pair `(config, fallback_active)` flows directly into
+/// [`build_scorecard`]; the renderer keys off `fallback_active` to
+/// surface the starter-wheels affordance. Surfacing the source as a
+/// distinct enum (rather than a bare bool) makes intent legible at the
+/// call site and keeps the fallback semantics consistent across
+/// callers (CLI today, BDD step-defs in a later slice).
+#[derive(Debug)]
+pub enum ThresholdSource {
+    /// The operator config at `path` was read and parsed successfully.
+    Configured {
+        config: ThresholdConfig,
+        path: PathBuf,
+    },
+    /// The operator config at `path` was not present on disk; the
+    /// producer fell back to [`ThresholdConfig::fallback`].
+    Fallback { path: PathBuf },
+}
+
+impl ThresholdSource {
+    /// Borrow the resolved [`ThresholdConfig`]. Configured sources
+    /// return their parsed config; fallback sources mint
+    /// [`ThresholdConfig::fallback`] on demand.
+    pub fn config(&self) -> ThresholdConfig {
+        match self {
+            ThresholdSource::Configured { config, .. } => config.clone(),
+            ThresholdSource::Fallback { .. } => ThresholdConfig::fallback(),
+        }
+    }
+
+    /// `true` when the producer is using the hardcoded fallback
+    /// thresholds rather than an operator-tuned config. Flows into the
+    /// `fallback_thresholds_active` artifact field.
+    pub fn fallback_active(&self) -> bool {
+        matches!(self, ThresholdSource::Fallback { .. })
+    }
+}
+
+/// Resolve the [`ThresholdConfig`] for a producer run from the
+/// `--quality-toml` path.
+///
+/// Three outcomes:
+/// - File present, parses → [`ThresholdSource::Configured`].
+/// - File absent (any [`io::ErrorKind::NotFound`] from `fs::read`) →
+///   [`ThresholdSource::Fallback`]. Operators who never write a
+///   `quality.toml` and just want the starter-wheel verdict get a
+///   green CI run, not an error.
+/// - File present but unreadable, invalid UTF-8, or unparseable as TOML
+///   → `Err(...)` with a message naming the path and the underlying
+///   cause. Fail-loud so a typo never silently degrades to fallback.
+pub fn resolve_threshold_source(path: &Path) -> Result<ThresholdSource, String> {
+    match fs::read_to_string(path) {
+        Ok(text) => {
+            let config = threshold::parse_quality_toml(&text).map_err(|e| {
+                format!(
+                    "aggregate: --quality-toml {} failed to parse: {e}",
+                    path.display()
+                )
+            })?;
+            Ok(ThresholdSource::Configured {
+                config,
+                path: path.to_path_buf(),
+            })
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(ThresholdSource::Fallback {
+            path: path.to_path_buf(),
+        }),
+        Err(e) => Err(format!(
+            "aggregate: --quality-toml {} could not be read: {e}",
+            path.display()
+        )),
     }
 }
 
@@ -272,8 +357,19 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
         }
     };
 
-    let thresholds = ThresholdConfig::fallback();
-    let scorecard = build_scorecard(pr, cli.coverage_delta_pp, &thresholds, true);
+    let source = match resolve_threshold_source(&cli.quality_toml) {
+        Ok(s) => s,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return ExitCode::from(1);
+        }
+    };
+    let scorecard = build_scorecard(
+        pr,
+        cli.coverage_delta_pp,
+        &source.config(),
+        source.fallback_active(),
+    );
     if let Err(msg) = write_scorecard(&scorecard, &cli.out) {
         eprintln!("{msg}");
         return ExitCode::from(1);
@@ -403,6 +499,172 @@ mod tests {
         let detail = coverage_failure_detail(-6.2, -5.0);
         assert!(detail.contains("6.2 pp"), "got: {detail}");
         assert!(detail.contains("5.0 pp"), "got: {detail}");
+    }
+
+    // ── --quality-toml resolution ──────────────────────────────────
+
+    #[test]
+    fn resolve_threshold_source_returns_fallback_for_missing_file() {
+        let dir = tempdir();
+        let missing = dir.path.join("does-not-exist.toml");
+        let source = resolve_threshold_source(&missing).expect("absent file is fallback");
+        assert!(source.fallback_active());
+        let cfg = source.config();
+        assert_eq!(cfg.rows.coverage.warn_pp_delta, -1.0);
+        assert_eq!(cfg.rows.coverage.fail_pp_delta, -5.0);
+    }
+
+    #[test]
+    fn resolve_threshold_source_parses_well_formed_toml() {
+        let dir = tempdir();
+        let path = dir.path.join("quality.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -0.5\nfail_pp_delta = -3.0\n",
+        )
+        .expect("write");
+        let source = resolve_threshold_source(&path).expect("parse");
+        assert!(!source.fallback_active());
+        let cfg = source.config();
+        assert_eq!(cfg.rows.coverage.warn_pp_delta, -0.5);
+        assert_eq!(cfg.rows.coverage.fail_pp_delta, -3.0);
+    }
+
+    #[test]
+    fn resolve_threshold_source_errors_on_malformed_toml() {
+        let dir = tempdir();
+        let path = dir.path.join("bad.toml");
+        fs::write(&path, "[rows.coverage]\nwarn_pp_delta = \"tight\"\n").expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(err.contains("bad.toml"), "got: {err}");
+        assert!(err.contains("--quality-toml"), "got: {err}");
+        assert!(err.contains("failed to parse"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_errors_on_unknown_field() {
+        let dir = tempdir();
+        let path = dir.path.join("typo.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\nfail_pp_dleta = -7.0\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(err.contains("unknown field"), "got: {err}");
+    }
+
+    #[test]
+    fn configured_thresholds_flip_status_at_smaller_drop() {
+        // Round-trip the V2 acceptance: tightened warn flips Green→Yellow.
+        let dir = tempdir();
+        let path = dir.path.join("tight.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -0.5\nfail_pp_delta = -5.0\n",
+        )
+        .expect("write");
+        let source = resolve_threshold_source(&path).expect("parse");
+        let sc = build_scorecard(pr_meta(), -0.8, &source.config(), source.fallback_active());
+        assert_eq!(sc.overall_status, Status::Yellow);
+        assert!(!sc.fallback_thresholds_active);
+    }
+
+    #[test]
+    fn fallback_path_yields_yellow_at_two_point_five_drop() {
+        // Round-trip the V2 acceptance for the absent-file case.
+        let dir = tempdir();
+        let missing = dir.path.join("absent.toml");
+        let source = resolve_threshold_source(&missing).expect("fallback");
+        let sc = build_scorecard(pr_meta(), -2.5, &source.config(), source.fallback_active());
+        assert_eq!(sc.overall_status, Status::Yellow);
+        assert!(sc.fallback_thresholds_active);
+    }
+
+    #[test]
+    fn run_emits_configured_path_artifact_when_quality_toml_present() {
+        let dir = tempdir();
+        let pr_path = dir.path.join("pr.json");
+        let toml_path = dir.path.join("quality.toml");
+        let out_path = dir.path.join("scorecard.json");
+        fs::write(
+            &pr_path,
+            r#"{"pr_number":1,"head_sha":"x","base_sha":"y","is_fork":false}"#,
+        )
+        .unwrap();
+        fs::write(
+            &toml_path,
+            "[rows.coverage]\nwarn_pp_delta = -0.5\nfail_pp_delta = -5.0\n",
+        )
+        .unwrap();
+        let code = run([
+            OsString::from("--pr-meta"),
+            OsString::from(pr_path.as_os_str()),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("-0.8"),
+            OsString::from("--quality-toml"),
+            OsString::from(toml_path.as_os_str()),
+            OsString::from("--out"),
+            OsString::from(out_path.as_os_str()),
+        ]);
+        assert_eq!(code, ExitCode::SUCCESS);
+        let parsed: Value = serde_json::from_str(&fs::read_to_string(&out_path).unwrap()).unwrap();
+        assert_eq!(parsed["overall_status"], "Yellow");
+        assert_eq!(parsed["fallback_thresholds_active"], false);
+    }
+
+    #[test]
+    fn run_emits_fallback_artifact_when_quality_toml_absent() {
+        let dir = tempdir();
+        let pr_path = dir.path.join("pr.json");
+        let out_path = dir.path.join("scorecard.json");
+        let missing_toml = dir.path.join("absent.toml");
+        fs::write(
+            &pr_path,
+            r#"{"pr_number":1,"head_sha":"x","base_sha":"y","is_fork":false}"#,
+        )
+        .unwrap();
+        let code = run([
+            OsString::from("--pr-meta"),
+            OsString::from(pr_path.as_os_str()),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("-2.5"),
+            OsString::from("--quality-toml"),
+            OsString::from(missing_toml.as_os_str()),
+            OsString::from("--out"),
+            OsString::from(out_path.as_os_str()),
+        ]);
+        assert_eq!(code, ExitCode::SUCCESS);
+        let parsed: Value = serde_json::from_str(&fs::read_to_string(&out_path).unwrap()).unwrap();
+        assert_eq!(parsed["overall_status"], "Yellow");
+        assert_eq!(parsed["fallback_thresholds_active"], true);
+    }
+
+    #[test]
+    fn run_returns_one_for_malformed_quality_toml() {
+        let dir = tempdir();
+        let pr_path = dir.path.join("pr.json");
+        let toml_path = dir.path.join("bad.toml");
+        let out_path = dir.path.join("scorecard.json");
+        fs::write(
+            &pr_path,
+            r#"{"pr_number":1,"head_sha":"x","base_sha":"y","is_fork":false}"#,
+        )
+        .unwrap();
+        fs::write(&toml_path, "[rows.coverage]\nwarn_pp_delta = \"tight\"\n").unwrap();
+        let code = run([
+            OsString::from("--pr-meta"),
+            OsString::from(pr_path.as_os_str()),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("-2.5"),
+            OsString::from("--quality-toml"),
+            OsString::from(toml_path.as_os_str()),
+            OsString::from("--out"),
+            OsString::from(out_path.as_os_str()),
+        ]);
+        assert_eq!(code, ExitCode::from(1));
+        // Malformed TOML must NOT silently produce a fallback artifact.
+        assert!(!out_path.exists());
     }
 
     /// Minimal scoped tempdir without pulling in a dev-dep — mirrors the
@@ -600,9 +862,13 @@ mod tests {
 
     #[test]
     fn run_writes_valid_scorecard_for_good_pr_meta() {
+        // Routes through the fallback path explicitly via --quality-toml
+        // so the test stays cwd-independent regardless of whether the
+        // default `.config/scorecard/quality.toml` exists in the repo.
         let dir = tempdir();
         let pr_path = dir.path.join("pr.json");
         let out_path = dir.path.join("scorecard.json");
+        let absent_toml = dir.path.join("absent.toml");
         fs::write(
             &pr_path,
             r#"{"pr_number":1,"head_sha":"x","base_sha":"y","is_fork":false}"#,
@@ -613,6 +879,8 @@ mod tests {
             OsString::from(pr_path.as_os_str()),
             OsString::from("--coverage-delta-pp"),
             OsString::from("-2.5"),
+            OsString::from("--quality-toml"),
+            OsString::from(absent_toml.as_os_str()),
             OsString::from("--out"),
             OsString::from(out_path.as_os_str()),
         ]);
