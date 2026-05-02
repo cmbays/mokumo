@@ -21,6 +21,7 @@ fn main() {
     let _row = Row::CoverageDelta {
         common,
         status: Status::Red,
+        delta_pp: -4.2,
         delta_text: "-4.2 pp".to_string(),
         failure_detail_md: None,
     };

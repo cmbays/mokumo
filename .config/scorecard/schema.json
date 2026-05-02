@@ -5,6 +5,7 @@
   "type": "object",
   "required": [
     "all_check_runs_url",
+    "fallback_thresholds_active",
     "overall_status",
     "pr",
     "rows",
@@ -16,6 +17,10 @@
       "type": "string",
       "format": "uri",
       "pattern": "^https://"
+    },
+    "fallback_thresholds_active": {
+      "description": "`true` when the producer resolved row statuses using the hardcoded [`threshold::ThresholdConfig::fallback`] thresholds (no operator `quality.toml` was present or readable). The renderer keys off this flag to emit [`threshold::STARTER_PREAMBLE`] + [`threshold::FALLBACK_MARKER`] + [`threshold::PATH_HINT_COMMENT`] so operators can tell at a glance that the verdict came from starter-wheel defaults rather than their tuned thresholds.",
+      "type": "boolean"
     },
     "overall_status": {
       "description": "Resolved status across all rows. The renderer's banner reads this directly; per the .feature spec the banner status is the worst status across all rows.",
@@ -136,6 +141,7 @@
           },
           "required": [
             "anchor",
+            "delta_pp",
             "delta_text",
             "id",
             "label",
@@ -146,6 +152,11 @@
             "anchor": {
               "description": "Anchor fragment for jump-linking from the comment.",
               "type": "string"
+            },
+            "delta_pp": {
+              "description": "Raw coverage delta in percentage points vs. the base branch. The constructor records this alongside the status that was minted from it; the renderer keeps using `delta_text` for display, but downstream tooling (and future trend dashboards) can read `delta_pp` without reparsing the formatted string.",
+              "type": "number",
+              "format": "double"
             },
             "delta_text": {
               "description": "Display string for the delta (e.g. `\"+0.3 pp\"` or `\"-4.2 pp\"`).",

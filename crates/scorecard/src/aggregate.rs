@@ -19,6 +19,7 @@ use clap::Parser;
 use jsonschema::JSONSchema;
 use serde_json::Value;
 
+use crate::threshold::{self, CoverageThresholds, ThresholdConfig};
 use crate::{PrMeta, Row, RowCommon, Scorecard, Status};
 
 /// Embedded copy of `.config/scorecard/schema.json`. Embedding (vs. a
@@ -28,18 +29,21 @@ use crate::{PrMeta, Row, RowCommon, Scorecard, Status};
 /// guarantees byte-identity between this string and the committed file.
 const COMMITTED_SCHEMA: &str = include_str!("../../../.config/scorecard/schema.json");
 
-const STUB_DELTA_TEXT: &str = "stub — V1 walking skeleton";
-
 #[derive(Debug, Parser)]
-#[command(
-    name = "aggregate",
-    about = "Walking-skeleton scorecard.json producer (V1)."
-)]
+#[command(name = "aggregate", about = "Sticky scorecard.json producer.")]
 struct Cli {
     /// Path to a JSON file matching the `PrMeta` shape:
     ///   { "pr_number": u64, "head_sha": "...", "base_sha": "...", "is_fork": bool }
     #[arg(long)]
     pr_meta: PathBuf,
+
+    /// Coverage delta vs. base, in percentage points (signed). The
+    /// producer feeds this through [`threshold::resolve_coverage_delta`]
+    /// against the resolved [`ThresholdConfig`] to mint the row's
+    /// status. `allow_hyphen_values` so a regression like `-2.5` is
+    /// not mis-parsed as a short flag.
+    #[arg(long, allow_hyphen_values = true)]
+    coverage_delta_pp: f64,
 
     /// Path to write the resulting scorecard.json artifact. Parent
     /// directories are created if missing.
@@ -47,18 +51,72 @@ struct Cli {
     out: PathBuf,
 }
 
-/// Build the V1 stub scorecard from the parsed PR metadata.
+/// Format a coverage delta (in percentage points) for display.
 ///
-/// Pure function: no I/O, no panics, deterministic.
-pub fn build_stub_scorecard(pr: PrMeta) -> Scorecard {
-    let row = Row::coverage_delta_green(
-        RowCommon {
-            id: "coverage".into(),
-            label: "Coverage".into(),
-            anchor: "coverage".into(),
-        },
-        STUB_DELTA_TEXT.to_string(),
-    );
+/// Positive deltas carry an explicit `+` sign so a glance at the row
+/// makes the direction unambiguous; negative deltas pick up the sign
+/// from `f64`'s default formatting. One decimal place keeps the row
+/// table from drifting columns when the delta crosses thresholds.
+pub fn format_delta_text(delta_pp: f64) -> String {
+    if delta_pp >= 0.0 {
+        format!("+{delta_pp:.1} pp")
+    } else {
+        format!("{delta_pp:.1} pp")
+    }
+}
+
+/// Render the inline failure detail for a Red coverage row.
+///
+/// The renderer wraps this string as the body of a markdown blockquote
+/// keyed by the row label, so the prose reads as a complete sentence
+/// after the label-colon prefix the renderer adds. Both numbers are
+/// reported in absolute magnitude (operators read "6.0 pp drop" more
+/// fluently than "-6.0 pp delta").
+fn coverage_failure_detail(delta_pp: f64, fail_pp_delta: f64) -> String {
+    format!(
+        "Coverage dropped {drop:.1} pp — below the {fail:.1} pp fail threshold.",
+        drop = -delta_pp,
+        fail = -fail_pp_delta,
+    )
+}
+
+/// Build a coverage row from the raw delta + the thresholds in effect.
+fn build_coverage_row(delta_pp: f64, thresholds: &CoverageThresholds) -> Row {
+    let common = RowCommon {
+        id: "coverage".into(),
+        label: "Coverage".into(),
+        anchor: "coverage".into(),
+    };
+    let delta_text = format_delta_text(delta_pp);
+    match threshold::resolve_coverage_delta(delta_pp, thresholds) {
+        Status::Green => Row::coverage_delta_green(common, delta_pp, delta_text),
+        Status::Yellow => Row::coverage_delta_yellow(common, delta_pp, delta_text),
+        Status::Red => Row::coverage_delta_red(
+            common,
+            delta_pp,
+            delta_text,
+            coverage_failure_detail(delta_pp, thresholds.fail_pp_delta),
+        ),
+    }
+}
+
+/// Build the scorecard artifact from parsed PR metadata, raw
+/// measurements, and the resolved threshold config.
+///
+/// Pure function: no I/O, no panics, deterministic. `fallback_active`
+/// records whether the supplied [`ThresholdConfig`] came from
+/// [`ThresholdConfig::fallback`] (no operator config) so the renderer
+/// can surface the starter-wheels affordance.
+pub fn build_scorecard(
+    pr: PrMeta,
+    coverage_delta_pp: f64,
+    thresholds: &ThresholdConfig,
+    fallback_active: bool,
+) -> Scorecard {
+    let row = build_coverage_row(coverage_delta_pp, &thresholds.rows.coverage);
+    let overall_status = match &row {
+        Row::CoverageDelta { status, .. } => *status,
+    };
 
     let head_sha = pr.head_sha.clone();
     let all_check_runs_url =
@@ -67,10 +125,11 @@ pub fn build_stub_scorecard(pr: PrMeta) -> Scorecard {
     Scorecard {
         schema_version: 0,
         pr,
-        overall_status: Status::Green,
+        overall_status,
         rows: vec![row],
         top_failures: Vec::new(),
         all_check_runs_url,
+        fallback_thresholds_active: fallback_active,
     }
 }
 
@@ -213,7 +272,8 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
         }
     };
 
-    let scorecard = build_stub_scorecard(pr);
+    let thresholds = ThresholdConfig::fallback();
+    let scorecard = build_scorecard(pr, cli.coverage_delta_pp, &thresholds, true);
     if let Err(msg) = write_scorecard(&scorecard, &cli.out) {
         eprintln!("{msg}");
         return ExitCode::from(1);
@@ -234,48 +294,115 @@ mod tests {
         }
     }
 
+    fn fallback() -> ThresholdConfig {
+        ThresholdConfig::fallback()
+    }
+
+    fn build_with_delta(delta_pp: f64) -> Scorecard {
+        build_scorecard(pr_meta(), delta_pp, &fallback(), true)
+    }
+
     #[test]
-    fn build_stub_scorecard_returns_one_green_row() {
-        let sc = build_stub_scorecard(pr_meta());
+    fn build_scorecard_yields_one_coverage_row() {
+        let sc = build_with_delta(0.3);
         assert_eq!(sc.rows.len(), 1);
-        // `Row` is non_exhaustive externally but exhaustive in-crate (one variant
-        // today), so a destructuring `let` is sufficient — `let-else` is irrefutable
-        // here. When V4 adds variants, switch back to `let-else { panic! }`.
         let Row::CoverageDelta {
-            status, delta_text, ..
+            status,
+            delta_pp,
+            delta_text,
+            ..
         } = &sc.rows[0];
         assert_eq!(*status, Status::Green);
-        assert_eq!(delta_text, STUB_DELTA_TEXT);
+        assert_eq!(*delta_pp, 0.3);
+        assert_eq!(delta_text, "+0.3 pp");
     }
 
     #[test]
-    fn build_stub_scorecard_overall_status_is_green() {
-        let sc = build_stub_scorecard(pr_meta());
-        assert_eq!(sc.overall_status, Status::Green);
+    fn build_scorecard_overall_status_mirrors_row_status() {
+        // Single-row scorecard: overall = row. When V4+ adds rows the
+        // overall computation becomes worst-of-rows; a regression here
+        // surfaces immediately.
+        assert_eq!(build_with_delta(0.5).overall_status, Status::Green);
+        assert_eq!(build_with_delta(-2.5).overall_status, Status::Yellow);
+        assert_eq!(build_with_delta(-6.0).overall_status, Status::Red);
     }
 
     #[test]
-    fn build_stub_scorecard_url_uses_https_and_head_sha() {
-        let sc = build_stub_scorecard(pr_meta());
+    fn build_scorecard_marks_fallback_thresholds_active() {
+        // V1 always passes `fallback_active = true` to `build_scorecard`,
+        // so the produced artifact carries the flag the renderer keys
+        // off.
+        let sc = build_with_delta(-2.5);
+        assert!(sc.fallback_thresholds_active);
+    }
+
+    #[test]
+    fn build_scorecard_records_fallback_active_false_when_passed() {
+        // Independent test of the parameter — V2 will pass `false`
+        // when an operator config is loaded; V1's plumbing must
+        // honour the argument.
+        let sc = build_scorecard(pr_meta(), -2.5, &fallback(), false);
+        assert!(!sc.fallback_thresholds_active);
+    }
+
+    #[test]
+    fn build_scorecard_red_row_carries_failure_detail() {
+        let sc = build_with_delta(-7.5);
+        let Row::CoverageDelta {
+            status,
+            failure_detail_md,
+            ..
+        } = &sc.rows[0];
+        assert_eq!(*status, Status::Red);
+        let detail = failure_detail_md
+            .as_ref()
+            .expect("Red rows carry failure_detail_md by Layer-1 invariant");
+        assert!(detail.contains("7.5 pp"), "got: {detail}");
+        assert!(detail.contains("5.0 pp"), "got: {detail}");
+    }
+
+    #[test]
+    fn build_scorecard_url_uses_https_and_head_sha() {
+        let sc = build_with_delta(0.0);
         assert!(sc.all_check_runs_url.starts_with("https://"));
         assert!(sc.all_check_runs_url.contains("abc123"));
     }
 
     #[test]
-    fn stub_scorecard_validates_against_committed_schema() {
-        let sc = build_stub_scorecard(pr_meta());
-        let value = serde_json::to_value(&sc).expect("serialize");
-        validate_against_schema(&value)
-            .expect("stub scorecard must validate against committed schema");
+    fn build_scorecard_validates_against_committed_schema_for_all_three_branches() {
+        // Layer 2 defense: every branch the producer can mint must
+        // pass schema validation. Catches a future field addition that
+        // forgets to add `failure_detail_md` to a Red branch.
+        for delta in [0.5_f64, -2.5, -7.5] {
+            let sc = build_with_delta(delta);
+            let value = serde_json::to_value(&sc).expect("serialize");
+            validate_against_schema(&value)
+                .unwrap_or_else(|e| panic!("schema validation failed for delta={delta}: {e}"));
+        }
     }
 
     #[test]
     fn validate_rejects_invalid_overall_status() {
-        let sc = build_stub_scorecard(pr_meta());
+        let sc = build_with_delta(0.0);
         let mut value = serde_json::to_value(&sc).expect("serialize");
         value["overall_status"] = serde_json::json!("Magenta");
         let err = validate_against_schema(&value).unwrap_err();
         assert!(err.contains("schema validation"), "got: {err}");
+    }
+
+    #[test]
+    fn format_delta_text_signs_match_direction() {
+        assert_eq!(format_delta_text(0.3), "+0.3 pp");
+        assert_eq!(format_delta_text(-2.5), "-2.5 pp");
+        assert_eq!(format_delta_text(0.0), "+0.0 pp");
+        assert_eq!(format_delta_text(-7.5), "-7.5 pp");
+    }
+
+    #[test]
+    fn coverage_failure_detail_reports_absolute_drop_and_threshold() {
+        let detail = coverage_failure_detail(-6.2, -5.0);
+        assert!(detail.contains("6.2 pp"), "got: {detail}");
+        assert!(detail.contains("5.0 pp"), "got: {detail}");
     }
 
     /// Minimal scoped tempdir without pulling in a dev-dep — mirrors the
@@ -305,7 +432,7 @@ mod tests {
     fn write_scorecard_creates_parent_dirs_and_emits_json() {
         let dir = tempdir();
         let out = dir.path.join("nested/out/scorecard.json");
-        let sc = build_stub_scorecard(pr_meta());
+        let sc = build_with_delta(0.0);
         write_scorecard(&sc, &out).expect("write");
         let content = fs::read_to_string(&out).expect("read back");
         let parsed: Value = serde_json::from_str(&content).expect("valid json");
@@ -319,7 +446,7 @@ mod tests {
         // .tmp.<pid> sidecars on the happy path.
         let dir = tempdir();
         let out = dir.path.join("scorecard.json");
-        let sc = build_stub_scorecard(pr_meta());
+        let sc = build_with_delta(0.0);
         write_scorecard(&sc, &out).expect("write");
         let entries: Vec<_> = fs::read_dir(&dir.path)
             .expect("read tmpdir")
@@ -354,7 +481,7 @@ mod tests {
 
     #[test]
     fn render_scorecard_appends_trailing_newline() {
-        let sc = build_stub_scorecard(pr_meta());
+        let sc = build_with_delta(0.0);
         let s = render_scorecard(&sc).expect("render");
         assert!(s.ends_with('\n'));
     }
@@ -407,12 +534,41 @@ mod tests {
         let cli = parse_cli([
             OsString::from("--pr-meta"),
             OsString::from("/tmp/pr.json"),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("-2.5"),
             OsString::from("--out"),
             OsString::from("/tmp/out.json"),
         ])
         .expect("parsed");
         assert_eq!(cli.pr_meta, PathBuf::from("/tmp/pr.json"));
+        assert_eq!(cli.coverage_delta_pp, -2.5);
         assert_eq!(cli.out, PathBuf::from("/tmp/out.json"));
+    }
+
+    #[test]
+    fn parse_cli_rejects_missing_coverage_delta_flag() {
+        let code = parse_cli([
+            OsString::from("--pr-meta"),
+            OsString::from("/tmp/pr.json"),
+            OsString::from("--out"),
+            OsString::from("/tmp/out.json"),
+        ])
+        .unwrap_err();
+        assert_eq!(code, ExitCode::from(2));
+    }
+
+    #[test]
+    fn parse_cli_rejects_non_numeric_coverage_delta() {
+        let code = parse_cli([
+            OsString::from("--pr-meta"),
+            OsString::from("/tmp/pr.json"),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("not-a-number"),
+            OsString::from("--out"),
+            OsString::from("/tmp/out.json"),
+        ])
+        .unwrap_err();
+        assert_eq!(code, ExitCode::from(2));
     }
 
     #[test]
@@ -422,6 +578,8 @@ mod tests {
         let code = run([
             OsString::from("--pr-meta"),
             OsString::from("/tmp/does-not-exist-aggregate.json"),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("0.0"),
             OsString::from("--out"),
             OsString::from(out.as_os_str()),
         ]);
@@ -453,10 +611,18 @@ mod tests {
         let code = run([
             OsString::from("--pr-meta"),
             OsString::from(pr_path.as_os_str()),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("-2.5"),
             OsString::from("--out"),
             OsString::from(out_path.as_os_str()),
         ]);
         assert_eq!(code, ExitCode::SUCCESS);
         assert!(out_path.exists());
+        // Round-trip sanity: the artifact carries the new fields and
+        // resolves to the expected status for the supplied delta.
+        let content = fs::read_to_string(&out_path).expect("read back");
+        let parsed: Value = serde_json::from_str(&content).expect("valid json");
+        assert_eq!(parsed["overall_status"], "Yellow");
+        assert_eq!(parsed["fallback_thresholds_active"], true);
     }
 }

@@ -22,11 +22,13 @@ const baseScorecard = {
       label: "Coverage",
       anchor: "coverage",
       status: "Green",
-      delta_text: "stub — V1 walking skeleton",
+      delta_pp: 0.3,
+      delta_text: "+0.3 pp",
     },
   ],
   top_failures: [],
   all_check_runs_url: "https://github.com/breezy-bays-labs/mokumo/runs",
+  fallback_thresholds_active: true,
 };
 
 describe("renderScorecardMarkdown", () => {
@@ -49,7 +51,7 @@ describe("renderScorecardMarkdown", () => {
   it("renders the row label and delta_text", () => {
     const md = renderScorecardMarkdown(baseScorecard);
     expect(md).toContain("Coverage");
-    expect(md).toContain("stub — V1 walking skeleton");
+    expect(md).toContain("+0.3 pp");
   });
 
   it("includes the abbreviated head SHA", () => {

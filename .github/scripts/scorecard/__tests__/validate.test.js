@@ -24,11 +24,13 @@ const validScorecard = {
       label: "Coverage",
       anchor: "coverage",
       status: "Green",
-      delta_text: "stub",
+      delta_pp: 0.0,
+      delta_text: "+0.0 pp",
     },
   ],
   top_failures: [],
   all_check_runs_url: "https://github.com/x/y/runs",
+  fallback_thresholds_active: true,
 };
 
 describe("validateScorecard", () => {
