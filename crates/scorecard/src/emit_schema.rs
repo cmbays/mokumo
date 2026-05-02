@@ -115,12 +115,11 @@ where
     }
     let target = match (target, &out) {
         (Some(t), _) => t,
-        // Back-compat for the V1/V2 CI invocation `emit-schema --out
-        // .config/scorecard/schema.json`: `--out` alone implies
-        // `--target scorecard`. Pre-V3 callers don't know the operator
-        // schema exists; treating `--out` as a single-target hint keeps
-        // their semantics intact while letting V3+ callers drop the
-        // flag for the default `both` behavior.
+        // `--out <PATH>` without `--target` is the single-artifact
+        // shorthand: it implies `--target scorecard` because the wire
+        // schema is the only artifact that ships at a caller-chosen
+        // path. The default (no flags) writes both artifacts at their
+        // canonical paths under `.config/scorecard/`.
         (None, Some(_)) => Target::Scorecard,
         (None, None) => Target::Both,
     };
@@ -286,10 +285,10 @@ mod tests {
 
     #[test]
     fn parse_args_back_compat_out_alone_implies_target_scorecard() {
-        // Locks the V1/V2 invocation `emit-schema --out
-        // .config/scorecard/schema.json` against silent regression: `--out`
-        // alone (without `--target`) keeps writing the wire schema only,
-        // matching pre-V3 behavior.
+        // Single-artifact shorthand: `--out <PATH>` without `--target`
+        // writes the wire schema only. Operators and CI invocations
+        // that name a single output path get the wire schema there;
+        // dropping `--target` is the default-both behavior.
         let parsed = parse_args(argv(["--out", "/tmp/schema.json"])).unwrap();
         assert_eq!(
             parsed,
@@ -370,6 +369,32 @@ mod tests {
         assert!(s.contains("ThresholdConfig"));
         assert!(s.contains("warn_pp_delta"));
         assert!(s.contains("fail_pp_delta"));
+    }
+
+    /// Regression test for the operator-schema typo-rejection contract.
+    ///
+    /// `serde(deny_unknown_fields)` on every `ThresholdConfig` /
+    /// `RowsConfig` / `CoverageThresholds` struct emits
+    /// `additionalProperties: false` at three nesting levels (root,
+    /// `definitions/RowsConfig`, `definitions/CoverageThresholds`). The
+    /// scorecard-drift CI step validates the committed `quality.toml`
+    /// against this schema via `ajv-cli`; if a future schema-postprocess
+    /// or schemars upgrade ever weakens any of those three levels, an
+    /// operator typo at that level would silently slide past the gate
+    /// and into the producer (which would then loud-fail at parse, but
+    /// after CI has already gone green).
+    ///
+    /// Pinning the count at three keeps the gate's reach honest.
+    #[test]
+    fn operator_schema_rejects_unknown_fields_at_every_nesting_level() {
+        let s = render_quality_config_schema_string();
+        let occurrences = s.matches("\"additionalProperties\": false").count();
+        assert_eq!(
+            occurrences, 3,
+            "operator schema must declare additionalProperties:false at the root, \
+             RowsConfig, and CoverageThresholds — got {occurrences}. \
+             Schema body:\n{s}",
+        );
     }
 
     #[test]

@@ -162,6 +162,8 @@ Feature: Sticky PR scorecard display contract
       Then any metric that regressed compared to the base branch is shown as yellow
       And any new gate failure is shown as red
       And the ci-scorecard comment contains the HTML marker "<!-- fallback-thresholds:hardcoded -->"
+      And the comment opens with the italic preamble "_Using starter-wheels fallback thresholds. Tune them in [`quality.toml`](QUALITY.md#threshold-tuning)._"
+      And the comment ends with the path-hint comment "<!-- tune at .config/scorecard/quality.toml — see QUALITY.md#threshold-tuning -->"
       And the comment displays a visible note that hardcoded fallback thresholds are in use
 
   # --- Forward compatibility: older renderers tolerate newer producers ---

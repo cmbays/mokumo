@@ -42,7 +42,13 @@ struct Cli {
     /// against the resolved [`ThresholdConfig`] to mint the row's
     /// status. `allow_hyphen_values` so a regression like `-2.5` is
     /// not mis-parsed as a short flag.
-    #[arg(long, allow_hyphen_values = true)]
+    ///
+    /// Rejected at parse time: `NaN`, `inf`, `-inf`. `f64::from_str`
+    /// accepts those literals, but a non-finite delta has no defensible
+    /// position in the warn/fail ordering and would silently resolve
+    /// Green under the default comparison rules. Loud-fail at the CLI
+    /// boundary keeps the verdict honest.
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_finite_f64)]
     coverage_delta_pp: f64,
 
     /// Path to the operator-tuned `quality.toml`. When the file is
@@ -59,6 +65,27 @@ struct Cli {
     /// directories are created if missing.
     #[arg(long)]
     out: PathBuf,
+}
+
+/// `clap` value-parser that accepts an `f64` and rejects non-finite
+/// values (`NaN`, `+inf`, `-inf`).
+///
+/// `f64::from_str` itself accepts those literals, so a producer
+/// invocation like `--coverage-delta-pp NaN` would otherwise satisfy
+/// clap's default parser and silently resolve Green under the
+/// `delta_pp <= warn_pp_delta` comparison. Rejecting at the boundary
+/// converts an invalid input into a non-zero exit with a clear message
+/// instead of a silent verdict.
+fn parse_finite_f64(raw: &str) -> Result<f64, String> {
+    let parsed: f64 = raw
+        .parse()
+        .map_err(|e| format!("not a valid floating-point number: {e}"))?;
+    if !parsed.is_finite() {
+        return Err(format!(
+            "must be a finite number (NaN and infinity are not allowed), got {raw}",
+        ));
+    }
+    Ok(parsed)
 }
 
 /// Format a coverage delta (in percentage points) for display.
@@ -185,17 +212,25 @@ impl ThresholdSource {
 /// Resolve the [`ThresholdConfig`] for a producer run from the
 /// `--quality-toml` path.
 ///
-/// Three outcomes:
-/// - File present, parses → [`ThresholdSource::Configured`].
-/// - File absent (any [`io::ErrorKind::NotFound`] from `fs::read`) →
-///   [`ThresholdSource::Fallback`]. Operators who never write a
-///   `quality.toml` and just want the starter-wheel verdict get a
-///   green CI run, not an error.
+/// Four outcomes:
+/// - File present, non-empty, parses → [`ThresholdSource::Configured`].
+/// - File absent (any [`std::io::ErrorKind::NotFound`] from
+///   `fs::read`) → [`ThresholdSource::Fallback`]. Operators who never
+///   write a `quality.toml` and just want the starter-wheel verdict
+///   get a green CI run, not an error.
+/// - File present but empty (zero bytes, or only whitespace) →
+///   [`ThresholdSource::Fallback`]. The schema rejects an empty file
+///   because `[rows.coverage]` is required; treating empty as absent
+///   keeps the operator-facing contract aligned with the rendered
+///   surface ("absent or empty falls back to hardcoded thresholds").
 /// - File present but unreadable, invalid UTF-8, or unparseable as TOML
 ///   → `Err(...)` with a message naming the path and the underlying
 ///   cause. Fail-loud so a typo never silently degrades to fallback.
 pub fn resolve_threshold_source(path: &Path) -> Result<ThresholdSource, String> {
     match fs::read_to_string(path) {
+        Ok(text) if text.trim().is_empty() => Ok(ThresholdSource::Fallback {
+            path: path.to_path_buf(),
+        }),
         Ok(text) => {
             let config = threshold::parse_quality_toml(&text).map_err(|e| {
                 format!(
@@ -415,9 +450,10 @@ mod tests {
 
     #[test]
     fn build_scorecard_overall_status_mirrors_row_status() {
-        // Single-row scorecard: overall = row. When V4+ adds rows the
-        // overall computation becomes worst-of-rows; a regression here
-        // surfaces immediately.
+        // Single-row scorecard: `overall_status` mirrors the row's
+        // status. When other row variants land their `build_*_row`
+        // helpers the overall computation grows into worst-of-rows; a
+        // regression on the single-row contract surfaces immediately.
         assert_eq!(build_with_delta(0.5).overall_status, Status::Green);
         assert_eq!(build_with_delta(-2.5).overall_status, Status::Yellow);
         assert_eq!(build_with_delta(-6.0).overall_status, Status::Red);
@@ -425,18 +461,19 @@ mod tests {
 
     #[test]
     fn build_scorecard_marks_fallback_thresholds_active() {
-        // V1 always passes `fallback_active = true` to `build_scorecard`,
-        // so the produced artifact carries the flag the renderer keys
-        // off.
+        // The `fallback_active` argument round-trips into the produced
+        // artifact's `fallback_thresholds_active` field — that's the
+        // flag the renderer keys off when it decides whether to surface
+        // the starter-wheels preamble + HTML markers.
         let sc = build_with_delta(-2.5);
         assert!(sc.fallback_thresholds_active);
     }
 
     #[test]
     fn build_scorecard_records_fallback_active_false_when_passed() {
-        // Independent test of the parameter — V2 will pass `false`
-        // when an operator config is loaded; V1's plumbing must
-        // honour the argument.
+        // Independent test of the parameter — `false` flows through
+        // the same path so a contributor cannot accidentally hardwire
+        // the field to `true` and pass the previous test by coincidence.
         let sc = build_scorecard(pr_meta(), -2.5, &fallback(), false);
         assert!(!sc.fallback_thresholds_active);
     }
@@ -515,6 +552,34 @@ mod tests {
     }
 
     #[test]
+    fn resolve_threshold_source_returns_fallback_for_empty_file() {
+        // Operator surface contract: "absent or empty falls back to
+        // hardcoded thresholds". Without this branch, `parse_quality_toml`
+        // rejects empty input because `[rows.coverage]` is required, and
+        // an operator who creates the file but hasn't filled it in yet
+        // gets a loud parse failure instead of the starter-wheels verdict.
+        let dir = tempdir();
+        let path = dir.path.join("empty.toml");
+        fs::write(&path, "").expect("write empty");
+        let source = resolve_threshold_source(&path).expect("empty file is fallback");
+        assert!(source.fallback_active());
+        let cfg = source.config();
+        assert_eq!(cfg.rows.coverage.warn_pp_delta, -1.0);
+        assert_eq!(cfg.rows.coverage.fail_pp_delta, -5.0);
+    }
+
+    #[test]
+    fn resolve_threshold_source_returns_fallback_for_whitespace_only_file() {
+        // Same contract as above — a file with only blank lines /
+        // comments-without-tables / spaces is operationally empty.
+        let dir = tempdir();
+        let path = dir.path.join("whitespace.toml");
+        fs::write(&path, "\n   \n\t\n").expect("write whitespace");
+        let source = resolve_threshold_source(&path).expect("whitespace file is fallback");
+        assert!(source.fallback_active());
+    }
+
+    #[test]
     fn resolve_threshold_source_parses_well_formed_toml() {
         let dir = tempdir();
         let path = dir.path.join("quality.toml");
@@ -556,7 +621,9 @@ mod tests {
 
     #[test]
     fn configured_thresholds_flip_status_at_smaller_drop() {
-        // Round-trip the V2 acceptance: tightened warn flips Green→Yellow.
+        // Tightened-warn round trip: with `warn_pp_delta = -0.5`, a
+        // drop of -0.8 lands Yellow even though it would land Green
+        // under the fallback's -1.0 warn threshold.
         let dir = tempdir();
         let path = dir.path.join("tight.toml");
         fs::write(
@@ -572,7 +639,9 @@ mod tests {
 
     #[test]
     fn fallback_path_yields_yellow_at_two_point_five_drop() {
-        // Round-trip the V2 acceptance for the absent-file case.
+        // Absent-file round trip: a drop of -2.5 against the fallback
+        // thresholds (warn = -1.0, fail = -5.0) lands Yellow and flags
+        // the artifact as fallback-active.
         let dir = tempdir();
         let missing = dir.path.join("absent.toml");
         let source = resolve_threshold_source(&missing).expect("fallback");
@@ -826,6 +895,37 @@ mod tests {
             OsString::from("/tmp/pr.json"),
             OsString::from("--coverage-delta-pp"),
             OsString::from("not-a-number"),
+            OsString::from("--out"),
+            OsString::from("/tmp/out.json"),
+        ])
+        .unwrap_err();
+        assert_eq!(code, ExitCode::from(2));
+    }
+
+    #[test]
+    fn parse_finite_f64_accepts_finite_inputs() {
+        assert_eq!(parse_finite_f64("0.0").unwrap(), 0.0);
+        assert_eq!(parse_finite_f64("-2.5").unwrap(), -2.5);
+        assert_eq!(parse_finite_f64("12345.6789").unwrap(), 12345.6789);
+    }
+
+    #[test]
+    fn parse_finite_f64_rejects_non_finite_inputs() {
+        for bad in ["NaN", "nan", "inf", "+inf", "-inf", "Infinity"] {
+            match parse_finite_f64(bad) {
+                Ok(v) => panic!("expected error for {bad}, got {v}"),
+                Err(err) => assert!(err.contains("finite"), "for {bad}: {err}"),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_cli_rejects_nan_coverage_delta() {
+        let code = parse_cli([
+            OsString::from("--pr-meta"),
+            OsString::from("/tmp/pr.json"),
+            OsString::from("--coverage-delta-pp"),
+            OsString::from("NaN"),
             OsString::from("--out"),
             OsString::from("/tmp/out.json"),
         ])

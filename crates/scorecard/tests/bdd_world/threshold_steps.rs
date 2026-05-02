@@ -61,7 +61,7 @@ fn produce(world: &mut ThresholdWorld, delta_pp: f64) {
         // arm is required by rustc and signals to a future contributor
         // that adding a row variant means revisiting the BDD assertion
         // surface.
-        _ => panic!("unexpected Row variant in V3 producer output"),
+        _ => panic!("unexpected Row variant in producer output"),
     };
     world.coverage_delta_pp = Some(delta_pp);
     world.coverage_row_status = Some(row_status);
@@ -180,11 +180,12 @@ async fn then_regressed_shown_yellow(world: &mut ThresholdWorld) {
 
 #[then(expr = "any new gate failure is shown as red")]
 async fn then_new_failure_shown_red(_world: &mut ThresholdWorld) {
-    // V3 ships only the CoverageDelta row variant. We exercise the Red
-    // branch as a unit assertion against the same fallback config the
-    // producer is using; the "gate failure" wording in the .feature is
-    // forward-compatible with the absolute-coverage row variant that
-    // lands in V4 or later (council C5).
+    // The CoverageDelta row variant is the only row variant whose Red
+    // branch is exercised today; the "gate failure" wording in the
+    // .feature is intentionally row-variant-neutral so other variants
+    // can register themselves under the same Then step when their
+    // resolvers ship. The unit assertion below pins the Red branch on
+    // the same fallback config the producer is using.
     let cfg = ThresholdConfig::fallback();
     let coverage: &CoverageThresholds = &cfg.rows.coverage;
     assert_eq!(
@@ -196,10 +197,10 @@ async fn then_new_failure_shown_red(_world: &mut ThresholdWorld) {
 
 #[then(expr = "the ci-scorecard comment contains the HTML marker {string}")]
 async fn then_comment_contains_marker(_world: &mut ThresholdWorld, marker_literal: String) {
-    // Doc-drift gate (impl-plan §C13). The Gherkin literal is the
-    // canonical text on the renderer side; the Rust constant is the
-    // canonical text on the producer side. Asserting byte-equality
-    // here means a drift on either side fails this scenario first.
+    // Doc-drift gate. The Gherkin literal is the canonical text on
+    // the renderer side; the Rust constant is the canonical text on
+    // the producer side. Asserting byte-equality here means a drift on
+    // either side fails this scenario first.
     assert_eq!(
         marker_literal, FALLBACK_MARKER,
         "Gherkin marker literal must equal scorecard::threshold::FALLBACK_MARKER",
@@ -211,13 +212,35 @@ async fn then_comment_contains_marker(_world: &mut ThresholdWorld, marker_litera
     );
 }
 
+#[then(expr = "the comment opens with the italic preamble {string}")]
+async fn then_comment_opens_with_preamble(_world: &mut ThresholdWorld, preamble_literal: String) {
+    // Doc-drift gate (sibling of the marker assertion above). The
+    // Gherkin literal is the canonical text on the renderer side;
+    // `STARTER_PREAMBLE` is the canonical text on the producer side.
+    // A drift on either side fails this scenario before the rendered
+    // comment is ever inspected by a human.
+    assert_eq!(
+        preamble_literal, STARTER_PREAMBLE,
+        "Gherkin preamble literal must equal scorecard::threshold::STARTER_PREAMBLE",
+    );
+}
+
+#[then(expr = "the comment ends with the path-hint comment {string}")]
+async fn then_comment_ends_with_path_hint(_world: &mut ThresholdWorld, path_hint_literal: String) {
+    // Doc-drift gate for the third byte-stable string. Together with
+    // the FALLBACK_MARKER and STARTER_PREAMBLE assertions above this
+    // pins all three constants the renderer mirrors from the producer.
+    assert_eq!(
+        path_hint_literal, PATH_HINT_COMMENT,
+        "Gherkin path-hint literal must equal scorecard::threshold::PATH_HINT_COMMENT",
+    );
+}
+
 #[then(expr = "the comment displays a visible note that hardcoded fallback thresholds are in use")]
 async fn then_comment_displays_note(world: &mut ThresholdWorld) {
-    // Mirror of the above: the producer flags fallback so the renderer
-    // (asserted by vitest) prepends `STARTER_PREAMBLE` and trails with
-    // `PATH_HINT_COMMENT`. Touching the constants here keeps any
-    // unused-import drift from sneaking past compile.
-    let _ = (STARTER_PREAMBLE, PATH_HINT_COMMENT);
+    // The visible note is gated on the producer marking fallback. The
+    // text of the note (italic preamble + HTML marker + path-hint
+    // comment) is asserted byte-for-byte by the three Then steps above.
     let scorecard = world.scorecard.as_ref().expect("scorecard must be built");
     assert!(
         scorecard.fallback_thresholds_active,
@@ -226,8 +249,9 @@ async fn then_comment_displays_note(world: &mut ThresholdWorld) {
 }
 
 // ───────────────────────────────────────────────────────────────────
-// Pinning the helpers' types — keeps `cargo check` honest about the
-// public surface even when no scenario currently exercises a code path.
+// Type pin — keeps `cargo check` honest about the public surface so
+// that an upstream signature drift fails the BDD test target before
+// it can sneak past the lib-tests-only `cargo test -p scorecard`.
 // ───────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]

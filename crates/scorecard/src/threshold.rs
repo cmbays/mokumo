@@ -243,9 +243,11 @@ mod tests {
 
     #[test]
     fn synthetic_red_below_fail_threshold_resolves_red() {
-        // The synthetic Red unit test required by impl-plan §DG —
-        // documents the Red branch behavior in the absence of an
-        // absolute-coverage row variant (V4+ territory).
+        // Documents the Red branch behavior with a synthetic delta that
+        // falls below `fail_pp_delta`. The coverage-delta row is the
+        // only row variant that exercises the Red branch today, so a
+        // unit test here is the canonical assertion until other row
+        // variants land their own resolvers.
         assert_eq!(
             resolve_coverage_delta(-7.5, &fallback_coverage()),
             Status::Red
@@ -302,8 +304,9 @@ mod tests {
 
     #[test]
     fn tightened_warn_flips_status_at_smaller_drop() {
-        // Operator tightens warn from -1.0 to -0.5; a drop of -0.8
-        // now resolves Yellow where it was Green under fallback.
+        // A drop of -0.8 lands Green against the fallback warn (-1.0)
+        // and Yellow against a tightened warn (-0.5) — the round-trip
+        // contract operators rely on when they tune `quality.toml`.
         let configured = CoverageThresholds {
             warn_pp_delta: -0.5,
             fail_pp_delta: -5.0,

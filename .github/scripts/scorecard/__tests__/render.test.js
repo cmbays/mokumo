@@ -102,7 +102,7 @@ describe("renderScorecardMarkdown", () => {
     expect(md).toContain("(detail missing — see workflow logs)");
   });
 
-  // ── Fallback-threshold signals (V3 doc-drift gate) ──────────────────
+  // ── Fallback-threshold signals (doc-drift gate) ─────────────────────
   //
   // Every byte of the three fallback signals is pinned by these
   // assertions. Drift between the renderer's emitted markdown and the
@@ -359,11 +359,11 @@ describe("renderer dependency hygiene", () => {
 });
 
 describe("bin/render-cli.js", () => {
-  // The render-cli wrapper lets non-Node callers (BDD step-defs, the
-  // V3-PR Red-smoke workflow, ad-hoc shell pipelines) feed a JSON
-  // artifact through the same renderer the production sticky-comment
-  // poster uses, without bouncing through `actions/github-script`.
-  // These tests pin its behavior end-to-end via a child process so a
+  // The render-cli wrapper lets non-Node callers (BDD step-defs,
+  // smoke workflows, ad-hoc shell pipelines) feed a JSON artifact
+  // through the same renderer the production sticky-comment poster
+  // uses, without bouncing through `actions/github-script`. These
+  // tests pin its behavior end-to-end via a child process so a
   // regression in stdin reading or stdout writing surfaces immediately.
 
   function runCli(jsonString) {

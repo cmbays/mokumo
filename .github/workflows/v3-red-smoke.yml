@@ -62,11 +62,18 @@ jobs:
           "
 
       - name: Aggregate Red-branch synthetic
+        # `--quality-toml` points at a non-existent path on purpose: the
+        # smoke needs to demonstrate the fallback signals (italic
+        # preamble + HTML marker + path-hint comment) end-to-end, so the
+        # producer must take the absent-file branch and mark
+        # `fallback_thresholds_active = true`. Pointing at the committed
+        # `.config/scorecard/quality.toml` would suppress those signals
+        # because the configured-thresholds branch hides them.
         run: |
           cargo run -p scorecard --features cli --bin aggregate -- \
             --pr-meta /tmp/red-smoke-pr.json \
             --coverage-delta-pp -7.5 \
-            --quality-toml .config/scorecard/quality.toml \
+            --quality-toml /tmp/red-smoke-no-such-quality.toml \
             --out /tmp/red-smoke.json
 
       - name: Render markdown

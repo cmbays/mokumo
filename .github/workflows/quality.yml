@@ -841,10 +841,17 @@ jobs:
             > tmp/pr-meta.json
           cat tmp/pr-meta.json
       - name: Run aggregate
+        # `--coverage-delta-pp 0.0` is a placeholder until the producer is
+        # wired to a real delta from `cargo-llvm-cov` against the base
+        # branch. With 0.0 the row resolves Green, which keeps the sticky
+        # comment readable while the upstream measurement plumbing is
+        # built. `--quality-toml` defaults to `.config/scorecard/quality.toml`
+        # so the configured-thresholds path is exercised on every PR.
         run: |
           mkdir -p tmp
           ./target/release/aggregate \
             --pr-meta tmp/pr-meta.json \
+            --coverage-delta-pp 0.0 \
             --out tmp/scorecard.json
           cat tmp/scorecard.json
       - name: Upload scorecard artifact

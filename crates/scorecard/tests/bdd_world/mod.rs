@@ -1,14 +1,15 @@
-//! `ThresholdWorld` — fixture state for the V3 threshold-engine BDD
-//! scenarios. Owned exclusively by `tests/bdd.rs`; the layout matches
-//! kikan/kikan-events so `bdd-lint`'s rust-glob
-//! (`crates/*/tests/bdd_world/**/*.rs`) discovers the step-defs.
+//! `ThresholdWorld` — fixture state for the threshold-engine BDD
+//! scenarios in `tests/features/scorecard_display.feature`. Owned
+//! exclusively by `tests/bdd.rs`; the layout matches kikan/kikan-events
+//! so `bdd-lint`'s rust-glob (`crates/*/tests/bdd_world/**/*.rs`)
+//! discovers the step-defs.
 
 use cucumber::World;
 use scorecard::{PrMeta, Scorecard, Status};
 
 pub mod threshold_steps;
 
-/// Scenario fixture for the V3 threshold-engine flow.
+/// Scenario fixture for the threshold-engine flow.
 ///
 /// Each scenario edits a temp `quality.toml`, runs the producer in
 /// process, and asserts on the resulting [`Scorecard`]. The fields are
@@ -42,9 +43,9 @@ impl ThresholdWorld {
         }
     }
 
-    /// Synthetic PR metadata. The scorecard's PR fields are not under
-    /// test in V3 — only the row + fallback flag are — so a fixed stub
-    /// is fine.
+    /// Synthetic PR metadata. The threshold-engine scenarios assert
+    /// only on the row + fallback flag of the produced scorecard, so a
+    /// fixed stub for `PrMeta` is sufficient.
     pub fn stub_pr_meta() -> PrMeta {
         PrMeta {
             pr_number: 768.into(),
