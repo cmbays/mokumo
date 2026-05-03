@@ -53,7 +53,7 @@ NAME_OVERRIDE="${NAME_OVERRIDE:-}"
 # Must come BEFORE diff acquisition so the gate is a true no-op when the
 # author has accepted the rule's escape hatch.
 
-if printf '%s' "$PR_LABELS" | tr ' ,' '\n\n' | grep -Fxq 'docs-not-applicable'; then
+if printf '%s' "$PR_LABELS" | tr ' ,' '\n' | grep -Fxq 'docs-not-applicable'; then
     echo "docs-paired-files ok: docs-not-applicable label set; gate skipped"
     exit 0
 fi
