@@ -94,6 +94,9 @@ pub struct RowsConfig {
     /// Thresholds for the `Row::BddSkipCount` variant.
     #[serde(default = "BddSkipThresholds::default")]
     pub bdd_skip: BddSkipThresholds,
+    /// Thresholds for the `Row::CiWallClockDelta` variant.
+    #[serde(default = "CiWallClockThresholds::default")]
+    pub ci_wall_clock: CiWallClockThresholds,
 }
 
 /// Warn / fail thresholds for the `Row::BddSkipCount` variant. Both
@@ -119,6 +122,37 @@ impl BddSkipThresholds {
         Self {
             warn_skipped: 50,
             fail_skipped: 200,
+        }
+    }
+}
+
+/// Warn / fail thresholds for the `Row::CiWallClockDelta` variant,
+/// expressed in seconds of total-CI-wall-clock delta vs base.
+///
+/// Both fields are signed: a slowdown is a positive delta, so warn /
+/// fail thresholds are themselves positive numbers. Inclusive boundary
+/// semantics: `delta_seconds == warn_seconds_delta` resolves
+/// [`Status::Yellow`]; `delta_seconds == fail_seconds_delta` resolves
+/// [`Status::Red`]. See [`resolve_ci_wall_clock`] for the full table.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CiWallClockThresholds {
+    /// Threshold above (or equal) which a row reports
+    /// [`Status::Yellow`]. Typically positive (slowdown).
+    pub warn_seconds_delta: f64,
+    /// Threshold above (or equal) which a row reports [`Status::Red`].
+    /// Typically positive and larger than `warn_seconds_delta`.
+    pub fail_seconds_delta: f64,
+}
+
+impl CiWallClockThresholds {
+    /// Defensible fallback: a 60s slowdown trips Yellow, 300s trips Red.
+    /// Tuned to be permissive enough that ordinary CI noise doesn't
+    /// flap the verdict; operators tighten via `quality.toml`.
+    pub fn default() -> Self {
+        Self {
+            warn_seconds_delta: 60.0,
+            fail_seconds_delta: 300.0,
         }
     }
 }
@@ -158,6 +192,7 @@ impl ThresholdConfig {
                     fail_pp_delta: -5.0,
                 },
                 bdd_skip: BddSkipThresholds::default(),
+                ci_wall_clock: CiWallClockThresholds::default(),
             },
         }
     }
@@ -216,6 +251,31 @@ pub fn resolve_bdd_skip(skipped: u32, cfg: &BddSkipThresholds) -> Status {
     if skipped >= cfg.fail_skipped {
         Status::Red
     } else if skipped >= cfg.warn_skipped {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a CI wall-clock delta (in seconds) to a [`Status`] using the
+/// supplied [`CiWallClockThresholds`].
+///
+/// # Boundary semantics
+///
+/// | `delta_seconds`                                        | Result            |
+/// |--------------------------------------------------------|-------------------|
+/// | `delta_seconds >= fail_seconds_delta`                  | [`Status::Red`]    |
+/// | `warn_seconds_delta <= delta_seconds < fail_seconds_delta` | [`Status::Yellow`] |
+/// | `delta_seconds < warn_seconds_delta`                   | [`Status::Green`]  |
+///
+/// Boundaries are inclusive on the worse (positive) side. A negative
+/// delta (CI sped up) resolves [`Status::Green`]. NaN handling mirrors
+/// `resolve_coverage_delta`: NaN compares false against everything and
+/// resolves Green; the producer rejects NaN at the input boundary.
+pub fn resolve_ci_wall_clock(delta_seconds: f64, cfg: &CiWallClockThresholds) -> Status {
+    if delta_seconds >= cfg.fail_seconds_delta {
+        Status::Red
+    } else if delta_seconds >= cfg.warn_seconds_delta {
         Status::Yellow
     } else {
         Status::Green
@@ -403,6 +463,77 @@ mod tests {
     #[test]
     fn bdd_skip_above_fail_threshold_resolves_red() {
         assert_eq!(resolve_bdd_skip(500, &fallback_bdd_skip()), Status::Red);
+    }
+
+    // ── CI wall-clock resolver boundary table ────────────────────────
+
+    fn fallback_ci_wall_clock() -> CiWallClockThresholds {
+        ThresholdConfig::fallback().rows.ci_wall_clock
+    }
+
+    #[test]
+    fn ci_wall_clock_fallback_values_match_documented_defaults() {
+        let cfg = fallback_ci_wall_clock();
+        assert_eq!(cfg.warn_seconds_delta, 60.0);
+        assert_eq!(cfg.fail_seconds_delta, 300.0);
+    }
+
+    #[test]
+    fn ci_wall_clock_negative_delta_resolves_green() {
+        // CI sped up — Green unconditionally.
+        assert_eq!(
+            resolve_ci_wall_clock(-30.0, &fallback_ci_wall_clock()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_zero_delta_resolves_green() {
+        assert_eq!(
+            resolve_ci_wall_clock(0.0, &fallback_ci_wall_clock()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_just_below_warn_resolves_green() {
+        // CLAUDE.md item 16 — the "almost wrong" case.
+        assert_eq!(
+            resolve_ci_wall_clock(59.9, &fallback_ci_wall_clock()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_at_warn_threshold_resolves_yellow() {
+        assert_eq!(
+            resolve_ci_wall_clock(60.0, &fallback_ci_wall_clock()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_just_below_fail_resolves_yellow() {
+        assert_eq!(
+            resolve_ci_wall_clock(299.9, &fallback_ci_wall_clock()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_at_fail_threshold_resolves_red() {
+        assert_eq!(
+            resolve_ci_wall_clock(300.0, &fallback_ci_wall_clock()),
+            Status::Red
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_above_fail_threshold_resolves_red() {
+        assert_eq!(
+            resolve_ci_wall_clock(900.0, &fallback_ci_wall_clock()),
+            Status::Red
+        );
     }
 
     // ── Configured-thresholds round-trip ─────────────────────────────

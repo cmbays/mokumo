@@ -17,9 +17,12 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use jsonschema::JSONSchema;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::threshold::{self, BddSkipThresholds, CoverageThresholds, ThresholdConfig};
+use crate::threshold::{
+    self, BddSkipThresholds, CiWallClockThresholds, CoverageThresholds, ThresholdConfig,
+};
 use crate::{
     BddCrateBreakout, Breakouts, GateRun, PrMeta, Row, RowCommon, Scorecard, Status, TagCount,
 };
@@ -70,6 +73,15 @@ struct Cli {
     /// run.
     #[arg(long = "bdd-features-root", value_name = "DIR")]
     bdd_features_roots: Vec<PathBuf>,
+
+    /// Path to the CI wall-clock JSON artifact produced by the workflow
+    /// `total_seconds` aggregation step. Shape:
+    /// `{ "total_seconds": f64, "base_total_seconds": Option<f64> }`.
+    /// When the flag is omitted the producer emits a Green
+    /// `CiWallClockDelta` row with delta_seconds=0 — the row is wired
+    /// even when the base SHA's data is unavailable.
+    #[arg(long, value_name = "PATH")]
+    ci_wall_clock_json: Option<PathBuf>,
 
     /// Path to write the resulting scorecard.json artifact. Parent
     /// directories are created if missing.
@@ -525,6 +537,119 @@ pub fn build_bdd_skip_row(summary: &BddSummary, thresholds: &BddSkipThresholds) 
     }
 }
 
+// ── CI wall-clock producer ─────────────────────────────────────────────
+//
+// V4 (#769) §4 wired row. The producer reads a JSON artifact emitted by
+// the workflow's per-job duration aggregation step, computes the delta
+// against the base SHA's most recent run (if available), and feeds the
+// result through `threshold::resolve_ci_wall_clock`.
+
+/// Wire shape of `--ci-wall-clock-json`. `base_total_seconds` is
+/// `Option<f64>` because the base SHA's wall-clock is not always
+/// available (first PR on a branch, base run never recorded an
+/// artifact, fork PRs without artifact-read permission). Absence
+/// resolves Green with `delta_seconds: 0` rather than failing closed
+/// — the row is informational on a no-base-data run.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CiWallClockJson {
+    /// Total CI wall-clock for the head SHA, in seconds.
+    pub total_seconds: f64,
+    /// Total CI wall-clock for the base SHA, in seconds. `None` when
+    /// the base run's artifact is absent.
+    #[serde(default)]
+    pub base_total_seconds: Option<f64>,
+}
+
+/// Render the inline failure detail for a Red CI wall-clock row.
+fn ci_wall_clock_failure_detail(delta_seconds: f64, fail_threshold: f64) -> String {
+    format!(
+        "CI wall-clock grew by {delta_seconds:.0}s — at or above the {fail_threshold:.0}s fail threshold."
+    )
+}
+
+/// Format the `delta_text` for a wired CI wall-clock row.
+fn ci_wall_clock_delta_text(json: &CiWallClockJson, delta_seconds: f64) -> String {
+    match json.base_total_seconds {
+        Some(_) => {
+            let sign = if delta_seconds >= 0.0 { "+" } else { "" };
+            format!(
+                "{:.0}s total / {sign}{delta_seconds:.0}s vs base",
+                json.total_seconds
+            )
+        }
+        None => format!("{:.0}s total / (no base)", json.total_seconds),
+    }
+}
+
+/// Build a wired `Row::CiWallClockDelta` from the JSON artifact +
+/// thresholds.
+pub fn build_ci_wall_clock_row(json: &CiWallClockJson, thresholds: &CiWallClockThresholds) -> Row {
+    let common = RowCommon {
+        id: "ci_wall_clock".into(),
+        label: "CI wall-clock".into(),
+        anchor: "ci-wall-clock".into(),
+    };
+    // No base data → delta is zero. The row reports total CI seconds
+    // unconditionally so operators see the absolute value even before
+    // base comparison is available.
+    let delta_seconds = match json.base_total_seconds {
+        Some(base) => json.total_seconds - base,
+        None => 0.0,
+    };
+    let delta_text = ci_wall_clock_delta_text(json, delta_seconds);
+    match threshold::resolve_ci_wall_clock(delta_seconds, thresholds) {
+        Status::Green => {
+            Row::ci_wall_clock_delta_green(common, json.total_seconds, delta_seconds, delta_text)
+        }
+        Status::Yellow => {
+            Row::ci_wall_clock_delta_yellow(common, json.total_seconds, delta_seconds, delta_text)
+        }
+        Status::Red => Row::ci_wall_clock_delta_red(
+            common,
+            json.total_seconds,
+            delta_seconds,
+            delta_text,
+            ci_wall_clock_failure_detail(delta_seconds, thresholds.fail_seconds_delta),
+        ),
+    }
+}
+
+/// Read the `--ci-wall-clock-json` file if present, returning `None`
+/// when the flag was omitted. Reports a clear error when the file is
+/// supplied but cannot be read or does not match the wire shape.
+pub fn read_ci_wall_clock_json(path: Option<&Path>) -> Result<Option<CiWallClockJson>, String> {
+    let Some(path) = path else { return Ok(None) };
+    let bytes = fs::read(path).map_err(|e| {
+        format!(
+            "aggregate: cannot read --ci-wall-clock-json {}: {e}",
+            path.display()
+        )
+    })?;
+    let parsed: CiWallClockJson = serde_json::from_slice(&bytes).map_err(|e| {
+        format!(
+            "aggregate: --ci-wall-clock-json {} is not a valid CiWallClockJson: {e}",
+            path.display()
+        )
+    })?;
+    if !parsed.total_seconds.is_finite() {
+        return Err(format!(
+            "aggregate: --ci-wall-clock-json {} total_seconds must be finite, got {}",
+            path.display(),
+            parsed.total_seconds
+        ));
+    }
+    if let Some(base) = parsed.base_total_seconds {
+        if !base.is_finite() {
+            return Err(format!(
+                "aggregate: --ci-wall-clock-json {} base_total_seconds must be finite, got {base}",
+                path.display(),
+            ));
+        }
+    }
+    Ok(Some(parsed))
+}
+
 /// Build the scorecard artifact from parsed PR metadata, raw
 /// measurements, and the resolved threshold config.
 ///
@@ -536,11 +661,22 @@ pub fn build_scorecard(
     pr: PrMeta,
     coverage_delta_pp: f64,
     bdd_summary: &BddSummary,
+    ci_wall_clock: Option<&CiWallClockJson>,
     thresholds: &ThresholdConfig,
     fallback_active: bool,
 ) -> Scorecard {
     let coverage = build_coverage_row(coverage_delta_pp, &thresholds.rows.coverage);
     let bdd = build_bdd_skip_row(bdd_summary, &thresholds.rows.bdd_skip);
+    // Absent CI wall-clock JSON: emit Green row with zero values. The
+    // row is informational until the workflow step starts uploading the
+    // artifact (C8); operators see the slot occupied either way.
+    let ci_wall_clock_default = CiWallClockJson {
+        total_seconds: 0.0,
+        base_total_seconds: None,
+    };
+    let ci_wall_clock_input = ci_wall_clock.unwrap_or(&ci_wall_clock_default);
+    let ci_wall_clock_row =
+        build_ci_wall_clock_row(ci_wall_clock_input, &thresholds.rows.ci_wall_clock);
 
     // Producer-blocked rows ship as Green stubs pinned to their
     // upstream producer references. The renderer detects the
@@ -550,6 +686,7 @@ pub fn build_scorecard(
     let rows = vec![
         coverage,
         bdd,
+        ci_wall_clock_row,
         stub_crap_delta_pending(),
         stub_mutation_survivors_pending(),
         stub_handler_coverage_axis_pending(),
@@ -874,10 +1011,18 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
             return ExitCode::from(1);
         }
     };
+    let ci_wall_clock = match read_ci_wall_clock_json(cli.ci_wall_clock_json.as_deref()) {
+        Ok(c) => c,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return ExitCode::from(1);
+        }
+    };
     let scorecard = build_scorecard(
         pr,
         cli.coverage_delta_pp,
         &bdd_summary,
+        ci_wall_clock.as_ref(),
         &source.config(),
         source.fallback_active(),
     );
@@ -910,6 +1055,7 @@ mod tests {
             pr_meta(),
             delta_pp,
             &BddSummary::default(),
+            None,
             &fallback(),
             true,
         )
@@ -917,13 +1063,13 @@ mod tests {
 
     #[test]
     fn build_scorecard_emits_coverage_row_first() {
-        // V4 emits the coverage row + the wired BddSkipCount row +
-        // four producer-pending stubs (CrapDelta, MutationSurvivors,
-        // HandlerCoverageAxis, GateRuns). C4-C6 wire CiWallClockDelta,
-        // FlakyPopulation, and ChangedScopeDiagram on top, growing the
-        // row vector.
+        // V4 emits the coverage row + the wired BddSkipCount + the
+        // wired CiWallClockDelta + four producer-pending stubs
+        // (CrapDelta, MutationSurvivors, HandlerCoverageAxis,
+        // GateRuns). C5-C6 wire FlakyPopulation and ChangedScopeDiagram
+        // on top, growing the row vector.
         let sc = build_with_delta(0.3);
-        assert!(sc.rows.len() >= 6);
+        assert!(sc.rows.len() >= 7);
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -1005,7 +1151,14 @@ mod tests {
         // Independent test of the parameter — `false` flows through
         // the same path so a contributor cannot accidentally hardwire
         // the field to `true` and pass the previous test by coincidence.
-        let sc = build_scorecard(pr_meta(), -2.5, &BddSummary::default(), &fallback(), false);
+        let sc = build_scorecard(
+            pr_meta(),
+            -2.5,
+            &BddSummary::default(),
+            None,
+            &fallback(),
+            false,
+        );
         assert!(!sc.fallback_thresholds_active);
     }
 
@@ -1234,6 +1387,7 @@ mod tests {
             pr_meta(),
             -0.8,
             &BddSummary::default(),
+            None,
             &source.config(),
             source.fallback_active(),
         );
@@ -1253,6 +1407,7 @@ mod tests {
             pr_meta(),
             -2.5,
             &BddSummary::default(),
+            None,
             &source.config(),
             source.fallback_active(),
         );
@@ -1378,8 +1533,166 @@ mod tests {
         let content = fs::read_to_string(&out).expect("read back");
         let parsed: Value = serde_json::from_str(&content).expect("valid json");
         assert_eq!(parsed["overall_status"], "Green");
-        // CoverageDelta + wired BddSkipCount + four producer-pending stubs.
-        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(6));
+        // CoverageDelta + wired BddSkipCount + wired CiWallClockDelta +
+        // four producer-pending stubs.
+        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(7));
+    }
+
+    // ── CI wall-clock producer ──────────────────────────────────────
+
+    #[test]
+    fn build_ci_wall_clock_row_green_when_no_base_data() {
+        let json = CiWallClockJson {
+            total_seconds: 600.0,
+            base_total_seconds: None,
+        };
+        let row = build_ci_wall_clock_row(&json, &CiWallClockThresholds::default());
+        let Row::CiWallClockDelta {
+            status,
+            total_ci_seconds,
+            delta_seconds,
+            delta_text,
+            ..
+        } = row
+        else {
+            panic!("expected CiWallClockDelta")
+        };
+        assert_eq!(status, Status::Green);
+        assert_eq!(total_ci_seconds, 600.0);
+        assert_eq!(delta_seconds, 0.0);
+        assert!(delta_text.contains("(no base)"), "got: {delta_text}");
+    }
+
+    #[test]
+    fn build_ci_wall_clock_row_yellow_at_warn_slowdown() {
+        let json = CiWallClockJson {
+            total_seconds: 660.0,
+            base_total_seconds: Some(600.0),
+        };
+        let row = build_ci_wall_clock_row(&json, &CiWallClockThresholds::default());
+        assert!(matches!(
+            row,
+            Row::CiWallClockDelta {
+                status: Status::Yellow,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn build_ci_wall_clock_row_red_at_fail_slowdown_carries_detail() {
+        let json = CiWallClockJson {
+            total_seconds: 1200.0,
+            base_total_seconds: Some(600.0),
+        };
+        let row = build_ci_wall_clock_row(&json, &CiWallClockThresholds::default());
+        let Row::CiWallClockDelta {
+            status,
+            failure_detail_md,
+            ..
+        } = row
+        else {
+            panic!("expected CiWallClockDelta")
+        };
+        assert_eq!(status, Status::Red);
+        let detail = failure_detail_md.expect("Red rows carry failure_detail_md");
+        assert!(detail.contains("600s"), "got: {detail}");
+        assert!(detail.contains("at or above"), "got: {detail}");
+    }
+
+    #[test]
+    fn build_ci_wall_clock_row_speedup_resolves_green() {
+        // Negative delta — CI sped up.
+        let json = CiWallClockJson {
+            total_seconds: 400.0,
+            base_total_seconds: Some(600.0),
+        };
+        let row = build_ci_wall_clock_row(&json, &CiWallClockThresholds::default());
+        let Row::CiWallClockDelta {
+            status,
+            delta_seconds,
+            ..
+        } = row
+        else {
+            panic!("expected CiWallClockDelta")
+        };
+        assert_eq!(status, Status::Green);
+        assert_eq!(delta_seconds, -200.0);
+    }
+
+    #[test]
+    fn read_ci_wall_clock_json_returns_none_when_path_absent() {
+        let parsed = read_ci_wall_clock_json(None).expect("absent flag is None");
+        assert!(parsed.is_none());
+    }
+
+    #[test]
+    fn read_ci_wall_clock_json_parses_valid_file() {
+        let dir = tempdir();
+        let path = dir.path.join("wc.json");
+        fs::write(
+            &path,
+            r#"{"total_seconds":600.0,"base_total_seconds":580.0}"#,
+        )
+        .expect("write");
+        let parsed = read_ci_wall_clock_json(Some(&path)).expect("parse");
+        let parsed = parsed.expect("Some");
+        assert_eq!(parsed.total_seconds, 600.0);
+        assert_eq!(parsed.base_total_seconds, Some(580.0));
+    }
+
+    #[test]
+    fn read_ci_wall_clock_json_omits_base_total_seconds_field() {
+        let dir = tempdir();
+        let path = dir.path.join("wc.json");
+        fs::write(&path, r#"{"total_seconds":600.0}"#).expect("write");
+        let parsed = read_ci_wall_clock_json(Some(&path))
+            .expect("parse")
+            .expect("Some");
+        assert!(parsed.base_total_seconds.is_none());
+    }
+
+    #[test]
+    fn read_ci_wall_clock_json_rejects_non_finite_total() {
+        let dir = tempdir();
+        let path = dir.path.join("wc.json");
+        // serde_json's default Number does not handle NaN/inf — but we
+        // can sneak a `null` into base_total_seconds (valid). Invalid
+        // shape: missing total_seconds. Use that to exercise the error
+        // path.
+        fs::write(&path, r#"{"base_total_seconds":600.0}"#).expect("write");
+        let err = read_ci_wall_clock_json(Some(&path)).unwrap_err();
+        assert!(err.contains("CiWallClockJson"), "got: {err}");
+    }
+
+    #[test]
+    fn read_ci_wall_clock_json_rejects_unknown_field() {
+        let dir = tempdir();
+        let path = dir.path.join("wc.json");
+        fs::write(
+            &path,
+            r#"{"total_seconds":600.0,"base_total_seconds":580.0,"extra":1}"#,
+        )
+        .expect("write");
+        let err = read_ci_wall_clock_json(Some(&path)).unwrap_err();
+        assert!(err.contains("unknown field") || err.contains("CiWallClockJson"));
+    }
+
+    #[test]
+    fn build_scorecard_emits_ci_wall_clock_row_after_bdd() {
+        let sc = build_with_delta(0.3);
+        let Row::CiWallClockDelta {
+            status,
+            total_ci_seconds,
+            delta_seconds,
+            ..
+        } = &sc.rows[2]
+        else {
+            panic!("expected CiWallClockDelta as the third row")
+        };
+        assert_eq!(*status, Status::Green);
+        assert_eq!(*total_ci_seconds, 0.0);
+        assert_eq!(*delta_seconds, 0.0);
     }
 
     // ── BDD producer ────────────────────────────────────────────────

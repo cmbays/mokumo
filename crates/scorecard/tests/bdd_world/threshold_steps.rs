@@ -55,7 +55,14 @@ fn produce(world: &mut ThresholdWorld, delta_pp: f64) {
     let fallback_active = source.fallback_active();
 
     let pr = ThresholdWorld::stub_pr_meta();
-    let scorecard = build_scorecard(pr, delta_pp, &BddSummary::default(), &cfg, fallback_active);
+    let scorecard = build_scorecard(
+        pr,
+        delta_pp,
+        &BddSummary::default(),
+        None,
+        &cfg,
+        fallback_active,
+    );
 
     // Coverage is the first row; downstream wired rows + producer-pending
     // stubs follow it. Pin to index 0 rather than scanning so a future

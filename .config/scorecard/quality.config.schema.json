@@ -39,6 +39,25 @@
       },
       "additionalProperties": false
     },
+    "CiWallClockThresholds": {
+      "description": "Warn / fail thresholds for the `Row::CiWallClockDelta` variant, expressed in seconds of total-CI-wall-clock delta vs base.\n\nBoth fields are signed: a slowdown is a positive delta, so warn / fail thresholds are themselves positive numbers. Inclusive boundary semantics: `delta_seconds == warn_seconds_delta` resolves [`Status::Yellow`]; `delta_seconds == fail_seconds_delta` resolves [`Status::Red`]. See [`resolve_ci_wall_clock`] for the full table.",
+      "type": "object",
+      "required": [
+        "fail_seconds_delta",
+        "warn_seconds_delta"
+      ],
+      "properties": {
+        "fail_seconds_delta": {
+          "description": "Threshold above (or equal) which a row reports [`Status::Red`]. Typically positive and larger than `warn_seconds_delta`.",
+          "type": "number"
+        },
+        "warn_seconds_delta": {
+          "description": "Threshold above (or equal) which a row reports [`Status::Yellow`]. Typically positive (slowdown).",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
     "CoverageThresholds": {
       "description": "Warn / fail thresholds for the `Row::CoverageDelta` variant, expressed in percentage points (pp) of coverage delta vs base.\n\nBoth fields are signed: a regression is a negative delta, so warn and fail thresholds for \"drops\" are themselves negative numbers. Inclusive boundary semantics: `delta_pp == warn_pp_delta` resolves to [`Status::Yellow`]; `delta_pp == fail_pp_delta` resolves to [`Status::Red`]. See [`resolve_coverage_delta`] for the full table.",
       "type": "object",
@@ -74,6 +93,18 @@
           "allOf": [
             {
               "$ref": "#/definitions/BddSkipThresholds"
+            }
+          ]
+        },
+        "ci_wall_clock": {
+          "description": "Thresholds for the `Row::CiWallClockDelta` variant.",
+          "default": {
+            "fail_seconds_delta": 300.0,
+            "warn_seconds_delta": 60.0
+          },
+          "allOf": [
+            {
+              "$ref": "#/definitions/CiWallClockThresholds"
             }
           ]
         },
