@@ -4,7 +4,7 @@
 //! Red constructor's parameter type (e.g. to `&str` or `Cow<'_, str>`)
 //! would be caught only in the negative direction.
 
-use scorecard::{Row, RowCommon};
+use scorecard::{Breakouts, Row, RowCommon};
 
 fn main() {
     let common = RowCommon {
@@ -17,6 +17,7 @@ fn main() {
         common,
         -4.2,
         "-4.2 pp".to_string(),
+        Breakouts::default(),
         "coverage dropped 4.2% on crate kikan".to_string(),
     );
 }

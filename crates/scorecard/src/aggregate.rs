@@ -20,7 +20,7 @@ use jsonschema::JSONSchema;
 use serde_json::Value;
 
 use crate::threshold::{self, CoverageThresholds, ThresholdConfig};
-use crate::{PrMeta, Row, RowCommon, Scorecard, Status};
+use crate::{Breakouts, GateRun, PrMeta, Row, RowCommon, Scorecard, Status};
 
 /// Embedded copy of `.config/scorecard/schema.json`. Embedding (vs. a
 /// `--schema <path>` CLI flag) keeps the binary cwd-portable: any CI
@@ -145,16 +145,130 @@ fn build_coverage_row(delta_pp: f64, thresholds: &CoverageThresholds) -> Row {
         anchor: "coverage".into(),
     };
     let delta_text = format_delta_text(delta_pp);
+    // V4 ships an empty `Breakouts` default — `by_crate[]` populates
+    // when per-crate coverage signal lands; per-handler-branch
+    // coverage waits on the producer (mokumo#583, currently
+    // re-architecting). The renderer surfaces a `(per-handler producer
+    // pending — see #583)` note inline when `handlers` is empty.
+    let breakouts = Breakouts::default();
     match threshold::resolve_coverage_delta(delta_pp, thresholds) {
-        Status::Green => Row::coverage_delta_green(common, delta_pp, delta_text),
-        Status::Yellow => Row::coverage_delta_yellow(common, delta_pp, delta_text),
+        Status::Green => Row::coverage_delta_green(common, delta_pp, delta_text, breakouts),
+        Status::Yellow => Row::coverage_delta_yellow(common, delta_pp, delta_text, breakouts),
         Status::Red => Row::coverage_delta_red(
             common,
             delta_pp,
             delta_text,
+            breakouts,
             coverage_failure_detail(delta_pp, thresholds.fail_pp_delta),
         ),
     }
+}
+
+// ── Layer-3 stub fallback ──────────────────────────────────────────────
+//
+// Per the V4 closure model, the v0 row inventory includes variants
+// whose producers have not yet shipped. Rather than file a sub-issue
+// per blocked row (the orchestration debt the parent issue closure-
+// model section retired), V4 emits each producer-blocked row as a
+// graceful Green "stub" with `delta_text` pinned to the
+// [`PENDING_TEXT_PREFIX`] sentinel + the upstream producer's issue
+// reference. The renderer surfaces the row inline; GitHub's automatic
+// linking turns refs like `crap4rs#111` into clickable links inside
+// the sticky comment without any extra renderer logic.
+//
+// Each producer-blocked row carries a stable, dedicated constant for
+// its producer reference so a future row-population follow-up PR can
+// grep this module for the matching constant and replace the stub
+// helper with a real producer.
+
+/// Renderer-detectable prefix that marks a row as a producer-pending
+/// stub. The renderer keys off this prefix to surface the
+/// `(producer pending — see #N)` cell + GitHub-autolink the issue
+/// reference. Mirrored by [`render.js::PENDING_DELTA_PREFIX`] (vitest
+/// snapshot pins byte-equality across the boundary).
+pub const PENDING_TEXT_PREFIX: &str = "(producer pending — see ";
+
+/// Closing parenthesis for the stub sentinel.
+pub const PENDING_TEXT_SUFFIX: &str = ")";
+
+/// Producer reference for the [`Row::CrapDelta`] stub. Replaced when
+/// crap4rs#111 (`--format scorecard-row`) ships and the aggregator
+/// consumes its output.
+const CRAP_DELTA_PENDING_REF: &str = "crap4rs#111";
+
+/// Producer reference for the [`Row::MutationSurvivors`] stub.
+/// Replaced when mokumo#748 wires `cargo-mutants --in-diff` into the
+/// CI pipeline.
+const MUTATION_SURVIVORS_PENDING_REF: &str = "mokumo#748";
+
+/// Producer reference for the [`Row::HandlerCoverageAxis`] stub.
+/// Replaced when the BDD-coverage map (mokumo#654 + #655) is built.
+const HANDLER_COVERAGE_AXIS_PENDING_REF: &str = "mokumo#654, mokumo#655";
+
+/// Producer reference for the [`Row::GateRuns`] stub. V4 ships the
+/// schema variant; V5 (mokumo#770) populates per-gate Check Runs.
+const GATE_RUNS_PENDING_REF: &str = "mokumo#770";
+
+/// Format the sentinel `delta_text` for a producer-pending row.
+fn pending_delta_text(producer_ref: &str) -> String {
+    format!("{PENDING_TEXT_PREFIX}{producer_ref}{PENDING_TEXT_SUFFIX}")
+}
+
+/// Mint a stub `Row::CrapDelta` row pinned to the upstream producer
+/// (`crap4rs#111`). Status is Green so the row does not poison the
+/// `overall_status` rollup.
+fn stub_crap_delta_pending() -> Row {
+    let common = RowCommon {
+        id: "crap_delta".into(),
+        label: "CRAP Δ".into(),
+        anchor: "crap-delta".into(),
+    };
+    Row::crap_delta_green(common, 15, 0, pending_delta_text(CRAP_DELTA_PENDING_REF))
+}
+
+/// Mint a stub `Row::MutationSurvivors` row pinned to mokumo#748.
+fn stub_mutation_survivors_pending() -> Row {
+    let common = RowCommon {
+        id: "mutation_survivors".into(),
+        label: "Mutation survivors".into(),
+        anchor: "mutation-survivors".into(),
+    };
+    Row::mutation_survivors_green(
+        common,
+        0,
+        Vec::new(),
+        pending_delta_text(MUTATION_SURVIVORS_PENDING_REF),
+    )
+}
+
+/// Mint a stub `Row::HandlerCoverageAxis` row pinned to mokumo#654 +
+/// mokumo#655.
+fn stub_handler_coverage_axis_pending() -> Row {
+    let common = RowCommon {
+        id: "handler_coverage_axis".into(),
+        label: "Handler axes".into(),
+        anchor: "handler-coverage-axis".into(),
+    };
+    Row::handler_coverage_axis_green(
+        common,
+        Vec::new(),
+        pending_delta_text(HANDLER_COVERAGE_AXIS_PENDING_REF),
+    )
+}
+
+/// Mint a stub `Row::GateRuns` row pinned to mokumo#770. V5 (#770)
+/// replaces this with real per-gate Check Run references.
+fn stub_gate_runs_pending() -> Row {
+    let common = RowCommon {
+        id: "gate_runs".into(),
+        label: "Gates".into(),
+        anchor: "gate-runs".into(),
+    };
+    Row::gate_runs_green(
+        common,
+        Vec::<GateRun>::new(),
+        pending_delta_text(GATE_RUNS_PENDING_REF),
+    )
 }
 
 /// Build the scorecard artifact from parsed PR metadata, raw
@@ -170,8 +284,28 @@ pub fn build_scorecard(
     thresholds: &ThresholdConfig,
     fallback_active: bool,
 ) -> Scorecard {
-    let row = build_coverage_row(coverage_delta_pp, &thresholds.rows.coverage);
-    let overall_status = row_status(&row);
+    let coverage = build_coverage_row(coverage_delta_pp, &thresholds.rows.coverage);
+
+    // Producer-blocked rows ship as Green stubs pinned to their
+    // upstream producer references. The renderer detects the
+    // [`PENDING_TEXT_PREFIX`] sentinel and inlines the cell with the
+    // GitHub-autolinked issue reference. Replacing a stub is a small
+    // one-PR follow-up against #650 — see the issue's closure model.
+    let rows = vec![
+        coverage,
+        stub_crap_delta_pending(),
+        stub_mutation_survivors_pending(),
+        stub_handler_coverage_axis_pending(),
+        stub_gate_runs_pending(),
+    ];
+
+    // Single-source overall_status rollup. Worst-of across all rows
+    // (Red > Yellow > Green); stub rows are Green by construction so
+    // they cannot mask a wired row's verdict.
+    let overall_status = rows
+        .iter()
+        .map(row_status)
+        .fold(Status::Green, Status::worst_of);
 
     let head_sha = pr.head_sha.clone();
     let all_check_runs_url =
@@ -181,7 +315,7 @@ pub fn build_scorecard(
         schema_version: SCHEMA_VERSION,
         pr,
         overall_status,
-        rows: vec![row],
+        rows,
         top_failures: Vec::new(),
         all_check_runs_url,
         fallback_thresholds_active: fallback_active,
@@ -511,9 +645,13 @@ mod tests {
     }
 
     #[test]
-    fn build_scorecard_yields_one_coverage_row() {
+    fn build_scorecard_emits_coverage_row_first() {
+        // V4 emits the coverage row plus four producer-pending stubs
+        // (CrapDelta, MutationSurvivors, HandlerCoverageAxis, GateRuns).
+        // C3-C6 wire BddSkipCount, CiWallClockDelta, FlakyPopulation,
+        // and ChangedScopeDiagram on top, growing the row vector.
         let sc = build_with_delta(0.3);
-        assert_eq!(sc.rows.len(), 1);
+        assert!(sc.rows.len() >= 5);
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -521,7 +659,7 @@ mod tests {
             ..
         } = &sc.rows[0]
         else {
-            panic!("expected CoverageDelta")
+            panic!("expected CoverageDelta as the first row")
         };
         assert_eq!(*status, Status::Green);
         assert_eq!(*delta_pp, 0.3);
@@ -529,14 +667,36 @@ mod tests {
     }
 
     #[test]
-    fn build_scorecard_overall_status_mirrors_row_status() {
-        // Single-row scorecard: `overall_status` mirrors the row's
-        // status. When other row variants land their `build_*_row`
-        // helpers the overall computation grows into worst-of-rows; a
-        // regression on the single-row contract surfaces immediately.
+    fn build_scorecard_overall_status_rolls_up_worst_of_rows() {
+        // Stub rows are Green by construction so they cannot mask the
+        // wired CoverageDelta verdict — the rollup mirrors the
+        // CoverageDelta row's status across all three branches.
         assert_eq!(build_with_delta(0.5).overall_status, Status::Green);
         assert_eq!(build_with_delta(-2.5).overall_status, Status::Yellow);
         assert_eq!(build_with_delta(-6.0).overall_status, Status::Red);
+    }
+
+    #[test]
+    fn build_scorecard_emits_producer_pending_stubs() {
+        let sc = build_with_delta(0.3);
+        let pending: Vec<_> = sc
+            .rows
+            .iter()
+            .filter_map(|row| match row {
+                Row::CrapDelta { delta_text, .. }
+                | Row::MutationSurvivors { delta_text, .. }
+                | Row::HandlerCoverageAxis { delta_text, .. }
+                | Row::GateRuns { delta_text, .. } => Some(delta_text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(pending.len(), 4);
+        for text in pending {
+            assert!(
+                text.starts_with(PENDING_TEXT_PREFIX),
+                "stub row delta_text must start with PENDING_TEXT_PREFIX, got: {text}"
+            );
+        }
     }
 
     #[test]
@@ -915,7 +1075,8 @@ mod tests {
         let content = fs::read_to_string(&out).expect("read back");
         let parsed: Value = serde_json::from_str(&content).expect("valid json");
         assert_eq!(parsed["overall_status"], "Green");
-        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(1));
+        // CoverageDelta + four producer-pending stubs.
+        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(5));
     }
 
     #[test]

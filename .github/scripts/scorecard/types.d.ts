@@ -27,6 +27,10 @@ export type Row =
        */
       anchor: string;
       /**
+       * Per-crate (and eventually per-handler-branch) drill-down. V4 emits an empty default when no per-crate signal is wired upstream; the renderer surfaces a `(per-handler producer pending — see #583)` note inline when `by_crate[].handlers` is empty.
+       */
+      breakouts?: Breakouts;
+      /**
        * Raw coverage delta in percentage points vs. the base branch. The constructor records this alongside the status that was minted from it; the renderer keeps using `delta_text` for display, but downstream tooling (and future trend dashboards) can read `delta_pp` without reparsing the formatted string.
        */
       delta_pp: number;
@@ -321,6 +325,48 @@ export interface PrMeta {
    */
   is_fork: boolean;
   pr_number: number;
+  [k: string]: unknown;
+}
+/**
+ * Coverage drill-down breakouts shown beneath the [`Row::CoverageDelta`] summary cell. V4 ships the type with `by_crate` populated by the coverage producer; the per-handler `handlers` vec stays empty until the per-handler-branch tooling (mokumo#583) ships.
+ */
+export interface Breakouts {
+  /**
+   * Per-crate line + (eventually) per-handler-branch breakdown.
+   */
+  by_crate: CrateBreakout[];
+  [k: string]: unknown;
+}
+/**
+ * Per-crate breakdown entry for [`Breakouts::by_crate`].
+ */
+export interface CrateBreakout {
+  /**
+   * Crate name (e.g. `"kikan"`).
+   */
+  crate_name: string;
+  /**
+   * Per-handler branch coverage entries. Empty until the producer (mokumo#583) ships; the renderer surfaces a `(per-handler producer pending — see #583)` note inline when the vec is empty.
+   */
+  handlers: HandlerBreakout[];
+  /**
+   * Per-crate line coverage delta in percentage points vs base.
+   */
+  line_delta_pp: number;
+  [k: string]: unknown;
+}
+/**
+ * Per-handler branch coverage entry for the [`CoverageDelta::breakouts`] drill-down (Quinn blind-spot 3 sibling — surfaces uncovered handler negative paths inside the coverage row).
+ */
+export interface HandlerBreakout {
+  /**
+   * Branch coverage on the handler (0.0 - 100.0).
+   */
+  branch_coverage_pct: number;
+  /**
+   * Handler identifier (e.g. `"POST /api/users"`).
+   */
+  handler: string;
   [k: string]: unknown;
 }
 /**

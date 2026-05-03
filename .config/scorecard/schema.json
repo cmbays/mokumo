@@ -96,6 +96,22 @@
         }
       }
     },
+    "Breakouts": {
+      "description": "Coverage drill-down breakouts shown beneath the [`Row::CoverageDelta`] summary cell. V4 ships the type with `by_crate` populated by the coverage producer; the per-handler `handlers` vec stays empty until the per-handler-branch tooling (mokumo#583) ships.",
+      "type": "object",
+      "required": [
+        "by_crate"
+      ],
+      "properties": {
+        "by_crate": {
+          "description": "Per-crate line + (eventually) per-handler-branch breakdown.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CrateBreakout"
+          }
+        }
+      }
+    },
     "CoverageAxis": {
       "description": "One handler's negative-path coverage axis for the `HandlerCoverageAxis` row (Quinn blind-spot 3).\n\nBoolean columns mark whether a scenario for that axis exists in BDD — a `false` is the actionable signal (negative path uncovered).",
       "type": "object",
@@ -124,6 +140,33 @@
         }
       }
     },
+    "CrateBreakout": {
+      "description": "Per-crate breakdown entry for [`Breakouts::by_crate`].",
+      "type": "object",
+      "required": [
+        "crate_name",
+        "handlers",
+        "line_delta_pp"
+      ],
+      "properties": {
+        "crate_name": {
+          "description": "Crate name (e.g. `\"kikan\"`).",
+          "type": "string"
+        },
+        "handlers": {
+          "description": "Per-handler branch coverage entries. Empty until the producer (mokumo#583) ships; the renderer surfaces a `(per-handler producer pending — see #583)` note inline when the vec is empty.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HandlerBreakout"
+          }
+        },
+        "line_delta_pp": {
+          "description": "Per-crate line coverage delta in percentage points vs base.",
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
     "GateRun": {
       "description": "Reference to a single failing gate's Check Run, surfaced in `top_failures` for the two-click rule.",
       "type": "object",
@@ -146,6 +189,25 @@
           "type": "string",
           "format": "uri",
           "pattern": "^https://"
+        }
+      }
+    },
+    "HandlerBreakout": {
+      "description": "Per-handler branch coverage entry for the [`CoverageDelta::breakouts`] drill-down (Quinn blind-spot 3 sibling — surfaces uncovered handler negative paths inside the coverage row).",
+      "type": "object",
+      "required": [
+        "branch_coverage_pct",
+        "handler"
+      ],
+      "properties": {
+        "branch_coverage_pct": {
+          "description": "Branch coverage on the handler (0.0 - 100.0).",
+          "type": "number",
+          "format": "double"
+        },
+        "handler": {
+          "description": "Handler identifier (e.g. `\"POST /api/users\"`).",
+          "type": "string"
         }
       }
     },
@@ -240,6 +302,17 @@
             "anchor": {
               "description": "Anchor fragment for jump-linking from the comment.",
               "type": "string"
+            },
+            "breakouts": {
+              "description": "Per-crate (and eventually per-handler-branch) drill-down. V4 emits an empty default when no per-crate signal is wired upstream; the renderer surfaces a `(per-handler producer pending — see #583)` note inline when `by_crate[].handlers` is empty.",
+              "default": {
+                "by_crate": []
+              },
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Breakouts"
+                }
+              ]
             },
             "delta_pp": {
               "description": "Raw coverage delta in percentage points vs. the base branch. The constructor records this alongside the status that was minted from it; the renderer keeps using `delta_text` for display, but downstream tooling (and future trend dashboards) can read `delta_pp` without reparsing the formatted string.",

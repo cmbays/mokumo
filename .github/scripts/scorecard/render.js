@@ -46,6 +46,37 @@ const STARTER_PREAMBLE =
 const PATH_HINT_COMMENT =
   "<!-- tune at .config/scorecard/quality.toml — see QUALITY.md#threshold-tuning -->";
 
+// ── Layer-3 stub fallback (producer-pending sentinel) ─────────────────
+//
+// Producers that have not yet shipped emit a Green stub row whose
+// `delta_text` opens with [`PENDING_DELTA_PREFIX`] + the upstream issue
+// reference. The renderer surfaces the row inline with a "⏳ pending"
+// affordance and lets GitHub auto-link the issue ref (`crap4rs#111` →
+// linked) so reviewers reach the upstream producer in one click.
+//
+// Mirror of `scorecard::aggregate::PENDING_TEXT_PREFIX`. Vitest pins
+// byte-equality so a drift on either side fails first.
+
+/** Prefix that flags a row's `delta_text` as a producer-pending stub.
+ *  Mirror of `scorecard::aggregate::PENDING_TEXT_PREFIX`. */
+const PENDING_DELTA_PREFIX = "(producer pending — see ";
+
+/** Icon shown in the status column for a producer-pending stub row. */
+const PENDING_ICON = "⏳";
+
+/** Detect whether a row is a Layer-3 producer-pending stub.
+ *
+ *  @param {import("./types").Row} row
+ *  @returns {boolean}
+ */
+function isPendingStubRow(row) {
+  return (
+    row.status === "Green" &&
+    typeof row.delta_text === "string" &&
+    row.delta_text.startsWith(PENDING_DELTA_PREFIX)
+  );
+}
+
 /** @type {Record<import("./types").Status, string>} */
 const STATUS_ICON = {
   Green: "🟢",
@@ -55,14 +86,22 @@ const STATUS_ICON = {
 
 /** Render a single row line as a markdown table row.
  *
+ *  Producer-pending stub rows substitute the [`PENDING_ICON`] in the
+ *  status cell so reviewers can tell at a glance the row is awaiting
+ *  an upstream producer; the `delta_text` already carries the
+ *  GitHub-autolinked issue reference so no extra link work is needed
+ *  here.
+ *
  *  @param {import("./types").Row} row
  *  @returns {string}
  */
 function renderRow(row) {
-  const icon = STATUS_ICON[row.status] || "❔";
+  const pending = isPendingStubRow(row);
+  const icon = pending ? PENDING_ICON : STATUS_ICON[row.status] || "❔";
+  const statusLabel = pending ? "Pending" : row.status;
   const label = row.label || row.id;
   const delta = row.delta_text || "";
-  return `| ${icon} ${row.status} | ${label} | ${delta} |`;
+  return `| ${icon} ${statusLabel} | ${label} | ${delta} |`;
 }
 
 /** Render inline failure detail block for a Red row.
@@ -267,6 +306,9 @@ module.exports = {
   FALLBACK_MARKER,
   STARTER_PREAMBLE,
   PATH_HINT_COMMENT,
+  PENDING_DELTA_PREFIX,
+  PENDING_ICON,
+  isPendingStubRow,
   renderScorecardMarkdown,
   renderFailClosedMarkdown,
   postStickyComment,

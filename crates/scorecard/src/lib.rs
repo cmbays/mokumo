@@ -165,6 +165,20 @@ pub enum Status {
     Red,
 }
 
+impl Status {
+    /// Pick the worse of two statuses. Used to roll per-row statuses
+    /// up into [`Scorecard::overall_status`] — `Red > Yellow > Green`.
+    /// Producer stubs are minted Green so they cannot mask a wired
+    /// row's verdict.
+    pub fn worst_of(a: Status, b: Status) -> Status {
+        match (a, b) {
+            (Status::Red, _) | (_, Status::Red) => Status::Red,
+            (Status::Yellow, _) | (_, Status::Yellow) => Status::Yellow,
+            _ => Status::Green,
+        }
+    }
+}
+
 /// Fields common to every `Row` variant.
 ///
 /// Pulled out so adding a new variant is a one-line addition to the `Row`
@@ -179,6 +193,40 @@ pub struct RowCommon {
     pub label: String,
     /// Anchor fragment for jump-linking from the comment.
     pub anchor: String,
+}
+
+/// Per-handler branch coverage entry for the [`CoverageDelta::breakouts`]
+/// drill-down (Quinn blind-spot 3 sibling — surfaces uncovered handler
+/// negative paths inside the coverage row).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct HandlerBreakout {
+    /// Handler identifier (e.g. `"POST /api/users"`).
+    pub handler: String,
+    /// Branch coverage on the handler (0.0 - 100.0).
+    pub branch_coverage_pct: f64,
+}
+
+/// Per-crate breakdown entry for [`Breakouts::by_crate`].
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CrateBreakout {
+    /// Crate name (e.g. `"kikan"`).
+    pub crate_name: String,
+    /// Per-crate line coverage delta in percentage points vs base.
+    pub line_delta_pp: f64,
+    /// Per-handler branch coverage entries. Empty until the producer
+    /// (mokumo#583) ships; the renderer surfaces a `(per-handler
+    /// producer pending — see #583)` note inline when the vec is empty.
+    pub handlers: Vec<HandlerBreakout>,
+}
+
+/// Coverage drill-down breakouts shown beneath the [`Row::CoverageDelta`]
+/// summary cell. V4 ships the type with `by_crate` populated by the
+/// coverage producer; the per-handler `handlers` vec stays empty until
+/// the per-handler-branch tooling (mokumo#583) ships.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct Breakouts {
+    /// Per-crate line + (eventually) per-handler-branch breakdown.
+    pub by_crate: Vec<CrateBreakout>,
 }
 
 /// One mutation that survived for the `MutationSurvivors` row's top-N.
@@ -277,6 +325,13 @@ pub enum Row {
         delta_pp: f64,
         /// Display string for the delta (e.g. `"+0.3 pp"` or `"-4.2 pp"`).
         delta_text: String,
+        /// Per-crate (and eventually per-handler-branch) drill-down. V4
+        /// emits an empty default when no per-crate signal is wired
+        /// upstream; the renderer surfaces a `(per-handler producer
+        /// pending — see #583)` note inline when `by_crate[].handlers`
+        /// is empty.
+        #[serde(default)]
+        breakouts: Breakouts,
         /// Inline failure detail rendered below the row when status is Red.
         /// JSON Schema requires this when `status == "Red"`; the Red
         /// constructor enforces the same invariant at compile time for
@@ -437,28 +492,40 @@ pub enum Row {
 }
 
 impl Row {
-    /// Construct a Green `CoverageDelta` row. No `failure_detail_md`
-    /// because the row is not Red. Status is minted internally.
-    pub fn coverage_delta_green(common: RowCommon, delta_pp: f64, delta_text: String) -> Self {
+    /// Construct a Green `CoverageDelta` row. `breakouts` carries the
+    /// per-crate drill-down (empty `Breakouts::default()` is acceptable
+    /// when no per-crate signal is wired upstream).
+    pub fn coverage_delta_green(
+        common: RowCommon,
+        delta_pp: f64,
+        delta_text: String,
+        breakouts: Breakouts,
+    ) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Green,
             delta_pp,
             delta_text,
+            breakouts,
             failure_detail_md: None,
         }
     }
 
-    /// Construct a Yellow `CoverageDelta` row. No `failure_detail_md`
-    /// because the row is not Red. Yellow surfaces as a regression but
-    /// not a hard failure per the empty-quality.toml fallback rule.
-    /// Status is minted internally.
-    pub fn coverage_delta_yellow(common: RowCommon, delta_pp: f64, delta_text: String) -> Self {
+    /// Construct a Yellow `CoverageDelta` row. Yellow surfaces as a
+    /// regression but not a hard failure per the empty-quality.toml
+    /// fallback rule.
+    pub fn coverage_delta_yellow(
+        common: RowCommon,
+        delta_pp: f64,
+        delta_text: String,
+        breakouts: Breakouts,
+    ) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Yellow,
             delta_pp,
             delta_text,
+            breakouts,
             failure_detail_md: None,
         }
     }
@@ -473,6 +540,7 @@ impl Row {
         common: RowCommon,
         delta_pp: f64,
         delta_text: String,
+        breakouts: Breakouts,
         failure_detail_md: String,
     ) -> Self {
         Row::CoverageDelta {
@@ -480,6 +548,7 @@ impl Row {
             status: Status::Red,
             delta_pp,
             delta_text,
+            breakouts,
             failure_detail_md: Some(failure_detail_md),
         }
     }
@@ -934,7 +1003,13 @@ mod tests {
 
     #[test]
     fn red_constructor_sets_status_and_failure_detail() {
-        let row = Row::coverage_delta_red(common(), -4.2, "-4.2 pp".into(), "detail".into());
+        let row = Row::coverage_delta_red(
+            common(),
+            -4.2,
+            "-4.2 pp".into(),
+            Breakouts::default(),
+            "detail".into(),
+        );
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -951,7 +1026,7 @@ mod tests {
 
     #[test]
     fn green_constructor_sets_status_and_omits_failure_detail() {
-        let row = Row::coverage_delta_green(common(), 0.3, "+0.3 pp".into());
+        let row = Row::coverage_delta_green(common(), 0.3, "+0.3 pp".into(), Breakouts::default());
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -968,7 +1043,8 @@ mod tests {
 
     #[test]
     fn yellow_constructor_sets_status_and_omits_failure_detail() {
-        let row = Row::coverage_delta_yellow(common(), -0.6, "-0.6 pp".into());
+        let row =
+            Row::coverage_delta_yellow(common(), -0.6, "-0.6 pp".into(), Breakouts::default());
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -994,7 +1070,12 @@ mod tests {
                 is_fork: false,
             },
             overall_status: Status::Yellow,
-            rows: vec![Row::coverage_delta_yellow(common(), -2.5, "-2.5 pp".into())],
+            rows: vec![Row::coverage_delta_yellow(
+                common(),
+                -2.5,
+                "-2.5 pp".into(),
+                Breakouts::default(),
+            )],
             top_failures: Vec::new(),
             all_check_runs_url: "https://example.test/x/checks".into(),
             fallback_thresholds_active: true,
