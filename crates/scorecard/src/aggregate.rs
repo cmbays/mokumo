@@ -512,12 +512,12 @@ fn parse_feature(contents: &str) -> ParsedFeature {
     parsed
 }
 
-/// Derive a crate / app name from a `.feature` file path.
-///
-/// Looks for `crates/<name>/...` or `apps/<name>/...` segments in the
-/// path. Falls back to `"unknown"` when no recognisable workspace
-/// segment is present (rare — only happens on hand-fed test fixtures).
-fn crate_name_from_path(path: &Path) -> String {
+/// Derive a crate / app name from a workspace-relative path. Returns
+/// `Some(name)` for `crates/<name>/...` or `apps/<name>/...` paths;
+/// returns `None` for paths outside those two trees (root files, docs,
+/// `.github/`, …). Callers decide whether the un-recognised slice is
+/// noise to drop or a fallback bucket to mint.
+fn crate_name_from_path(path: &Path) -> Option<String> {
     let parts: Vec<_> = path.components().collect();
     for (i, c) in parts.iter().enumerate() {
         let std::path::Component::Normal(s) = c else {
@@ -528,10 +528,10 @@ fn crate_name_from_path(path: &Path) -> String {
             && i + 1 < parts.len()
             && let std::path::Component::Normal(name) = &parts[i + 1]
         {
-            return name.to_string_lossy().into_owned();
+            return Some(name.to_string_lossy().into_owned());
         }
     }
-    "unknown".into()
+    None
 }
 
 /// `true` when `path` is a regular file ending in `.feature`.
@@ -681,7 +681,12 @@ pub fn discover_bdd_corpus(roots: &[PathBuf]) -> Result<BddSummary, String> {
     for path in walk_files_matching(roots, is_feature_file) {
         let contents = read_source_file(&path, "feature")?;
         let parsed = parse_feature(&contents);
-        let crate_name = crate_name_from_path(&path);
+        // `.feature` files always live under `crates/<name>/...` or
+        // `apps/<name>/...` in this workspace. A path that escapes
+        // both trees is a hand-rolled test fixture or an authoring
+        // mistake — bucket those under a stable label so the breakout
+        // stays deterministic instead of dropping them silently.
+        let crate_name = crate_name_from_path(&path).unwrap_or_else(|| "unknown".to_string());
         merge_parsed_feature(&mut per_crate, &mut summary, crate_name, parsed);
     }
 
@@ -1133,6 +1138,11 @@ pub struct ChangedScope {
 /// Project a list of changed paths (one per line, untrimmed) into a
 /// [`ChangedScope`]. Pure function — exposed for unit tests so the
 /// projection can be exercised without touching the filesystem.
+///
+/// Paths outside `crates/` and `apps/` (root files, docs, `.github/`,
+/// …) are dropped — the diagram's purpose is to show *which crates*
+/// the PR touches, and bucketing every workflow tweak into an
+/// `unknown` node would actively mislead reviewers.
 fn project_changed_scope(body: &str) -> ChangedScope {
     let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for line in body.lines() {
@@ -1140,7 +1150,9 @@ fn project_changed_scope(body: &str) -> ChangedScope {
         if trimmed.is_empty() {
             continue;
         }
-        seen.insert(crate_name_from_path(Path::new(trimmed)));
+        if let Some(name) = crate_name_from_path(Path::new(trimmed)) {
+            seen.insert(name);
+        }
     }
     let truncated = seen.len() > CHANGED_SCOPE_NODE_LIMIT;
     let touched: Vec<String> = seen.into_iter().take(CHANGED_SCOPE_NODE_LIMIT).collect();
@@ -1453,6 +1465,62 @@ fn validate_threshold_config(config: &ThresholdConfig) -> Result<(), String> {
             coverage.fail_pp_delta, coverage.warn_pp_delta
         ));
     }
+
+    // Integer-count thresholds: every resolver here treats the row as
+    // worse when the measured count is *higher*, so `fail` must be at
+    // or above `warn`. An inverted pair makes Yellow unreachable —
+    // a measured value crossing `fail` resolves Red before the Yellow
+    // arm runs. Loud-fail at config-load time so an operator typo
+    // never silently shifts the verdict.
+    let bf = &config.rows.bdd_feature_skip;
+    if bf.fail_skipped_features < bf.warn_skipped_features {
+        return Err(format!(
+            "rows.bdd_feature_skip.fail_skipped_features ({}) must be >= warn_skipped_features ({}); \
+             with fail below warn, Yellow is unreachable",
+            bf.fail_skipped_features, bf.warn_skipped_features
+        ));
+    }
+    let bs = &config.rows.bdd_scenario_skip;
+    if bs.fail_skipped_scenarios < bs.warn_skipped_scenarios {
+        return Err(format!(
+            "rows.bdd_scenario_skip.fail_skipped_scenarios ({}) must be >= warn_skipped_scenarios ({}); \
+             with fail below warn, Yellow is unreachable",
+            bs.fail_skipped_scenarios, bs.warn_skipped_scenarios
+        ));
+    }
+    let fl = &config.rows.flaky;
+    if fl.fail_marker_count < fl.warn_marker_count {
+        return Err(format!(
+            "rows.flaky.fail_marker_count ({}) must be >= warn_marker_count ({}); \
+             with fail below warn, Yellow is unreachable",
+            fl.fail_marker_count, fl.warn_marker_count
+        ));
+    }
+
+    // CI wall-clock thresholds are signed seconds. A positive delta is
+    // a slowdown, so the resolver flags Red when measured >= fail and
+    // Yellow when measured >= warn — same monotonicity rule.
+    let ci = &config.rows.ci_wall_clock;
+    if !ci.warn_seconds_delta.is_finite() {
+        return Err(format!(
+            "rows.ci_wall_clock.warn_seconds_delta must be finite, got {}",
+            ci.warn_seconds_delta
+        ));
+    }
+    if !ci.fail_seconds_delta.is_finite() {
+        return Err(format!(
+            "rows.ci_wall_clock.fail_seconds_delta must be finite, got {}",
+            ci.fail_seconds_delta
+        ));
+    }
+    if ci.fail_seconds_delta < ci.warn_seconds_delta {
+        return Err(format!(
+            "rows.ci_wall_clock.fail_seconds_delta ({}) must be >= warn_seconds_delta ({}); \
+             with fail below warn, Yellow is unreachable",
+            ci.fail_seconds_delta, ci.warn_seconds_delta
+        ));
+    }
+
     Ok(())
 }
 
@@ -1973,6 +2041,109 @@ mod tests {
         .expect("write");
         let err = resolve_threshold_source(&path).unwrap_err();
         assert!(err.contains("fail_pp_delta must be finite"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_inverted_bdd_feature_skip() {
+        let dir = tempdir();
+        let path = dir.path.join("bdd-feat-inv.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\n\
+             [rows.bdd_feature_skip]\nwarn_skipped_features = 15\nfail_skipped_features = 5\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(
+            err.contains("rows.bdd_feature_skip.fail_skipped_features"),
+            "got: {err}"
+        );
+        assert!(err.contains("Yellow is unreachable"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_inverted_bdd_scenario_skip() {
+        let dir = tempdir();
+        let path = dir.path.join("bdd-scen-inv.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\n\
+             [rows.bdd_scenario_skip]\nwarn_skipped_scenarios = 50\nfail_skipped_scenarios = 30\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(
+            err.contains("rows.bdd_scenario_skip.fail_skipped_scenarios"),
+            "got: {err}"
+        );
+        assert!(err.contains("Yellow is unreachable"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_inverted_flaky() {
+        let dir = tempdir();
+        let path = dir.path.join("flaky-inv.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\n\
+             [rows.flaky]\nwarn_marker_count = 30\nfail_marker_count = 10\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(err.contains("rows.flaky.fail_marker_count"), "got: {err}");
+        assert!(err.contains("Yellow is unreachable"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_inverted_ci_wall_clock() {
+        let dir = tempdir();
+        let path = dir.path.join("ci-inv.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\n\
+             [rows.ci_wall_clock]\nwarn_seconds_delta = 300.0\nfail_seconds_delta = 60.0\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(
+            err.contains("rows.ci_wall_clock.fail_seconds_delta"),
+            "got: {err}"
+        );
+        assert!(err.contains("Yellow is unreachable"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_non_finite_ci_wall_clock_warn() {
+        let dir = tempdir();
+        let path = dir.path.join("ci-nan.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\n\
+             [rows.ci_wall_clock]\nwarn_seconds_delta = nan\nfail_seconds_delta = 300.0\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(
+            err.contains("rows.ci_wall_clock.warn_seconds_delta must be finite"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn resolve_threshold_source_rejects_non_finite_ci_wall_clock_fail() {
+        let dir = tempdir();
+        let path = dir.path.join("ci-inf.toml");
+        fs::write(
+            &path,
+            "[rows.coverage]\nwarn_pp_delta = -1.0\nfail_pp_delta = -5.0\n\
+             [rows.ci_wall_clock]\nwarn_seconds_delta = 60.0\nfail_seconds_delta = inf\n",
+        )
+        .expect("write");
+        let err = resolve_threshold_source(&path).unwrap_err();
+        assert!(
+            err.contains("rows.ci_wall_clock.fail_seconds_delta must be finite"),
+            "got: {err}"
+        );
     }
 
     #[test]
@@ -2882,6 +3053,33 @@ mod tests {
     }
 
     #[test]
+    fn project_changed_scope_drops_paths_outside_crates_and_apps() {
+        // Documentation, workflow, and root-file changes are NOT
+        // workspace crates and must not appear in the diagram —
+        // historically these silently merged into an `unknown` bucket
+        // which was actively misleading on docs-only PRs.
+        let body = "README.md\n\
+                    CHANGELOG.md\n\
+                    .github/workflows/quality.yml\n\
+                    docs/architecture.md\n\
+                    crates/foo/src/lib.rs\n";
+        let scope = project_changed_scope(body);
+        assert_eq!(scope.touched, vec!["foo".to_string()]);
+        assert!(!scope.truncated);
+    }
+
+    #[test]
+    fn project_changed_scope_returns_empty_for_docs_only_diff() {
+        // A docs-only PR produces an empty scope (renderer paints the
+        // "no diff" placeholder). Previously this rendered a single
+        // `unknown` node — now it correctly shows nothing-touched.
+        let body = "README.md\nCHANGELOG.md\n";
+        let scope = project_changed_scope(body);
+        assert!(scope.touched.is_empty());
+        assert!(!scope.truncated);
+    }
+
+    #[test]
     fn project_changed_scope_marks_truncated_when_unique_crates_exceed_limit() {
         let mut body = String::new();
         for i in 0..(CHANGED_SCOPE_NODE_LIMIT + 5) {
@@ -3254,19 +3452,29 @@ Feature: example
     #[test]
     fn crate_name_from_path_extracts_crate_segment() {
         let p = Path::new("crates/mokumo-shop/tests/features/quote.feature");
-        assert_eq!(crate_name_from_path(p), "mokumo-shop");
+        assert_eq!(crate_name_from_path(p), Some("mokumo-shop".to_string()));
     }
 
     #[test]
     fn crate_name_from_path_extracts_apps_segment() {
         let p = Path::new("apps/web/tests/customer.feature");
-        assert_eq!(crate_name_from_path(p), "web");
+        assert_eq!(crate_name_from_path(p), Some("web".to_string()));
     }
 
     #[test]
-    fn crate_name_from_path_falls_back_when_no_recognised_segment() {
-        let p = Path::new("/tmp/random/path.feature");
-        assert_eq!(crate_name_from_path(p), "unknown");
+    fn crate_name_from_path_returns_none_for_unrecognised_segment() {
+        // Root files, docs, .github/* etc. are not workspace crates —
+        // the projector drops them so the changed-scope diagram does
+        // not show an `unknown` node for every workflow tweak.
+        assert_eq!(
+            crate_name_from_path(Path::new("/tmp/random/path.feature")),
+            None
+        );
+        assert_eq!(crate_name_from_path(Path::new("README.md")), None);
+        assert_eq!(
+            crate_name_from_path(Path::new(".github/workflows/quality.yml")),
+            None
+        );
     }
 
     #[test]

@@ -84,7 +84,7 @@ V4 (mokumo#769) ships all eight v0 row variants alongside the original `Coverage
 
 ### The `// FLAKY:` marker convention
 
-The `FlakyPopulation` row counts `// FLAKY:` line comments across the source roots passed to the producer (defaults to `crates/` and `apps/web/src/`). The convention:
+The `FlakyPopulation` row counts `// FLAKY:` line comments across the source roots passed to the producer via repeated `--flaky-source-root` flags. The CI workflow wires those flags to `crates/` and `apps/web/src/`; running `aggregate` locally without the flags emits a Green row with zero markers (the producer has no implicit default — the workflow does). The convention:
 
 ```rust
 #[test]
