@@ -498,6 +498,10 @@ jobs:
         run: moon run web:build
       - name: Capture HEAD coverage
         # --exclude trio rationale: see docs/adr/adr-coverage-exclusions.md
+        # --features scorecard/cli: without it llvm-cov reports 0% on every
+        # cli-gated function in `crates/scorecard/src/aggregate.rs`, which
+        # auto-fails their CRAP score even when unit tests exist. Mirrors
+        # the rationale on the crap-rust task in crates/mokumo-shop/moon.yml.
         run: |
           mkdir -p tmp
           cargo llvm-cov nextest \
@@ -505,6 +509,7 @@ jobs:
             --exclude mokumo-desktop \
             --exclude kikan-tauri \
             --exclude kikan-admin-ui \
+            --features scorecard/cli \
             --lcov --output-path tmp/lcov.info
 
       - name: Capture baseline coverage on PR base
@@ -525,6 +530,7 @@ jobs:
             --exclude mokumo-desktop \
             --exclude kikan-tauri \
             --exclude kikan-admin-ui \
+            --features scorecard/cli \
             --lcov --output-path tmp/base-lcov.info
           crap4rs \
             --coverage tmp/base-lcov.info \
@@ -867,18 +873,40 @@ jobs:
             "$PR_NUMBER" "$HEAD_SHA" "$BASE_SHA" "${IS_FORK:-false}" \
             > tmp/pr-meta.json
           cat tmp/pr-meta.json
+      - name: Compute changed files
+        # The base/head SHAs come from `github.event.pull_request.*`,
+        # which GitHub's runner validates as hex SHAs — no untrusted
+        # free-form text. Pass via env vars and quote shell expansions
+        # to follow the workflow-injection prevention pattern.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p tmp
+          git diff --name-only "$BASE_SHA"..."$HEAD_SHA" > tmp/changed-files.txt
+          wc -l tmp/changed-files.txt
       - name: Run aggregate
-        # `--coverage-delta-pp 0.0` is a placeholder until the producer is
-        # wired to a real delta from `cargo-llvm-cov` against the base
-        # branch. With 0.0 the row resolves Green, which keeps the sticky
-        # comment readable while the upstream measurement plumbing is
-        # built. `--quality-toml` defaults to `.config/scorecard/quality.toml`
-        # so the configured-thresholds path is exercised on every PR.
+        # V4 (mokumo#769) wires four real producers: BddSkipCount,
+        # CiWallClockDelta, FlakyPopulation, and ChangedScopeDiagram.
+        #
+        # `--coverage-delta-pp 0.0` remains a placeholder until coverage
+        # delta is wired to `cargo-llvm-cov` against the base branch.
+        # `--ci-wall-clock-json` is intentionally omitted — wiring the
+        # workflow to upload per-job durations is a follow-up against
+        # #650 once the surface is exercised; meanwhile the row emits
+        # Green with `(no base)`. `--quality-toml` defaults to
+        # `.config/scorecard/quality.toml` so the configured-thresholds
+        # path is exercised on every PR.
         run: |
           mkdir -p tmp
           ./target/release/aggregate \
             --pr-meta tmp/pr-meta.json \
             --coverage-delta-pp 0.0 \
+            --bdd-features-root crates \
+            --bdd-features-root apps/web/tests \
+            --flaky-source-root crates \
+            --flaky-source-root apps/web/src \
+            --changed-files tmp/changed-files.txt \
             --out tmp/scorecard.json
           cat tmp/scorecard.json
       - name: Upload scorecard artifact
@@ -888,6 +916,7 @@ jobs:
           path: |
             tmp/scorecard.json
             tmp/pr-meta.json
+            tmp/changed-files.txt
           retention-days: 7
           if-no-files-found: error
 

@@ -374,26 +374,29 @@ mod tests {
     /// Regression test for the operator-schema typo-rejection contract.
     ///
     /// `serde(deny_unknown_fields)` on every `ThresholdConfig` /
-    /// `RowsConfig` / `CoverageThresholds` struct emits
-    /// `additionalProperties: false` at three nesting levels (root,
-    /// `definitions/RowsConfig`, `definitions/CoverageThresholds`). The
-    /// scorecard-drift CI step validates the committed `quality.toml`
-    /// against this schema via `ajv-cli`; if a future schema-postprocess
-    /// or schemars upgrade ever weakens any of those three levels, an
-    /// operator typo at that level would silently slide past the gate
-    /// and into the producer (which would then loud-fail at parse, but
-    /// after CI has already gone green).
+    /// `RowsConfig` / `CoverageThresholds` / `BddSkipThresholds` struct
+    /// emits `additionalProperties: false` at every nesting level (root,
+    /// `definitions/RowsConfig`, `definitions/CoverageThresholds`,
+    /// `definitions/BddSkipThresholds`). The scorecard-drift CI step
+    /// validates the committed `quality.toml` against this schema via
+    /// `ajv-cli`; if a future schema-postprocess or schemars upgrade
+    /// ever weakens any level, an operator typo would silently slide
+    /// past the gate and into the producer (which would then loud-fail
+    /// at parse, but after CI has already gone green).
     ///
-    /// Pinning the count at three keeps the gate's reach honest.
+    /// Pinning to one occurrence per `[rows.*]` table + the two
+    /// envelope structs (root + RowsConfig) keeps the gate's reach
+    /// honest; bump the count when a new `[rows.*]` section lands.
     #[test]
     fn operator_schema_rejects_unknown_fields_at_every_nesting_level() {
         let s = render_quality_config_schema_string();
         let occurrences = s.matches("\"additionalProperties\": false").count();
         assert_eq!(
-            occurrences, 3,
+            occurrences, 7,
             "operator schema must declare additionalProperties:false at the root, \
-             RowsConfig, and CoverageThresholds — got {occurrences}. \
-             Schema body:\n{s}",
+             RowsConfig, CoverageThresholds, BddFeatureSkipThresholds, \
+             BddScenarioSkipThresholds, CiWallClockThresholds, and \
+             FlakyPopulationThresholds — got {occurrences}. Schema body:\n{s}",
         );
     }
 

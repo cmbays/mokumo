@@ -17,39 +17,303 @@ export type Status = "Green" | "Yellow" | "Red";
  * `#[serde(tag = "type")]` lands in the JSON Schema as a `oneOf` with per-variant `type` constants, which the Layer 2 post-processor walks to inject the `failure_detail_md` invariant.
  *
  * `#[non_exhaustive]` on both the enum and each variant blocks external crates from struct-literal construction (variant-level) and from non-wildcard pattern matches (enum-level). Within this crate, both remain reachable so the producer binary can construct rows and the renderer-side dest types can match exhaustively.
+ *
+ * Every variant carries a `failure_detail_md: Option<String>` so the generic Layer 2 post-processor in `schema_postprocess.rs` can inject the `if status == Red then failure_detail_md required` invariant uniformly across the `oneOf`.
  */
-export type Row = {
-  /**
-   * Anchor fragment for jump-linking from the comment.
-   */
-  anchor: string;
-  /**
-   * Raw coverage delta in percentage points vs. the base branch. The constructor records this alongside the status that was minted from it; the renderer keeps using `delta_text` for display, but downstream tooling (and future trend dashboards) can read `delta_pp` without reparsing the formatted string.
-   */
-  delta_pp: number;
-  /**
-   * Display string for the delta (e.g. `"+0.3 pp"` or `"-4.2 pp"`).
-   */
-  delta_text: string;
-  /**
-   * Inline failure detail rendered below the row when status is Red. JSON Schema requires this when `status == "Red"`; the Red constructor enforces the same invariant at compile time for external callers.
-   */
-  failure_detail_md?: string | null;
-  /**
-   * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
-   */
-  id: string;
-  /**
-   * Human-readable label (e.g. `"Coverage"`).
-   */
-  label: string;
-  /**
-   * Resolved status (Green/Yellow/Red). Set by the constructor — callers cannot supply this directly because `Row::CoverageDelta` is `#[non_exhaustive]`.
-   */
-  status: Status;
-  type: "CoverageDelta";
-  [k: string]: unknown;
-};
+export type Row =
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      /**
+       * Per-crate (and eventually per-handler-branch) drill-down. V4 emits an empty default when no per-crate signal is wired upstream; the renderer surfaces a `(per-handler producer pending — see #583)` note inline when `by_crate[].handlers` is empty.
+       */
+      breakouts?: Breakouts;
+      /**
+       * Raw coverage delta in percentage points vs. the base branch. The constructor records this alongside the status that was minted from it; the renderer keeps using `delta_text` for display, but downstream tooling (and future trend dashboards) can read `delta_pp` without reparsing the formatted string.
+       */
+      delta_pp: number;
+      /**
+       * Display string for the delta (e.g. `"+0.3 pp"` or `"-4.2 pp"`).
+       */
+      delta_text: string;
+      /**
+       * Inline failure detail rendered below the row when status is Red. JSON Schema requires this when `status == "Red"`; the Red constructor enforces the same invariant at compile time for external callers.
+       */
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      /**
+       * Resolved status (Green/Yellow/Red). Set by the constructor — callers cannot supply this directly because `Row::CoverageDelta` is `#[non_exhaustive]`.
+       */
+      status: Status;
+      type: "CoverageDelta";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      /**
+       * Signed delta vs. baseline (positive = new violations landed). Mirrors `CoverageDelta::delta_pp`'s sign discipline.
+       */
+      delta_count: number;
+      /**
+       * Producer-rendered display string (e.g. `"5 → 7 (+2)"`).
+       */
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      status: Status;
+      /**
+       * CRAP threshold in effect on this run (default 15). Metric- intrinsic; surfaced so downstream tooling can interpret `delta_count` without out-of-band knowledge.
+       */
+      threshold: number;
+      type: "CrapDelta";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      status: Status;
+      /**
+       * Total surviving mutants for the diff (top-N is the renderer's drill-down; this is the headline count).
+       */
+      survivor_count: number;
+      /**
+       * Up to three top survivors selected by the producer.
+       */
+      top_survivors: MutationSurvivor[];
+      type: "MutationSurvivors";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      /**
+       * Per-crate drill-down of feature-file counts.
+       */
+      breakouts: BddFeatureBreakout[];
+      /**
+       * Workspace-wide tag breakdown across feature-level tags (`{ "@wip": 10, "@future": 2 }`).
+       */
+      by_tag: TagCount[];
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      /**
+       * Feature files carrying at least one feature-level skip tag.
+       */
+      skipped_features: number;
+      status: Status;
+      /**
+       * Total `.feature` files across the discovered roots.
+       */
+      total_features: number;
+      type: "BddFeatureLevelSkipped";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      /**
+       * Per-crate drill-down of scenario counts.
+       */
+      breakouts: BddScenarioBreakout[];
+      /**
+       * Workspace-wide tag breakdown across scenario-level skip tags (`{ "@wip": 8, "@future": 5, "@tracked:#1234": 2 }`).
+       */
+      by_tag: TagCount[];
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      /**
+       * Scenarios whose own tag set carries a skip tag.
+       */
+      skipped_scenarios: number;
+      status: Status;
+      /**
+       * Total scenarios across all `.feature` files.
+       */
+      total_scenarios: number;
+      type: "BddScenarioLevelSkipped";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Per-gate Check Run references. V4 stub uses an empty vec pinned to mokumo#770; V5 populates with real runs.
+       */
+      gate_runs: GateRun[];
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      status: Status;
+      type: "GateRuns";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Count of `// FLAKY:` markers in the source tree.
+       */
+      flaky_marker_count: number;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      /**
+       * Count of nextest retry events on the head SHA (best-effort — `0` when no retry-event JSON is supplied).
+       */
+      nextest_retry_events: number;
+      status: Status;
+      type: "FlakyPopulation";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      /**
+       * Signed delta vs. base branch's most recent main run. Negative means CI got faster.
+       */
+      delta_seconds: number;
+      /**
+       * Display string (e.g. `"+92.0s"` or `"-12.5s"`).
+       */
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      status: Status;
+      /**
+       * Cumulative CI wall-clock for this run (sum of job durations, in seconds).
+       */
+      total_ci_seconds: number;
+      type: "CiWallClockDelta";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      /**
+       * One axis per handler.
+       */
+      axes: CoverageAxis[];
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      status: Status;
+      type: "HandlerCoverageAxis";
+      [k: string]: unknown;
+    }
+  | {
+      /**
+       * Anchor fragment for jump-linking from the comment.
+       */
+      anchor: string;
+      delta_text: string;
+      failure_detail_md?: string | null;
+      /**
+       * Stable row id (e.g. `"coverage"`). Used by the renderer for anchors.
+       */
+      id: string;
+      /**
+       * Human-readable label (e.g. `"Coverage"`).
+       */
+      label: string;
+      /**
+       * Mermaid markdown (already wrapped in a fenced code block).
+       */
+      mermaid_md: string;
+      /**
+       * Total node count in the (possibly truncated) diagram.
+       */
+      node_count: number;
+      status: Status;
+      type: "ChangedScopeDiagram";
+      [k: string]: unknown;
+    };
 
 /**
  * Top-level scorecard artifact.
@@ -103,6 +367,126 @@ export interface PrMeta {
   [k: string]: unknown;
 }
 /**
+ * Coverage drill-down breakouts shown beneath the [`Row::CoverageDelta`] summary cell. V4 ships the type with `by_crate` populated by the coverage producer; the per-handler `handlers` vec stays empty until the per-handler-branch tooling (mokumo#583) ships.
+ */
+export interface Breakouts {
+  /**
+   * Per-crate line + (eventually) per-handler-branch breakdown.
+   */
+  by_crate: CrateBreakout[];
+  [k: string]: unknown;
+}
+/**
+ * Per-crate breakdown entry for [`Breakouts::by_crate`].
+ */
+export interface CrateBreakout {
+  /**
+   * Crate name (e.g. `"kikan"`).
+   */
+  crate_name: string;
+  /**
+   * Per-handler branch coverage entries. Empty until the producer (mokumo#583) ships; the renderer surfaces a `(per-handler producer pending — see #583)` note inline when the vec is empty.
+   */
+  handlers: HandlerBreakout[];
+  /**
+   * Per-crate line coverage delta in percentage points vs base.
+   */
+  line_delta_pp: number;
+  [k: string]: unknown;
+}
+/**
+ * Per-handler branch coverage entry for the [`CoverageDelta::breakouts`] drill-down (Quinn blind-spot 3 sibling — surfaces uncovered handler negative paths inside the coverage row).
+ */
+export interface HandlerBreakout {
+  /**
+   * Branch coverage on the handler (0.0 - 100.0).
+   */
+  branch_coverage_pct: number;
+  /**
+   * Handler identifier (e.g. `"POST /api/users"`).
+   */
+  handler: string;
+  [k: string]: unknown;
+}
+/**
+ * One mutation that survived for the `MutationSurvivors` row's top-N.
+ *
+ * V4 ships the variant + supporting type. The producer (`cargo-mutants --in-diff`, mokumo#748) populates instances in a follow-up PR once the upstream gate ships; until then `top_survivors` is stub-empty.
+ */
+export interface MutationSurvivor {
+  /**
+   * Source file the surviving mutant lives in.
+   */
+  file: string;
+  /**
+   * `cargo-mutants` mutation kind label (e.g. `"replace + with -"`).
+   */
+  kind: string;
+  /**
+   * 1-based line number.
+   */
+  line: number;
+  [k: string]: unknown;
+}
+/**
+ * One crate's *feature-file* drill-down for the `BddFeatureLevelSkipped` row. Counts whole `.feature` files as the unit — a feature with `@wip` at the feature line counts as one skipped feature regardless of how many scenarios it contains. The `by_tag` counts surface which tag families the operator is using (e.g. `@wip` vs `@future` vs `@tracked:#1234`).
+ */
+export interface BddFeatureBreakout {
+  /**
+   * Per-tag drill-down across the crate's *feature-level* tags. Counts increment once per file (not once per scenario).
+   */
+  by_tag: TagCount[];
+  /**
+   * Crate name (e.g. `"mokumo-shop"`).
+   */
+  crate_name: string;
+  /**
+   * `.feature` files carrying at least one feature-level skip tag.
+   */
+  feature_skipped: number;
+  /**
+   * Total `.feature` files in the crate.
+   */
+  feature_total: number;
+  [k: string]: unknown;
+}
+/**
+ * Per-tag breakdown inside a [`BddFeatureBreakout`] or [`BddScenarioBreakout`].
+ */
+export interface TagCount {
+  /**
+   * Number of scenarios bearing this tag in the crate.
+   */
+  count: number;
+  /**
+   * Tag literal as it appears in the .feature file (`@wip`, `tracked:mokumo#123`, ...).
+   */
+  tag: string;
+  [k: string]: unknown;
+}
+/**
+ * One crate's *scenario* drill-down for the `BddScenarioLevelSkipped` row. Counts individual scenarios whose skip tag lives on the scenario itself (not inherited from a feature-level tag — those land in `BddFeatureBreakout`).
+ */
+export interface BddScenarioBreakout {
+  /**
+   * Per-tag drill-down across the crate's *scenario-level* skip tags. Counts increment once per scenario.
+   */
+  by_tag: TagCount[];
+  /**
+   * Crate name (e.g. `"mokumo-shop"`).
+   */
+  crate_name: string;
+  /**
+   * Scenarios whose own tag set carries a skip tag — does NOT count scenarios whose only skip tag was inherited from the feature.
+   */
+  scenario_skipped: number;
+  /**
+   * Total scenarios across the crate's `.feature` files.
+   */
+  scenario_total: number;
+  [k: string]: unknown;
+}
+/**
  * Reference to a single failing gate's Check Run, surfaced in `top_failures` for the two-click rule.
  */
 export interface GateRun {
@@ -112,5 +496,29 @@ export interface GateRun {
    * Absolute https:// URL to the Check Run page.
    */
   url: string;
+  [k: string]: unknown;
+}
+/**
+ * One handler's negative-path coverage axis for the `HandlerCoverageAxis` row (Quinn blind-spot 3).
+ *
+ * Boolean columns mark whether a scenario for that axis exists in BDD — a `false` is the actionable signal (negative path uncovered).
+ */
+export interface CoverageAxis {
+  /**
+   * 4xx error path covered.
+   */
+  error_4xx: boolean;
+  /**
+   * 5xx error path covered.
+   */
+  error_5xx: boolean;
+  /**
+   * Handler identifier (e.g. `"POST /api/users"`).
+   */
+  handler: string;
+  /**
+   * Happy path covered.
+   */
+  happy: boolean;
   [k: string]: unknown;
 }

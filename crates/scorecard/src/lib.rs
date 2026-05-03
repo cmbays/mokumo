@@ -165,6 +165,20 @@ pub enum Status {
     Red,
 }
 
+impl Status {
+    /// Pick the worse of two statuses. Used to roll per-row statuses
+    /// up into [`Scorecard::overall_status`] — `Red > Yellow > Green`.
+    /// Producer stubs are minted Green so they cannot mask a wired
+    /// row's verdict.
+    pub fn worst_of(a: Status, b: Status) -> Status {
+        match (a, b) {
+            (Status::Red, _) | (_, Status::Red) => Status::Red,
+            (Status::Yellow, _) | (_, Status::Yellow) => Status::Yellow,
+            _ => Status::Green,
+        }
+    }
+}
+
 /// Fields common to every `Row` variant.
 ///
 /// Pulled out so adding a new variant is a one-line addition to the `Row`
@@ -181,6 +195,120 @@ pub struct RowCommon {
     pub anchor: String,
 }
 
+/// Per-handler branch coverage entry for the [`CoverageDelta::breakouts`]
+/// drill-down (Quinn blind-spot 3 sibling — surfaces uncovered handler
+/// negative paths inside the coverage row).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct HandlerBreakout {
+    /// Handler identifier (e.g. `"POST /api/users"`).
+    pub handler: String,
+    /// Branch coverage on the handler (0.0 - 100.0).
+    pub branch_coverage_pct: f64,
+}
+
+/// Per-crate breakdown entry for [`Breakouts::by_crate`].
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CrateBreakout {
+    /// Crate name (e.g. `"kikan"`).
+    pub crate_name: String,
+    /// Per-crate line coverage delta in percentage points vs base.
+    pub line_delta_pp: f64,
+    /// Per-handler branch coverage entries. Empty until the producer
+    /// (mokumo#583) ships; the renderer surfaces a `(per-handler
+    /// producer pending — see #583)` note inline when the vec is empty.
+    pub handlers: Vec<HandlerBreakout>,
+}
+
+/// Coverage drill-down breakouts shown beneath the [`Row::CoverageDelta`]
+/// summary cell. V4 ships the type with `by_crate` populated by the
+/// coverage producer; the per-handler `handlers` vec stays empty until
+/// the per-handler-branch tooling (mokumo#583) ships.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct Breakouts {
+    /// Per-crate line + (eventually) per-handler-branch breakdown.
+    pub by_crate: Vec<CrateBreakout>,
+}
+
+/// One mutation that survived for the `MutationSurvivors` row's top-N.
+///
+/// V4 ships the variant + supporting type. The producer (`cargo-mutants
+/// --in-diff`, mokumo#748) populates instances in a follow-up PR once
+/// the upstream gate ships; until then `top_survivors` is stub-empty.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct MutationSurvivor {
+    /// Source file the surviving mutant lives in.
+    pub file: String,
+    /// 1-based line number.
+    pub line: u32,
+    /// `cargo-mutants` mutation kind label (e.g. `"replace + with -"`).
+    pub kind: String,
+}
+
+/// Per-tag breakdown inside a [`BddFeatureBreakout`] or
+/// [`BddScenarioBreakout`].
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TagCount {
+    /// Tag literal as it appears in the .feature file (`@wip`,
+    /// `tracked:mokumo#123`, ...).
+    pub tag: String,
+    /// Number of scenarios bearing this tag in the crate.
+    pub count: u32,
+}
+
+/// One crate's *feature-file* drill-down for the
+/// `BddFeatureLevelSkipped` row. Counts whole `.feature` files as the
+/// unit — a feature with `@wip` at the feature line counts as one
+/// skipped feature regardless of how many scenarios it contains. The
+/// `by_tag` counts surface which tag families the operator is using
+/// (e.g. `@wip` vs `@future` vs `@tracked:#1234`).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct BddFeatureBreakout {
+    /// Crate name (e.g. `"mokumo-shop"`).
+    pub crate_name: String,
+    /// Total `.feature` files in the crate.
+    pub feature_total: u32,
+    /// `.feature` files carrying at least one feature-level skip tag.
+    pub feature_skipped: u32,
+    /// Per-tag drill-down across the crate's *feature-level* tags.
+    /// Counts increment once per file (not once per scenario).
+    pub by_tag: Vec<TagCount>,
+}
+
+/// One crate's *scenario* drill-down for the
+/// `BddScenarioLevelSkipped` row. Counts individual scenarios whose
+/// skip tag lives on the scenario itself (not inherited from a
+/// feature-level tag — those land in `BddFeatureBreakout`).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct BddScenarioBreakout {
+    /// Crate name (e.g. `"mokumo-shop"`).
+    pub crate_name: String,
+    /// Total scenarios across the crate's `.feature` files.
+    pub scenario_total: u32,
+    /// Scenarios whose own tag set carries a skip tag — does NOT count
+    /// scenarios whose only skip tag was inherited from the feature.
+    pub scenario_skipped: u32,
+    /// Per-tag drill-down across the crate's *scenario-level* skip
+    /// tags. Counts increment once per scenario.
+    pub by_tag: Vec<TagCount>,
+}
+
+/// One handler's negative-path coverage axis for the
+/// `HandlerCoverageAxis` row (Quinn blind-spot 3).
+///
+/// Boolean columns mark whether a scenario for that axis exists in BDD
+/// — a `false` is the actionable signal (negative path uncovered).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CoverageAxis {
+    /// Handler identifier (e.g. `"POST /api/users"`).
+    pub handler: String,
+    /// Happy path covered.
+    pub happy: bool,
+    /// 4xx error path covered.
+    pub error_4xx: bool,
+    /// 5xx error path covered.
+    pub error_5xx: bool,
+}
+
 /// Tagged-union of scorecard row variants.
 ///
 /// `#[serde(tag = "type")]` lands in the JSON Schema as a `oneOf` with
@@ -192,6 +320,11 @@ pub struct RowCommon {
 /// non-wildcard pattern matches (enum-level). Within this crate, both
 /// remain reachable so the producer binary can construct rows and the
 /// renderer-side dest types can match exhaustively.
+///
+/// Every variant carries a `failure_detail_md: Option<String>` so the
+/// generic Layer 2 post-processor in `schema_postprocess.rs` can inject
+/// the `if status == Red then failure_detail_md required` invariant
+/// uniformly across the `oneOf`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -214,6 +347,13 @@ pub enum Row {
         delta_pp: f64,
         /// Display string for the delta (e.g. `"+0.3 pp"` or `"-4.2 pp"`).
         delta_text: String,
+        /// Per-crate (and eventually per-handler-branch) drill-down. V4
+        /// emits an empty default when no per-crate signal is wired
+        /// upstream; the renderer surfaces a `(per-handler producer
+        /// pending — see #583)` note inline when `by_crate[].handlers`
+        /// is empty.
+        #[serde(default)]
+        breakouts: Breakouts,
         /// Inline failure detail rendered below the row when status is Red.
         /// JSON Schema requires this when `status == "Red"`; the Red
         /// constructor enforces the same invariant at compile time for
@@ -221,31 +361,220 @@ pub enum Row {
         #[serde(skip_serializing_if = "Option::is_none")]
         failure_detail_md: Option<String>,
     },
+
+    /// CRAP delta — count of functions over the configured CRAP threshold,
+    /// minus the same count on the base branch. Producer is `crap4rs` /
+    /// `crap4ts` (the `--format scorecard-row` projector). See the gap-
+    /// analysis pipeline note for the V3-symmetric shape rationale.
+    #[non_exhaustive]
+    CrapDelta {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// CRAP threshold in effect on this run (default 15). Metric-
+        /// intrinsic; surfaced so downstream tooling can interpret
+        /// `delta_count` without out-of-band knowledge.
+        threshold: u32,
+        /// Signed delta vs. baseline (positive = new violations
+        /// landed). Mirrors `CoverageDelta::delta_pp`'s sign discipline.
+        delta_count: i32,
+        /// Producer-rendered display string (e.g. `"5 → 7 (+2)"`).
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Top-N mutations not killed by the test suite for this PR.
+    /// Producer is `cargo-mutants --in-diff` (mokumo#748). V4 ships the
+    /// variant; row-population is a follow-up PR when the producer lands.
+    #[non_exhaustive]
+    MutationSurvivors {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Total surviving mutants for the diff (top-N is the
+        /// renderer's drill-down; this is the headline count).
+        survivor_count: u32,
+        /// Up to three top survivors selected by the producer.
+        top_survivors: Vec<MutationSurvivor>,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Count of `.feature` files that carry a *feature-level* skip
+    /// tag (`@wip`, `@future`, `@tracked:*`). Feature-level tags
+    /// propagate to every scenario in the file, so this row tracks
+    /// *backlog* — how many work-streams are still gated open. The
+    /// scenario-level signal lives in `BddScenarioLevelSkipped`.
+    #[non_exhaustive]
+    BddFeatureLevelSkipped {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Total `.feature` files across the discovered roots.
+        total_features: u32,
+        /// Feature files carrying at least one feature-level skip tag.
+        skipped_features: u32,
+        /// Workspace-wide tag breakdown across feature-level tags
+        /// (`{ "@wip": 10, "@future": 2 }`).
+        by_tag: Vec<TagCount>,
+        /// Per-crate drill-down of feature-file counts.
+        breakouts: Vec<BddFeatureBreakout>,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Count of *individual scenarios* whose own tag set carries a
+    /// skip tag — feature-level inheritance is excluded so the count
+    /// tracks targeted hygiene debt.
+    #[non_exhaustive]
+    BddScenarioLevelSkipped {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Total scenarios across all `.feature` files.
+        total_scenarios: u32,
+        /// Scenarios whose own tag set carries a skip tag.
+        skipped_scenarios: u32,
+        /// Workspace-wide tag breakdown across scenario-level skip
+        /// tags (`{ "@wip": 8, "@future": 5, "@tracked:#1234": 2 }`).
+        by_tag: Vec<TagCount>,
+        /// Per-crate drill-down of scenario counts.
+        breakouts: Vec<BddScenarioBreakout>,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Per-gate Check Run summary (Layer 1 of the 3-layer DAG). V4
+    /// ships the variant + ctors; V5 (#770) populates `gate_runs` with
+    /// per-gate Check Run references and wires the two-click rule.
+    #[non_exhaustive]
+    GateRuns {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Per-gate Check Run references. V4 stub uses an empty vec
+        /// pinned to mokumo#770; V5 populates with real runs.
+        gate_runs: Vec<GateRun>,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Flaky-test population (Quinn blind-spot 1). Producer scans for
+    /// `// FLAKY:` source markers and consumes nextest retry events on
+    /// the same SHA.
+    #[non_exhaustive]
+    FlakyPopulation {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Count of `// FLAKY:` markers in the source tree.
+        flaky_marker_count: u32,
+        /// Count of nextest retry events on the head SHA (best-effort —
+        /// `0` when no retry-event JSON is supplied).
+        nextest_retry_events: u32,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Cumulative test wall-clock delta vs base (Quinn blind-spot 2).
+    /// Producer aggregates per-job durations from the GitHub Actions
+    /// API and compares against the base branch's most recent run.
+    #[non_exhaustive]
+    CiWallClockDelta {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Cumulative CI wall-clock for this run (sum of job durations,
+        /// in seconds).
+        total_ci_seconds: f64,
+        /// Signed delta vs. base branch's most recent main run. Negative
+        /// means CI got faster.
+        delta_seconds: f64,
+        /// Display string (e.g. `"+92.0s"` or `"-12.5s"`).
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Per-handler negative-path coverage axes (Quinn blind-spot 3).
+    /// Producer reads the BDD scenario × handler map (mokumo#654 / #655)
+    /// and emits one [`CoverageAxis`] per handler.
+    #[non_exhaustive]
+    HandlerCoverageAxis {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// One axis per handler.
+        axes: Vec<CoverageAxis>,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
+
+    /// Embedded changed-scope Mermaid diagram showing the diff's
+    /// dependency footprint (frontend graph + crate graph). Producer
+    /// consumes `dependency-cruiser` JSON (mokumo#749 / PR #774) plus
+    /// `cargo metadata` and renders a `graph LR` snippet.
+    ///
+    /// Truncates above the 200-node Mermaid renderer limit; oversize
+    /// diagrams emit a `(diagram truncated — see workflow logs)`
+    /// footer in `mermaid_md`.
+    #[non_exhaustive]
+    ChangedScopeDiagram {
+        #[serde(flatten)]
+        common: RowCommon,
+        status: Status,
+        /// Mermaid markdown (already wrapped in a fenced code block).
+        mermaid_md: String,
+        /// Total node count in the (possibly truncated) diagram.
+        node_count: u32,
+        delta_text: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        failure_detail_md: Option<String>,
+    },
 }
 
 impl Row {
-    /// Construct a Green `CoverageDelta` row. No `failure_detail_md`
-    /// because the row is not Red. Status is minted internally.
-    pub fn coverage_delta_green(common: RowCommon, delta_pp: f64, delta_text: String) -> Self {
+    /// Construct a Green `CoverageDelta` row. `breakouts` carries the
+    /// per-crate drill-down (empty `Breakouts::default()` is acceptable
+    /// when no per-crate signal is wired upstream).
+    pub fn coverage_delta_green(
+        common: RowCommon,
+        delta_pp: f64,
+        delta_text: String,
+        breakouts: Breakouts,
+    ) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Green,
             delta_pp,
             delta_text,
+            breakouts,
             failure_detail_md: None,
         }
     }
 
-    /// Construct a Yellow `CoverageDelta` row. No `failure_detail_md`
-    /// because the row is not Red. Yellow surfaces as a regression but
-    /// not a hard failure per the empty-quality.toml fallback rule.
-    /// Status is minted internally.
-    pub fn coverage_delta_yellow(common: RowCommon, delta_pp: f64, delta_text: String) -> Self {
+    /// Construct a Yellow `CoverageDelta` row. Yellow surfaces as a
+    /// regression but not a hard failure per the empty-quality.toml
+    /// fallback rule.
+    pub fn coverage_delta_yellow(
+        common: RowCommon,
+        delta_pp: f64,
+        delta_text: String,
+        breakouts: Breakouts,
+    ) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Yellow,
             delta_pp,
             delta_text,
+            breakouts,
             failure_detail_md: None,
         }
     }
@@ -260,12 +589,511 @@ impl Row {
         common: RowCommon,
         delta_pp: f64,
         delta_text: String,
+        breakouts: Breakouts,
         failure_detail_md: String,
     ) -> Self {
         Row::CoverageDelta {
             common,
             status: Status::Red,
             delta_pp,
+            delta_text,
+            breakouts,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── CrapDelta ───────────────────────────────────────────────────────
+
+    /// Construct a Green `CrapDelta` row.
+    pub fn crap_delta_green(
+        common: RowCommon,
+        threshold: u32,
+        delta_count: i32,
+        delta_text: String,
+    ) -> Self {
+        Row::CrapDelta {
+            common,
+            status: Status::Green,
+            threshold,
+            delta_count,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `CrapDelta` row (regression on existing
+    /// functions, no new threshold violations).
+    pub fn crap_delta_yellow(
+        common: RowCommon,
+        threshold: u32,
+        delta_count: i32,
+        delta_text: String,
+    ) -> Self {
+        Row::CrapDelta {
+            common,
+            status: Status::Yellow,
+            threshold,
+            delta_count,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `CrapDelta` row (new threshold violation
+    /// landed). Layer 1 typestate: `failure_detail_md` is `String`, not
+    /// `Option<String>`.
+    pub fn crap_delta_red(
+        common: RowCommon,
+        threshold: u32,
+        delta_count: i32,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::CrapDelta {
+            common,
+            status: Status::Red,
+            threshold,
+            delta_count,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── MutationSurvivors ───────────────────────────────────────────────
+
+    /// Construct a Green `MutationSurvivors` row.
+    pub fn mutation_survivors_green(
+        common: RowCommon,
+        survivor_count: u32,
+        top_survivors: Vec<MutationSurvivor>,
+        delta_text: String,
+    ) -> Self {
+        Row::MutationSurvivors {
+            common,
+            status: Status::Green,
+            survivor_count,
+            top_survivors,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `MutationSurvivors` row.
+    pub fn mutation_survivors_yellow(
+        common: RowCommon,
+        survivor_count: u32,
+        top_survivors: Vec<MutationSurvivor>,
+        delta_text: String,
+    ) -> Self {
+        Row::MutationSurvivors {
+            common,
+            status: Status::Yellow,
+            survivor_count,
+            top_survivors,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `MutationSurvivors` row.
+    pub fn mutation_survivors_red(
+        common: RowCommon,
+        survivor_count: u32,
+        top_survivors: Vec<MutationSurvivor>,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::MutationSurvivors {
+            common,
+            status: Status::Red,
+            survivor_count,
+            top_survivors,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── BddFeatureLevelSkipped ──────────────────────────────────────────
+
+    /// Construct a Green `BddFeatureLevelSkipped` row.
+    pub fn bdd_feature_level_skipped_green(
+        common: RowCommon,
+        total_features: u32,
+        skipped_features: u32,
+        by_tag: Vec<TagCount>,
+        breakouts: Vec<BddFeatureBreakout>,
+        delta_text: String,
+    ) -> Self {
+        Row::BddFeatureLevelSkipped {
+            common,
+            status: Status::Green,
+            total_features,
+            skipped_features,
+            by_tag,
+            breakouts,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `BddFeatureLevelSkipped` row.
+    pub fn bdd_feature_level_skipped_yellow(
+        common: RowCommon,
+        total_features: u32,
+        skipped_features: u32,
+        by_tag: Vec<TagCount>,
+        breakouts: Vec<BddFeatureBreakout>,
+        delta_text: String,
+    ) -> Self {
+        Row::BddFeatureLevelSkipped {
+            common,
+            status: Status::Yellow,
+            total_features,
+            skipped_features,
+            by_tag,
+            breakouts,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `BddFeatureLevelSkipped` row.
+    pub fn bdd_feature_level_skipped_red(
+        common: RowCommon,
+        total_features: u32,
+        skipped_features: u32,
+        by_tag: Vec<TagCount>,
+        breakouts: Vec<BddFeatureBreakout>,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::BddFeatureLevelSkipped {
+            common,
+            status: Status::Red,
+            total_features,
+            skipped_features,
+            by_tag,
+            breakouts,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── BddScenarioLevelSkipped ─────────────────────────────────────────
+
+    /// Construct a Green `BddScenarioLevelSkipped` row.
+    pub fn bdd_scenario_level_skipped_green(
+        common: RowCommon,
+        total_scenarios: u32,
+        skipped_scenarios: u32,
+        by_tag: Vec<TagCount>,
+        breakouts: Vec<BddScenarioBreakout>,
+        delta_text: String,
+    ) -> Self {
+        Row::BddScenarioLevelSkipped {
+            common,
+            status: Status::Green,
+            total_scenarios,
+            skipped_scenarios,
+            by_tag,
+            breakouts,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `BddScenarioLevelSkipped` row.
+    pub fn bdd_scenario_level_skipped_yellow(
+        common: RowCommon,
+        total_scenarios: u32,
+        skipped_scenarios: u32,
+        by_tag: Vec<TagCount>,
+        breakouts: Vec<BddScenarioBreakout>,
+        delta_text: String,
+    ) -> Self {
+        Row::BddScenarioLevelSkipped {
+            common,
+            status: Status::Yellow,
+            total_scenarios,
+            skipped_scenarios,
+            by_tag,
+            breakouts,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `BddScenarioLevelSkipped` row.
+    pub fn bdd_scenario_level_skipped_red(
+        common: RowCommon,
+        total_scenarios: u32,
+        skipped_scenarios: u32,
+        by_tag: Vec<TagCount>,
+        breakouts: Vec<BddScenarioBreakout>,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::BddScenarioLevelSkipped {
+            common,
+            status: Status::Red,
+            total_scenarios,
+            skipped_scenarios,
+            by_tag,
+            breakouts,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── GateRuns ────────────────────────────────────────────────────────
+
+    /// Construct a Green `GateRuns` row.
+    pub fn gate_runs_green(common: RowCommon, gate_runs: Vec<GateRun>, delta_text: String) -> Self {
+        Row::GateRuns {
+            common,
+            status: Status::Green,
+            gate_runs,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `GateRuns` row.
+    pub fn gate_runs_yellow(
+        common: RowCommon,
+        gate_runs: Vec<GateRun>,
+        delta_text: String,
+    ) -> Self {
+        Row::GateRuns {
+            common,
+            status: Status::Yellow,
+            gate_runs,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `GateRuns` row.
+    pub fn gate_runs_red(
+        common: RowCommon,
+        gate_runs: Vec<GateRun>,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::GateRuns {
+            common,
+            status: Status::Red,
+            gate_runs,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── FlakyPopulation ─────────────────────────────────────────────────
+
+    /// Construct a Green `FlakyPopulation` row.
+    pub fn flaky_population_green(
+        common: RowCommon,
+        flaky_marker_count: u32,
+        nextest_retry_events: u32,
+        delta_text: String,
+    ) -> Self {
+        Row::FlakyPopulation {
+            common,
+            status: Status::Green,
+            flaky_marker_count,
+            nextest_retry_events,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `FlakyPopulation` row.
+    pub fn flaky_population_yellow(
+        common: RowCommon,
+        flaky_marker_count: u32,
+        nextest_retry_events: u32,
+        delta_text: String,
+    ) -> Self {
+        Row::FlakyPopulation {
+            common,
+            status: Status::Yellow,
+            flaky_marker_count,
+            nextest_retry_events,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `FlakyPopulation` row.
+    pub fn flaky_population_red(
+        common: RowCommon,
+        flaky_marker_count: u32,
+        nextest_retry_events: u32,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::FlakyPopulation {
+            common,
+            status: Status::Red,
+            flaky_marker_count,
+            nextest_retry_events,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── CiWallClockDelta ────────────────────────────────────────────────
+
+    /// Construct a Green `CiWallClockDelta` row.
+    pub fn ci_wall_clock_delta_green(
+        common: RowCommon,
+        total_ci_seconds: f64,
+        delta_seconds: f64,
+        delta_text: String,
+    ) -> Self {
+        Row::CiWallClockDelta {
+            common,
+            status: Status::Green,
+            total_ci_seconds,
+            delta_seconds,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `CiWallClockDelta` row.
+    pub fn ci_wall_clock_delta_yellow(
+        common: RowCommon,
+        total_ci_seconds: f64,
+        delta_seconds: f64,
+        delta_text: String,
+    ) -> Self {
+        Row::CiWallClockDelta {
+            common,
+            status: Status::Yellow,
+            total_ci_seconds,
+            delta_seconds,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `CiWallClockDelta` row.
+    pub fn ci_wall_clock_delta_red(
+        common: RowCommon,
+        total_ci_seconds: f64,
+        delta_seconds: f64,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::CiWallClockDelta {
+            common,
+            status: Status::Red,
+            total_ci_seconds,
+            delta_seconds,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── HandlerCoverageAxis ─────────────────────────────────────────────
+
+    /// Construct a Green `HandlerCoverageAxis` row.
+    pub fn handler_coverage_axis_green(
+        common: RowCommon,
+        axes: Vec<CoverageAxis>,
+        delta_text: String,
+    ) -> Self {
+        Row::HandlerCoverageAxis {
+            common,
+            status: Status::Green,
+            axes,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `HandlerCoverageAxis` row.
+    pub fn handler_coverage_axis_yellow(
+        common: RowCommon,
+        axes: Vec<CoverageAxis>,
+        delta_text: String,
+    ) -> Self {
+        Row::HandlerCoverageAxis {
+            common,
+            status: Status::Yellow,
+            axes,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `HandlerCoverageAxis` row.
+    pub fn handler_coverage_axis_red(
+        common: RowCommon,
+        axes: Vec<CoverageAxis>,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::HandlerCoverageAxis {
+            common,
+            status: Status::Red,
+            axes,
+            delta_text,
+            failure_detail_md: Some(failure_detail_md),
+        }
+    }
+
+    // ── ChangedScopeDiagram ─────────────────────────────────────────────
+
+    /// Construct a Green `ChangedScopeDiagram` row.
+    pub fn changed_scope_diagram_green(
+        common: RowCommon,
+        mermaid_md: String,
+        node_count: u32,
+        delta_text: String,
+    ) -> Self {
+        Row::ChangedScopeDiagram {
+            common,
+            status: Status::Green,
+            mermaid_md,
+            node_count,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Yellow `ChangedScopeDiagram` row.
+    pub fn changed_scope_diagram_yellow(
+        common: RowCommon,
+        mermaid_md: String,
+        node_count: u32,
+        delta_text: String,
+    ) -> Self {
+        Row::ChangedScopeDiagram {
+            common,
+            status: Status::Yellow,
+            mermaid_md,
+            node_count,
+            delta_text,
+            failure_detail_md: None,
+        }
+    }
+
+    /// Construct a Red `ChangedScopeDiagram` row.
+    pub fn changed_scope_diagram_red(
+        common: RowCommon,
+        mermaid_md: String,
+        node_count: u32,
+        delta_text: String,
+        failure_detail_md: String,
+    ) -> Self {
+        Row::ChangedScopeDiagram {
+            common,
+            status: Status::Red,
+            mermaid_md,
+            node_count,
             delta_text,
             failure_detail_md: Some(failure_detail_md),
         }
@@ -296,13 +1124,22 @@ mod tests {
 
     #[test]
     fn red_constructor_sets_status_and_failure_detail() {
-        let row = Row::coverage_delta_red(common(), -4.2, "-4.2 pp".into(), "detail".into());
+        let row = Row::coverage_delta_red(
+            common(),
+            -4.2,
+            "-4.2 pp".into(),
+            Breakouts::default(),
+            "detail".into(),
+        );
         let Row::CoverageDelta {
             status,
             delta_pp,
             failure_detail_md,
             ..
-        } = row;
+        } = row
+        else {
+            panic!("expected CoverageDelta")
+        };
         assert_eq!(status, Status::Red);
         assert_eq!(delta_pp, -4.2);
         assert_eq!(failure_detail_md.as_deref(), Some("detail"));
@@ -310,13 +1147,16 @@ mod tests {
 
     #[test]
     fn green_constructor_sets_status_and_omits_failure_detail() {
-        let row = Row::coverage_delta_green(common(), 0.3, "+0.3 pp".into());
+        let row = Row::coverage_delta_green(common(), 0.3, "+0.3 pp".into(), Breakouts::default());
         let Row::CoverageDelta {
             status,
             delta_pp,
             failure_detail_md,
             ..
-        } = row;
+        } = row
+        else {
+            panic!("expected CoverageDelta")
+        };
         assert_eq!(status, Status::Green);
         assert_eq!(delta_pp, 0.3);
         assert!(failure_detail_md.is_none());
@@ -324,22 +1164,284 @@ mod tests {
 
     #[test]
     fn yellow_constructor_sets_status_and_omits_failure_detail() {
-        let row = Row::coverage_delta_yellow(common(), -0.6, "-0.6 pp".into());
+        let row =
+            Row::coverage_delta_yellow(common(), -0.6, "-0.6 pp".into(), Breakouts::default());
         let Row::CoverageDelta {
             status,
             delta_pp,
             failure_detail_md,
             ..
-        } = row;
+        } = row
+        else {
+            panic!("expected CoverageDelta")
+        };
         assert_eq!(status, Status::Yellow);
         assert_eq!(delta_pp, -0.6);
         assert!(failure_detail_md.is_none());
     }
 
+    /// Pulls `(status, failure_detail_md.is_some())` out of any `Row`
+    /// variant so per-ctor smoke tests stay flat. CC stays at 9 (one
+    /// match arm per variant) — well under the 15 threshold — and
+    /// each per-ctor test below collapses to a single helper call.
+    fn row_status_and_detail_set(row: &Row) -> (Status, bool) {
+        match row {
+            Row::CoverageDelta {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::CrapDelta {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::MutationSurvivors {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::BddFeatureLevelSkipped {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::BddScenarioLevelSkipped {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::GateRuns {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::FlakyPopulation {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::CiWallClockDelta {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::HandlerCoverageAxis {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::ChangedScopeDiagram {
+                status,
+                failure_detail_md,
+                ..
+            } => (*status, failure_detail_md.is_some()),
+        }
+    }
+
+    fn assert_row_status(row: &Row, expected: Status) {
+        let (status, detail_set) = row_status_and_detail_set(row);
+        assert_eq!(status, expected);
+        assert_eq!(detail_set, expected == Status::Red);
+    }
+
+    // ── Stub-variant ctor smoke tests (Yellow/Red for producer-pending rows) ──
+    //
+    // The Green ctors for these stub variants are exercised through
+    // `aggregate::stub_pending_row`; the Yellow/Red ctors stay available
+    // for the follow-up PRs that wire each producer. Each test stays at
+    // CC=1 — `assert_row_status` does the discriminant walk.
+
+    #[test]
+    fn crap_delta_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::crap_delta_yellow(common(), 15, 1, "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn crap_delta_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::crap_delta_red(common(), 15, 3, "+3".into(), "detail".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn mutation_survivors_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::mutation_survivors_yellow(common(), 1, vec![], "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn mutation_survivors_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::mutation_survivors_red(common(), 5, vec![], "+5".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn handler_coverage_axis_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::handler_coverage_axis_yellow(common(), vec![], "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn handler_coverage_axis_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::handler_coverage_axis_red(common(), vec![], "+1".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn gate_runs_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::gate_runs_yellow(common(), vec![], "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn gate_runs_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::gate_runs_red(common(), vec![], "+1".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn changed_scope_diagram_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::changed_scope_diagram_yellow(common(), "graph LR".into(), 1, "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn changed_scope_diagram_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::changed_scope_diagram_red(
+                common(),
+                "graph LR".into(),
+                1,
+                "+1".into(),
+                "d".into(),
+            ),
+            Status::Red,
+        );
+    }
+
+    // ── Wired-row Yellow/Red ctor smoke tests ────────────────────────────
+    //
+    // Green is exercised through the producer happy paths in
+    // `aggregate.rs`; the Yellow/Red ctors fire when the producer
+    // observes a degraded signal.
+
+    #[test]
+    fn bdd_feature_level_skipped_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::bdd_feature_level_skipped_yellow(
+                common(),
+                40,
+                7,
+                vec![],
+                vec![],
+                "7 / 40".into(),
+            ),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn bdd_feature_level_skipped_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::bdd_feature_level_skipped_red(
+                common(),
+                40,
+                20,
+                vec![],
+                vec![],
+                "20 / 40".into(),
+                "d".into(),
+            ),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn bdd_scenario_level_skipped_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::bdd_scenario_level_skipped_yellow(
+                common(),
+                900,
+                32,
+                vec![],
+                vec![],
+                "32 / 900".into(),
+            ),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn bdd_scenario_level_skipped_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::bdd_scenario_level_skipped_red(
+                common(),
+                900,
+                50,
+                vec![],
+                vec![],
+                "50 / 900".into(),
+                "d".into(),
+            ),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_delta_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::ci_wall_clock_delta_yellow(common(), 1200.0, 90.0, "+90s".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_delta_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::ci_wall_clock_delta_red(common(), 2000.0, 400.0, "+400s".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn flaky_population_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::flaky_population_yellow(common(), 8, 0, "+8".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn flaky_population_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::flaky_population_red(common(), 25, 4, "+25".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
     #[test]
     fn scorecard_round_trips_with_fallback_thresholds_active_flag() {
         let sc = Scorecard {
-            schema_version: 0,
+            schema_version: 2,
             pr: PrMeta {
                 pr_number: 1.into(),
                 head_sha: "deadbeef".into(),
@@ -347,7 +1449,12 @@ mod tests {
                 is_fork: false,
             },
             overall_status: Status::Yellow,
-            rows: vec![Row::coverage_delta_yellow(common(), -2.5, "-2.5 pp".into())],
+            rows: vec![Row::coverage_delta_yellow(
+                common(),
+                -2.5,
+                "-2.5 pp".into(),
+                Breakouts::default(),
+            )],
             top_failures: Vec::new(),
             all_check_runs_url: "https://example.test/x/checks".into(),
             fallback_thresholds_active: true,

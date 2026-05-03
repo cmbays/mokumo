@@ -91,6 +91,132 @@ pub struct ThresholdConfig {
 pub struct RowsConfig {
     /// Thresholds for the `Row::CoverageDelta` variant.
     pub coverage: CoverageThresholds,
+    /// Thresholds for the `Row::BddFeatureLevelSkipped` variant.
+    #[serde(default = "BddFeatureSkipThresholds::default")]
+    pub bdd_feature_skip: BddFeatureSkipThresholds,
+    /// Thresholds for the `Row::BddScenarioLevelSkipped` variant.
+    #[serde(default = "BddScenarioSkipThresholds::default")]
+    pub bdd_scenario_skip: BddScenarioSkipThresholds,
+    /// Thresholds for the `Row::CiWallClockDelta` variant.
+    #[serde(default = "CiWallClockThresholds::default")]
+    pub ci_wall_clock: CiWallClockThresholds,
+    /// Thresholds for the `Row::FlakyPopulation` variant.
+    #[serde(default = "FlakyPopulationThresholds::default")]
+    pub flaky: FlakyPopulationThresholds,
+}
+
+/// Warn / fail thresholds for the `Row::BddFeatureLevelSkipped`
+/// variant. Both fields are unsigned integer feature-file counts;
+/// threshold semantics are inclusive on the worse side.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BddFeatureSkipThresholds {
+    /// Skipped-feature count above (or equal) which a row reports
+    /// [`Status::Yellow`].
+    pub warn_skipped_features: u32,
+    /// Skipped-feature count above (or equal) which a row reports
+    /// [`Status::Red`]. Typically larger than `warn_skipped_features`.
+    pub fail_skipped_features: u32,
+}
+
+impl Default for BddFeatureSkipThresholds {
+    /// Defensible fallback: 10 WIP feature files trigger Yellow, 20
+    /// trigger Red. Counts whole files (not scenarios), so the bar
+    /// sits on backlog growth rather than scenario churn — operators
+    /// tune via `quality.toml`.
+    fn default() -> Self {
+        Self {
+            warn_skipped_features: 10,
+            fail_skipped_features: 20,
+        }
+    }
+}
+
+/// Warn / fail thresholds for the `Row::BddScenarioLevelSkipped`
+/// variant. Both fields are unsigned integer scenario counts; threshold
+/// semantics are inclusive on the worse side.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BddScenarioSkipThresholds {
+    /// Skipped-scenario count above (or equal) which a row reports
+    /// [`Status::Yellow`].
+    pub warn_skipped_scenarios: u32,
+    /// Skipped-scenario count above (or equal) which a row reports
+    /// [`Status::Red`].
+    pub fail_skipped_scenarios: u32,
+}
+
+impl Default for BddScenarioSkipThresholds {
+    /// Defensible fallback: 40 scenario-level skips trigger Yellow, 60
+    /// trigger Red. Operators tune via `quality.toml`. The bdd-lint
+    /// `--max-dead-specs` ratchet evolves separately; coupling the two
+    /// would send them in opposite directions whenever either is tuned.
+    fn default() -> Self {
+        Self {
+            warn_skipped_scenarios: 40,
+            fail_skipped_scenarios: 60,
+        }
+    }
+}
+
+/// Warn / fail thresholds for the `Row::CiWallClockDelta` variant,
+/// expressed in seconds of total-CI-wall-clock delta vs base.
+///
+/// Both fields are signed: a slowdown is a positive delta, so warn /
+/// fail thresholds are themselves positive numbers. Inclusive boundary
+/// semantics: `delta_seconds == warn_seconds_delta` resolves
+/// [`Status::Yellow`]; `delta_seconds == fail_seconds_delta` resolves
+/// [`Status::Red`]. See [`resolve_ci_wall_clock`] for the full table.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CiWallClockThresholds {
+    /// Threshold above (or equal) which a row reports
+    /// [`Status::Yellow`]. Typically positive (slowdown).
+    pub warn_seconds_delta: f64,
+    /// Threshold above (or equal) which a row reports [`Status::Red`].
+    /// Typically positive and larger than `warn_seconds_delta`.
+    pub fail_seconds_delta: f64,
+}
+
+impl Default for CiWallClockThresholds {
+    /// Defensible fallback: a 60s slowdown trips Yellow, 300s trips Red.
+    /// Tuned to be permissive enough that ordinary CI noise doesn't
+    /// flap the verdict; operators tighten via `quality.toml`.
+    fn default() -> Self {
+        Self {
+            warn_seconds_delta: 60.0,
+            fail_seconds_delta: 300.0,
+        }
+    }
+}
+
+/// Warn / fail thresholds for the `Row::FlakyPopulation` variant.
+///
+/// `marker_count` is the integer count of `// FLAKY:` markers
+/// across the operator-supplied source roots. Threshold semantics
+/// are inclusive on the worse side.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FlakyPopulationThresholds {
+    /// Marker count above (or equal) which a row reports
+    /// [`Status::Yellow`].
+    pub warn_marker_count: u32,
+    /// Marker count above (or equal) which a row reports
+    /// [`Status::Red`]. Typically larger than `warn_marker_count`.
+    pub fail_marker_count: u32,
+}
+
+impl Default for FlakyPopulationThresholds {
+    /// Defensible fallback: 5 markers trips Yellow, 20 trips Red.
+    /// Tightening these is the natural way operators discourage flaky-
+    /// test accumulation; the fallback is permissive enough that an
+    /// established codebase doesn't go red on day one.
+    fn default() -> Self {
+        Self {
+            warn_marker_count: 5,
+            fail_marker_count: 20,
+        }
+    }
 }
 
 /// Warn / fail thresholds for the `Row::CoverageDelta` variant,
@@ -127,6 +253,10 @@ impl ThresholdConfig {
                     warn_pp_delta: -1.0,
                     fail_pp_delta: -5.0,
                 },
+                bdd_feature_skip: BddFeatureSkipThresholds::default(),
+                bdd_scenario_skip: BddScenarioSkipThresholds::default(),
+                ci_wall_clock: CiWallClockThresholds::default(),
+                flaky: FlakyPopulationThresholds::default(),
             },
         }
     }
@@ -161,6 +291,90 @@ pub fn resolve_coverage_delta(delta_pp: f64, cfg: &CoverageThresholds) -> Status
     if delta_pp <= cfg.fail_pp_delta {
         Status::Red
     } else if delta_pp <= cfg.warn_pp_delta {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a BDD skipped-feature-file count to a [`Status`] using the
+/// supplied [`BddFeatureSkipThresholds`].
+///
+/// Boundaries are inclusive on the worse side: a count exactly equal
+/// to `warn_skipped_features` is [`Status::Yellow`]; a count exactly
+/// equal to `fail_skipped_features` is [`Status::Red`].
+pub fn resolve_bdd_feature_skip(skipped_features: u32, cfg: &BddFeatureSkipThresholds) -> Status {
+    if skipped_features >= cfg.fail_skipped_features {
+        Status::Red
+    } else if skipped_features >= cfg.warn_skipped_features {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a BDD scenario-level skipped count to a [`Status`] using
+/// the supplied [`BddScenarioSkipThresholds`].
+///
+/// Boundaries are inclusive on the worse side: a count exactly equal
+/// to `warn_skipped_scenarios` is [`Status::Yellow`]; a count exactly
+/// equal to `fail_skipped_scenarios` is [`Status::Red`].
+pub fn resolve_bdd_scenario_skip(
+    skipped_scenarios: u32,
+    cfg: &BddScenarioSkipThresholds,
+) -> Status {
+    if skipped_scenarios >= cfg.fail_skipped_scenarios {
+        Status::Red
+    } else if skipped_scenarios >= cfg.warn_skipped_scenarios {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a CI wall-clock delta (in seconds) to a [`Status`] using the
+/// supplied [`CiWallClockThresholds`].
+///
+/// # Boundary semantics
+///
+/// | `delta_seconds`                                        | Result            |
+/// |--------------------------------------------------------|-------------------|
+/// | `delta_seconds >= fail_seconds_delta`                  | [`Status::Red`]    |
+/// | `warn_seconds_delta <= delta_seconds < fail_seconds_delta` | [`Status::Yellow`] |
+/// | `delta_seconds < warn_seconds_delta`                   | [`Status::Green`]  |
+///
+/// Boundaries are inclusive on the worse (positive) side. A negative
+/// delta (CI sped up) resolves [`Status::Green`]. NaN handling mirrors
+/// `resolve_coverage_delta`: NaN compares false against everything and
+/// resolves Green; the producer rejects NaN at the input boundary.
+pub fn resolve_ci_wall_clock(delta_seconds: f64, cfg: &CiWallClockThresholds) -> Status {
+    if delta_seconds >= cfg.fail_seconds_delta {
+        Status::Red
+    } else if delta_seconds >= cfg.warn_seconds_delta {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a flaky-marker count to a [`Status`] using the supplied
+/// [`FlakyPopulationThresholds`].
+///
+/// # Boundary semantics
+///
+/// | `marker_count`                                       | Result            |
+/// |------------------------------------------------------|-------------------|
+/// | `marker_count >= fail_marker_count`                  | [`Status::Red`]    |
+/// | `warn_marker_count <= marker_count < fail_marker_count` | [`Status::Yellow`] |
+/// | `marker_count < warn_marker_count`                   | [`Status::Green`]  |
+///
+/// Boundaries are inclusive on the worse side: a count exactly equal
+/// to `warn_marker_count` is [`Status::Yellow`]; a count exactly equal
+/// to `fail_marker_count` is [`Status::Red`].
+pub fn resolve_flaky_population(marker_count: u32, cfg: &FlakyPopulationThresholds) -> Status {
+    if marker_count >= cfg.fail_marker_count {
+        Status::Red
+    } else if marker_count >= cfg.warn_marker_count {
         Status::Yellow
     } else {
         Status::Green
@@ -298,6 +512,238 @@ mod tests {
             resolve_coverage_delta(f64::INFINITY, &fallback_coverage()),
             Status::Green
         );
+    }
+
+    // ── BDD feature-skip resolver boundary table ─────────────────────
+
+    fn fallback_bdd_feature_skip() -> BddFeatureSkipThresholds {
+        ThresholdConfig::fallback().rows.bdd_feature_skip
+    }
+
+    #[test]
+    fn bdd_feature_skip_fallback_values_match_documented_defaults() {
+        let cfg = fallback_bdd_feature_skip();
+        assert_eq!(cfg.warn_skipped_features, 10);
+        assert_eq!(cfg.fail_skipped_features, 20);
+    }
+
+    #[test]
+    fn bdd_feature_skip_zero_resolves_green() {
+        assert_eq!(
+            resolve_bdd_feature_skip(0, &fallback_bdd_feature_skip()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn bdd_feature_skip_just_below_warn_resolves_green() {
+        assert_eq!(
+            resolve_bdd_feature_skip(9, &fallback_bdd_feature_skip()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn bdd_feature_skip_at_warn_threshold_resolves_yellow() {
+        assert_eq!(
+            resolve_bdd_feature_skip(10, &fallback_bdd_feature_skip()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn bdd_feature_skip_just_below_fail_resolves_yellow() {
+        assert_eq!(
+            resolve_bdd_feature_skip(19, &fallback_bdd_feature_skip()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn bdd_feature_skip_at_fail_threshold_resolves_red() {
+        assert_eq!(
+            resolve_bdd_feature_skip(20, &fallback_bdd_feature_skip()),
+            Status::Red
+        );
+    }
+
+    // ── BDD scenario-skip resolver boundary table ────────────────────
+
+    fn fallback_bdd_scenario_skip() -> BddScenarioSkipThresholds {
+        ThresholdConfig::fallback().rows.bdd_scenario_skip
+    }
+
+    #[test]
+    fn bdd_scenario_skip_fallback_values_match_documented_defaults() {
+        let cfg = fallback_bdd_scenario_skip();
+        assert_eq!(cfg.warn_skipped_scenarios, 40);
+        assert_eq!(cfg.fail_skipped_scenarios, 60);
+    }
+
+    #[test]
+    fn bdd_scenario_skip_zero_resolves_green() {
+        assert_eq!(
+            resolve_bdd_scenario_skip(0, &fallback_bdd_scenario_skip()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn bdd_scenario_skip_just_below_warn_resolves_green() {
+        assert_eq!(
+            resolve_bdd_scenario_skip(39, &fallback_bdd_scenario_skip()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn bdd_scenario_skip_at_warn_threshold_resolves_yellow() {
+        assert_eq!(
+            resolve_bdd_scenario_skip(40, &fallback_bdd_scenario_skip()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn bdd_scenario_skip_just_below_fail_resolves_yellow() {
+        assert_eq!(
+            resolve_bdd_scenario_skip(59, &fallback_bdd_scenario_skip()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn bdd_scenario_skip_at_fail_threshold_resolves_red() {
+        assert_eq!(
+            resolve_bdd_scenario_skip(60, &fallback_bdd_scenario_skip()),
+            Status::Red
+        );
+    }
+
+    // ── CI wall-clock resolver boundary table ────────────────────────
+
+    fn fallback_ci_wall_clock() -> CiWallClockThresholds {
+        ThresholdConfig::fallback().rows.ci_wall_clock
+    }
+
+    #[test]
+    fn ci_wall_clock_fallback_values_match_documented_defaults() {
+        let cfg = fallback_ci_wall_clock();
+        assert_eq!(cfg.warn_seconds_delta, 60.0);
+        assert_eq!(cfg.fail_seconds_delta, 300.0);
+    }
+
+    #[test]
+    fn ci_wall_clock_negative_delta_resolves_green() {
+        // CI sped up — Green unconditionally.
+        assert_eq!(
+            resolve_ci_wall_clock(-30.0, &fallback_ci_wall_clock()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_zero_delta_resolves_green() {
+        assert_eq!(
+            resolve_ci_wall_clock(0.0, &fallback_ci_wall_clock()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_just_below_warn_resolves_green() {
+        // CLAUDE.md item 16 — the "almost wrong" case.
+        assert_eq!(
+            resolve_ci_wall_clock(59.9, &fallback_ci_wall_clock()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_at_warn_threshold_resolves_yellow() {
+        assert_eq!(
+            resolve_ci_wall_clock(60.0, &fallback_ci_wall_clock()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_just_below_fail_resolves_yellow() {
+        assert_eq!(
+            resolve_ci_wall_clock(299.9, &fallback_ci_wall_clock()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_at_fail_threshold_resolves_red() {
+        assert_eq!(
+            resolve_ci_wall_clock(300.0, &fallback_ci_wall_clock()),
+            Status::Red
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_above_fail_threshold_resolves_red() {
+        assert_eq!(
+            resolve_ci_wall_clock(900.0, &fallback_ci_wall_clock()),
+            Status::Red
+        );
+    }
+
+    // ── Flaky-population resolver boundary table ─────────────────────
+
+    fn fallback_flaky() -> FlakyPopulationThresholds {
+        ThresholdConfig::fallback().rows.flaky
+    }
+
+    #[test]
+    fn flaky_fallback_values_match_documented_defaults() {
+        let cfg = fallback_flaky();
+        assert_eq!(cfg.warn_marker_count, 5);
+        assert_eq!(cfg.fail_marker_count, 20);
+    }
+
+    #[test]
+    fn flaky_zero_resolves_green() {
+        assert_eq!(
+            resolve_flaky_population(0, &fallback_flaky()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn flaky_just_below_warn_resolves_green() {
+        assert_eq!(
+            resolve_flaky_population(4, &fallback_flaky()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn flaky_at_warn_threshold_resolves_yellow() {
+        assert_eq!(
+            resolve_flaky_population(5, &fallback_flaky()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn flaky_just_below_fail_resolves_yellow() {
+        assert_eq!(
+            resolve_flaky_population(19, &fallback_flaky()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn flaky_at_fail_threshold_resolves_red() {
+        assert_eq!(resolve_flaky_population(20, &fallback_flaky()), Status::Red);
+    }
+
+    #[test]
+    fn flaky_above_fail_threshold_resolves_red() {
+        assert_eq!(resolve_flaky_population(50, &fallback_flaky()), Status::Red);
     }
 
     // ── Configured-thresholds round-trip ─────────────────────────────

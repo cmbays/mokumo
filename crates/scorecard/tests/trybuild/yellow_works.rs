@@ -1,7 +1,7 @@
 //! Layer 1 typestate: a Yellow row constructs without `failure_detail_md`.
 //! This file must compile cleanly.
 
-use scorecard::{Row, RowCommon};
+use scorecard::{Breakouts, Row, RowCommon};
 
 fn main() {
     let common = RowCommon {
@@ -10,5 +10,6 @@ fn main() {
         anchor: "coverage".into(),
     };
 
-    let _row = Row::coverage_delta_yellow(common, -0.6, "-0.6 pp".to_string());
+    let _row =
+        Row::coverage_delta_yellow(common, -0.6, "-0.6 pp".to_string(), Breakouts::default());
 }

@@ -20,6 +20,27 @@
 
 const STICKY_MARKER = "<!-- ci-scorecard -->";
 
+/** Schema version this renderer is pinned to. Mirror of
+ *  `scorecard::aggregate::SCHEMA_VERSION`. When an artifact reports a
+ *  higher schema_version (a producer running ahead of the renderer
+ *  rollout), the renderer prepends a degradation banner so reviewers
+ *  know rows may be missing or rendered with stale logic.
+ *
+ *  Bumped in lockstep with the producer; the schema-drift CI step
+ *  catches any divergence by validating the committed scorecard
+ *  artifact against the embedded schema. */
+const RENDERER_SCHEMA_VERSION = 2;
+
+/** HTML marker the renderer emits when an artifact's schema_version
+ *  exceeds the renderer's pinned version. Surfaced as an
+ *  always-on-comment so operators can detect the drift even without
+ *  reading the rendered Markdown. */
+const FORWARD_COMPAT_MARKER = "<!-- forward-compat:degraded -->";
+
+/** Visible italic preamble for forward-compat degradation. */
+const FORWARD_COMPAT_PREAMBLE =
+  "_Renderer pinned to an older schema_version than this artifact — some rows may render with stale logic. Update the renderer to catch up._";
+
 // ── Fallback-threshold signals ─────────────────────────────────────────
 //
 // The renderer surfaces three byte-stable strings whenever the producer
@@ -46,6 +67,37 @@ const STARTER_PREAMBLE =
 const PATH_HINT_COMMENT =
   "<!-- tune at .config/scorecard/quality.toml — see QUALITY.md#threshold-tuning -->";
 
+// ── Layer-3 stub fallback (producer-pending sentinel) ─────────────────
+//
+// Producers that have not yet shipped emit a Green stub row whose
+// `delta_text` opens with [`PENDING_DELTA_PREFIX`] + the upstream issue
+// reference. The renderer surfaces the row inline with a "⏳ pending"
+// affordance and lets GitHub auto-link the issue ref (`crap4rs#111` →
+// linked) so reviewers reach the upstream producer in one click.
+//
+// Mirror of `scorecard::aggregate::PENDING_TEXT_PREFIX`. Vitest pins
+// byte-equality so a drift on either side fails first.
+
+/** Prefix that flags a row's `delta_text` as a producer-pending stub.
+ *  Mirror of `scorecard::aggregate::PENDING_TEXT_PREFIX`. */
+const PENDING_DELTA_PREFIX = "(producer pending — see ";
+
+/** Icon shown in the status column for a producer-pending stub row. */
+const PENDING_ICON = "⏳";
+
+/** Detect whether a row is a Layer-3 producer-pending stub.
+ *
+ *  @param {import("./types").Row} row
+ *  @returns {boolean}
+ */
+function isPendingStubRow(row) {
+  return (
+    row.status === "Green" &&
+    typeof row.delta_text === "string" &&
+    row.delta_text.startsWith(PENDING_DELTA_PREFIX)
+  );
+}
+
 /** @type {Record<import("./types").Status, string>} */
 const STATUS_ICON = {
   Green: "🟢",
@@ -55,14 +107,22 @@ const STATUS_ICON = {
 
 /** Render a single row line as a markdown table row.
  *
+ *  Producer-pending stub rows substitute the [`PENDING_ICON`] in the
+ *  status cell so reviewers can tell at a glance the row is awaiting
+ *  an upstream producer; the `delta_text` already carries the
+ *  GitHub-autolinked issue reference so no extra link work is needed
+ *  here.
+ *
  *  @param {import("./types").Row} row
  *  @returns {string}
  */
 function renderRow(row) {
-  const icon = STATUS_ICON[row.status] || "❔";
+  const pending = isPendingStubRow(row);
+  const icon = pending ? PENDING_ICON : STATUS_ICON[row.status] || "❔";
+  const statusLabel = pending ? "Pending" : row.status;
   const label = row.label || row.id;
   const delta = row.delta_text || "";
-  return `| ${icon} ${row.status} | ${label} | ${delta} |`;
+  return `| ${icon} ${statusLabel} | ${label} | ${delta} |`;
 }
 
 /** Render inline failure detail block for a Red row.
@@ -77,6 +137,13 @@ function renderFailureDetail(row) {
   if (row.status !== "Red") return "";
   const detail = row.failure_detail_md;
   if (typeof detail !== "string" || detail.length === 0) {
+    // Layer 3 defensive: producer + schema validator should have
+    // already rejected this. Log loudly so operators see the breach
+    // even when the comment renders cleanly.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[scorecard] Red row '${row.label || row.id}' missing failure_detail_md — falling back to placeholder. Layers 1+2 should have prevented this.`,
+    );
     return `\n> **${row.label || row.id}:** (detail missing — see workflow logs)\n`;
   }
   return `\n> **${row.label || row.id}:** ${detail}\n`;
@@ -103,7 +170,17 @@ function renderScorecardMarkdown(scorecard) {
   const headerLine = `_PR #${scorecard.pr.pr_number} • head ${scorecard.pr.head_sha.slice(0, 7)}_`;
 
   const fallback = scorecard.fallback_thresholds_active === true;
+  const forwardCompat =
+    typeof scorecard.schema_version === "number" &&
+    scorecard.schema_version > RENDERER_SCHEMA_VERSION;
   const lines = [STICKY_MARKER];
+  if (forwardCompat) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[scorecard] artifact at schema_version=${scorecard.schema_version} — renderer pinned to ${RENDERER_SCHEMA_VERSION}; rendering with degradation notice.`,
+    );
+    lines.push(FORWARD_COMPAT_PREAMBLE, "");
+  }
   if (fallback) {
     lines.push(STARTER_PREAMBLE, "");
   }
@@ -117,6 +194,9 @@ function renderScorecardMarkdown(scorecard) {
     rows,
     detailBlocks,
   );
+  if (forwardCompat) {
+    lines.push(FORWARD_COMPAT_MARKER);
+  }
   if (fallback) {
     lines.push(FALLBACK_MARKER, PATH_HINT_COMMENT);
   }
@@ -267,6 +347,12 @@ module.exports = {
   FALLBACK_MARKER,
   STARTER_PREAMBLE,
   PATH_HINT_COMMENT,
+  PENDING_DELTA_PREFIX,
+  PENDING_ICON,
+  RENDERER_SCHEMA_VERSION,
+  FORWARD_COMPAT_MARKER,
+  FORWARD_COMPAT_PREAMBLE,
+  isPendingStubRow,
   renderScorecardMarkdown,
   renderFailClosedMarkdown,
   postStickyComment,

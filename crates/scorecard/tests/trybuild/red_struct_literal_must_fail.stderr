@@ -6,7 +6,7 @@ error[E0639]: cannot create non-exhaustive variant using struct expression
 22 | |         common,
 23 | |         status: Status::Red,
 24 | |         delta_pp: -4.2,
-25 | |         delta_text: "-4.2 pp".to_string(),
-26 | |         failure_detail_md: None,
-27 | |     };
+...  |
+27 | |         failure_detail_md: None,
+28 | |     };
    | |_____^

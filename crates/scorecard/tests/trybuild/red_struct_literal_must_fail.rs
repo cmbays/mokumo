@@ -6,7 +6,7 @@
 //! failure_detail_md: None }` and produce the exact wire-shape Layer 1
 //! is supposed to forbid.
 
-use scorecard::{Row, RowCommon, Status};
+use scorecard::{Breakouts, Row, RowCommon, Status};
 
 fn main() {
     let common = RowCommon {
@@ -23,6 +23,7 @@ fn main() {
         status: Status::Red,
         delta_pp: -4.2,
         delta_text: "-4.2 pp".to_string(),
+        breakouts: Breakouts::default(),
         failure_detail_md: None,
     };
 }

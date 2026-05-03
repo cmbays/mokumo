@@ -9,6 +9,12 @@ import {
   FALLBACK_MARKER,
   STARTER_PREAMBLE,
   PATH_HINT_COMMENT,
+  PENDING_DELTA_PREFIX,
+  PENDING_ICON,
+  RENDERER_SCHEMA_VERSION,
+  FORWARD_COMPAT_MARKER,
+  FORWARD_COMPAT_PREAMBLE,
+  isPendingStubRow,
   renderScorecardMarkdown,
   renderFailClosedMarkdown,
   postStickyComment,
@@ -150,6 +156,72 @@ describe("renderScorecardMarkdown", () => {
     expect(STARTER_PREAMBLE.endsWith("_")).toBe(true);
     expect(STARTER_PREAMBLE).toContain("`quality.toml`");
     expect(STARTER_PREAMBLE).toContain("QUALITY.md#threshold-tuning");
+  });
+
+  // ── Layer-3 producer-pending stub rows ──────────────────────────────
+  //
+  // Producer-blocked rows ship as Green stubs with `delta_text` keyed
+  // by the [`PENDING_DELTA_PREFIX`] sentinel. The renderer surfaces
+  // the row inline with a [`PENDING_ICON`] in the status cell so a
+  // reviewer can tell at a glance the row is awaiting an upstream
+  // producer; GitHub auto-links the issue reference inside the cell.
+
+  /** Build a synthetic stub row for the given variant.
+   *  @param {string} type
+   *  @param {string} producerRef
+   *  @returns {Record<string, unknown>}
+   */
+  function pendingStubRow(type, producerRef) {
+    return {
+      type,
+      id: type.toLowerCase(),
+      label: type,
+      anchor: type.toLowerCase(),
+      status: "Green",
+      delta_text: `${PENDING_DELTA_PREFIX}${producerRef})`,
+    };
+  }
+
+  it("PENDING_DELTA_PREFIX matches the producer-side aggregate.rs constant byte-for-byte", () => {
+    expect(PENDING_DELTA_PREFIX).toBe("(producer pending — see ");
+  });
+
+  it("isPendingStubRow recognizes the sentinel only on Green rows starting with the prefix", () => {
+    expect(isPendingStubRow(pendingStubRow("CrapDelta", "crap4rs#111"))).toBe(true);
+    // Wrong status: Yellow row carrying the same delta_text is not a stub.
+    expect(
+      isPendingStubRow({ ...pendingStubRow("CrapDelta", "crap4rs#111"), status: "Yellow" }),
+    ).toBe(false);
+    // Free-form delta_text without the prefix is not a stub.
+    expect(
+      isPendingStubRow({ ...pendingStubRow("CrapDelta", "crap4rs#111"), delta_text: "5 → 7" }),
+    ).toBe(false);
+  });
+
+  it.each([
+    ["CrapDelta", "crap4rs#111"],
+    ["MutationSurvivors", "mokumo#748"],
+    ["HandlerCoverageAxis", "mokumo#654, mokumo#655"],
+    ["GateRuns", "mokumo#770"],
+  ])("renders a pending stub row for %s with the sentinel + producer ref autolinked", (type, ref) => {
+    const sc = {
+      ...baseScorecard,
+      rows: [pendingStubRow(type, ref)],
+    };
+    const md = renderScorecardMarkdown(sc);
+    // The pending icon stands in for the green icon so reviewers spot
+    // the awaiting-producer state.
+    expect(md).toContain(PENDING_ICON);
+    expect(md).toContain("Pending");
+    // The delta_text cell carries the issue reference verbatim so
+    // GitHub auto-links it inside the sticky comment.
+    expect(md).toContain(`${PENDING_DELTA_PREFIX}${ref})`);
+  });
+
+  it("does not stamp the pending icon on regular Green rows", () => {
+    const md = renderScorecardMarkdown(baseScorecard);
+    expect(md).not.toContain(PENDING_ICON);
+    expect(md).toContain("🟢");
   });
 });
 
@@ -432,5 +504,109 @@ describe("bin/render-cli.js", () => {
     expect(stdout).not.toContain(STARTER_PREAMBLE);
     expect(stdout).not.toContain(FALLBACK_MARKER);
     expect(stdout).not.toContain(PATH_HINT_COMMENT);
+  });
+});
+
+describe("forward-compat degradation banner", () => {
+  it("RENDERER_SCHEMA_VERSION is a non-negative integer", () => {
+    expect(Number.isInteger(RENDERER_SCHEMA_VERSION)).toBe(true);
+    expect(RENDERER_SCHEMA_VERSION).toBeGreaterThanOrEqual(0);
+  });
+
+  it("emits the forward-compat marker when artifact version exceeds renderer", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        schema_version: RENDERER_SCHEMA_VERSION + 1,
+      });
+      expect(md).toContain(FORWARD_COMPAT_MARKER);
+      expect(md).toContain(FORWARD_COMPAT_PREAMBLE);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not emit the forward-compat banner at the renderer's pinned version", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        schema_version: RENDERER_SCHEMA_VERSION,
+      });
+      expect(md).not.toContain(FORWARD_COMPAT_MARKER);
+      expect(md).not.toContain(FORWARD_COMPAT_PREAMBLE);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not emit the forward-compat banner at older schema versions", () => {
+    const md = renderScorecardMarkdown({
+      ...baseScorecard,
+      schema_version: 0,
+    });
+    expect(md).not.toContain(FORWARD_COMPAT_MARKER);
+  });
+});
+
+describe("Layer 3 missing-detail defensive fallback", () => {
+  it("renders placeholder + console.warns when a Red row lacks failure_detail_md", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        overall_status: "Red",
+        rows: [
+          {
+            type: "CoverageDelta",
+            id: "coverage",
+            label: "Coverage",
+            anchor: "coverage",
+            status: "Red",
+            delta_pp: -7.5,
+            delta_text: "-7.5 pp",
+            // failure_detail_md OMITTED — Layer 3 defensive path.
+          },
+        ],
+      });
+      expect(md).toContain("(detail missing — see workflow logs)");
+      expect(warn).toHaveBeenCalled();
+      const call = warn.mock.calls.find((args) =>
+        String(args[0]).includes("missing failure_detail_md"),
+      );
+      expect(call).toBeDefined();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("renders the supplied detail when failure_detail_md is present", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        overall_status: "Red",
+        rows: [
+          {
+            type: "CoverageDelta",
+            id: "coverage",
+            label: "Coverage",
+            anchor: "coverage",
+            status: "Red",
+            delta_pp: -7.5,
+            delta_text: "-7.5 pp",
+            failure_detail_md: "Coverage dropped 7.5 pp.",
+          },
+        ],
+      });
+      expect(md).toContain("Coverage dropped 7.5 pp.");
+      expect(md).not.toContain("(detail missing");
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
