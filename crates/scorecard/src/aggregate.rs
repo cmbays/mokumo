@@ -19,8 +19,10 @@ use clap::Parser;
 use jsonschema::JSONSchema;
 use serde_json::Value;
 
-use crate::threshold::{self, CoverageThresholds, ThresholdConfig};
-use crate::{Breakouts, GateRun, PrMeta, Row, RowCommon, Scorecard, Status};
+use crate::threshold::{self, BddSkipThresholds, CoverageThresholds, ThresholdConfig};
+use crate::{
+    BddCrateBreakout, Breakouts, GateRun, PrMeta, Row, RowCommon, Scorecard, Status, TagCount,
+};
 
 /// Embedded copy of `.config/scorecard/schema.json`. Embedding (vs. a
 /// `--schema <path>` CLI flag) keeps the binary cwd-portable: any CI
@@ -60,6 +62,14 @@ struct Cli {
     /// fallback mode and produces a different verdict than intended.
     #[arg(long, default_value = ".config/scorecard/quality.toml")]
     quality_toml: PathBuf,
+
+    /// Roots to walk for BDD `.feature` files. Repeat the flag for
+    /// multiple roots. When the flag is omitted the producer emits a
+    /// `BddSkipCount` row with `0 skipped / 0 total` rather than a
+    /// producer-pending stub — the row is wired even on a corpus-less
+    /// run.
+    #[arg(long = "bdd-features-root", value_name = "DIR")]
+    bdd_features_roots: Vec<PathBuf>,
 
     /// Path to write the resulting scorecard.json artifact. Parent
     /// directories are created if missing.
@@ -271,6 +281,250 @@ fn stub_gate_runs_pending() -> Row {
     )
 }
 
+// ── BDD scenario / skip producer ───────────────────────────────────────
+//
+// V4 (#769) §4 wired row. The producer walks operator-supplied
+// `.feature` directory roots, parses each file's tag stack and scenario
+// keywords, and aggregates per-crate breakouts. The threshold resolver
+// in `threshold::resolve_bdd_skip` maps the total `skipped` count to a
+// [`Status`].
+
+/// Tags that mark a scenario as skipped from execution. Matches the
+/// cucumber-rs convention used across the workspace.
+const BDD_SKIP_TAGS: &[&str] = &["@wip", "@future", "@ignore", "@skip"];
+
+/// Tag prefix that marks a scenario as tracked-but-deferred. Tag
+/// payloads after the colon (`@tracked:mokumo#123`) act as upstream
+/// issue references the renderer can autolink.
+const BDD_TRACKED_TAG_PREFIX: &str = "@tracked:";
+
+/// Aggregated BDD corpus statistics computed from one or more
+/// `.feature` files. Pure-data input to [`build_bdd_skip_row`] —
+/// callers either build it via [`discover_bdd_corpus`] (CLI path) or
+/// hand-roll it for unit tests.
+#[derive(Debug, Default, Clone)]
+pub struct BddSummary {
+    /// Total scenarios across the corpus (`Scenario:` +
+    /// `Scenario Outline:` + `Example:`).
+    pub total_scenarios: u32,
+    /// Scenarios bearing at least one tag in [`BDD_SKIP_TAGS`] or with
+    /// the [`BDD_TRACKED_TAG_PREFIX`] prefix.
+    pub skipped: u32,
+    /// Per-crate breakdown. Sorted by `crate_name` for deterministic
+    /// artifacts.
+    pub breakouts: Vec<BddCrateBreakout>,
+}
+
+/// `true` when a tag literal counts toward `skipped`.
+fn is_bdd_skip_tag(tag: &str) -> bool {
+    BDD_SKIP_TAGS.contains(&tag) || tag.starts_with(BDD_TRACKED_TAG_PREFIX)
+}
+
+#[derive(Debug, Default)]
+struct ParsedFeature {
+    total: u32,
+    skipped: u32,
+    by_tag: std::collections::BTreeMap<String, u32>,
+}
+
+/// Parse a `.feature` file body into per-file scenario / skip counts.
+///
+/// Recognises Gherkin-style tag lines (one or more `@...` tokens),
+/// `Feature:` / `Rule:` / `Scenario:` / `Scenario Outline:` /
+/// `Example:` keywords. Feature-level tags (those above `Feature:`)
+/// apply to every scenario in the file. Step / docstring / table /
+/// comment lines are ignored.
+///
+/// Not a full Gherkin parser — good enough for counting + tagging.
+fn parse_feature(contents: &str) -> ParsedFeature {
+    let mut feature_tags: Vec<String> = Vec::new();
+    let mut pending: Vec<String> = Vec::new();
+    let mut feature_seen = false;
+    let mut parsed = ParsedFeature::default();
+
+    for raw in contents.lines() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if line.starts_with('@') {
+            for tok in line.split_whitespace() {
+                if tok.starts_with('@') {
+                    pending.push(tok.to_string());
+                }
+            }
+            continue;
+        }
+        if line.starts_with("Feature:") || line.starts_with("Rule:") {
+            if !feature_seen {
+                feature_tags = std::mem::take(&mut pending);
+                feature_seen = true;
+            } else {
+                pending.clear();
+            }
+            continue;
+        }
+        if line.starts_with("Scenario:")
+            || line.starts_with("Scenario Outline:")
+            || line.starts_with("Example:")
+        {
+            parsed.total += 1;
+            let mut effective = feature_tags.clone();
+            effective.append(&mut pending);
+            let mut is_skipped = false;
+            for tag in &effective {
+                *parsed.by_tag.entry(tag.clone()).or_insert(0) += 1;
+                if is_bdd_skip_tag(tag) {
+                    is_skipped = true;
+                }
+            }
+            if is_skipped {
+                parsed.skipped += 1;
+            }
+            continue;
+        }
+        // Background / step / examples / docstring / table — clear
+        // pending tags so a stray `@` line followed by a non-Scenario
+        // keyword does not bleed into the next scenario.
+        if line.starts_with("Background:") {
+            pending.clear();
+        }
+    }
+
+    parsed
+}
+
+/// Derive a crate / app name from a `.feature` file path.
+///
+/// Looks for `crates/<name>/...` or `apps/<name>/...` segments in the
+/// path. Falls back to `"unknown"` when no recognisable workspace
+/// segment is present (rare — only happens on hand-fed test fixtures).
+fn crate_name_from_path(path: &Path) -> String {
+    let parts: Vec<_> = path.components().collect();
+    for (i, c) in parts.iter().enumerate() {
+        if let std::path::Component::Normal(s) = c {
+            let s = s.to_string_lossy();
+            if (s == "crates" || s == "apps") && i + 1 < parts.len() {
+                if let std::path::Component::Normal(name) = &parts[i + 1] {
+                    return name.to_string_lossy().into_owned();
+                }
+            }
+        }
+    }
+    "unknown".into()
+}
+
+/// Walk one or more roots for `.feature` files and aggregate the BDD
+/// corpus into a [`BddSummary`].
+///
+/// Returns an error when a discovered file cannot be read; missing
+/// roots are silently skipped (an empty `--bdd-features-root` set
+/// produces an empty summary).
+pub fn discover_bdd_corpus(roots: &[PathBuf]) -> Result<BddSummary, String> {
+    use std::collections::BTreeMap;
+
+    type CrateBucket = (u32, u32, BTreeMap<String, u32>);
+    let mut per_crate: BTreeMap<String, CrateBucket> = BTreeMap::new();
+    let mut total = 0u32;
+    let mut skipped = 0u32;
+
+    for root in roots {
+        if !root.exists() {
+            continue;
+        }
+        for entry in walkdir::WalkDir::new(root)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            if entry.path().extension().and_then(|s| s.to_str()) != Some("feature") {
+                continue;
+            }
+            let contents = fs::read_to_string(entry.path()).map_err(|e| {
+                format!(
+                    "aggregate: failed to read feature file {}: {e}",
+                    entry.path().display()
+                )
+            })?;
+            let parsed = parse_feature(&contents);
+            let crate_name = crate_name_from_path(entry.path());
+            total += parsed.total;
+            skipped += parsed.skipped;
+            let bucket = per_crate.entry(crate_name).or_default();
+            bucket.0 += parsed.total;
+            bucket.1 += parsed.skipped;
+            for (tag, n) in parsed.by_tag {
+                *bucket.2.entry(tag).or_insert(0) += n;
+            }
+        }
+    }
+
+    let breakouts = per_crate
+        .into_iter()
+        .map(|(crate_name, (total, skipped, by_tag))| BddCrateBreakout {
+            crate_name,
+            total,
+            skipped,
+            by_tag: by_tag
+                .into_iter()
+                .map(|(tag, count)| TagCount { tag, count })
+                .collect(),
+        })
+        .collect();
+
+    Ok(BddSummary {
+        total_scenarios: total,
+        skipped,
+        breakouts,
+    })
+}
+
+/// Render the inline failure detail for a Red BDD skip-count row.
+fn bdd_failure_detail(skipped: u32, fail_threshold: u32) -> String {
+    format!("BDD skip count is {skipped} — at or above the {fail_threshold} fail threshold.")
+}
+
+/// Format the `delta_text` for a wired BDD skip row.
+fn bdd_delta_text(total: u32, skipped: u32) -> String {
+    format!("{skipped} skipped / {total} total")
+}
+
+/// Build a wired `Row::BddSkipCount` from a corpus summary + thresholds.
+pub fn build_bdd_skip_row(summary: &BddSummary, thresholds: &BddSkipThresholds) -> Row {
+    let common = RowCommon {
+        id: "bdd_skip".into(),
+        label: "BDD skips".into(),
+        anchor: "bdd-skip".into(),
+    };
+    let delta_text = bdd_delta_text(summary.total_scenarios, summary.skipped);
+    match threshold::resolve_bdd_skip(summary.skipped, thresholds) {
+        Status::Green => Row::bdd_skip_count_green(
+            common,
+            summary.total_scenarios,
+            summary.skipped,
+            summary.breakouts.clone(),
+            delta_text,
+        ),
+        Status::Yellow => Row::bdd_skip_count_yellow(
+            common,
+            summary.total_scenarios,
+            summary.skipped,
+            summary.breakouts.clone(),
+            delta_text,
+        ),
+        Status::Red => Row::bdd_skip_count_red(
+            common,
+            summary.total_scenarios,
+            summary.skipped,
+            summary.breakouts.clone(),
+            delta_text,
+            bdd_failure_detail(summary.skipped, thresholds.fail_skipped),
+        ),
+    }
+}
+
 /// Build the scorecard artifact from parsed PR metadata, raw
 /// measurements, and the resolved threshold config.
 ///
@@ -281,10 +535,12 @@ fn stub_gate_runs_pending() -> Row {
 pub fn build_scorecard(
     pr: PrMeta,
     coverage_delta_pp: f64,
+    bdd_summary: &BddSummary,
     thresholds: &ThresholdConfig,
     fallback_active: bool,
 ) -> Scorecard {
     let coverage = build_coverage_row(coverage_delta_pp, &thresholds.rows.coverage);
+    let bdd = build_bdd_skip_row(bdd_summary, &thresholds.rows.bdd_skip);
 
     // Producer-blocked rows ship as Green stubs pinned to their
     // upstream producer references. The renderer detects the
@@ -293,6 +549,7 @@ pub fn build_scorecard(
     // one-PR follow-up against #650 — see the issue's closure model.
     let rows = vec![
         coverage,
+        bdd,
         stub_crap_delta_pending(),
         stub_mutation_survivors_pending(),
         stub_handler_coverage_axis_pending(),
@@ -610,9 +867,17 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
             return ExitCode::from(1);
         }
     };
+    let bdd_summary = match discover_bdd_corpus(&cli.bdd_features_roots) {
+        Ok(s) => s,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return ExitCode::from(1);
+        }
+    };
     let scorecard = build_scorecard(
         pr,
         cli.coverage_delta_pp,
+        &bdd_summary,
         &source.config(),
         source.fallback_active(),
     );
@@ -641,17 +906,24 @@ mod tests {
     }
 
     fn build_with_delta(delta_pp: f64) -> Scorecard {
-        build_scorecard(pr_meta(), delta_pp, &fallback(), true)
+        build_scorecard(
+            pr_meta(),
+            delta_pp,
+            &BddSummary::default(),
+            &fallback(),
+            true,
+        )
     }
 
     #[test]
     fn build_scorecard_emits_coverage_row_first() {
-        // V4 emits the coverage row plus four producer-pending stubs
-        // (CrapDelta, MutationSurvivors, HandlerCoverageAxis, GateRuns).
-        // C3-C6 wire BddSkipCount, CiWallClockDelta, FlakyPopulation,
-        // and ChangedScopeDiagram on top, growing the row vector.
+        // V4 emits the coverage row + the wired BddSkipCount row +
+        // four producer-pending stubs (CrapDelta, MutationSurvivors,
+        // HandlerCoverageAxis, GateRuns). C4-C6 wire CiWallClockDelta,
+        // FlakyPopulation, and ChangedScopeDiagram on top, growing the
+        // row vector.
         let sc = build_with_delta(0.3);
-        assert!(sc.rows.len() >= 5);
+        assert!(sc.rows.len() >= 6);
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -664,6 +936,25 @@ mod tests {
         assert_eq!(*status, Status::Green);
         assert_eq!(*delta_pp, 0.3);
         assert_eq!(delta_text, "+0.3 pp");
+    }
+
+    #[test]
+    fn build_scorecard_emits_bdd_skip_row_after_coverage() {
+        // BDD skip is the second row in the artifact — wired in C3 and
+        // sourced from `BddSummary`. Empty summary lands Green.
+        let sc = build_with_delta(0.3);
+        let Row::BddSkipCount {
+            status,
+            total_scenarios,
+            skipped,
+            ..
+        } = &sc.rows[1]
+        else {
+            panic!("expected BddSkipCount as the second row")
+        };
+        assert_eq!(*status, Status::Green);
+        assert_eq!(*total_scenarios, 0);
+        assert_eq!(*skipped, 0);
     }
 
     #[test]
@@ -714,7 +1005,7 @@ mod tests {
         // Independent test of the parameter — `false` flows through
         // the same path so a contributor cannot accidentally hardwire
         // the field to `true` and pass the previous test by coincidence.
-        let sc = build_scorecard(pr_meta(), -2.5, &fallback(), false);
+        let sc = build_scorecard(pr_meta(), -2.5, &BddSummary::default(), &fallback(), false);
         assert!(!sc.fallback_thresholds_active);
     }
 
@@ -939,7 +1230,13 @@ mod tests {
         )
         .expect("write");
         let source = resolve_threshold_source(&path).expect("parse");
-        let sc = build_scorecard(pr_meta(), -0.8, &source.config(), source.fallback_active());
+        let sc = build_scorecard(
+            pr_meta(),
+            -0.8,
+            &BddSummary::default(),
+            &source.config(),
+            source.fallback_active(),
+        );
         assert_eq!(sc.overall_status, Status::Yellow);
         assert!(!sc.fallback_thresholds_active);
     }
@@ -952,7 +1249,13 @@ mod tests {
         let dir = tempdir();
         let missing = dir.path.join("absent.toml");
         let source = resolve_threshold_source(&missing).expect("fallback");
-        let sc = build_scorecard(pr_meta(), -2.5, &source.config(), source.fallback_active());
+        let sc = build_scorecard(
+            pr_meta(),
+            -2.5,
+            &BddSummary::default(),
+            &source.config(),
+            source.fallback_active(),
+        );
         assert_eq!(sc.overall_status, Status::Yellow);
         assert!(sc.fallback_thresholds_active);
     }
@@ -1075,8 +1378,226 @@ mod tests {
         let content = fs::read_to_string(&out).expect("read back");
         let parsed: Value = serde_json::from_str(&content).expect("valid json");
         assert_eq!(parsed["overall_status"], "Green");
-        // CoverageDelta + four producer-pending stubs.
-        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(5));
+        // CoverageDelta + wired BddSkipCount + four producer-pending stubs.
+        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(6));
+    }
+
+    // ── BDD producer ────────────────────────────────────────────────
+
+    #[test]
+    fn parse_feature_counts_simple_scenario() {
+        let body = r#"
+Feature: example
+
+  Scenario: alpha
+    Given a step
+"#;
+        let parsed = parse_feature(body);
+        assert_eq!(parsed.total, 1);
+        assert_eq!(parsed.skipped, 0);
+    }
+
+    #[test]
+    fn parse_feature_counts_skipped_scenarios_via_wip_tag() {
+        let body = r#"
+Feature: example
+
+  @wip
+  Scenario: deferred
+    Given a step
+
+  Scenario: shipping
+    Given another step
+"#;
+        let parsed = parse_feature(body);
+        assert_eq!(parsed.total, 2);
+        assert_eq!(parsed.skipped, 1);
+        assert_eq!(parsed.by_tag.get("@wip"), Some(&1));
+    }
+
+    #[test]
+    fn parse_feature_counts_tracked_prefix_as_skipped() {
+        let body = r#"
+Feature: example
+
+  @tracked:mokumo#123
+  Scenario: deferred
+    Given a step
+"#;
+        let parsed = parse_feature(body);
+        assert_eq!(parsed.skipped, 1);
+        assert_eq!(parsed.by_tag.get("@tracked:mokumo#123"), Some(&1));
+    }
+
+    #[test]
+    fn parse_feature_propagates_feature_level_tags_to_each_scenario() {
+        // Feature-level tags above `Feature:` apply to every scenario.
+        let body = r#"
+@feature-tag
+Feature: example
+
+  Scenario: alpha
+    Given a
+
+  Scenario: beta
+    Given b
+"#;
+        let parsed = parse_feature(body);
+        assert_eq!(parsed.total, 2);
+        assert_eq!(parsed.skipped, 0);
+        assert_eq!(parsed.by_tag.get("@feature-tag"), Some(&2));
+    }
+
+    #[test]
+    fn parse_feature_counts_scenario_outline_and_example() {
+        let body = r#"
+Feature: example
+
+  Scenario Outline: alpha
+    Given <x>
+
+    Examples:
+      | x |
+      | 1 |
+
+  Example: beta
+    Given a step
+"#;
+        let parsed = parse_feature(body);
+        assert_eq!(parsed.total, 2);
+    }
+
+    #[test]
+    fn parse_feature_ignores_comments_and_blank_lines() {
+        let body = r#"
+# top comment
+Feature: example
+
+  # in-feature comment
+
+  Scenario: alpha
+    Given a step
+"#;
+        let parsed = parse_feature(body);
+        assert_eq!(parsed.total, 1);
+    }
+
+    #[test]
+    fn build_bdd_skip_row_green_below_warn_threshold() {
+        let summary = BddSummary {
+            total_scenarios: 100,
+            skipped: 10,
+            breakouts: vec![],
+        };
+        let row = build_bdd_skip_row(&summary, &BddSkipThresholds::default());
+        let Row::BddSkipCount {
+            status,
+            total_scenarios,
+            skipped,
+            delta_text,
+            failure_detail_md,
+            ..
+        } = row
+        else {
+            panic!("expected BddSkipCount")
+        };
+        assert_eq!(status, Status::Green);
+        assert_eq!(total_scenarios, 100);
+        assert_eq!(skipped, 10);
+        assert_eq!(delta_text, "10 skipped / 100 total");
+        assert!(failure_detail_md.is_none());
+    }
+
+    #[test]
+    fn build_bdd_skip_row_yellow_at_warn_threshold() {
+        let summary = BddSummary {
+            total_scenarios: 100,
+            skipped: 50,
+            breakouts: vec![],
+        };
+        let row = build_bdd_skip_row(&summary, &BddSkipThresholds::default());
+        assert!(matches!(
+            row,
+            Row::BddSkipCount {
+                status: Status::Yellow,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn build_bdd_skip_row_red_at_fail_threshold_carries_detail() {
+        let summary = BddSummary {
+            total_scenarios: 500,
+            skipped: 200,
+            breakouts: vec![],
+        };
+        let row = build_bdd_skip_row(&summary, &BddSkipThresholds::default());
+        let Row::BddSkipCount {
+            status,
+            failure_detail_md,
+            ..
+        } = row
+        else {
+            panic!("expected BddSkipCount")
+        };
+        assert_eq!(status, Status::Red);
+        let detail = failure_detail_md.expect("Red rows carry failure_detail_md");
+        assert!(detail.contains("200"), "got: {detail}");
+        assert!(detail.contains("at or above"), "got: {detail}");
+    }
+
+    #[test]
+    fn discover_bdd_corpus_walks_feature_files_in_root() {
+        let dir = tempdir();
+        let crate_dir = dir.path.join("crates/example/tests/features");
+        fs::create_dir_all(&crate_dir).expect("mkdir");
+        fs::write(
+            crate_dir.join("a.feature"),
+            "Feature: a\n\n  @wip\n  Scenario: alpha\n    Given x\n",
+        )
+        .expect("write a");
+        fs::write(
+            crate_dir.join("b.feature"),
+            "Feature: b\n\n  Scenario: beta\n    Given y\n",
+        )
+        .expect("write b");
+
+        let summary = discover_bdd_corpus(&[dir.path.clone()]).expect("walk");
+        assert_eq!(summary.total_scenarios, 2);
+        assert_eq!(summary.skipped, 1);
+        assert_eq!(summary.breakouts.len(), 1);
+        assert_eq!(summary.breakouts[0].crate_name, "example");
+        assert_eq!(summary.breakouts[0].total, 2);
+        assert_eq!(summary.breakouts[0].skipped, 1);
+    }
+
+    #[test]
+    fn discover_bdd_corpus_returns_empty_for_missing_root() {
+        let dir = tempdir();
+        let missing = dir.path.join("nope");
+        let summary = discover_bdd_corpus(&[missing]).expect("missing root is empty corpus");
+        assert_eq!(summary.total_scenarios, 0);
+        assert_eq!(summary.skipped, 0);
+        assert!(summary.breakouts.is_empty());
+    }
+
+    #[test]
+    fn crate_name_from_path_extracts_crate_segment() {
+        let p = Path::new("crates/mokumo-shop/tests/features/quote.feature");
+        assert_eq!(crate_name_from_path(p), "mokumo-shop");
+    }
+
+    #[test]
+    fn crate_name_from_path_extracts_apps_segment() {
+        let p = Path::new("apps/web/tests/customer.feature");
+        assert_eq!(crate_name_from_path(p), "web");
+    }
+
+    #[test]
+    fn crate_name_from_path_falls_back_when_no_recognised_segment() {
+        let p = Path::new("/tmp/random/path.feature");
+        assert_eq!(crate_name_from_path(p), "unknown");
     }
 
     #[test]

@@ -91,6 +91,36 @@ pub struct ThresholdConfig {
 pub struct RowsConfig {
     /// Thresholds for the `Row::CoverageDelta` variant.
     pub coverage: CoverageThresholds,
+    /// Thresholds for the `Row::BddSkipCount` variant.
+    #[serde(default = "BddSkipThresholds::default")]
+    pub bdd_skip: BddSkipThresholds,
+}
+
+/// Warn / fail thresholds for the `Row::BddSkipCount` variant. Both
+/// fields are unsigned integer scenario counts; threshold semantics
+/// are inclusive on the worse side (matching `CoverageDelta`).
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BddSkipThresholds {
+    /// Skip-count above (or equal) which a row reports
+    /// [`Status::Yellow`].
+    pub warn_skipped: u32,
+    /// Skip-count above (or equal) which a row reports [`Status::Red`].
+    /// Typically larger than `warn_skipped`.
+    pub fail_skipped: u32,
+}
+
+impl BddSkipThresholds {
+    /// Defensible fallback: 50 skipped scenarios trigger Yellow, 200
+    /// trigger Red. Permissive enough that a typical mid-sized
+    /// codebase's `@wip` / `tracked:` exclusions stay Green; operators
+    /// tune via `quality.toml`.
+    pub fn default() -> Self {
+        Self {
+            warn_skipped: 50,
+            fail_skipped: 200,
+        }
+    }
 }
 
 /// Warn / fail thresholds for the `Row::CoverageDelta` variant,
@@ -127,6 +157,7 @@ impl ThresholdConfig {
                     warn_pp_delta: -1.0,
                     fail_pp_delta: -5.0,
                 },
+                bdd_skip: BddSkipThresholds::default(),
             },
         }
     }
@@ -161,6 +192,30 @@ pub fn resolve_coverage_delta(delta_pp: f64, cfg: &CoverageThresholds) -> Status
     if delta_pp <= cfg.fail_pp_delta {
         Status::Red
     } else if delta_pp <= cfg.warn_pp_delta {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a BDD skipped-scenario count to a [`Status`] using the
+/// supplied [`BddSkipThresholds`].
+///
+/// # Boundary semantics
+///
+/// | `skipped`                                   | Result            |
+/// |---------------------------------------------|-------------------|
+/// | `skipped >= fail_skipped`                   | [`Status::Red`]    |
+/// | `warn_skipped <= skipped < fail_skipped`    | [`Status::Yellow`] |
+/// | `skipped < warn_skipped`                    | [`Status::Green`]  |
+///
+/// Boundaries are inclusive on the worse side: a count exactly equal
+/// to `warn_skipped` is [`Status::Yellow`]; a count exactly equal to
+/// `fail_skipped` is [`Status::Red`]. Mirrors `resolve_coverage_delta`.
+pub fn resolve_bdd_skip(skipped: u32, cfg: &BddSkipThresholds) -> Status {
+    if skipped >= cfg.fail_skipped {
+        Status::Red
+    } else if skipped >= cfg.warn_skipped {
         Status::Yellow
     } else {
         Status::Green
@@ -298,6 +353,56 @@ mod tests {
             resolve_coverage_delta(f64::INFINITY, &fallback_coverage()),
             Status::Green
         );
+    }
+
+    // ── BDD-skip resolver boundary table ─────────────────────────────
+
+    fn fallback_bdd_skip() -> BddSkipThresholds {
+        ThresholdConfig::fallback().rows.bdd_skip
+    }
+
+    #[test]
+    fn bdd_skip_fallback_values_match_documented_defaults() {
+        let cfg = fallback_bdd_skip();
+        assert_eq!(cfg.warn_skipped, 50);
+        assert_eq!(cfg.fail_skipped, 200);
+    }
+
+    #[test]
+    fn bdd_skip_zero_resolves_green() {
+        assert_eq!(resolve_bdd_skip(0, &fallback_bdd_skip()), Status::Green);
+    }
+
+    #[test]
+    fn bdd_skip_just_below_warn_resolves_green() {
+        // The "almost wrong" case (CLAUDE.md item 16): one fewer than
+        // the warn threshold is still Green.
+        assert_eq!(resolve_bdd_skip(49, &fallback_bdd_skip()), Status::Green);
+    }
+
+    #[test]
+    fn bdd_skip_at_warn_threshold_resolves_yellow() {
+        assert_eq!(resolve_bdd_skip(50, &fallback_bdd_skip()), Status::Yellow);
+    }
+
+    #[test]
+    fn bdd_skip_between_warn_and_fail_resolves_yellow() {
+        assert_eq!(resolve_bdd_skip(120, &fallback_bdd_skip()), Status::Yellow);
+    }
+
+    #[test]
+    fn bdd_skip_just_below_fail_resolves_yellow() {
+        assert_eq!(resolve_bdd_skip(199, &fallback_bdd_skip()), Status::Yellow);
+    }
+
+    #[test]
+    fn bdd_skip_at_fail_threshold_resolves_red() {
+        assert_eq!(resolve_bdd_skip(200, &fallback_bdd_skip()), Status::Red);
+    }
+
+    #[test]
+    fn bdd_skip_above_fail_threshold_resolves_red() {
+        assert_eq!(resolve_bdd_skip(500, &fallback_bdd_skip()), Status::Red);
     }
 
     // ── Configured-thresholds round-trip ─────────────────────────────

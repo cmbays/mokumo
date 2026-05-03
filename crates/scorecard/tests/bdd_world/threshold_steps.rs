@@ -24,7 +24,9 @@
 
 use cucumber::{given, then, when};
 
-use scorecard::aggregate::{ThresholdSource, build_scorecard, resolve_threshold_source};
+use scorecard::aggregate::{
+    BddSummary, ThresholdSource, build_scorecard, resolve_threshold_source,
+};
 use scorecard::threshold::{
     self, CoverageThresholds, FALLBACK_MARKER, PATH_HINT_COMMENT, STARTER_PREAMBLE, ThresholdConfig,
 };
@@ -53,8 +55,11 @@ fn produce(world: &mut ThresholdWorld, delta_pp: f64) {
     let fallback_active = source.fallback_active();
 
     let pr = ThresholdWorld::stub_pr_meta();
-    let scorecard = build_scorecard(pr, delta_pp, &cfg, fallback_active);
+    let scorecard = build_scorecard(pr, delta_pp, &BddSummary::default(), &cfg, fallback_active);
 
+    // Coverage is the first row; downstream wired rows + producer-pending
+    // stubs follow it. Pin to index 0 rather than scanning so a future
+    // ordering regression surfaces here.
     let row_status = match scorecard.rows[0] {
         Row::CoverageDelta { status, .. } => status,
         // `Row` is `#[non_exhaustive]` (Layer-1 typestate); the wildcard
