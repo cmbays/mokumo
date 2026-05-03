@@ -27,7 +27,7 @@ section=""
 while IFS= read -r line; do
   if [[ "$line" =~ ^\[tools\.([a-zA-Z0-9_-]+)\]$ ]]; then
     section="${BASH_REMATCH[1]}"
-  elif [[ "$line" =~ ^version[[:space:]]*=[[:space:]]*\"([^\"]+)\"[[:space:]]*$ ]] && [ -n "$section" ]; then
+  elif [[ "$line" =~ ^version[[:space:]]*=[[:space:]]*\"([^\"]+)\"[[:space:]]*(#.*)?$ ]] && [ -n "$section" ]; then
     pinned[$section]="${BASH_REMATCH[1]}"
     section=""
   elif [[ "$line" =~ ^\[ ]]; then
@@ -41,7 +41,7 @@ if [ "${#pinned[@]}" -eq 0 ]; then
 fi
 
 errors=()
-seen_in_workflow=()
+declare -A seen_in_workflow
 
 # Scan every `bins:` line. The `(@version)?` group captures the optional pin.
 shopt -s nullglob
@@ -73,7 +73,7 @@ while IFS= read -r match; do
       version=""
     fi
     if [ -n "${pinned[$name]+set}" ]; then
-      seen_in_workflow+=("$name")
+      seen_in_workflow[$name]=1
       pin="${pinned[$name]}"
       if [ -z "$version" ]; then
         errors+=("$file:$lineno: governed tool '$name' missing pin (expected '$name@$pin')")
@@ -86,14 +86,7 @@ done < <(grep -nE '^[[:space:]]+bins:' "${workflow_files[@]}" 2>/dev/null || tru
 
 # Reverse direction: every governed tool must be referenced somewhere.
 for tool in "${!pinned[@]}"; do
-  found=0
-  for seen in "${seen_in_workflow[@]:-}"; do
-    if [ "$seen" = "$tool" ]; then
-      found=1
-      break
-    fi
-  done
-  if [ "$found" -eq 0 ]; then
+  if [ -z "${seen_in_workflow[$tool]+set}" ]; then
     errors+=("tools.toml: '$tool' pinned at @${pinned[$tool]} but referenced by no workflow")
   fi
 done
