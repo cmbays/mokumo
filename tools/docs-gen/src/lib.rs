@@ -11,6 +11,7 @@
 //! given identical source inputs (no timestamps, no path variation, no
 //! map-iteration order leaking into output).
 
+pub mod adr;
 pub mod badge;
 pub mod markers;
 pub mod msrv;
