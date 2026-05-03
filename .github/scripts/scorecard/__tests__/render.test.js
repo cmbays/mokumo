@@ -11,6 +11,9 @@ import {
   PATH_HINT_COMMENT,
   PENDING_DELTA_PREFIX,
   PENDING_ICON,
+  RENDERER_SCHEMA_VERSION,
+  FORWARD_COMPAT_MARKER,
+  FORWARD_COMPAT_PREAMBLE,
   isPendingStubRow,
   renderScorecardMarkdown,
   renderFailClosedMarkdown,
@@ -501,5 +504,109 @@ describe("bin/render-cli.js", () => {
     expect(stdout).not.toContain(STARTER_PREAMBLE);
     expect(stdout).not.toContain(FALLBACK_MARKER);
     expect(stdout).not.toContain(PATH_HINT_COMMENT);
+  });
+});
+
+describe("forward-compat degradation banner", () => {
+  it("RENDERER_SCHEMA_VERSION is a non-negative integer", () => {
+    expect(Number.isInteger(RENDERER_SCHEMA_VERSION)).toBe(true);
+    expect(RENDERER_SCHEMA_VERSION).toBeGreaterThanOrEqual(0);
+  });
+
+  it("emits the forward-compat marker when artifact version exceeds renderer", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        schema_version: RENDERER_SCHEMA_VERSION + 1,
+      });
+      expect(md).toContain(FORWARD_COMPAT_MARKER);
+      expect(md).toContain(FORWARD_COMPAT_PREAMBLE);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not emit the forward-compat banner at the renderer's pinned version", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        schema_version: RENDERER_SCHEMA_VERSION,
+      });
+      expect(md).not.toContain(FORWARD_COMPAT_MARKER);
+      expect(md).not.toContain(FORWARD_COMPAT_PREAMBLE);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not emit the forward-compat banner at older schema versions", () => {
+    const md = renderScorecardMarkdown({
+      ...baseScorecard,
+      schema_version: 0,
+    });
+    expect(md).not.toContain(FORWARD_COMPAT_MARKER);
+  });
+});
+
+describe("Layer 3 missing-detail defensive fallback", () => {
+  it("renders placeholder + console.warns when a Red row lacks failure_detail_md", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        overall_status: "Red",
+        rows: [
+          {
+            type: "CoverageDelta",
+            id: "coverage",
+            label: "Coverage",
+            anchor: "coverage",
+            status: "Red",
+            delta_pp: -7.5,
+            delta_text: "-7.5 pp",
+            // failure_detail_md OMITTED — Layer 3 defensive path.
+          },
+        ],
+      });
+      expect(md).toContain("(detail missing — see workflow logs)");
+      expect(warn).toHaveBeenCalled();
+      const call = warn.mock.calls.find((args) =>
+        String(args[0]).includes("missing failure_detail_md"),
+      );
+      expect(call).toBeDefined();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("renders the supplied detail when failure_detail_md is present", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const md = renderScorecardMarkdown({
+        ...baseScorecard,
+        overall_status: "Red",
+        rows: [
+          {
+            type: "CoverageDelta",
+            id: "coverage",
+            label: "Coverage",
+            anchor: "coverage",
+            status: "Red",
+            delta_pp: -7.5,
+            delta_text: "-7.5 pp",
+            failure_detail_md: "Coverage dropped 7.5 pp.",
+          },
+        ],
+      });
+      expect(md).toContain("Coverage dropped 7.5 pp.");
+      expect(md).not.toContain("(detail missing");
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
