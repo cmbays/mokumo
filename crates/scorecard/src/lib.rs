@@ -1059,164 +1059,211 @@ mod tests {
         assert!(failure_detail_md.is_none());
     }
 
-    /// Smoke-tests every stub-variant ctor (Yellow/Red for variants
-    /// whose producer has not yet shipped). The Green ctors are
-    /// exercised through the producer-pending fallback path in
-    /// `aggregate::stub_pending_row`; the Yellow/Red ctors stay
-    /// available for the follow-up PRs that wire each producer.
-    /// Without this test those ctors would compile but report as
-    /// uncovered, dragging lib.rs function coverage below the 90%
-    /// target. Each branch asserts the discriminant + status + the
-    /// `failure_detail_md` Layer-1 typestate (set on Red, omitted
-    /// otherwise).
-    #[test]
-    fn stub_variant_ctors_round_trip_status_and_failure_detail() {
-        let yellow_red = [Status::Yellow, Status::Red];
-
-        for status in yellow_red {
-            let row = match status {
-                Status::Yellow => Row::crap_delta_yellow(common(), 15, 1, "+1".into()),
-                _ => Row::crap_delta_red(common(), 15, 3, "+3".into(), "detail".into()),
-            };
-            let Row::CrapDelta {
-                status: s,
+    /// Pulls `(status, failure_detail_md.is_some())` out of any `Row`
+    /// variant so per-ctor smoke tests stay flat. CC stays at 9 (one
+    /// match arm per variant) — well under the 15 threshold — and
+    /// each per-ctor test below collapses to a single helper call.
+    fn row_status_and_detail_set(row: &Row) -> (Status, bool) {
+        match row {
+            Row::CoverageDelta {
+                status,
                 failure_detail_md,
                 ..
-            } = row
-            else {
-                panic!("CrapDelta")
-            };
-            assert_eq!(s, status);
-            assert_eq!(failure_detail_md.is_some(), status == Status::Red);
-
-            let row = match status {
-                Status::Yellow => Row::mutation_survivors_yellow(common(), 1, vec![], "1".into()),
-                _ => Row::mutation_survivors_red(common(), 5, vec![], "5".into(), "d".into()),
-            };
-            let Row::MutationSurvivors {
-                status: s,
+            }
+            | Row::CrapDelta {
+                status,
                 failure_detail_md,
                 ..
-            } = row
-            else {
-                panic!("MutationSurvivors")
-            };
-            assert_eq!(s, status);
-            assert_eq!(failure_detail_md.is_some(), status == Status::Red);
-
-            let row = match status {
-                Status::Yellow => Row::handler_coverage_axis_yellow(common(), vec![], "1".into()),
-                _ => Row::handler_coverage_axis_red(common(), vec![], "1".into(), "d".into()),
-            };
-            let Row::HandlerCoverageAxis {
-                status: s,
+            }
+            | Row::MutationSurvivors {
+                status,
                 failure_detail_md,
                 ..
-            } = row
-            else {
-                panic!("HandlerCoverageAxis")
-            };
-            assert_eq!(s, status);
-            assert_eq!(failure_detail_md.is_some(), status == Status::Red);
-
-            let row = match status {
-                Status::Yellow => Row::gate_runs_yellow(common(), vec![], "1".into()),
-                _ => Row::gate_runs_red(common(), vec![], "1".into(), "d".into()),
-            };
-            let Row::GateRuns {
-                status: s,
+            }
+            | Row::BddSkipCount {
+                status,
                 failure_detail_md,
                 ..
-            } = row
-            else {
-                panic!("GateRuns")
-            };
-            assert_eq!(s, status);
-            assert_eq!(failure_detail_md.is_some(), status == Status::Red);
-
-            let row = match status {
-                Status::Yellow => {
-                    Row::changed_scope_diagram_yellow(common(), "graph LR".into(), 1, "1".into())
-                }
-                _ => Row::changed_scope_diagram_red(
-                    common(),
-                    "graph LR".into(),
-                    1,
-                    "1".into(),
-                    "d".into(),
-                ),
-            };
-            let Row::ChangedScopeDiagram {
-                status: s,
+            }
+            | Row::GateRuns {
+                status,
                 failure_detail_md,
                 ..
-            } = row
-            else {
-                panic!("ChangedScopeDiagram")
-            };
-            assert_eq!(s, status);
-            assert_eq!(failure_detail_md.is_some(), status == Status::Red);
+            }
+            | Row::FlakyPopulation {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::CiWallClockDelta {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::HandlerCoverageAxis {
+                status,
+                failure_detail_md,
+                ..
+            }
+            | Row::ChangedScopeDiagram {
+                status,
+                failure_detail_md,
+                ..
+            } => (*status, failure_detail_md.is_some()),
         }
     }
 
-    /// Smoke-tests the wired-row Yellow/Red ctors that the producer
-    /// emits on degraded signal. Green is already exercised by the
-    /// producer happy paths in `aggregate.rs`.
+    fn assert_row_status(row: &Row, expected: Status) {
+        let (status, detail_set) = row_status_and_detail_set(row);
+        assert_eq!(status, expected);
+        assert_eq!(detail_set, expected == Status::Red);
+    }
+
+    // ── Stub-variant ctor smoke tests (Yellow/Red for producer-pending rows) ──
+    //
+    // The Green ctors for these stub variants are exercised through
+    // `aggregate::stub_pending_row`; the Yellow/Red ctors stay available
+    // for the follow-up PRs that wire each producer. Each test stays at
+    // CC=1 — `assert_row_status` does the discriminant walk.
+
     #[test]
-    fn wired_variant_ctors_round_trip_status_and_failure_detail() {
-        let row = Row::bdd_skip_count_yellow(common(), 100, 60, vec![], "+10".into());
-        let Row::BddSkipCount { status, .. } = row else {
-            panic!("BddSkipCount")
-        };
-        assert_eq!(status, Status::Yellow);
+    fn crap_delta_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::crap_delta_yellow(common(), 15, 1, "+1".into()),
+            Status::Yellow,
+        );
+    }
 
-        let row = Row::bdd_skip_count_red(common(), 100, 220, vec![], "+170".into(), "d".into());
-        let Row::BddSkipCount {
-            status,
-            failure_detail_md,
-            ..
-        } = row
-        else {
-            panic!("BddSkipCount")
-        };
-        assert_eq!(status, Status::Red);
-        assert!(failure_detail_md.is_some());
+    #[test]
+    fn crap_delta_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::crap_delta_red(common(), 15, 3, "+3".into(), "detail".into()),
+            Status::Red,
+        );
+    }
 
-        let row = Row::ci_wall_clock_delta_yellow(common(), 1200.0, 90.0, "+90s".into());
-        let Row::CiWallClockDelta { status, .. } = row else {
-            panic!("CiWallClockDelta")
-        };
-        assert_eq!(status, Status::Yellow);
+    #[test]
+    fn mutation_survivors_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::mutation_survivors_yellow(common(), 1, vec![], "+1".into()),
+            Status::Yellow,
+        );
+    }
 
-        let row = Row::ci_wall_clock_delta_red(common(), 2000.0, 400.0, "+400s".into(), "d".into());
-        let Row::CiWallClockDelta {
-            status,
-            failure_detail_md,
-            ..
-        } = row
-        else {
-            panic!("CiWallClockDelta")
-        };
-        assert_eq!(status, Status::Red);
-        assert!(failure_detail_md.is_some());
+    #[test]
+    fn mutation_survivors_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::mutation_survivors_red(common(), 5, vec![], "+5".into(), "d".into()),
+            Status::Red,
+        );
+    }
 
-        let row = Row::flaky_population_yellow(common(), 8, 0, "+8".into());
-        let Row::FlakyPopulation { status, .. } = row else {
-            panic!("FlakyPopulation")
-        };
-        assert_eq!(status, Status::Yellow);
+    #[test]
+    fn handler_coverage_axis_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::handler_coverage_axis_yellow(common(), vec![], "+1".into()),
+            Status::Yellow,
+        );
+    }
 
-        let row = Row::flaky_population_red(common(), 25, 4, "+25".into(), "d".into());
-        let Row::FlakyPopulation {
-            status,
-            failure_detail_md,
-            ..
-        } = row
-        else {
-            panic!("FlakyPopulation")
-        };
-        assert_eq!(status, Status::Red);
-        assert!(failure_detail_md.is_some());
+    #[test]
+    fn handler_coverage_axis_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::handler_coverage_axis_red(common(), vec![], "+1".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn gate_runs_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::gate_runs_yellow(common(), vec![], "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn gate_runs_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::gate_runs_red(common(), vec![], "+1".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn changed_scope_diagram_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::changed_scope_diagram_yellow(common(), "graph LR".into(), 1, "+1".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn changed_scope_diagram_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::changed_scope_diagram_red(
+                common(),
+                "graph LR".into(),
+                1,
+                "+1".into(),
+                "d".into(),
+            ),
+            Status::Red,
+        );
+    }
+
+    // ── Wired-row Yellow/Red ctor smoke tests ────────────────────────────
+    //
+    // Green is exercised through the producer happy paths in
+    // `aggregate.rs`; the Yellow/Red ctors fire when the producer
+    // observes a degraded signal.
+
+    #[test]
+    fn bdd_skip_count_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::bdd_skip_count_yellow(common(), 100, 60, vec![], "+10".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn bdd_skip_count_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::bdd_skip_count_red(common(), 100, 220, vec![], "+170".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_delta_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::ci_wall_clock_delta_yellow(common(), 1200.0, 90.0, "+90s".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn ci_wall_clock_delta_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::ci_wall_clock_delta_red(common(), 2000.0, 400.0, "+400s".into(), "d".into()),
+            Status::Red,
+        );
+    }
+
+    #[test]
+    fn flaky_population_yellow_ctor_round_trips() {
+        assert_row_status(
+            &Row::flaky_population_yellow(common(), 8, 0, "+8".into()),
+            Status::Yellow,
+        );
+    }
+
+    #[test]
+    fn flaky_population_red_ctor_round_trips() {
+        assert_row_status(
+            &Row::flaky_population_red(common(), 25, 4, "+25".into(), "d".into()),
+            Status::Red,
+        );
     }
 
     #[test]
