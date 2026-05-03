@@ -97,6 +97,9 @@ pub struct RowsConfig {
     /// Thresholds for the `Row::CiWallClockDelta` variant.
     #[serde(default = "CiWallClockThresholds::default")]
     pub ci_wall_clock: CiWallClockThresholds,
+    /// Thresholds for the `Row::FlakyPopulation` variant.
+    #[serde(default = "FlakyPopulationThresholds::default")]
+    pub flaky: FlakyPopulationThresholds,
 }
 
 /// Warn / fail thresholds for the `Row::BddSkipCount` variant. Both
@@ -157,6 +160,35 @@ impl CiWallClockThresholds {
     }
 }
 
+/// Warn / fail thresholds for the `Row::FlakyPopulation` variant.
+///
+/// `marker_count` is the integer count of `// FLAKY:` markers
+/// across the operator-supplied source roots. Threshold semantics
+/// are inclusive on the worse side.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FlakyPopulationThresholds {
+    /// Marker count above (or equal) which a row reports
+    /// [`Status::Yellow`].
+    pub warn_marker_count: u32,
+    /// Marker count above (or equal) which a row reports
+    /// [`Status::Red`]. Typically larger than `warn_marker_count`.
+    pub fail_marker_count: u32,
+}
+
+impl FlakyPopulationThresholds {
+    /// Defensible fallback: 5 markers trips Yellow, 20 trips Red.
+    /// Tightening these is the natural way operators discourage flaky-
+    /// test accumulation; the fallback is permissive enough that an
+    /// established codebase doesn't go red on day one.
+    pub fn default() -> Self {
+        Self {
+            warn_marker_count: 5,
+            fail_marker_count: 20,
+        }
+    }
+}
+
 /// Warn / fail thresholds for the `Row::CoverageDelta` variant,
 /// expressed in percentage points (pp) of coverage delta vs base.
 ///
@@ -193,6 +225,7 @@ impl ThresholdConfig {
                 },
                 bdd_skip: BddSkipThresholds::default(),
                 ci_wall_clock: CiWallClockThresholds::default(),
+                flaky: FlakyPopulationThresholds::default(),
             },
         }
     }
@@ -276,6 +309,30 @@ pub fn resolve_ci_wall_clock(delta_seconds: f64, cfg: &CiWallClockThresholds) ->
     if delta_seconds >= cfg.fail_seconds_delta {
         Status::Red
     } else if delta_seconds >= cfg.warn_seconds_delta {
+        Status::Yellow
+    } else {
+        Status::Green
+    }
+}
+
+/// Resolve a flaky-marker count to a [`Status`] using the supplied
+/// [`FlakyPopulationThresholds`].
+///
+/// # Boundary semantics
+///
+/// | `marker_count`                                       | Result            |
+/// |------------------------------------------------------|-------------------|
+/// | `marker_count >= fail_marker_count`                  | [`Status::Red`]    |
+/// | `warn_marker_count <= marker_count < fail_marker_count` | [`Status::Yellow`] |
+/// | `marker_count < warn_marker_count`                   | [`Status::Green`]  |
+///
+/// Boundaries are inclusive on the worse side: a count exactly equal
+/// to `warn_marker_count` is [`Status::Yellow`]; a count exactly equal
+/// to `fail_marker_count` is [`Status::Red`].
+pub fn resolve_flaky_population(marker_count: u32, cfg: &FlakyPopulationThresholds) -> Status {
+    if marker_count >= cfg.fail_marker_count {
+        Status::Red
+    } else if marker_count >= cfg.warn_marker_count {
         Status::Yellow
     } else {
         Status::Green
@@ -534,6 +591,61 @@ mod tests {
             resolve_ci_wall_clock(900.0, &fallback_ci_wall_clock()),
             Status::Red
         );
+    }
+
+    // ── Flaky-population resolver boundary table ─────────────────────
+
+    fn fallback_flaky() -> FlakyPopulationThresholds {
+        ThresholdConfig::fallback().rows.flaky
+    }
+
+    #[test]
+    fn flaky_fallback_values_match_documented_defaults() {
+        let cfg = fallback_flaky();
+        assert_eq!(cfg.warn_marker_count, 5);
+        assert_eq!(cfg.fail_marker_count, 20);
+    }
+
+    #[test]
+    fn flaky_zero_resolves_green() {
+        assert_eq!(
+            resolve_flaky_population(0, &fallback_flaky()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn flaky_just_below_warn_resolves_green() {
+        assert_eq!(
+            resolve_flaky_population(4, &fallback_flaky()),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn flaky_at_warn_threshold_resolves_yellow() {
+        assert_eq!(
+            resolve_flaky_population(5, &fallback_flaky()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn flaky_just_below_fail_resolves_yellow() {
+        assert_eq!(
+            resolve_flaky_population(19, &fallback_flaky()),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn flaky_at_fail_threshold_resolves_red() {
+        assert_eq!(resolve_flaky_population(20, &fallback_flaky()), Status::Red);
+    }
+
+    #[test]
+    fn flaky_above_fail_threshold_resolves_red() {
+        assert_eq!(resolve_flaky_population(50, &fallback_flaky()), Status::Red);
     }
 
     // ── Configured-thresholds round-trip ─────────────────────────────

@@ -25,7 +25,7 @@
 use cucumber::{given, then, when};
 
 use scorecard::aggregate::{
-    BddSummary, ThresholdSource, build_scorecard, resolve_threshold_source,
+    BddSummary, FlakyCorpus, ThresholdSource, build_scorecard, resolve_threshold_source,
 };
 use scorecard::threshold::{
     self, CoverageThresholds, FALLBACK_MARKER, PATH_HINT_COMMENT, STARTER_PREAMBLE, ThresholdConfig,
@@ -60,6 +60,7 @@ fn produce(world: &mut ThresholdWorld, delta_pp: f64) {
         delta_pp,
         &BddSummary::default(),
         None,
+        &FlakyCorpus::default(),
         &cfg,
         fallback_active,
     );

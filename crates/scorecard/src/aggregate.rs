@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::threshold::{
-    self, BddSkipThresholds, CiWallClockThresholds, CoverageThresholds, ThresholdConfig,
+    self, BddSkipThresholds, CiWallClockThresholds, CoverageThresholds, FlakyPopulationThresholds,
+    ThresholdConfig,
 };
 use crate::{
     BddCrateBreakout, Breakouts, GateRun, PrMeta, Row, RowCommon, Scorecard, Status, TagCount,
@@ -82,6 +83,19 @@ struct Cli {
     /// even when the base SHA's data is unavailable.
     #[arg(long, value_name = "PATH")]
     ci_wall_clock_json: Option<PathBuf>,
+
+    /// Roots to walk for `// FLAKY:` markers. Repeat the flag for
+    /// multiple roots. When the flag is omitted the producer emits a
+    /// Green `FlakyPopulation` row with `flaky_marker_count: 0` — the
+    /// row is wired even on a corpus-less run.
+    #[arg(long = "flaky-source-root", value_name = "DIR")]
+    flaky_source_roots: Vec<PathBuf>,
+
+    /// Path to a JSON artifact `{ "retry_count": u32 }` capturing the
+    /// number of nextest retry events on the head SHA's run. Optional;
+    /// when absent `nextest_retry_events: 0` is emitted.
+    #[arg(long, value_name = "PATH")]
+    nextest_retry_json: Option<PathBuf>,
 
     /// Path to write the resulting scorecard.json artifact. Parent
     /// directories are created if missing.
@@ -650,6 +664,162 @@ pub fn read_ci_wall_clock_json(path: Option<&Path>) -> Result<Option<CiWallClock
     Ok(Some(parsed))
 }
 
+// ── Flaky-population producer ──────────────────────────────────────────
+//
+// V4 (#769) §4 wired row. The producer scans operator-supplied source
+// roots for `// FLAKY:` markers (a repo-wide convention documented in
+// QUALITY.md, landed in C8) and optionally consumes a JSON artifact
+// reporting nextest retry events on the head SHA. Threshold resolver
+// in `threshold::resolve_flaky_population` mints status from the marker
+// count.
+
+/// Source-file extensions the flaky-marker scanner inspects. Limited
+/// to text-source code files we expect `// FLAKY:` to appear in;
+/// extending the list is additive.
+const FLAKY_SCAN_EXTENSIONS: &[&str] = &["rs", "ts", "tsx", "js", "mjs", "svelte"];
+
+/// Marker substring the producer counts in source files. Documented in
+/// QUALITY.md (C8) so contributors know to tag a flaky test with a
+/// trailing `// FLAKY: <reason>` comment as the canonical signal.
+const FLAKY_MARKER: &str = "// FLAKY:";
+
+/// Wire shape of `--nextest-retry-json`. Captures only the head SHA's
+/// retry-event count today; richer per-test breakouts are a future
+/// extension paid for when a producer can populate them.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NextestRetryJson {
+    /// Number of retry events recorded on the head SHA's run. Captured
+    /// from nextest's output (or `0` on best-effort runs).
+    pub retry_count: u32,
+}
+
+/// Aggregated flaky-population corpus. Pure-data input to
+/// [`build_flaky_population_row`].
+#[derive(Debug, Default, Clone)]
+pub struct FlakyCorpus {
+    /// Total `// FLAKY:` markers across the scanned source roots.
+    pub marker_count: u32,
+    /// Retry events from the optional `--nextest-retry-json` input
+    /// (`0` when absent).
+    pub retry_events: u32,
+}
+
+/// Walk one or more roots for source files and count `// FLAKY:`
+/// markers. Reports a clear error when a discovered file cannot be
+/// read; missing roots are silently skipped.
+pub fn discover_flaky_corpus(
+    source_roots: &[PathBuf],
+    retry_json: Option<&NextestRetryJson>,
+) -> Result<FlakyCorpus, String> {
+    let mut marker_count = 0u32;
+    for root in source_roots {
+        if !root.exists() {
+            continue;
+        }
+        for entry in walkdir::WalkDir::new(root)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let ext = entry.path().extension().and_then(|s| s.to_str());
+            if !ext.is_some_and(|e| FLAKY_SCAN_EXTENSIONS.contains(&e)) {
+                continue;
+            }
+            let contents = fs::read_to_string(entry.path()).map_err(|e| {
+                format!(
+                    "aggregate: failed to read source file {}: {e}",
+                    entry.path().display()
+                )
+            })?;
+            for line in contents.lines() {
+                if line.contains(FLAKY_MARKER) {
+                    marker_count = marker_count.saturating_add(1);
+                }
+            }
+        }
+    }
+    Ok(FlakyCorpus {
+        marker_count,
+        retry_events: retry_json.map(|r| r.retry_count).unwrap_or(0),
+    })
+}
+
+/// Read the `--nextest-retry-json` file if present, returning `None`
+/// when the flag was omitted.
+pub fn read_nextest_retry_json(path: Option<&Path>) -> Result<Option<NextestRetryJson>, String> {
+    let Some(path) = path else { return Ok(None) };
+    let bytes = fs::read(path).map_err(|e| {
+        format!(
+            "aggregate: cannot read --nextest-retry-json {}: {e}",
+            path.display()
+        )
+    })?;
+    serde_json::from_slice::<NextestRetryJson>(&bytes)
+        .map(Some)
+        .map_err(|e| {
+            format!(
+                "aggregate: --nextest-retry-json {} is not a valid NextestRetryJson: {e}",
+                path.display()
+            )
+        })
+}
+
+/// Render the inline failure detail for a Red flaky-population row.
+fn flaky_failure_detail(marker_count: u32, fail_threshold: u32) -> String {
+    format!(
+        "FLAKY marker count is {marker_count} — at or above the {fail_threshold} fail threshold."
+    )
+}
+
+/// Format the `delta_text` for a wired flaky-population row.
+fn flaky_delta_text(corpus: &FlakyCorpus) -> String {
+    if corpus.retry_events == 0 {
+        format!("{} markers", corpus.marker_count)
+    } else {
+        format!(
+            "{} markers / {} retries",
+            corpus.marker_count, corpus.retry_events
+        )
+    }
+}
+
+/// Build a wired `Row::FlakyPopulation` from a corpus + thresholds.
+pub fn build_flaky_population_row(
+    corpus: &FlakyCorpus,
+    thresholds: &FlakyPopulationThresholds,
+) -> Row {
+    let common = RowCommon {
+        id: "flaky_population".into(),
+        label: "Flaky markers".into(),
+        anchor: "flaky-population".into(),
+    };
+    let delta_text = flaky_delta_text(corpus);
+    match threshold::resolve_flaky_population(corpus.marker_count, thresholds) {
+        Status::Green => Row::flaky_population_green(
+            common,
+            corpus.marker_count,
+            corpus.retry_events,
+            delta_text,
+        ),
+        Status::Yellow => Row::flaky_population_yellow(
+            common,
+            corpus.marker_count,
+            corpus.retry_events,
+            delta_text,
+        ),
+        Status::Red => Row::flaky_population_red(
+            common,
+            corpus.marker_count,
+            corpus.retry_events,
+            delta_text,
+            flaky_failure_detail(corpus.marker_count, thresholds.fail_marker_count),
+        ),
+    }
+}
+
 /// Build the scorecard artifact from parsed PR metadata, raw
 /// measurements, and the resolved threshold config.
 ///
@@ -662,6 +832,7 @@ pub fn build_scorecard(
     coverage_delta_pp: f64,
     bdd_summary: &BddSummary,
     ci_wall_clock: Option<&CiWallClockJson>,
+    flaky_corpus: &FlakyCorpus,
     thresholds: &ThresholdConfig,
     fallback_active: bool,
 ) -> Scorecard {
@@ -677,6 +848,7 @@ pub fn build_scorecard(
     let ci_wall_clock_input = ci_wall_clock.unwrap_or(&ci_wall_clock_default);
     let ci_wall_clock_row =
         build_ci_wall_clock_row(ci_wall_clock_input, &thresholds.rows.ci_wall_clock);
+    let flaky = build_flaky_population_row(flaky_corpus, &thresholds.rows.flaky);
 
     // Producer-blocked rows ship as Green stubs pinned to their
     // upstream producer references. The renderer detects the
@@ -687,6 +859,7 @@ pub fn build_scorecard(
         coverage,
         bdd,
         ci_wall_clock_row,
+        flaky,
         stub_crap_delta_pending(),
         stub_mutation_survivors_pending(),
         stub_handler_coverage_axis_pending(),
@@ -1018,11 +1191,27 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
             return ExitCode::from(1);
         }
     };
+    let nextest_retry = match read_nextest_retry_json(cli.nextest_retry_json.as_deref()) {
+        Ok(r) => r,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return ExitCode::from(1);
+        }
+    };
+    let flaky_corpus = match discover_flaky_corpus(&cli.flaky_source_roots, nextest_retry.as_ref())
+    {
+        Ok(c) => c,
+        Err(msg) => {
+            eprintln!("{msg}");
+            return ExitCode::from(1);
+        }
+    };
     let scorecard = build_scorecard(
         pr,
         cli.coverage_delta_pp,
         &bdd_summary,
         ci_wall_clock.as_ref(),
+        &flaky_corpus,
         &source.config(),
         source.fallback_active(),
     );
@@ -1056,6 +1245,7 @@ mod tests {
             delta_pp,
             &BddSummary::default(),
             None,
+            &FlakyCorpus::default(),
             &fallback(),
             true,
         )
@@ -1064,12 +1254,12 @@ mod tests {
     #[test]
     fn build_scorecard_emits_coverage_row_first() {
         // V4 emits the coverage row + the wired BddSkipCount + the
-        // wired CiWallClockDelta + four producer-pending stubs
-        // (CrapDelta, MutationSurvivors, HandlerCoverageAxis,
-        // GateRuns). C5-C6 wire FlakyPopulation and ChangedScopeDiagram
+        // wired CiWallClockDelta + the wired FlakyPopulation + four
+        // producer-pending stubs (CrapDelta, MutationSurvivors,
+        // HandlerCoverageAxis, GateRuns). C6 wires ChangedScopeDiagram
         // on top, growing the row vector.
         let sc = build_with_delta(0.3);
-        assert!(sc.rows.len() >= 7);
+        assert!(sc.rows.len() >= 8);
         let Row::CoverageDelta {
             status,
             delta_pp,
@@ -1156,6 +1346,7 @@ mod tests {
             -2.5,
             &BddSummary::default(),
             None,
+            &FlakyCorpus::default(),
             &fallback(),
             false,
         );
@@ -1388,6 +1579,7 @@ mod tests {
             -0.8,
             &BddSummary::default(),
             None,
+            &FlakyCorpus::default(),
             &source.config(),
             source.fallback_active(),
         );
@@ -1408,6 +1600,7 @@ mod tests {
             -2.5,
             &BddSummary::default(),
             None,
+            &FlakyCorpus::default(),
             &source.config(),
             source.fallback_active(),
         );
@@ -1534,8 +1727,151 @@ mod tests {
         let parsed: Value = serde_json::from_str(&content).expect("valid json");
         assert_eq!(parsed["overall_status"], "Green");
         // CoverageDelta + wired BddSkipCount + wired CiWallClockDelta +
-        // four producer-pending stubs.
-        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(7));
+        // wired FlakyPopulation + four producer-pending stubs.
+        assert_eq!(parsed["rows"].as_array().map(|a| a.len()), Some(8));
+    }
+
+    // ── Flaky-population producer ───────────────────────────────────
+
+    #[test]
+    fn build_flaky_population_row_green_when_below_warn() {
+        let corpus = FlakyCorpus {
+            marker_count: 2,
+            retry_events: 0,
+        };
+        let row = build_flaky_population_row(&corpus, &FlakyPopulationThresholds::default());
+        let Row::FlakyPopulation {
+            status,
+            flaky_marker_count,
+            nextest_retry_events,
+            delta_text,
+            ..
+        } = row
+        else {
+            panic!("expected FlakyPopulation")
+        };
+        assert_eq!(status, Status::Green);
+        assert_eq!(flaky_marker_count, 2);
+        assert_eq!(nextest_retry_events, 0);
+        assert_eq!(delta_text, "2 markers");
+    }
+
+    #[test]
+    fn build_flaky_population_row_yellow_at_warn_threshold() {
+        let corpus = FlakyCorpus {
+            marker_count: 5,
+            retry_events: 0,
+        };
+        let row = build_flaky_population_row(&corpus, &FlakyPopulationThresholds::default());
+        assert!(matches!(
+            row,
+            Row::FlakyPopulation {
+                status: Status::Yellow,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn build_flaky_population_row_red_at_fail_threshold_carries_detail() {
+        let corpus = FlakyCorpus {
+            marker_count: 25,
+            retry_events: 0,
+        };
+        let row = build_flaky_population_row(&corpus, &FlakyPopulationThresholds::default());
+        let Row::FlakyPopulation {
+            status,
+            failure_detail_md,
+            ..
+        } = row
+        else {
+            panic!("expected FlakyPopulation")
+        };
+        assert_eq!(status, Status::Red);
+        let detail = failure_detail_md.expect("Red rows carry failure_detail_md");
+        assert!(detail.contains("25"), "got: {detail}");
+        assert!(detail.contains("at or above"), "got: {detail}");
+    }
+
+    #[test]
+    fn build_flaky_population_row_includes_retries_in_delta_text() {
+        let corpus = FlakyCorpus {
+            marker_count: 3,
+            retry_events: 7,
+        };
+        let row = build_flaky_population_row(&corpus, &FlakyPopulationThresholds::default());
+        let Row::FlakyPopulation { delta_text, .. } = row else {
+            panic!("expected FlakyPopulation")
+        };
+        assert_eq!(delta_text, "3 markers / 7 retries");
+    }
+
+    #[test]
+    fn discover_flaky_corpus_counts_markers_in_supported_extensions() {
+        let dir = tempdir();
+        fs::write(
+            dir.path.join("a.rs"),
+            "fn x() { /* ok */ }\n// FLAKY: timing-sensitive\nfn y() {}\n",
+        )
+        .expect("write rs");
+        fs::write(
+            dir.path.join("b.ts"),
+            "// FLAKY: dom timing\nconst x = 1;\n// FLAKY: another\n",
+        )
+        .expect("write ts");
+        // Wrong extension — should not be scanned.
+        fs::write(dir.path.join("c.txt"), "// FLAKY: ignored\n").expect("write txt");
+        let corpus = discover_flaky_corpus(&[dir.path.clone()], None).expect("discover ok");
+        assert_eq!(corpus.marker_count, 3);
+        assert_eq!(corpus.retry_events, 0);
+    }
+
+    #[test]
+    fn discover_flaky_corpus_picks_up_retry_count_from_json() {
+        let dir = tempdir();
+        let retry = NextestRetryJson { retry_count: 4 };
+        let corpus = discover_flaky_corpus(&[dir.path.clone()], Some(&retry)).expect("discover");
+        assert_eq!(corpus.marker_count, 0);
+        assert_eq!(corpus.retry_events, 4);
+    }
+
+    #[test]
+    fn discover_flaky_corpus_skips_missing_root() {
+        let dir = tempdir();
+        let missing = dir.path.join("nope");
+        let corpus = discover_flaky_corpus(&[missing], None).expect("missing root is empty");
+        assert_eq!(corpus.marker_count, 0);
+    }
+
+    #[test]
+    fn read_nextest_retry_json_returns_none_when_path_absent() {
+        assert!(read_nextest_retry_json(None).expect("absent").is_none());
+    }
+
+    #[test]
+    fn read_nextest_retry_json_parses_valid_file() {
+        let dir = tempdir();
+        let path = dir.path.join("retry.json");
+        fs::write(&path, r#"{"retry_count":4}"#).expect("write");
+        let parsed = read_nextest_retry_json(Some(&path))
+            .expect("parse")
+            .expect("Some");
+        assert_eq!(parsed.retry_count, 4);
+    }
+
+    #[test]
+    fn build_scorecard_emits_flaky_row_after_ci_wall_clock() {
+        let sc = build_with_delta(0.3);
+        let Row::FlakyPopulation {
+            status,
+            flaky_marker_count,
+            ..
+        } = &sc.rows[3]
+        else {
+            panic!("expected FlakyPopulation as the fourth row")
+        };
+        assert_eq!(*status, Status::Green);
+        assert_eq!(*flaky_marker_count, 0);
     }
 
     // ── CI wall-clock producer ──────────────────────────────────────

@@ -392,10 +392,10 @@ mod tests {
         let s = render_quality_config_schema_string();
         let occurrences = s.matches("\"additionalProperties\": false").count();
         assert_eq!(
-            occurrences, 5,
+            occurrences, 6,
             "operator schema must declare additionalProperties:false at the root, \
-             RowsConfig, CoverageThresholds, BddSkipThresholds, and \
-             CiWallClockThresholds — got {occurrences}. Schema body:\n{s}",
+             RowsConfig, CoverageThresholds, BddSkipThresholds, CiWallClockThresholds, \
+             and FlakyPopulationThresholds — got {occurrences}. Schema body:\n{s}",
         );
     }
 
