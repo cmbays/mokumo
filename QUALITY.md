@@ -63,14 +63,43 @@ A typo in `quality.toml` is a **loud failure**: the producer aborts with a non-z
 
 The committed `quality.toml`, the operator schema, and the wire schema all live under `.config/scorecard/` so an operator can see the entire surface in one directory listing. The schemas are generated from the Rust source — direct edits to either schema file fail CI on the next push.
 
-### What V3 covers vs defers
+### V4 row inventory
 
-V3 ships the threshold engine for the **coverage-delta** row variant only. Two follow-ups are intentionally deferred:
+V4 (mokumo#769) ships all eight v0 row variants alongside the original `CoverageDelta`. Each row has a tunable `[rows.<name>]` table in `quality.toml`:
 
-- **Absolute-coverage row variant.** A second row that compares absolute coverage against an absolute floor (rather than the delta against the base branch). Lands in V4 and inherits the same `[rows.<name>]` table shape.
-- **Conditional gating between coverage-delta and absolute coverage.** When the absolute-coverage row variant lands, the warn/fail thresholds for `CoverageDelta` should apply only if absolute coverage passes its own threshold — a regression on a project that's already under its absolute floor should be reported as Red regardless of delta. This is tracked alongside V4 (see [mokumo#769](https://github.com/breezy-bays-labs/mokumo/issues/769)).
+| Row | Producer status | Operator table | Fallback warn / fail |
+|---|---|---|---|
+| `CoverageDelta` | wired (since V1) | `[rows.coverage]` (`warn_pp_delta`, `fail_pp_delta`) | -1.0 pp / -5.0 pp |
+| `BddSkipCount` | wired (V4) | `[rows.bdd_skip]` (`warn_skipped`, `fail_skipped`) | 50 / 200 |
+| `CiWallClockDelta` | wired (V4) | `[rows.ci_wall_clock]` (`warn_seconds_delta`, `fail_seconds_delta`) | 60s / 300s |
+| `FlakyPopulation` | wired (V4) | `[rows.flaky]` (`warn_marker_count`, `fail_marker_count`) | 5 / 20 |
+| `ChangedScopeDiagram` | wired (V4) — informational, always Green | (no table) | n/a |
+| `CrapDelta` | producer-pending stub → [`crap4rs#111`](https://github.com/breezy-bays-labs/crap4rs/issues/111) | (none until producer ships) | n/a |
+| `MutationSurvivors` | producer-pending stub → [`mokumo#748`](https://github.com/breezy-bays-labs/mokumo/issues/748) | (none until producer ships) | n/a |
+| `HandlerCoverageAxis` | producer-pending stub → [`mokumo#654`](https://github.com/breezy-bays-labs/mokumo/issues/654) + [`#655`](https://github.com/breezy-bays-labs/mokumo/issues/655) | (none until producer ships) | n/a |
+| `GateRuns` | producer-pending stub → [`mokumo#770`](https://github.com/breezy-bays-labs/mokumo/issues/770) | (none until producer ships) | n/a |
 
-The Red branch of the threshold resolver is unit-tested in `crates/scorecard/src/threshold.rs::tests` against the fallback config; the BDD scenarios in `crates/scorecard/tests/features/scorecard_display.feature` assert the producer side of the Yellow + fallback-marker contract, and vitest snapshots in `.github/scripts/scorecard/__tests__/` lock the renderer's byte output for `STARTER_PREAMBLE`, `FALLBACK_MARKER`, and `PATH_HINT_COMMENT`. A drift on either side fails CI before merge.
+**Producer-pending stub policy.** Variants whose upstream producer has not yet shipped render as Green stub rows whose `delta_text` opens with `(producer pending — see <repo>#<n>)`. The renderer surfaces a `⏳ Pending` affordance and lets GitHub auto-link the issue reference. When each upstream producer lands, populating the row is a small follow-up PR opened directly against [`#650`](https://github.com/breezy-bays-labs/mokumo/issues/650) — V4 retired the prior pattern of filing a sub-issue per blocked row.
+
+### The `// FLAKY:` marker convention
+
+The `FlakyPopulation` row counts `// FLAKY:` line comments across the source roots passed to the producer (defaults to `crates/` and `apps/web/src/`). The convention:
+
+```rust
+#[test]
+fn timing_sensitive_thing() {
+    // FLAKY: depends on tokio runtime quiescing under load — see #1234
+    // ...
+}
+```
+
+A trailing prose summary after the colon is recommended (helps reviewers understand the marker without chasing the linked issue). The marker is intentionally human-readable rather than an attribute macro: contributors mark a flaky test the moment they observe the flake, without waiting for tooling adoption. The producer treats every match as a single marker; the threshold resolver flips the row to Yellow when the count crosses `warn_marker_count` and to Red at `fail_marker_count`.
+
+### Forward-compat degradation
+
+The renderer declares `RENDERER_SCHEMA_VERSION` (currently `2`) and emits a forward-compat degradation banner + HTML marker (`<!-- forward-compat:degraded -->`) when an artifact reports a higher `schema_version`. A producer running ahead of the renderer rollout therefore signals the drift to operators rather than silently rendering rows the renderer does not understand. Bumps to the producer's `SCHEMA_VERSION` are paired with a renderer catch-up; the schema-drift CI step fails any PR that adds variants without regenerating the schema.
+
+The Red branch of the threshold resolvers is unit-tested in `crates/scorecard/src/threshold.rs::tests` against the fallback configs; the BDD scenarios in `crates/scorecard/tests/features/scorecard_display.feature` assert the producer side of the fallback-marker contract; `crates/scorecard/tests/layer2_e2e.rs` hand-mutates Red rows with `failure_detail_md` removed to pin the JSON-Schema rejection contract; vitest snapshots in `.github/scripts/scorecard/__tests__/` lock the renderer's byte output for `STARTER_PREAMBLE`, `FALLBACK_MARKER`, `PATH_HINT_COMMENT`, the producer-pending `⏳` affordance, the forward-compat banner, and the missing-detail `console.warn`. A drift on either side fails CI before merge.
 
 ### Vendored ajv refresh cadence
 
