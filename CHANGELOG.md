@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Changed
+
+- **Clippy `pedantic` enabled at workspace level** (#786): the `pedantic` lint group is now `warn` in `[workspace.lints.clippy]` and inherited by every member crate via `[lints] workspace = true`. The CI lint command (`moon run shop:lint`) already escalates with `-D warnings`, so any new pedantic violation now blocks merge. Lint categories the existing codebase already trips are explicitly allowed in the workspace lint table; the umbrella tracking issue is #786, which lists each allowed category and recommended cleanup order. Goal: tighter AI-agent guardrail against sloppy patterns (cast safety, float comparisons, `let-else`, format-arg inlining, etc.) in new code without a 1755-line cleanup PR.
+
 ### Added
 
 - **Cargo-binary version pinning via `tools.toml`** (#736, M00 T1 Wave 1): new `tools.toml` at the repo root pins versions of every cargo binary on the quality-gate critical path (`cargo-nextest`, `cargo-llvm-cov`, `crap4rs`). Workflow `bins:` lines now use the `name@version` form (`cargo-nextest@0.9.133`, etc.). A new `tools-pins` CI job (and `lefthook` pre-push mirror) runs `scripts/check-tools-pins.sh` which fails on any drift in either direction: pinned-but-unreferenced, referenced-but-unpinned, or version-disagreement. T1 minimum of the Warden pattern from epic #370 council research — NOT the T3 URL+SHA verification, which lives in the deferred-quality umbrella. Ungoverned bins (e.g. `tauri-driver`) pass through silently. The convention is recorded in `AGENTS.md` §"Dep-graph and verdict assertions" alongside the existing dep-graph and verdict rules.
