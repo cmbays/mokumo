@@ -159,6 +159,37 @@ tasks:
     options:
       cache: false
       runFromWorkspaceRoot: true
+  coverage-branches:
+    # Per-handler **branch** coverage producer (mokumo#583, scorecard V4
+    # `Row::CoverageDelta.breakouts.by_crate[].handlers[]`).
+    #
+    # Branch instrumentation (`--branch` → rustc `-Zcoverage-options=branch`)
+    # is nightly-only as of rustc 1.97. The pinned channel lives in
+    # `rust-nightly-coverage-toolchain.toml` at the workspace root and is
+    # parsed inline by `scripts/nightly-coverage-channel.sh` so this script
+    # and the matching CI install step share one source of truth. Every
+    # other task in the repo stays on stable via `rust-toolchain.toml`.
+    #
+    # Output (`coverage-branches.json`) is consumed exclusively by
+    # `tools/docs-gen --bin coverage-breakouts` to populate the per-handler
+    # drill-down. It is **not** the input for the CRAP gate — that path
+    # remains `coverage`. The two artifacts are intentionally separate so a
+    # nightly-toolchain outage cannot block the merge queue.
+    script: |
+      set -euo pipefail
+      RUSTUP_TOOLCHAIN="$(scripts/nightly-coverage-channel.sh)" \
+        cargo llvm-cov nextest --lib --branch --workspace \
+          --exclude mokumo-desktop --exclude kikan-tauri --exclude kikan-admin-ui \
+          --json --output-path coverage-branches.json
+    deps:
+    - web:build
+    inputs:
+    - '@group(allRust)'
+    - /rust-nightly-coverage-toolchain.toml
+    - /scripts/nightly-coverage-channel.sh
+    options:
+      cache: false
+      runFromWorkspaceRoot: true
   lint:
     # `--features scorecard/cli` enables the `aggregate` lib module so
     # clippy lints its code path. Without the feature, the bin's
