@@ -128,11 +128,12 @@ pub async fn build_bundle(state: &PlatformState) -> Result<(Vec<u8>, String), Co
     })?;
 
     let log_dir = state.data_dir.join("logs");
-    let zip_bytes = tokio::task::spawn_blocking(move || build_bundle_sync(metadata_json, log_dir))
-        .await
-        .map_err(|e| {
-            ControlPlaneError::Internal(anyhow::anyhow!("bundle worker panicked: {e}"))
-        })??;
+    let zip_bytes =
+        tokio::task::spawn_blocking(move || build_bundle_sync(&metadata_json, &log_dir))
+            .await
+            .map_err(|e| {
+                ControlPlaneError::Internal(anyhow::anyhow!("bundle worker panicked: {e}"))
+            })??;
 
     let timestamp = Utc::now().format("%Y%m%d-%H%M%S");
     let filename = format!("mokumo-diagnostics-{timestamp}.zip");
@@ -153,8 +154,8 @@ const MAX_LOG_FILES: usize = 32;
 const MAX_LOG_TOTAL_BYTES: u64 = 64 * 1024 * 1024;
 
 fn build_bundle_sync(
-    metadata_json: String,
-    log_dir: std::path::PathBuf,
+    metadata_json: &str,
+    log_dir: &std::path::Path,
 ) -> Result<Vec<u8>, ControlPlaneError> {
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -167,7 +168,7 @@ fn build_bundle_sync(
         .map_err(|e| ControlPlaneError::Internal(anyhow::anyhow!("zip write metadata: {e}")))?;
 
     if log_dir.is_dir() {
-        let truncated = write_log_files(&mut zip, opts, &log_dir)?;
+        let truncated = write_log_files(&mut zip, opts, log_dir)?;
         if truncated {
             zip.start_file("logs/TRUNCATED", opts).map_err(|e| {
                 ControlPlaneError::Internal(anyhow::anyhow!("zip start_file TRUNCATED: {e}"))

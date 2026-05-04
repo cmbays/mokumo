@@ -28,6 +28,10 @@ impl fmt::Display for ActorType {
 
 impl Actor {
     /// Build an actor from an authenticated user's ID.
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "by-value `impl ToString` matches the conventional builder-style ergonomics; callers pass `42`, `user.id.get()`, etc. without explicit borrowing"
+    )]
     pub fn user(id: impl ToString) -> Self {
         Self {
             id: id.to_string(),

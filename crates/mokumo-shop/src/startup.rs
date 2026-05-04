@@ -314,7 +314,7 @@ async fn setup_profile_db(
                 return crate::db::initialize_database(&url)
                     .await
                     .map_err(|e| ProfileDbError {
-                        message: format_db_setup_error(e, db_path, true),
+                        message: format_db_setup_error(&e, db_path, true),
                         backup_path: None,
                     });
             }
@@ -336,13 +336,13 @@ async fn setup_profile_db(
     crate::db::initialize_database(&url)
         .await
         .map_err(|e| ProfileDbError {
-            message: format_db_setup_error(e, db_path, backup_taken),
+            message: format_db_setup_error(&e, db_path, backup_taken),
             backup_path: backup_path.clone(),
         })
 }
 
 fn format_db_setup_error(
-    e: kikan::db::DatabaseSetupError,
+    e: &kikan::db::DatabaseSetupError,
     db_path: &Path,
     backup_taken: bool,
 ) -> String {
@@ -361,12 +361,12 @@ fn format_db_setup_error(
                 db_path.display()
             )
         }
-        DatabaseSetupError::SchemaIncompatible { ref path, .. } => format!(
+        DatabaseSetupError::SchemaIncompatible { path, .. } => format!(
             "The database at {} was created by a newer version of Mokumo. \
              Please upgrade Mokumo to the latest version, or restore from a backup.",
             path.display()
         ),
-        DatabaseSetupError::NotKikanDatabase { ref path } => format!(
+        DatabaseSetupError::NotKikanDatabase { path } => format!(
             "The database at {} is not a Mokumo database. \
              Check your --data-dir setting.",
             path.display()

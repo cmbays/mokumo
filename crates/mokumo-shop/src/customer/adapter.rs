@@ -24,12 +24,20 @@ use super::domain::{CreateCustomer, Customer, CustomerId, UpdateCustomer};
 use super::entity::{self, Entity as CustomerEntity};
 use crate::activity::ActivityAction;
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "passed by reference at every callsite via `.map_err(sea_err)`; flipping to `&sea_orm::DbErr` would force `.map_err(|e| sea_err(&e))` everywhere"
+)]
 fn sea_err(e: sea_orm::DbErr) -> DomainError {
     DomainError::Internal {
         message: e.to_string(),
     }
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "passed by reference at every callsite via `.map_err(activity_err)`; flipping to `&ActivityWriteError` would force `.map_err(|e| activity_err(&e))` everywhere"
+)]
 fn activity_err(e: ActivityWriteError) -> DomainError {
     DomainError::Internal {
         message: format!("activity log write failed: {e}"),

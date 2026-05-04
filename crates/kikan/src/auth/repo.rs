@@ -10,6 +10,10 @@ use sea_orm::{
 use super::entity_user::{self as entity, Entity as UserEntity};
 use super::password;
 use crate::control_plane_error::{ConflictKind, ControlPlaneError};
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "passed by reference at every callsite via `.map_err(sea_err)`; flipping to `&sea_orm::DbErr` would force `.map_err(|e| sea_err(&e))` everywhere"
+)]
 fn sea_err(e: sea_orm::DbErr) -> DomainError {
     DomainError::Internal {
         message: e.to_string(),

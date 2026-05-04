@@ -24,12 +24,20 @@ struct ActivityRow {
     created_at: String,
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "passed by reference at every callsite via `.map_err(db_err)`; flipping to `&sqlx::Error` would force `.map_err(|e| db_err(&e))` everywhere"
+)]
 fn db_err(e: sqlx::Error) -> DomainError {
     DomainError::Internal {
         message: e.to_string(),
     }
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "passed by reference at every callsite via `.map_err(sea_err)`; flipping to `&sea_orm::DbErr` would force `.map_err(|e| sea_err(&e))` everywhere"
+)]
 fn sea_err(e: sea_orm::DbErr) -> DomainError {
     DomainError::Internal {
         message: e.to_string(),
