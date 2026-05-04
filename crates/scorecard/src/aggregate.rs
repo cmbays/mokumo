@@ -649,7 +649,7 @@ fn merge_parsed_feature(
     per_crate: &mut std::collections::BTreeMap<String, BddCrateAcc>,
     summary: &mut BddSummary,
     crate_name: String,
-    parsed: ParsedFeature,
+    parsed: &ParsedFeature,
 ) {
     summary.total_features += 1;
     summary.total_scenarios += parsed.total_scenarios;
@@ -666,7 +666,7 @@ fn merge_parsed_feature(
             *summary.scenario_by_tag.entry(tag.clone()).or_insert(0) += n;
         }
     }
-    per_crate.entry(crate_name).or_default().merge(&parsed);
+    per_crate.entry(crate_name).or_default().merge(parsed);
 }
 
 /// Walk one or more roots for `.feature` files and aggregate the BDD
@@ -689,7 +689,7 @@ pub fn discover_bdd_corpus(roots: &[PathBuf]) -> Result<BddSummary, String> {
         // mistake — bucket those under a stable label so the breakout
         // stays deterministic instead of dropping them silently.
         let crate_name = crate_name_from_path(&path).unwrap_or_else(|| "unknown".to_string());
-        merge_parsed_feature(&mut per_crate, &mut summary, crate_name, parsed);
+        merge_parsed_feature(&mut per_crate, &mut summary, crate_name, &parsed);
     }
 
     summary.feature_breakouts = per_crate
@@ -2954,7 +2954,7 @@ mod tests {
             feature_tags: vec![],
             scenario_by_tag: std::collections::BTreeMap::from([("@wip".into(), 1)]),
         };
-        merge_parsed_feature(&mut per_crate, &mut summary, "foo".into(), parsed);
+        merge_parsed_feature(&mut per_crate, &mut summary, "foo".into(), &parsed);
         assert_eq!(summary.total_features, 1);
         assert_eq!(summary.skipped_features, 0);
         assert_eq!(summary.total_scenarios, 3);
@@ -2981,7 +2981,7 @@ mod tests {
             feature_tags: vec!["@wip".into()],
             scenario_by_tag: std::collections::BTreeMap::new(),
         };
-        merge_parsed_feature(&mut per_crate, &mut summary, "bar".into(), parsed);
+        merge_parsed_feature(&mut per_crate, &mut summary, "bar".into(), &parsed);
         assert_eq!(summary.total_features, 1);
         assert_eq!(summary.skipped_features, 1);
         assert_eq!(summary.feature_by_tag.get("@wip"), Some(&1));

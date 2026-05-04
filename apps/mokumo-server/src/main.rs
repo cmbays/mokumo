@@ -1251,6 +1251,10 @@ async fn collect_backup_entries(
 // reset-password
 // ---------------------------------------------------------------------------
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "uniform signature for clap-dispatched cmd_* functions; clap parses owned values and hands them to a single dispatcher"
+)]
 fn cmd_reset_password(data_dir: PathBuf, email: String, password_file: PathBuf, production: bool) {
     let profile = if production {
         kikan_types::SetupMode::Production
@@ -1305,6 +1309,10 @@ fn cmd_reset_password(data_dir: PathBuf, email: String, password_file: PathBuf, 
 // reset-db
 // ---------------------------------------------------------------------------
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "uniform signature for clap-dispatched cmd_* functions; clap parses owned values and hands them to a single dispatcher"
+)]
 fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, production: bool) {
     let profile = if production {
         kikan_types::SetupMode::Production
@@ -1381,6 +1389,10 @@ fn cmd_reset_db(data_dir: PathBuf, force: bool, include_backups: bool, productio
 // restore
 // ---------------------------------------------------------------------------
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "uniform signature for clap-dispatched cmd_* functions; clap parses owned values and hands them to a single dispatcher"
+)]
 fn cmd_restore(data_dir: PathBuf, backup_file: PathBuf, production: bool) {
     let profile = if production {
         kikan_types::SetupMode::Production

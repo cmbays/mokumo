@@ -33,6 +33,10 @@ impl ConnectionManager {
 
     /// Serialize once and broadcast to all subscribers.
     /// Returns the number of receivers that received it.
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "by-value lets callers hand off freshly built events without an explicit borrow; tests that re-use an event already `.clone()` once at the call site"
+    )]
     pub fn broadcast(&self, event: BroadcastEvent) -> usize {
         let json: Arc<str> = serde_json::to_string(&event)
             .expect("BroadcastEvent serialization cannot fail")

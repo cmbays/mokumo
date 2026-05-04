@@ -202,10 +202,6 @@ struct_excessive_bools = "allow"
 struct_field_names = "allow"
 items_after_statements = "allow"
 
-# Signature-changing lint deferred to a follow-up PR — fixing it touches
-# every caller site, not just the function definition.
-needless_pass_by_value = "allow"
-
 [profile.dev.package.argon2]
 opt-level = 3
 
