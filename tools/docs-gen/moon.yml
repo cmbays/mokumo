@@ -20,9 +20,11 @@ tasks:
       runFromWorkspaceRoot: true
   adr-validate:
     # Resolves `enforced-by:` references for in-repo ADRs. Path-shaped refs
-    # must exist; Rust test idents and clippy lint idents are accepted (T2
-    # wires `cargo test --list` resolution). See
-    # `tools/docs-gen/src/bin/adr-validate.rs`.
+    # must exist (and must be workspace-relative, no absolute / `..` paths);
+    # Rust test idents and clippy lint idents are accepted (T2 wires
+    # `cargo test --list` resolution). Library lives in
+    # `tools/docs-gen/src/validate.rs`; the bin under `src/bin/` is a CC=1
+    # shim around `validate::execute`.
     command: cargo run --quiet -p docs-gen --bin adr-validate
     inputs:
       - src/**/*

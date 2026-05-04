@@ -49,10 +49,16 @@ fi
 failures=()
 # while-read over a here-string keeps the loop safe for paths containing
 # spaces, and IFS reset prevents word-splitting on tabs.
+#
+# Delimiter handling: the Rust parser in `tools/docs-gen/src/adr.rs` uses
+# `trim_end()` on each line before comparing to `---`. We mirror that
+# tolerance here — strip CR (CRLF endings) and trailing whitespace before
+# the check — so a CRLF-encoded ADR can't be parsed by Rust while being
+# silently classified as legacy by this gate.
 while IFS= read -r path; do
     [ -z "$path" ] && continue
     [ -f "$path" ] || continue
-    first_line=$(head -n 1 < "$path" || true)
+    first_line=$(head -n 1 < "$path" | sed -e 's/\r$//' -e 's/[[:space:]]*$//' || true)
     if [ "$first_line" != "---" ]; then
         # Legacy format — no YAML frontmatter, gate is dormant for this file.
         continue
@@ -62,7 +68,12 @@ while IFS= read -r path; do
     # `grep -E '^enforced-by:[[:space:]]*$'` is exact-line shape: matches
     # only the block-sequence opener, never a substring like
     # `enforced-by-legacy:` or an inline-value variant.
-    block=$(awk 'NR==1 && /^---$/ { in_fm=1; next } in_fm && /^---$/ { exit } in_fm { print }' < "$path")
+    # `sed 's/\r$//'` upstream of awk normalizes CRLF; awk's delimiter
+    # match accepts trailing whitespace to mirror the Rust parser.
+    block=$(
+        sed 's/\r$//' < "$path" |
+        awk 'NR==1 && /^---[[:space:]]*$/ { in_fm=1; next } in_fm && /^---[[:space:]]*$/ { exit } in_fm { print }'
+    )
     if ! printf '%s\n' "$block" | grep -Eq '^enforced-by:[[:space:]]*$'; then
         failures+=("$path")
     fi

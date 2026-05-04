@@ -192,7 +192,26 @@ pub fn looks_like_path(reference: &str) -> bool {
 }
 
 fn resolve_path(workspace_root: &Path, reference: &str) -> std::result::Result<(), String> {
-    let target = workspace_root.join(reference);
+    let rel = Path::new(reference);
+    // `Path::join` lets an absolute argument replace the base entirely
+    // (`/ws".join("/etc/passwd") == "/etc/passwd"`), and `..` segments can
+    // walk above the workspace root. Both violate the documented
+    // "workspace-relative" contract for `enforced-by:` refs, so we reject
+    // them before the existence check rather than silently following them.
+    if rel.is_absolute() {
+        return Err(format!(
+            "path `{reference}` must be workspace-relative (absolute paths rejected)"
+        ));
+    }
+    if rel
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err(format!(
+            "path `{reference}` must stay under the workspace root (parent-relative `..` rejected)"
+        ));
+    }
+    let target = workspace_root.join(rel);
     if target.exists() {
         Ok(())
     } else {
@@ -362,6 +381,37 @@ enforced-by:
     }
 
     // ─── resolve / looks_like_path ───────────────────────────────────
+
+    #[test]
+    fn resolve_path_rejects_absolute_references() {
+        let dir = tempdir().unwrap();
+        let err = resolve(dir.path(), &ev(EnforcedByKind::Workflow, "/etc/passwd")).unwrap_err();
+        assert!(
+            err.contains("workspace-relative") && err.contains("absolute"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn resolve_path_rejects_parent_relative_references() {
+        let dir = tempdir().unwrap();
+        let err = resolve(dir.path(), &ev(EnforcedByKind::Workflow, "../etc/passwd")).unwrap_err();
+        assert!(
+            err.contains("under the workspace root") && err.contains(".."),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn resolve_path_rejects_embedded_parent_traversal() {
+        let dir = tempdir().unwrap();
+        let err = resolve(
+            dir.path(),
+            &ev(EnforcedByKind::Workflow, "docs/../../etc/passwd"),
+        )
+        .unwrap_err();
+        assert!(err.contains("under the workspace root"), "got: {err}");
+    }
 
     #[test]
     fn workflow_ref_must_exist() {

@@ -56,7 +56,7 @@ enforced-by:
 ---
 ```
 
-`kind` is one of `test | lint | dep-absence | workflow | human-judgment`. The `adr-registry` CI job is **syntactic**: it fails any PR that touches a `docs/adr/*.md` file with YAML frontmatter but no `enforced-by:` key. Reference resolution (paths exist, lints exist, dependencies are absent) lives in `tools/docs-gen/src/bin/adr-validate.rs` and runs from the `adr-validate` lefthook pre-push hook plus local dev shells — CI stays repo-scoped so the canonical 76-ADR vault in the private ops repo doesn't have to be checked out by runners. ADRs without YAML frontmatter (legacy format) are dormant under both gates; adoption is voluntary at the file level.
+`kind` is one of `test | lint | dep-absence | workflow | human-judgment`. The `adr-registry` CI job is **syntactic**: it fails any PR that touches a `docs/adr/*.md` file with YAML frontmatter but no `enforced-by:` key. Reference resolution (paths exist, lints exist, dependencies are absent) lives in [`tools/docs-gen/src/validate.rs`](tools/docs-gen/src/validate.rs); the `adr-validate` binary under `tools/docs-gen/src/bin/` is just a CC=1 shim that calls `validate::execute`. The validator runs from the `adr-validate` lefthook pre-push hook plus local dev shells — CI stays repo-scoped so the canonical 76-ADR vault in the private ops repo doesn't have to be checked out by runners. ADRs without YAML frontmatter (legacy format) are dormant under both gates; adoption is voluntary at the file level.
 
 ### B. Paired-files rules
 
