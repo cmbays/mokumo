@@ -188,6 +188,6 @@ fn map_setup_error(err: ControlPlaneError) -> AppError {
                 message: "Setup failed — an admin account may already exist".into(),
             })
         }
-        other => AppError::from(other),
+        other @ ControlPlaneError::NotFound => AppError::from(other),
     }
 }
