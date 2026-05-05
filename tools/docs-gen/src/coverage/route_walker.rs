@@ -83,46 +83,95 @@ pub struct WalkOutcome {
 /// crate-name-as-Rust-ident (`mokumo_shop`) and the directory holding its
 /// `Cargo.toml`. The walker scans each crate's `src/` recursively.
 pub fn walk(crate_dirs: &[(String, PathBuf)]) -> Result<WalkOutcome> {
-    // Pass 1: parse every file, collect builder functions + their routes/nests.
-    let mut builders: HashMap<String, BuilderFn> = HashMap::new();
-    let mut nest_targets: Vec<NestEdge> = Vec::new();
-    let mut unresolvable: Vec<UnresolvableRouteFinding> = Vec::new();
+    let parsed = parse_crate_sources(crate_dirs)?;
+    let prefixes = resolve_prefixes(&parsed.builders, &parsed.nest_edges);
+    let mut routes = emit_routes(&parsed.builders, &prefixes);
+    routes.sort_by(|a, b| {
+        a.crate_name
+            .cmp(&b.crate_name)
+            .then(a.method.cmp(&b.method))
+            .then(a.path.cmp(&b.path))
+    });
+    Ok(WalkOutcome {
+        routes,
+        unresolvable: parsed.unresolvable,
+    })
+}
+
+/// Pass 1 result: all builder functions, nest edges, and per-file
+/// unresolvable findings collected by walking every `.rs` source under
+/// each crate's `src/`.
+struct ParsedSources {
+    builders: HashMap<String, BuilderFn>,
+    nest_edges: Vec<NestEdge>,
+    unresolvable: Vec<UnresolvableRouteFinding>,
+}
+
+/// Pass 1 — visit every source file across `crate_dirs` and collect the
+/// builders / nest edges / unresolvable findings into one bucket.
+fn parse_crate_sources(crate_dirs: &[(String, PathBuf)]) -> Result<ParsedSources> {
+    let mut acc = ParsedSources {
+        builders: HashMap::new(),
+        nest_edges: Vec::new(),
+        unresolvable: Vec::new(),
+    };
     for (crate_name, crate_dir) in crate_dirs {
         let src_dir = crate_dir.join("src");
         if !src_dir.is_dir() {
             continue;
         }
-        for entry in WalkDir::new(&src_dir).into_iter().filter_map(Result::ok) {
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            if entry.path().extension().is_none_or(|e| e != "rs") {
-                continue;
-            }
-            let file_path = entry.path().to_path_buf();
-            let source = std::fs::read_to_string(&file_path)
-                .with_context(|| format!("reading {}", file_path.display()))?;
-            // Skip files that don't parse (build.rs etc. with non-rustc syntax).
-            let Ok(parsed) = syn::parse_file(&source) else {
-                continue;
-            };
-            let module_path = file_module_path(crate_name, &src_dir, &file_path);
-            let mut visitor = FileVisitor::new(crate_name, &module_path, &file_path);
-            visitor.visit_file(&parsed);
-            for (path, b) in visitor.builders {
-                builders.insert(path, b);
-            }
-            nest_targets.extend(visitor.nest_edges);
-            unresolvable.extend(visitor.unresolvable);
-        }
+        scan_src_tree(crate_name, &src_dir, &mut acc)?;
     }
+    Ok(acc)
+}
 
-    // Pass 2: resolve mount prefixes for each builder.
-    let prefixes = resolve_prefixes(&builders, &nest_targets);
+/// Walk one crate's `src/` tree, parse each `.rs` file, and merge the
+/// per-file visitor output into `acc`.
+fn scan_src_tree(crate_name: &str, src_dir: &Path, acc: &mut ParsedSources) -> Result<()> {
+    for entry in WalkDir::new(src_dir).into_iter().filter_map(Result::ok) {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        if entry.path().extension().is_none_or(|e| e != "rs") {
+            continue;
+        }
+        visit_one_file(crate_name, src_dir, entry.path(), acc)?;
+    }
+    Ok(())
+}
 
-    // Pass 3: emit routes with full URL paths.
+/// Parse one `.rs` file and merge its visitor output into `acc`. Skips
+/// files that don't parse (e.g. `build.rs` with non-rustc syntax).
+fn visit_one_file(
+    crate_name: &str,
+    src_dir: &Path,
+    file_path: &Path,
+    acc: &mut ParsedSources,
+) -> Result<()> {
+    let source = std::fs::read_to_string(file_path)
+        .with_context(|| format!("reading {}", file_path.display()))?;
+    let Ok(parsed) = syn::parse_file(&source) else {
+        return Ok(());
+    };
+    let module_path = file_module_path(crate_name, src_dir, file_path);
+    let mut visitor = FileVisitor::new(crate_name, &module_path, file_path);
+    visitor.visit_file(&parsed);
+    for (path, b) in visitor.builders {
+        acc.builders.insert(path, b);
+    }
+    acc.nest_edges.extend(visitor.nest_edges);
+    acc.unresolvable.extend(visitor.unresolvable);
+    Ok(())
+}
+
+/// Pass 3 — fan each builder's `(prefix, route, method)` triple out into
+/// flat [`RouteEntry`] rows. Caller sorts.
+fn emit_routes(
+    builders: &HashMap<String, BuilderFn>,
+    prefixes: &HashMap<String, String>,
+) -> Vec<RouteEntry> {
     let mut routes = Vec::new();
-    for (builder_path, builder) in &builders {
+    for (builder_path, builder) in builders {
         let prefix = prefixes.get(builder_path).cloned().unwrap_or_default();
         for r in &builder.routes {
             let full_path = join_url_path(&prefix, &r.literal_path);
@@ -138,16 +187,7 @@ pub fn walk(crate_dirs: &[(String, PathBuf)]) -> Result<WalkOutcome> {
             }
         }
     }
-    routes.sort_by(|a, b| {
-        a.crate_name
-            .cmp(&b.crate_name)
-            .then(a.method.cmp(&b.method))
-            .then(a.path.cmp(&b.path))
-    });
-    Ok(WalkOutcome {
-        routes,
-        unresolvable,
-    })
+    routes
 }
 
 // ---------------------------------------------------------------------------
@@ -248,80 +288,42 @@ impl<'a> FileVisitor<'a> {
         let head = segments[0].as_str();
         let tail = &segments[1..];
         let resolved = match head {
-            "crate" => {
-                // crate::a::b → <crate_name>::a::b
-                let mut s = self.crate_name.to_string();
-                for seg in tail {
-                    s.push_str("::");
-                    s.push_str(seg);
-                }
-                s
-            }
-            "self" => {
-                let mut s = self.file_module_path.to_string();
-                for seg in tail {
-                    s.push_str("::");
-                    s.push_str(seg);
-                }
-                s
-            }
-            "super" => {
-                // Pop one segment off the file's module path.
-                let parent = self
-                    .file_module_path
-                    .rsplit_once("::")
-                    .map_or("", |(p, _)| p);
-                let mut s = parent.to_string();
-                for seg in tail {
-                    s.push_str("::");
-                    s.push_str(seg);
-                }
-                s
-            }
-            other => {
-                if let Some(use_target) = self.use_map.get(other) {
-                    // Bare ident or two-segment chain via use.
-                    let mut s = use_target.clone();
-                    for seg in tail {
-                        s.push_str("::");
-                        s.push_str(seg);
-                    }
-                    s
-                } else if segments.len() == 1 {
-                    // Single ident with no `use` match — assume module-local.
-                    let mut s = self.file_module_path.to_string();
-                    s.push_str("::");
-                    s.push_str(other);
-                    s
-                } else if self.module_decls.contains(other) {
-                    // Multi-segment whose head names a sibling module
-                    // declared in this file (`mod foo;`). Resolve under
-                    // `file_module_path::foo::…` — without this branch,
-                    // patterns like `.post(login::login)` from a parent
-                    // `mod.rs` would mis-resolve to literal `login::login`.
-                    let mut s = self.file_module_path.to_string();
-                    s.push_str("::");
-                    s.push_str(other);
-                    for seg in tail {
-                        s.push_str("::");
-                        s.push_str(seg);
-                    }
-                    s
-                } else {
-                    // Multi-segment with unresolvable head — assume it's a
-                    // qualified-by-crate-name reference (e.g. `axum::Router`),
-                    // which the producer is not interested in. Caller decides
-                    // whether to record this as unresolvable.
-                    let mut s = head.to_string();
-                    for seg in tail {
-                        s.push_str("::");
-                        s.push_str(seg);
-                    }
-                    s
-                }
-            }
+            "crate" => join_path(self.crate_name, tail),
+            "self" => join_path(self.file_module_path, tail),
+            "super" => join_path(parent_module(self.file_module_path), tail),
+            other => self.resolve_other_head(other, segments, tail),
         };
         Some(resolved)
+    }
+
+    /// Resolution branches for any non-keyword head — split out so
+    /// `resolve_path` is a clean dispatch and the four cases here are
+    /// individually CC-cheap.
+    fn resolve_other_head(&self, head: &str, segments: &[String], tail: &[String]) -> String {
+        if let Some(use_target) = self.use_map.get(head) {
+            // Bare ident or two-segment chain via use.
+            return join_path(use_target, tail);
+        }
+        if segments.len() == 1 {
+            // Single ident with no `use` match — assume module-local.
+            return join_path(self.file_module_path, &[head.to_string()]);
+        }
+        if self.module_decls.contains(head) {
+            // Multi-segment whose head names a sibling module declared in
+            // this file (`mod foo;`). Resolve under
+            // `file_module_path::foo::…` — without this branch, patterns
+            // like `.post(login::login)` from a parent `mod.rs` would
+            // mis-resolve to literal `login::login`.
+            let mut prefix = self.file_module_path.to_string();
+            prefix.push_str("::");
+            prefix.push_str(head);
+            return join_path(&prefix, tail);
+        }
+        // Multi-segment with unresolvable head — assume it's a
+        // qualified-by-crate-name reference (e.g. `axum::Router`), which
+        // the producer is not interested in. Caller decides whether to
+        // record this as unresolvable.
+        join_path(head, tail)
     }
 
     fn current_fn(&self) -> Option<&str> {
@@ -517,46 +519,51 @@ fn collect_method_router(expr: &Expr) -> MethodRouterCollect {
     loop {
         match current {
             Expr::Call(call) => {
-                let Expr::Path(ExprPath { path, .. }) = &*call.func else {
+                let Some(pair) = head_call_method_handler(call) else {
                     return MethodRouterCollect::Skip;
                 };
-                let Some(last) = path.segments.last().map(|s| s.ident.to_string()) else {
-                    return MethodRouterCollect::Skip;
-                };
-                if !is_method_router_constructor(&last) {
-                    return MethodRouterCollect::Skip;
-                }
-                let Some(handler_arg) = call.args.first() else {
-                    return MethodRouterCollect::Skip;
-                };
-                let Some(handler_path) = expr_to_path_segments(handler_arg) else {
-                    return MethodRouterCollect::Skip;
-                };
-                out.push((last, handler_path));
-                return if out.is_empty() {
-                    MethodRouterCollect::Skip
-                } else {
-                    MethodRouterCollect::Resolved(out)
-                };
+                out.push(pair);
+                return MethodRouterCollect::Resolved(out);
             }
             Expr::MethodCall(mcall) => {
-                // chain-tail: `.method(handler)` on top of `receiver`.
-                let method = mcall.method.to_string();
-                if !is_method_router_constructor(&method) {
-                    return MethodRouterCollect::Skip;
-                }
-                let Some(handler_arg) = mcall.args.first() else {
+                let Some(pair) = chain_call_method_handler(mcall) else {
                     return MethodRouterCollect::Skip;
                 };
-                let Some(handler_path) = expr_to_path_segments(handler_arg) else {
-                    return MethodRouterCollect::Skip;
-                };
-                out.push((method, handler_path));
+                out.push(pair);
                 current = &mcall.receiver;
             }
             _ => return MethodRouterCollect::Skip,
         }
     }
+}
+
+/// Pull `(method, handler_path)` from the **head** of a method-router
+/// chain — `get(handler)` — returning `None` when the call isn't
+/// recognisable as `<method-router-ctor>(handler)`.
+fn head_call_method_handler(call: &syn::ExprCall) -> Option<(String, Vec<String>)> {
+    let Expr::Path(ExprPath { path, .. }) = &*call.func else {
+        return None;
+    };
+    let last = path.segments.last().map(|s| s.ident.to_string())?;
+    if !is_method_router_constructor(&last) {
+        return None;
+    }
+    let handler_arg = call.args.first()?;
+    let handler_path = expr_to_path_segments(handler_arg)?;
+    Some((last, handler_path))
+}
+
+/// Pull `(method, handler_path)` from a **chained** method-router call —
+/// `.post(handler)` on top of a receiver. Returns `None` when the call
+/// isn't a method-router method.
+fn chain_call_method_handler(mcall: &ExprMethodCall) -> Option<(String, Vec<String>)> {
+    let method = mcall.method.to_string();
+    if !is_method_router_constructor(&method) {
+        return None;
+    }
+    let handler_arg = mcall.args.first()?;
+    let handler_path = expr_to_path_segments(handler_arg)?;
+    Some((method, handler_path))
 }
 
 fn is_method_router_constructor(name: &str) -> bool {
@@ -695,30 +702,48 @@ fn file_module_path(crate_name: &str, src_dir: &Path, file: &Path) -> String {
     let Ok(rel) = file.strip_prefix(src_dir) else {
         return crate_name.to_string();
     };
-    let mut segments: Vec<String> = Vec::new();
     let parts: Vec<_> = rel.components().collect();
+    let mut segments: Vec<String> = Vec::new();
     for (i, comp) in parts.iter().enumerate() {
         let s = comp.as_os_str().to_string_lossy();
         let is_last = i + 1 == parts.len();
-        if is_last {
-            // `lib.rs` / `main.rs` / `mod.rs` don't add a segment.
-            if s == "lib.rs" || s == "main.rs" || s == "mod.rs" {
-                break;
-            }
-            // `foo.rs` adds `foo`.
-            if let Some(stem) = s.strip_suffix(".rs") {
-                segments.push(stem.to_string());
-            }
-        } else {
-            segments.push(s.to_string());
+        if let Some(seg) = file_path_segment(&s, is_last) {
+            segments.push(seg);
         }
     }
-    let mut out = crate_name.to_string();
-    for seg in segments {
+    let segs_owned: Vec<String> = segments;
+    join_path(crate_name, &segs_owned)
+}
+
+/// Translate one rel-path component into an optional module segment.
+/// `lib.rs` / `main.rs` / `mod.rs` contribute nothing (they ARE the parent
+/// module); other `.rs` files contribute their stem; directory components
+/// pass through verbatim.
+fn file_path_segment(name: &str, is_last: bool) -> Option<String> {
+    if !is_last {
+        return Some(name.to_string());
+    }
+    if name == "lib.rs" || name == "main.rs" || name == "mod.rs" {
+        return None;
+    }
+    name.strip_suffix(".rs").map(str::to_string)
+}
+
+/// Append `::seg` for each `seg` in `tail` to `prefix`. Centralised so the
+/// many call-sites in `resolve_path` and `file_module_path` don't open-code
+/// the same loop.
+fn join_path(prefix: &str, tail: &[String]) -> String {
+    let mut out = prefix.to_string();
+    for seg in tail {
         out.push_str("::");
-        out.push_str(&seg);
+        out.push_str(seg);
     }
     out
+}
+
+/// Parent of a `::`-delimited module path, or `""` for a single segment.
+fn parent_module(module_path: &str) -> &str {
+    module_path.rsplit_once("::").map_or("", |(p, _)| p)
 }
 
 // ---------------------------------------------------------------------------
