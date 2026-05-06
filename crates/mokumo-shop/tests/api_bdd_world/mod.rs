@@ -12,6 +12,7 @@ pub mod offline_startup_steps;
 pub mod port_fallback_steps;
 pub mod regen_steps;
 pub mod restore_steps;
+pub mod scenario_coverage;
 pub mod shop_logo_steps;
 pub mod shutdown_steps;
 
@@ -65,6 +66,10 @@ pub struct ApiWorld {
     // Ephemeral bind step state
     pub ephemeral_addr: Option<std::net::SocketAddr>,
     pub ephemeral_listener: Option<tokio::net::TcpListener>,
+    // Scenario-coverage capture (mokumo#655) — set by `before(scenario)`
+    // in `tests/api_bdd.rs`, read by the capture middleware on every
+    // request through `boot_test_server_with_recorder`'s router.
+    pub scenario_recorder: scenario_coverage::ScenarioRecorder,
 }
 
 impl ApiWorld {
@@ -89,13 +94,15 @@ impl ApiWorld {
         let active_profile = kikan_types::SetupMode::Production;
         let shutdown_token = CancellationToken::new();
 
-        let (server, setup_token, app_state, session_pool) = boot_test_server(
+        let scenario_recorder = scenario_coverage::ScenarioRecorder::new();
+        let (server, setup_token, app_state, session_pool) = boot_test_server_with_recorder(
             data_dir.clone(),
             recovery_dir.clone(),
             db.clone(),
             db.clone(),
             active_profile,
             shutdown_token.clone(),
+            scenario_recorder.clone(),
         )
         .await;
 
@@ -131,6 +138,7 @@ impl ApiWorld {
             restore_in_progress_simulated: false,
             ephemeral_addr: None,
             ephemeral_listener: None,
+            scenario_recorder,
         }
     }
 
@@ -404,17 +412,26 @@ async fn client_receives_close_frame(w: &mut ApiWorld, code: u16) {
 
 /// Boot a test server using `Engine::boot` with pre-seeded databases.
 ///
-/// Consolidates the Engine::boot boilerplate used by step modules that need
-/// to rebuild the server with custom profiles or database contents. Returns
-/// a ready-to-use `TestServer` alongside the setup token and shared state
-/// needed to wire the `ApiWorld` back up.
-pub async fn boot_test_server(
+/// Consolidates the Engine::boot boilerplate used by step modules that
+/// need to rebuild the server with custom profiles or database contents.
+/// Returns a ready-to-use `TestServer` alongside the setup token and
+/// shared state needed to wire the `ApiWorld` back up.
+///
+/// `scenario_recorder` is the per-`World` slot read by the scenario-
+/// coverage capture middleware (mokumo#655). Step modules that rebuild
+/// the server mid-scenario must pass `w.scenario_recorder.clone()` so
+/// the rebuilt server's middleware keeps tagging requests with the
+/// active scenario name. `World::new` constructs a fresh recorder and
+/// passes it through; the cucumber `before(scenario)` hook stamps the
+/// recorder before any step runs.
+pub async fn boot_test_server_with_recorder(
     data_dir: PathBuf,
     recovery_dir: PathBuf,
     demo_db: DatabaseConnection,
     production_db: DatabaseConnection,
     active_profile: kikan_types::SetupMode,
     shutdown_token: CancellationToken,
+    scenario_recorder: scenario_coverage::ScenarioRecorder,
 ) -> (
     TestServer,
     Option<String>,
@@ -490,6 +507,17 @@ pub async fn boot_test_server(
     }
 
     let app = engine.build_router(app_state.clone());
+    // mokumo#655: wrap the data-plane router so every request that reaches
+    // a matched route emits a (scenario, method, matched_path, status_class)
+    // row to the JSONL sink. The sink is initialized in `tests/api_bdd.rs`'s
+    // `main()` before cucumber starts; if a step module calls this function
+    // outside the api_bdd harness (none currently do) the capture layer is a
+    // no-op because no scenario will ever be set on the recorder.
+    let app = scenario_coverage::install(
+        app,
+        scenario_recorder.clone(),
+        scenario_coverage::init_run("api_bdd"),
+    );
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await

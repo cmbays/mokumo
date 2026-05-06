@@ -1,0 +1,22 @@
+# Handler ↔ scenario coverage allowlist (mokumo#655).
+#
+# Every line is `<METHOD> <path>` followed by a required annotation:
+#   `# tracked: <repo>#<n> — <reason>`
+#
+# The annotation is mandatory: `scripts/check-handler-scenario-coverage.sh`
+# rejects entries without it. The drift gate
+# (`scripts/check-handler-scenario-allowlist-drift.sh`, CI-only) iterates
+# the entries, calls `gh issue view`, and fails when an issue is closed
+# while its entry is still in this file — the closure should have come
+# with restored coverage and a removal of the entry.
+#
+# Format examples:
+#   GET  /api/foo/{id}  # tracked: mokumo#999 — needs scenario harness for X
+#   POST /api/bar       # tracked: mokumo#1000 — blocked on Y; restore by Z
+#
+# Posture A (Posture A from `docs/adr/adr-handler-scenario-coverage.md`):
+# new handlers need happy + 4xx coverage. Add an allowlist entry only when
+# adding the scenario in this PR is genuinely impossible.
+#
+# Existing un-instrumented handlers go into `baseline.txt`, NOT here —
+# this file is for *new* handlers that ship behind a tracking issue.
