@@ -1,0 +1,45 @@
+# Date-pinned nightly toolchain used **only** by the per-handler branch
+# coverage producer (`shop:coverage-branches` moon task → `coverage-handlers`
+# CI job). Every other task in the repo runs on the stable channel pinned in
+# `rust-toolchain.toml` (currently 1.95.0).
+#
+# Why a separate file?
+#
+# Branch-level instrumentation (`-Zcoverage-options=branch`, surfaced through
+# `cargo llvm-cov --branch`) is nightly-only as of rustc 1.97. Until rust-lang
+# stabilizes branch coverage (tracking issue rust-lang/rust#124137), the
+# per-handler breakout producer needs a nightly toolchain to populate
+# `Row::CoverageDelta.breakouts.by_crate[].handlers[]` (mokumo#583, scorecard
+# V4 schema). Putting nightly in `rust-toolchain.toml` would override stable
+# globally; instead the moon task and the matching CI job consume this file via
+# `RUSTUP_TOOLCHAIN_FILE`, so the override is scoped to one invocation.
+#
+# Why a date-pinned channel and not bare `nightly`?
+#
+# Nightly drifts daily — leaving the channel un-dated means a coverage run can
+# break on a random Tuesday for reasons unrelated to the PR under review.
+# The pin is bumped deliberately by an operator (same review surface as the
+# stable bump documented in `crates/scorecard/README.md`).
+#
+# How to bump:
+#   1. Update the channel below to the desired `nightly-YYYY-MM-DD`.
+#   2. Run `moon run shop:coverage-branches` locally; confirm the producer
+#      output (`coverage-breakouts.json`) matches expectations.
+#   3. Commit. CI installs the pinned toolchain via `setup-rust@v1` with
+#      `toolchain-file: rust-nightly-coverage-toolchain.toml`.
+#
+# Removal path (when branch coverage stabilizes):
+#   1. Delete this file.
+#   2. Drop the `coverage-handlers` CI job; add `--branch` to the `coverage`
+#      task in `crates/mokumo-shop/moon.yml`.
+#   3. Repoint the producer at `coverage.json` (one constant in
+#      `tools/docs-gen/src/coverage.rs`).
+#   4. CHANGELOG note.
+#
+# See ADR `adr-per-handler-branch-coverage-nightly-side-car.md` for the
+# motivating decision.
+
+[toolchain]
+channel = "nightly-2026-05-01"
+profile = "minimal"
+components = ["llvm-tools-preview"]

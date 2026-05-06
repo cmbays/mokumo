@@ -13,6 +13,8 @@
 
 pub mod adr;
 pub mod badge;
+pub mod coverage;
+pub mod coverage_breakouts;
 pub mod lcov;
 pub mod markers;
 pub mod msrv;
