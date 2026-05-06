@@ -34,13 +34,14 @@ async fn rebuild_as_first_launch(w: &mut ApiWorld) {
 
     let shutdown_token = CancellationToken::new();
 
-    let (server, setup_token, app_state, _session_pool) = super::boot_test_server(
+    let (server, setup_token, app_state, _session_pool) = super::boot_test_server_with_recorder(
         data_dir.clone(),
         recovery_dir.clone(),
         demo_db.clone(),
         prod_db.clone(),
         SetupMode::Demo,
         shutdown_token.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 
@@ -82,13 +83,14 @@ async fn rebuild_as_non_first_launch(w: &mut ApiWorld) {
 
     let shutdown_token = CancellationToken::new();
 
-    let (server, setup_token, app_state, _session_pool) = super::boot_test_server(
+    let (server, setup_token, app_state, _session_pool) = super::boot_test_server_with_recorder(
         data_dir.clone(),
         recovery_dir.clone(),
         demo_db.clone(),
         prod_db.clone(),
         SetupMode::Demo,
         shutdown_token.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 

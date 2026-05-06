@@ -1,0 +1,22 @@
+# Handler ↔ scenario coverage baseline (mokumo#655).
+#
+# Frozen list of `(METHOD, path)` rows that lacked happy + 4xx coverage
+# at gate-live (the first run of `scripts/check-handler-scenario-coverage.sh`
+# in CI). Entries are skipped by the gate so existing handlers don't
+# block the merge queue while their backfill scenarios are written.
+#
+# Format:
+#   <METHOD> <path>  [# baselined: <commit-hash> — <optional note>]
+#
+# Provenance is documented in `docs/adr/adr-handler-scenario-coverage.md`
+# §"Baseline policy". Removing an entry from this file requires the
+# matching handler row to have happy + 4xx coverage in the producer
+# artifact; otherwise the gate fails the PR.
+#
+# CI populates this file on first green run of the gate; subsequent runs
+# only ratchet forward. To regenerate manually:
+#   moon run shop:test-bdd-api
+#   cargo run -p docs-gen --bin handler-scenario-coverage -- \
+#     --workspace-root . --jsonl-dir target/bdd-coverage \
+#     --output-json handler-scenario-coverage.json
+#   scripts/regen-handler-scenario-baseline.sh

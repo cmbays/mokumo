@@ -22,6 +22,10 @@ path = "src/bin/lcov-dedup.rs"
 name = "coverage-breakouts"
 path = "src/bin/coverage-breakouts.rs"
 
+[[bin]]
+name = "handler-scenario-coverage"
+path = "src/bin/handler-scenario-coverage.rs"
+
 [dependencies]
 anyhow = { workspace = true }
 thiserror = { workspace = true }

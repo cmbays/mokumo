@@ -45,13 +45,14 @@ async fn rebuild_world(w: &mut ApiWorld, cfg: &WorldConfig) {
         _ => kikan_types::SetupMode::Production,
     };
 
-    let (server, setup_token, app_state, session_pool) = super::boot_test_server(
+    let (server, setup_token, app_state, session_pool) = super::boot_test_server_with_recorder(
         data_dir,
         recovery_dir.clone(),
         db.clone(),
         db.clone(),
         active_profile,
         shutdown_token.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 
@@ -742,13 +743,14 @@ async fn rebuild_as_demo_no_admin(w: &mut ApiWorld) {
 
     let shutdown_token = tokio_util::sync::CancellationToken::new();
 
-    let (server, setup_token, app_state, session_pool) = super::boot_test_server(
+    let (server, setup_token, app_state, session_pool) = super::boot_test_server_with_recorder(
         data_dir,
         recovery_dir.clone(),
         db.clone(),
         db.clone(),
         kikan_types::SetupMode::Demo,
         shutdown_token.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 
@@ -861,13 +863,14 @@ async fn health_reports_install_ok_after_restart(w: &mut ApiWorld) {
 
     let shutdown_token = tokio_util::sync::CancellationToken::new();
 
-    let (server, setup_token, app_state, session_pool) = super::boot_test_server(
+    let (server, setup_token, app_state, session_pool) = super::boot_test_server_with_recorder(
         data_dir.clone(),
         w.recovery_dir.clone(),
         db.clone(),
         db.clone(),
         kikan_types::SetupMode::Demo,
         shutdown_token.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 
