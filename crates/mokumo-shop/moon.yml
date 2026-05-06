@@ -213,6 +213,9 @@ tasks:
     # load-bearing for #655 because its tracing-middleware approach also
     # needs BDD scenarios to actually execute — and that requires the
     # `cargo test` runner to invoke the `harness = false` binaries.
+    #
+    # tracked: mokumo#655 — branch-by-handler gate kept non-blocking;
+    # route-presence axis supersedes for quality gating
     script: |
       set -euo pipefail
       RUSTUP_TOOLCHAIN="$(scripts/nightly-coverage-channel.sh)" \
