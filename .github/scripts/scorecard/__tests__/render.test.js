@@ -273,6 +273,37 @@ describe("renderScorecardMarkdown", () => {
     expect(md).not.toContain(PENDING_ICON);
     expect(md).toContain("🟢");
   });
+
+  it.each([
+    ["Green", "🟢", "5 → 5 (no change)"],
+    ["Yellow", "🟡", "5 → 6 (+1)"],
+    ["Red", "🔴", "5 → 7 (+2)"],
+  ])(
+    "renders a populated %s CrapDelta row with the producer-minted status (no Pending icon)",
+    (status, icon, deltaText) => {
+      // mokumo#806 — once `--crap-row-json` is wired, the producer mints
+      // status (Model P; crap4rs `docs/scorecard-row-contract.md`). The
+      // renderer must surface the live icon, not the ⏳ pending sentinel.
+      const populated = {
+        type: "CrapDelta",
+        id: "crap_delta",
+        label: "CRAP Δ",
+        anchor: "crap-delta",
+        tool: "crap4rs",
+        status,
+        threshold: 15,
+        delta_count: 0,
+        delta_text: deltaText,
+        ...(status === "Red" ? { failure_detail_md: "violations landed" } : {}),
+      };
+      const sc = { ...baseScorecard, rows: [populated], overall_status: status };
+      const md = renderScorecardMarkdown(sc);
+      expect(md).toContain(icon);
+      expect(md).not.toContain(PENDING_ICON);
+      expect(md).not.toContain(PENDING_DELTA_PREFIX);
+      expect(md).toContain(deltaText);
+    },
+  );
 });
 
 describe("two-click rule (renderRow link wrapping)", () => {

@@ -119,6 +119,19 @@ struct Cli {
     #[arg(long, value_name = "PATH")]
     coverage_breakouts_json: Option<PathBuf>,
 
+    /// Path to the producer-emitted `Row::CrapDelta` JSON artifact from
+    /// `crap4rs --format scorecard-row` (crap4rs#119, action output
+    /// `row-json`). When the flag is omitted, the file is missing, or
+    /// the file is empty (older crap4rs without `--format scorecard-row`
+    /// emits empty), the aggregator falls through to the producer-pending
+    /// stub. When present and non-empty, the producer-minted status
+    /// (Model P — see crap4rs `docs/scorecard-row-contract.md`) replaces
+    /// the stub verbatim; the aggregator does not reinterpret thresholds.
+    /// Malformed JSON or a non-`CrapDelta` variant is fail-loud, matching
+    /// the contract of `--coverage-breakouts-json`.
+    #[arg(long, value_name = "PATH")]
+    crap_row_json: Option<PathBuf>,
+
     /// Path to write the resulting scorecard.json artifact. Parent
     /// directories are created if missing.
     #[arg(long)]
@@ -411,17 +424,95 @@ fn pending_delta_text(producer_ref: &str) -> String {
     format!("{PENDING_TEXT_PREFIX}{producer_ref}{PENDING_TEXT_SUFFIX}")
 }
 
-/// Mint a stub `Row::CrapDelta` row pinned to the upstream producer
-/// (`crap4rs#111`). Status is Green so the row does not poison the
-/// `overall_status` rollup.
-fn stub_crap_delta_pending() -> Row {
-    let common = RowCommon {
+/// Canonical [`RowCommon`] for the `CrapDelta` slot. The aggregator
+/// mints `id` / `label` / `anchor` / `tool` so the producer-emitted
+/// row JSON only needs to carry the status-bearing fields. This
+/// mirrors the `tool`-stamping pattern (the producer omits `tool` per
+/// the crap4rs row-contract; the aggregator stamps it on
+/// deserialization) and protects renderer `ROW_ID_TO_ANCHOR` lookups
+/// against producer-side slug drift.
+fn canonical_crap_delta_common() -> RowCommon {
+    RowCommon {
         id: "crap_delta".into(),
         label: "CRAP Δ".into(),
         anchor: "crap-delta".into(),
         tool: "crap4rs".into(),
+    }
+}
+
+/// Mint a stub `Row::CrapDelta` row pinned to the upstream producer
+/// (`crap4rs#111`). Status is Green so the row does not poison the
+/// `overall_status` rollup.
+fn stub_crap_delta_pending() -> Row {
+    Row::crap_delta_green(
+        canonical_crap_delta_common(),
+        15,
+        0,
+        pending_delta_text(CRAP_DELTA_PENDING_REF),
+    )
+}
+
+/// Read the `--crap-row-json` artifact produced by
+/// `crap4rs --format scorecard-row`. Returns `Ok(None)` when the flag is
+/// omitted or the file is empty (the action emits an empty file when the
+/// installed crap4rs lacks `--format scorecard-row` support); the caller
+/// then falls through to [`stub_crap_delta_pending`].
+///
+/// Producer-side status policy (Model P — crap4rs
+/// `docs/scorecard-row-contract.md`): the producer mints status from its
+/// `new_violations` / `regressions` counts. The aggregator does not
+/// reinterpret. For the same reason this fn does not call
+/// [`validate_against_schema`] on the row in isolation — the full
+/// scorecard validator that runs in [`write_scorecard`] catches
+/// shape errors at the envelope boundary, and rebuilding via the
+/// [`Row::crap_delta_*`] ctors preserves Layer 1 typestate (a Red
+/// row without `failure_detail_md` cannot be constructed).
+pub fn read_crap_row_json(path: Option<&Path>) -> Result<Option<Row>, String> {
+    let Some(path) = path else { return Ok(None) };
+    let bytes = fs::read(path).map_err(|e| {
+        format!(
+            "aggregate: cannot read --crap-row-json {}: {e}",
+            path.display()
+        )
+    })?;
+    if bytes.iter().all(u8::is_ascii_whitespace) {
+        return Ok(None);
+    }
+    let parsed: Row = serde_json::from_slice(&bytes).map_err(|e| {
+        format!(
+            "aggregate: --crap-row-json {} is not a valid Row: {e}",
+            path.display()
+        )
+    })?;
+    let Row::CrapDelta {
+        status,
+        threshold,
+        delta_count,
+        delta_text,
+        failure_detail_md,
+        ..
+    } = parsed
+    else {
+        return Err(format!(
+            "aggregate: --crap-row-json {} must contain a CrapDelta row, got a different variant",
+            path.display(),
+        ));
     };
-    Row::crap_delta_green(common, 15, 0, pending_delta_text(CRAP_DELTA_PENDING_REF))
+    let common = canonical_crap_delta_common();
+    let row = match status {
+        Status::Green => Row::crap_delta_green(common, threshold, delta_count, delta_text),
+        Status::Yellow => Row::crap_delta_yellow(common, threshold, delta_count, delta_text),
+        Status::Red => {
+            let detail = failure_detail_md.ok_or_else(|| {
+                format!(
+                    "aggregate: --crap-row-json {} is Red but lacks failure_detail_md (Model P contract)",
+                    path.display(),
+                )
+            })?;
+            Row::crap_delta_red(common, threshold, delta_count, delta_text, detail)
+        }
+    };
+    Ok(Some(row))
 }
 
 /// Mint a stub `Row::MutationSurvivors` row pinned to mokumo#748.
@@ -1411,6 +1502,7 @@ pub fn build_scorecard(
     changed_scope: Option<&ChangedScope>,
     thresholds: &ThresholdConfig,
     fallback_active: bool,
+    crap_row: Option<Row>,
 ) -> Scorecard {
     let coverage = build_coverage_row(
         coverage_delta_pp,
@@ -1440,6 +1532,12 @@ pub fn build_scorecard(
     // [`PENDING_TEXT_PREFIX`] sentinel and inlines the cell with the
     // GitHub-autolinked issue reference. Replacing a stub is a small
     // one-PR follow-up against #650 — see the issue's closure model.
+    //
+    // CrapDelta: when `--crap-row-json` supplied a producer-emitted row,
+    // the aggregator stamps a canonical `RowCommon` (id/label/anchor/tool)
+    // and trusts the producer's status (Model P). When absent, the stub
+    // keeps the slot occupied with the producer-pending sentinel.
+    let crap_delta_row = crap_row.unwrap_or_else(stub_crap_delta_pending);
     let rows = vec![
         coverage,
         bdd_feature,
@@ -1447,7 +1545,7 @@ pub fn build_scorecard(
         ci_wall_clock_row,
         flaky,
         changed_scope_row,
-        stub_crap_delta_pending(),
+        crap_delta_row,
         stub_mutation_survivors_pending(),
         stub_handler_coverage_axis_pending(),
     ];
@@ -1862,6 +1960,7 @@ struct ProducerInputs {
     changed_scope: Option<ChangedScope>,
     threshold_source: ThresholdSource,
     coverage_breakouts: Option<CoverageBreakoutArtifact>,
+    crap_row: Option<Row>,
 }
 
 /// Composite error coupling a human-readable message with the exit
@@ -1894,6 +1993,7 @@ fn gather_producer_inputs(cli: &Cli) -> Result<ProducerInputs, CliError> {
     let changed_scope = read_changed_scope(cli.changed_files.as_deref()).map_err(runtime_err)?;
     let coverage_breakouts =
         read_coverage_breakouts(cli.coverage_breakouts_json.as_deref()).map_err(runtime_err)?;
+    let crap_row = read_crap_row_json(cli.crap_row_json.as_deref()).map_err(runtime_err)?;
     Ok(ProducerInputs {
         pr,
         bdd,
@@ -1902,6 +2002,7 @@ fn gather_producer_inputs(cli: &Cli) -> Result<ProducerInputs, CliError> {
         changed_scope,
         threshold_source,
         coverage_breakouts,
+        crap_row,
     })
 }
 
@@ -1951,6 +2052,7 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
         inputs.changed_scope.as_ref(),
         &inputs.threshold_source.config(),
         inputs.threshold_source.fallback_active(),
+        inputs.crap_row,
     );
     if let Err(msg) = write_scorecard(&scorecard, &cli.out) {
         eprintln!("{msg}");
@@ -1991,6 +2093,7 @@ mod tests {
             None,
             &fallback(),
             true,
+            None,
         )
     }
 
@@ -2114,6 +2217,7 @@ mod tests {
             None,
             &fallback(),
             false,
+            None,
         );
         assert!(!sc.fallback_thresholds_active);
     }
@@ -2452,6 +2556,7 @@ mod tests {
             None,
             &source.config(),
             source.fallback_active(),
+            None,
         );
         assert_eq!(sc.overall_status, Status::Yellow);
         assert!(!sc.fallback_thresholds_active);
@@ -2475,6 +2580,7 @@ mod tests {
             None,
             &source.config(),
             source.fallback_active(),
+            None,
         );
         assert_eq!(sc.overall_status, Status::Yellow);
         assert!(sc.fallback_thresholds_active);
@@ -2497,6 +2603,7 @@ mod tests {
             None,
             thresholds,
             true,
+            None,
         )
     }
 
