@@ -25,12 +25,14 @@ async fn given_pull_request_from_fork(world: &mut ThresholdWorld) {
     let scorecard = build_scorecard(
         pr,
         0.0,
+        None,
         &BddSummary::default(),
         None,
         &FlakyCorpus::default(),
         None,
         &cfg,
         true,
+        None,
     );
     world.scorecard = Some(scorecard);
 }

@@ -390,7 +390,7 @@ jobs:
       - uses: moonrepo/setup-toolchain@v0
       - uses: moonrepo/setup-rust@v1
         with:
-          bins: cargo-nextest@0.9.133,cargo-llvm-cov@0.8.5,crap4rs@0.3.0
+          bins: cargo-nextest@0.9.133,cargo-llvm-cov@0.8.5,crap4rs@0.4.0
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
@@ -438,7 +438,7 @@ jobs:
       - uses: moonrepo/setup-toolchain@v0
       - uses: moonrepo/setup-rust@v1
         with:
-          bins: cargo-nextest@0.9.133,cargo-llvm-cov@0.8.5,crap4rs@0.3.0
+          bins: cargo-nextest@0.9.133,cargo-llvm-cov@0.8.5,crap4rs@0.4.0
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
@@ -491,7 +491,7 @@ jobs:
           # the action runs). The scorecard action's pre-installed-binary
           # short-circuit (crap4rs ≥ 0.2.2) reuses this binary instead of
           # reinstalling, so a single binstall covers both call sites.
-          bins: cargo-nextest@0.9.133,cargo-llvm-cov@0.8.5,crap4rs@0.3.0
+          bins: cargo-nextest@0.9.133,cargo-llvm-cov@0.8.5,crap4rs@0.4.0
           cache: false
       - uses: Swatinem/rust-cache@v2
         with:
@@ -577,6 +577,46 @@ jobs:
         with:
           name: crap-baseline
           path: tmp/baseline.json
+          if-no-files-found: ignore
+
+      - name: Emit scorecard-row JSON for scorecard-aggregate
+        # Direct crap4rs invocation that bypasses the composite action's
+        # `outputs.row-json` capture path. The action's graceful probe
+        # (`crap4rs --help | grep -- 'scorecard-row'`) returns no match
+        # against crap4rs v0.4.0+ because the CLI switched `--format` from
+        # a plain `clap::ValueEnum` to a custom `FormatSpec` parser
+        # (`<format>` or `<format>:<file>`, comma-separated for multi-format
+        # output — crap4rs#100). Custom value-parsers don't surface
+        # `[possible values: ...]` in `--help`, so the probe false-negatives
+        # and the action's row-json output comes back empty even when the
+        # `ScorecardRow` variant works correctly at runtime.
+        #
+        # We invoke crap4rs ourselves with the same coverage / src /
+        # baseline / config / threshold the action used, write the
+        # producer-minted `Row::CrapDelta` JSON to a file, and let
+        # scorecard-aggregate consume it via `--crap-row-json`.
+        # `--no-fail` keeps the step green so the gate semantics live
+        # entirely in the action's existing `delta-gate` enforcement.
+        if: always()
+        run: |
+          mkdir -p tmp
+          crap4rs \
+            --coverage tmp/lcov.info \
+            --src . \
+            --baseline tmp/baseline.json \
+            --config crap4rs.toml \
+            --threshold 15 \
+            --format scorecard-row \
+            --no-fail \
+            > tmp/crap-scorecard-row.json
+          echo "Wrote $(wc -c < tmp/crap-scorecard-row.json) bytes:"
+          cat tmp/crap-scorecard-row.json
+      - name: Upload row-json for scorecard-aggregate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mokumo-crap-scorecard-row
+          path: tmp/crap-scorecard-row.json
           if-no-files-found: ignore
 
   api-smoke:
@@ -1039,7 +1079,7 @@ jobs:
     # download-artifact step below tolerates a missing artifact; the
     # aggregator falls back to the "producer pending" pathway in the
     # renderer.
-    needs: [changes, coverage-handlers]
+    needs: [changes, coverage-handlers, crap-scorecard]
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
@@ -1068,6 +1108,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: mokumo-coverage-breakouts
+          path: tmp/
+        continue-on-error: true
+      - name: Download crap-scorecard row-json artifact
+        # Soft consumer: `crap-scorecard` runs only on Rust-touching PRs
+        # and may be skipped on docs-only diffs. `continue-on-error: true`
+        # tolerates the missing artifact; the aggregator's
+        # `--crap-row-json` flag is only passed when the file exists and
+        # carries content (older crap4rs without `--format scorecard-row`
+        # uploads an empty file).
+        uses: actions/download-artifact@v4
+        with:
+          name: mokumo-crap-scorecard-row
           path: tmp/
         continue-on-error: true
       - name: Write pr-meta.json
@@ -1126,10 +1178,18 @@ jobs:
           else
             echo "tmp/coverage-breakouts.json absent — aggregator will emit pending-note row"
           fi
+          crap_row_arg=()
+          if [ -s tmp/crap-scorecard-row.json ]; then
+            crap_row_arg+=(--crap-row-json tmp/crap-scorecard-row.json)
+            echo "Found tmp/crap-scorecard-row.json — passing to aggregator"
+          else
+            echo "tmp/crap-scorecard-row.json absent or empty — aggregator will emit pending stub"
+          fi
           ./target/release/aggregate \
             --pr-meta tmp/pr-meta.json \
             --coverage-delta-pp 0.0 \
             "${breakouts_arg[@]}" \
+            "${crap_row_arg[@]}" \
             --bdd-features-root crates \
             --bdd-features-root apps/web/tests \
             --flaky-source-root crates \

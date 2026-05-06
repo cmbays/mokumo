@@ -58,12 +58,14 @@ fn produce(world: &mut ThresholdWorld, delta_pp: f64) {
     let scorecard = build_scorecard(
         pr,
         delta_pp,
+        None,
         &BddSummary::default(),
         None,
         &FlakyCorpus::default(),
         None,
         &cfg,
         fallback_active,
+        None,
     );
 
     // Coverage is the first row; downstream wired rows + producer-pending
