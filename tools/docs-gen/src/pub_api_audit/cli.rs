@@ -145,18 +145,25 @@ fn write_artifacts(
 
 fn write_json_artifact(json_path: &std::path::Path, artifact: &PubApiAuditArtifact) -> Result<()> {
     let json = serde_json::to_string_pretty(artifact).context("serialise json artifact")?;
-    ensure_parent_dir(json_path)?;
-    std::fs::write(json_path, format!("{json}\n"))
-        .with_context(|| format!("write {}", json_path.display()))
+    write_atomically(json_path, format!("{json}\n").as_bytes())
 }
 
 fn write_markdown_artifact(
     md_path: &std::path::Path,
     artifact: &PubApiAuditArtifact,
 ) -> Result<()> {
-    ensure_parent_dir(md_path)?;
     let body = markdown::render(artifact);
-    std::fs::write(md_path, body).with_context(|| format!("write {}", md_path.display()))
+    write_atomically(md_path, body.as_bytes())
+}
+
+/// Write `bytes` to `path` via temp-file + rename so a crash mid-write
+/// can never leave a half-written artifact for downstream readers.
+fn write_atomically(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
+    ensure_parent_dir(path)?;
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, bytes).with_context(|| format!("write {}", tmp.display()))?;
+    std::fs::rename(&tmp, path)
+        .with_context(|| format!("rename {} to {}", tmp.display(), path.display()))
 }
 
 fn ensure_parent_dir(path: &std::path::Path) -> Result<()> {

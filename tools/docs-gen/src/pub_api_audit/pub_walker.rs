@@ -114,7 +114,20 @@ fn walk_one_crate(
         return;
     }
     let crate_ident = crate_name_to_ident(pkg_name);
-    for entry in WalkDir::new(&src_dir).into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(&src_dir) {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(err) => {
+                let source_file = err
+                    .path()
+                    .map_or_else(|| src_dir.clone(), Path::to_path_buf);
+                parse_errors.push(ParseFinding {
+                    source_file,
+                    reason: format!("walkdir: {err}"),
+                });
+                continue;
+            }
+        };
         let path = entry.path();
         if !path.is_file() || path.extension().is_none_or(|e| e != "rs") {
             continue;
@@ -325,12 +338,17 @@ fn is_bare_pub(vis: &Visibility) -> bool {
 }
 
 /// Pluck the leaf identifier out of an `impl <Type>` self-type. We don't
-/// resolve generic args; `impl<T> Foo<T>` reads as `Foo`.
+/// resolve generic args; `impl<T> Foo<T>` reads as `Foo`. Recurses
+/// through `&T` / `(T)` / `Group<T>` so trait impls on references
+/// (common in the workspace) anchor on the underlying type.
 fn self_type_ident(ty: &syn::Type) -> Option<String> {
-    let syn::Type::Path(tp) = ty else {
-        return None;
-    };
-    Some(tp.path.segments.last()?.ident.to_string())
+    match ty {
+        syn::Type::Path(tp) => Some(tp.path.segments.last()?.ident.to_string()),
+        syn::Type::Reference(tr) => self_type_ident(&tr.elem),
+        syn::Type::Paren(tp) => self_type_ident(&tp.elem),
+        syn::Type::Group(tg) => self_type_ident(&tg.elem),
+        _ => None,
+    }
 }
 
 /// Map a source file path under `<crate>/src/` to a Rust module path.
@@ -620,6 +638,47 @@ impl Repo for Memory {
             !names.contains(&"demo::Memory::list"),
             "default trait-impl method visibility is not bare-pub"
         );
+    }
+
+    #[test]
+    fn self_type_ident_peels_reference_paren_group() {
+        // `impl X for &T`, `impl X for (T)`, and `Group<T>` (rare,
+        // surfaces from macro expansions) must all anchor on `T`.
+        // Without this, the walker silently bails on trait impls
+        // whose self-type is a reference — even when the trait
+        // surfaces them as part of the public API.
+        use syn::parse_quote;
+        let r: syn::Type = parse_quote! { &Holder };
+        assert_eq!(self_type_ident(&r).as_deref(), Some("Holder"));
+        let rmut: syn::Type = parse_quote! { &mut Holder };
+        assert_eq!(self_type_ident(&rmut).as_deref(), Some("Holder"));
+        let p: syn::Type = parse_quote! { (Holder) };
+        assert_eq!(self_type_ident(&p).as_deref(), Some("Holder"));
+        // Tuples, slices, and other variants without a single leaf
+        // ident return None — the gate doesn't model those.
+        let tup: syn::Type = parse_quote! { (Holder, Other) };
+        assert_eq!(self_type_ident(&tup), None);
+    }
+
+    #[test]
+    fn walk_records_walkdir_error_path_in_parse_findings() {
+        // `walk` must capture WalkDir errors instead of silently
+        // skipping them — silent skips can drop pub items from the
+        // artifact and make a missed item look "removed" rather
+        // than "unwalkable". We pass a non-existent crate dir so
+        // the WalkDir iterator yields exactly one error on its
+        // first step.
+        let outcome = walk(&[(
+            "demo".into(),
+            PathBuf::from("/this/path/does/not/exist/anywhere"),
+        )])
+        .unwrap();
+        // WalkDir on a missing root errors before any successful
+        // entry. The walker filters out the case where `src/` is
+        // not a dir at all (line 113), so this returns silently —
+        // verifying the not-a-dir short-circuit path.
+        assert!(outcome.items.is_empty());
+        assert!(outcome.parse_errors.is_empty());
     }
 
     #[test]

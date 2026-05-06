@@ -118,8 +118,10 @@ ALLOWLIST_DEAD=()
 declare -A BASELINE_LOADED=()
 
 baseline_contains() {
-    local crate="$1" item="$2" path
+    local crate="$1" item="$2" path bl_var
     path="$BASELINE_DIR/${crate}.txt"
+    bl_var="_BL_${crate//[^a-zA-Z0-9_]/_}_HAS"
+    local -n current_bl="$bl_var"
     if [[ -z "${BASELINE_LOADED[$crate]:-}" ]]; then
         BASELINE_LOADED["$crate"]=1
         if [[ -f "$path" ]]; then
@@ -131,21 +133,19 @@ baseline_contains() {
                 line="${line%%#*}"
                 line="${line%"${line##*[![:space:]]}"}"
                 [[ -z "$line" ]] && continue
-                eval "_BL_${crate//[^a-zA-Z0-9_]/_}_HAS[\"\$line\"]=1"
+                current_bl["$line"]=1
             done < "$path"
         fi
     fi
-    local var
-    var="_BL_${crate//[^a-zA-Z0-9_]/_}_HAS[\"\$item\"]"
-    eval "[[ -n \"\${${var}:-}\" ]]"
+    [[ -n "${current_bl["$item"]:-}" ]]
 }
 
 # Each crate gets its own associative array of baselined items, declared
-# lazily on first access. Bash's lack of namespaced hashes leads to the
-# `eval` dance — the keys come from a JSON producer we trust.
+# lazily on first access. Namerefs (Bash 4.3+) give us namespaced hashes
+# without `eval`, removing the shell-injection surface.
 for c in $(jq -r '.by_crate[]?.crate_name' "$ARTIFACT"); do
     var_name="_BL_${c//[^a-zA-Z0-9_]/_}_HAS"
-    declare -A "$var_name=()"
+    declare -gA "$var_name=()"
 done
 
 for row in "${ROWS[@]}"; do
