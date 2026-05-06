@@ -20,8 +20,10 @@ Feature: Shop restore from backup
 
   # tracked: mokumo#814 — BDD harness gap (concurrency cannot be
   # reproduced from cucumber-rs without a shared AppState handle);
-  # backfill needed at unit-test layer
-  @allow.skipped
+  # backfill needed at unit-test layer. `@wip` is the runner's only
+  # tag that actually filters scenarios out — `@allow.skipped` only
+  # exempts unrunnable steps from the fail-on-skipped gate.
+  @wip
   Scenario: Concurrent restore attempts are rejected
     Given a running server on first launch with no production database
     And a restore request is already in progress
@@ -195,8 +197,9 @@ Feature: Shop restore from backup
 
   # tracked: mokumo#814 — BDD harness gap (chmod 0o444 on the file does
   # not stop atomic write-via-rename when the parent dir is writable);
-  # backfill needs a real read-only mount or an injectable fs-failure seam
-  @allow.skipped
+  # backfill needs a real read-only mount or an injectable fs-failure seam.
+  # See `@wip` rationale on the concurrent-restore scenario.
+  @wip
   Scenario: Failed profile write rolls back copied database
     Given a running server on first launch with no production database
     And the active_profile file location is read-only

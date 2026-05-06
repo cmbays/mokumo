@@ -30,8 +30,14 @@ async fn json_path_exists(w: &mut ApiWorld, path: String) {
     // from "field absent." `Value::index` would conflate both as Null.
     // The contract is structural — the field must appear in the response,
     // even when its `Option<T>` value is None (as `build_commit` is in
-    // builds without `VERGEN_GIT_SHA`).
-    let pointer = format!("/{}", path.replace('.', "/"));
+    // builds without `VERGEN_GIT_SHA`). Per RFC 6901, escape `~` as `~0`
+    // and `/` as `~1` before joining; cheap insurance against future
+    // diagnostics keys that contain those characters.
+    let pointer = path.split('.').fold(String::new(), |mut acc, part| {
+        acc.push('/');
+        acc.push_str(&part.replace('~', "~0").replace('/', "~1"));
+        acc
+    });
     assert!(
         json.pointer(&pointer).is_some(),
         "Expected json path '{path}' to be present in response: {json}"

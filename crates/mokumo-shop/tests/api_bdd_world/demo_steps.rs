@@ -142,12 +142,19 @@ async fn seed_test_data(db: &sea_orm::DatabaseConnection, cfg: &SeedConfig) {
     // an empty default; the production /api/setup handler updates it.
     // Tests that mint a "post-setup" world must do the same — otherwise
     // Engine::boot returns DefensiveEmptyShopName and the world fails to
-    // construct.
-    sqlx::query("UPDATE shop_settings SET shop_name = ? WHERE id = 1")
+    // construct. Assert the row count so a future migration change that
+    // drops the singleton default surfaces here, not at the engine-boot
+    // layer where the failure is much harder to read.
+    let result = sqlx::query("UPDATE shop_settings SET shop_name = ? WHERE id = 1")
         .bind(cfg.shop_name)
         .execute(pool)
         .await
         .expect("failed to update shop_settings.shop_name");
+    assert_eq!(
+        result.rows_affected(),
+        1,
+        "shop_settings row with id=1 missing — platform migration default lost?"
+    );
 
     let hash = password_auth::generate_hash(cfg.admin_password);
     sqlx::query(

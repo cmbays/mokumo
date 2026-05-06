@@ -152,17 +152,27 @@ fn make_truncated_db(path: &std::path::Path) {
 }
 
 fn make_corrupted_db(path: &std::path::Path) {
-    // Create a real DB first.
+    // Create a real DB first, then scramble the start of page 2. Page 2
+    // begins at offset PAGE_SIZE (4096 by default) and starts with a
+    // btree page header — corrupting it makes `PRAGMA integrity_check`
+    // return a non-"ok" diagnostic ("Page 2: btreeInitPage() returns
+    // error code 11"). Empirically, corrupting the middle of the file
+    // hits unused space and integrity_check still returns "ok", so the
+    // test would not exercise the `database_corrupt` mapping.
+    const PAGE_SIZE: usize = 4096;
+    const SCRAMBLE_LEN: usize = 64;
+
     let tmp_path = path.with_extension("tmp_corrupt");
     make_mokumo_db(&tmp_path, kikan::db::KIKAN_APPLICATION_ID);
     let mut data = std::fs::read(&tmp_path).unwrap();
     std::fs::remove_file(&tmp_path).unwrap();
-    // Corrupt the middle of the file.
-    let mid = data.len() / 2;
-    if mid + 64 < data.len() {
-        for b in &mut data[mid..mid + 64] {
-            *b = 0xFF;
-        }
+    assert!(
+        data.len() >= PAGE_SIZE + SCRAMBLE_LEN,
+        "make_corrupted_db: source DB ({} bytes) is too small to scramble page 2",
+        data.len()
+    );
+    for b in &mut data[PAGE_SIZE..PAGE_SIZE + SCRAMBLE_LEN] {
+        *b = 0xFF;
     }
     std::fs::write(path, &data).unwrap();
 }
