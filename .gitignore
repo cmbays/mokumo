@@ -44,6 +44,8 @@ coverage/
 coverage.json
 coverage-branches.json
 coverage-breakouts.json
+handler-scenario-coverage.json
+handler-scenario-coverage.md
 lcov.info
 # `coverage/` above matches both runtime artifacts AND the producer
 # library module path. Re-include the source so the producer code itself

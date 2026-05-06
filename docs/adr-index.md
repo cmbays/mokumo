@@ -13,5 +13,7 @@ contract. Schema and `enforced-by:` semantics: see
 [`AGENTS.md`](../AGENTS.md#synchronized-docs).
 
 <!-- AUTO-GEN:adr-index -->
-_No ADRs registered yet._
+| Title | Status | Source | Enforcement |
+|---|---|---|---|
+| ADR: Handler ↔ Scenario Coverage Gate (Per-Route BDD-Coverage Axis) | approved | [docs/adr/adr-handler-scenario-coverage.md](docs/adr/adr-handler-scenario-coverage.md) | lint, test, workflow |
 <!-- /AUTO-GEN:adr-index -->

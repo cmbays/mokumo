@@ -50,13 +50,14 @@ async fn rebuild_with_separate_storage_dbs(
 
     let shutdown_token = tokio_util::sync::CancellationToken::new();
 
-    let (server, setup_token, _app_state, session_pool) = super::boot_test_server(
+    let (server, setup_token, _app_state, session_pool) = super::boot_test_server_with_recorder(
         data_dir,
         recovery_dir.clone(),
         demo_db,
         prod_db.clone(),
         kikan_types::SetupMode::Production,
         shutdown_token.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 
@@ -283,13 +284,14 @@ async fn database_unavailable(w: &mut ApiWorld) {
     std::fs::create_dir_all(&recovery_dir).expect("failed to create recovery dir");
     let shutdown = tokio_util::sync::CancellationToken::new();
 
-    let (server, _setup_token, _app_state, _session_pool) = super::boot_test_server(
+    let (server, _setup_token, _app_state, _session_pool) = super::boot_test_server_with_recorder(
         data_dir,
         recovery_dir,
         db.clone(),
         db.clone(),
         kikan_types::SetupMode::Production,
         shutdown.clone(),
+        w.scenario_recorder.clone(),
     )
     .await;
 

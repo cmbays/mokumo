@@ -19,6 +19,7 @@ pub mod lcov;
 pub mod markers;
 pub mod msrv;
 pub mod registry;
+pub mod scenario_coverage;
 pub mod validate;
 pub mod workspace;
 
