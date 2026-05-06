@@ -2,8 +2,11 @@
 //! per-function branch coverage.
 //!
 //! The JSON shape is LLVM's coverage export format
-//! (`llvm.coverage.json.export`, version 2.x). Per-function entries carry
-//! a `branches[]` array where each entry is a 9-element tuple:
+//! (`llvm.coverage.json.export`). [`parse_str`] accepts both schema
+//! `2.x` and `3.x` — the `branches[]` shape is identical across them
+//! (the version bump tightened other parts of the export). Per-function
+//! entries carry a `branches[]` array where each entry is a 9-element
+//! tuple:
 //!
 //! ```text
 //! [start_line, start_col, end_line, end_col,
@@ -14,7 +17,14 @@
 //! Branch coverage convention (matches LLVM/cargo-llvm-cov summaries):
 //! - **total** = `2 * branches.len()` (each branch contributes 2 sides)
 //! - **covered** = sum over branches of `(true_count > 0) + (false_count > 0)`
-//! - **percent** = `100 * covered / total` (0.0 when total == 0)
+//! - **percent** = `100 * covered / total`
+//!
+//! Branchless functions (no conditionals — `branches_total == 0`)
+//! report **`100.0%`** from [`PerFnCoverage::branch_coverage_pct`]:
+//! they are vacuously fully branch-covered and would otherwise drag
+//! the worst-of resolver toward Red on functions that have no Red
+//! signal to give. Callers that need to distinguish "100% of zero" from
+//! "100% of N" should read `branches_total` directly.
 //!
 //! A partially-covered branch (one side hit, the other missed) registers
 //! as 1-of-2 sides — this is exactly the negative-path signal Quinn's

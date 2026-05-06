@@ -21,9 +21,12 @@ pub struct CoverageBreakoutArtifact {
     pub version: u32,
     /// ISO-8601 UTC timestamp set by the producer at emit time.
     pub generated_at: String,
-    /// Per-crate handler entries, keyed by crate name (Rust ident form,
-    /// hyphens → underscores). Sorted by crate name for deterministic
-    /// output across runs.
+    /// Per-crate handler entries, keyed by Cargo package name as it
+    /// appears in `Cargo.toml` (e.g. `mokumo-shop`, `kikan`). Hyphens
+    /// are preserved — downstream consumers that need the Rust-ident
+    /// form for symbol resolution should convert with their own
+    /// `to_ident` step. Sorted by crate name for deterministic output
+    /// across runs.
     pub by_crate: Vec<CrateHandlerSet>,
     /// Producer diagnostics — handlers found in routes but missing from
     /// coverage, or vice-versa. Empty in a healthy run; non-empty entries
@@ -34,7 +37,9 @@ pub struct CoverageBreakoutArtifact {
 /// One crate's handler set.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CrateHandlerSet {
-    /// Crate name in Rust-ident form (e.g. `mokumo_shop`, `kikan`).
+    /// Cargo package name (as in `Cargo.toml`) — e.g. `mokumo-shop`,
+    /// `kikan`. Hyphens are preserved; this is **not** the Rust-ident
+    /// form. The wire schema labels crates the way operators read them.
     pub crate_name: String,
     /// Per-handler coverage entries, sorted by `(method, route)` for
     /// deterministic output.

@@ -1897,22 +1897,26 @@ fn gather_producer_inputs(cli: &Cli) -> Result<ProducerInputs, CliError> {
 }
 
 /// Read the per-handler coverage producer artifact when the operator
-/// supplied `--coverage-breakouts-json`. Missing path → `Ok(None)` so
-/// the producer-pending stub path stays the default; a present-but-
-/// malformed file is a hard error so an aggregator drift can't silently
-/// drop the drill-down.
+/// supplied `--coverage-breakouts-json`. The flag itself is optional:
+/// when omitted, the renderer falls through to the producer-pending
+/// stub. But once the flag IS supplied, any failure to load the file —
+/// missing path, malformed JSON, schema drift — is a hard error. A
+/// path typo on a CI invocation must surface, not silently degrade
+/// the verdict to a "no handler data" stub. This matches the
+/// fail-loud contract of `read_pr_meta`, `read_ci_wall_clock_json`,
+/// and `resolve_threshold_source` for operator-supplied paths.
 fn read_coverage_breakouts(
     path: Option<&Path>,
 ) -> Result<Option<CoverageBreakoutArtifact>, String> {
     let Some(p) = path else {
         return Ok(None);
     };
-    if !p.exists() {
-        return Ok(None);
-    }
-    coverage_breakouts::read_artifact(p)
-        .map(Some)
-        .map_err(|e| format!("aggregate: read --coverage-breakouts-json: {e}"))
+    coverage_breakouts::read_artifact(p).map(Some).map_err(|e| {
+        format!(
+            "aggregate: read --coverage-breakouts-json {}: {e}",
+            p.display()
+        )
+    })
 }
 
 /// Drive the CLI from raw OS args. Extracted for testability.
@@ -3158,6 +3162,29 @@ mod tests {
         .expect("write");
         let err = read_ci_wall_clock_json(Some(&path)).unwrap_err();
         assert!(err.contains("unknown field") || err.contains("CiWallClockJson"));
+    }
+
+    #[test]
+    fn read_coverage_breakouts_returns_none_when_flag_absent() {
+        // Default branch — operator did not pass --coverage-breakouts-json.
+        // The renderer falls through to the producer-pending stub.
+        let parsed = read_coverage_breakouts(None).expect("absent flag is None");
+        assert!(parsed.is_none());
+    }
+
+    #[test]
+    fn read_coverage_breakouts_fails_loud_when_explicit_path_missing() {
+        // Operator-supplied --coverage-breakouts-json with a path that
+        // doesn't exist must NOT silently degrade to the pending-stub.
+        // A typo on a CI invocation has to surface — otherwise the
+        // verdict drops the drill-down without anyone noticing.
+        let dir = tempdir();
+        let missing = dir.path.join("does-not-exist.json");
+        let err = read_coverage_breakouts(Some(&missing)).unwrap_err();
+        assert!(
+            err.contains("--coverage-breakouts-json") && err.contains("does-not-exist.json"),
+            "error must name the flag and the missing path; got: {err}"
+        );
     }
 
     #[test]

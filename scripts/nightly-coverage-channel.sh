@@ -24,17 +24,20 @@ if [[ ! -f "${file}" ]]; then
   exit 1
 fi
 
-# Match `channel = "nightly-YYYY-MM-DD"` under [toolchain]; tolerate single or
-# double quotes and surrounding whitespace. Fail loudly on any deviation rather
-# than silently emitting an empty string.
+# Match `channel = "nightly-YYYY-MM-DD"` under [toolchain]. Tolerates
+#  - leading whitespace on the key (some formatters indent under the table)
+#  - single or double quotes around the value
+#  - any field-position drift caused by indentation
+# We pick the first field shaped like `nightly-...` rather than relying on
+# fixed field index 2, so an indented `  channel = "..."` (where the leading
+# whitespace makes field 1 empty) still resolves correctly. Fail loudly on
+# any deviation rather than silently emitting an empty string.
 channel="$(awk -F"[='\"[:space:]]+" '
   /^\[toolchain\]/ { in_toolchain = 1; next }
   /^\[/             { in_toolchain = 0 }
-  in_toolchain && /^channel/ {
-    # Field 2 is the value; awk has already split on single/double
-    # quotes / `=` / whitespace.
-    for (i = 2; i <= NF; i++) {
-      if ($i != "") { print $i; exit }
+  in_toolchain && /^[[:space:]]*channel[[:space:]]*=/ {
+    for (i = 1; i <= NF; i++) {
+      if ($i ~ /^nightly-/) { print $i; exit }
     }
   }
 ' "${file}")"

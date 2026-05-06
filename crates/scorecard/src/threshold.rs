@@ -986,4 +986,149 @@ fail_pp_delta = -5.0
 "#;
         assert!(parse_quality_toml(input).is_err());
     }
+
+    // ---------- resolve_coverage_handler boundary tests ----------
+    //
+    // The resolver picks the worst status across all per-handler branch
+    // coverage percentages, with inclusive boundaries on the worse side
+    // (a handler exactly AT a threshold takes the worse status). These
+    // tests pin every transition the worst-of fold can make: empty,
+    // each side of warn, each side of fail, mixed populations, and the
+    // short-circuit on the first Red. See CLAUDE.md item 16
+    // (pre-implementation boundary checklist) and
+    // ops/standards/testing/negative-path.md.
+
+    fn handler_cfg(warn: f64, fail: f64) -> CoverageHandlerThresholds {
+        CoverageHandlerThresholds {
+            warn_pct_below: warn,
+            fail_pct_below: fail,
+            report_only: false,
+        }
+    }
+
+    #[test]
+    fn resolve_coverage_handler_empty_iterator_resolves_green() {
+        // No data at all (producer hasn't run, or no crate has handlers)
+        // resolves Green: there's no signal to fire on, and the renderer
+        // owns the "pending" stub elsewhere.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(
+            resolve_coverage_handler(std::iter::empty::<f64>(), &cfg),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn resolve_coverage_handler_above_warn_resolves_green() {
+        // All handlers safely above warn → Green.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(
+            resolve_coverage_handler(vec![100.0, 80.0, 60.01], &cfg),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn resolve_coverage_handler_at_warn_boundary_resolves_yellow() {
+        // Inclusive on the worse side: a handler exactly at warn_pct_below
+        // takes Yellow, not Green. Off-by-one bugs in the resolver
+        // would flip this case.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(resolve_coverage_handler(vec![60.0], &cfg), Status::Yellow);
+    }
+
+    #[test]
+    fn resolve_coverage_handler_just_above_warn_resolves_green() {
+        // Symmetric to the at-warn case: the next representable f64
+        // above the boundary must resolve Green so an operator can
+        // dial out of Yellow by an arbitrarily small amount.
+        // (`f64::EPSILON` is the gap at 1.0; at 60.0 the gap is
+        // `60.0 * EPSILON`, so we use `next_up` to step exactly one
+        // f64 unit instead of getting rounded back to the boundary.)
+        let cfg = handler_cfg(60.0, 40.0);
+        let just_above = 60.0_f64.next_up();
+        assert_eq!(
+            resolve_coverage_handler(vec![just_above], &cfg),
+            Status::Green
+        );
+    }
+
+    #[test]
+    fn resolve_coverage_handler_between_warn_and_fail_resolves_yellow() {
+        // Strictly between fail and warn → Yellow.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(resolve_coverage_handler(vec![50.0], &cfg), Status::Yellow);
+    }
+
+    #[test]
+    fn resolve_coverage_handler_at_fail_boundary_resolves_red() {
+        // Inclusive on the worse side: a handler exactly at
+        // fail_pct_below takes Red, not Yellow.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(resolve_coverage_handler(vec![40.0], &cfg), Status::Red);
+    }
+
+    #[test]
+    fn resolve_coverage_handler_just_above_fail_resolves_yellow() {
+        // The next representable f64 above the fail boundary must stay
+        // Yellow, not Red — operators must be able to dial out of Red.
+        let cfg = handler_cfg(60.0, 40.0);
+        let just_above = 40.0_f64.next_up();
+        assert_eq!(
+            resolve_coverage_handler(vec![just_above], &cfg),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn resolve_coverage_handler_below_fail_resolves_red() {
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(resolve_coverage_handler(vec![10.0], &cfg), Status::Red);
+    }
+
+    #[test]
+    fn resolve_coverage_handler_zero_pct_resolves_red() {
+        // 0% — the wholly-uncovered handler — must resolve Red. This
+        // is the case the per-handler gate exists to surface.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(resolve_coverage_handler(vec![0.0], &cfg), Status::Red);
+    }
+
+    #[test]
+    fn resolve_coverage_handler_worst_of_drives_overall() {
+        // One Red handler in a population of Greens drives the verdict
+        // Red. Any other behavior would dilute the signal and let a
+        // single broken handler hide behind well-covered siblings.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(
+            resolve_coverage_handler(vec![100.0, 95.0, 30.0, 90.0], &cfg),
+            Status::Red
+        );
+    }
+
+    #[test]
+    fn resolve_coverage_handler_yellow_holds_when_no_red_present() {
+        // No Red, but at least one Yellow → Yellow. Confirms the fold
+        // promotes Yellow over Green.
+        let cfg = handler_cfg(60.0, 40.0);
+        assert_eq!(
+            resolve_coverage_handler(vec![100.0, 50.0, 80.0], &cfg),
+            Status::Yellow
+        );
+    }
+
+    #[test]
+    fn resolve_coverage_handler_short_circuits_on_first_red() {
+        // The resolver's hot path is a worst-of fold that breaks on the
+        // first Red. This test pins the contract via observable
+        // behavior: if the iterator-after-Red were consumed, including
+        // a NaN there would propagate through the comparisons and
+        // change the result. The break clamps that.
+        let cfg = handler_cfg(60.0, 40.0);
+        let mut probe = vec![10.0, f64::NAN].into_iter();
+        let status = resolve_coverage_handler(probe.by_ref(), &cfg);
+        assert_eq!(status, Status::Red);
+        // The NaN was never popped — the fold broke on the first Red.
+        assert!(probe.next().is_some_and(f64::is_nan));
+    }
 }

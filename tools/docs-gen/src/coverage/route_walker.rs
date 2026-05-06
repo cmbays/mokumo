@@ -142,8 +142,12 @@ fn scan_src_tree(crate_name: &str, src_dir: &Path, acc: &mut ParsedSources) -> R
     Ok(())
 }
 
-/// Parse one `.rs` file and merge its visitor output into `acc`. Skips
-/// files that don't parse (e.g. `build.rs` with non-rustc syntax).
+/// Parse one `.rs` file under a crate's `src/` tree and merge its
+/// visitor output into `acc`. Both read and parse failures propagate —
+/// every `.rs` file under `src/` is expected to be valid Rust, and a
+/// silent skip would let the producer emit a partial artifact under
+/// exit-0 cover (precisely the drift the producer's loud-by-design
+/// diagnostics exist to surface).
 fn visit_one_file(
     crate_name: &str,
     src_dir: &Path,
@@ -152,9 +156,8 @@ fn visit_one_file(
 ) -> Result<()> {
     let source = std::fs::read_to_string(file_path)
         .with_context(|| format!("reading {}", file_path.display()))?;
-    let Ok(parsed) = syn::parse_file(&source) else {
-        return Ok(());
-    };
+    let parsed =
+        syn::parse_file(&source).with_context(|| format!("parsing {}", file_path.display()))?;
     let crate_ident = crap_exclusions::to_ident(crate_name);
     let module_path = file_module_path(&crate_ident, src_dir, file_path);
     let mut visitor = FileVisitor::new(crate_name, &crate_ident, &module_path, file_path);
