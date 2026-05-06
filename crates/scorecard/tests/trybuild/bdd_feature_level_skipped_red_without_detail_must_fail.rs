@@ -8,6 +8,7 @@ fn main() {
         id: "bdd_feature_skip".into(),
         label: "WIP feature files".into(),
         anchor: "bdd-feature-skip".into(),
+        tool: "bdd-lint".into(),
     };
 
     let _row = Row::bdd_feature_level_skipped_red(

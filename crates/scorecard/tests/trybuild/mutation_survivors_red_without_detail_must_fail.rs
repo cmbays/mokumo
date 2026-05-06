@@ -8,6 +8,7 @@ fn main() {
         id: "mutation_survivors".into(),
         label: "Mutation survivors".into(),
         anchor: "mutation-survivors".into(),
+        tool: "cargo-mutants".into(),
     };
 
     let _row = Row::mutation_survivors_red(common, 3, Vec::new(), "3 survivors".to_string());

@@ -8,6 +8,7 @@ fn main() {
         id: "handler_coverage_axis".into(),
         label: "Handler axes".into(),
         anchor: "handler-coverage-axis".into(),
+        tool: "bdd-handler-axis".into(),
     };
 
     let _row = Row::handler_coverage_axis_red(common, Vec::new(), "no axes covered".to_string());

@@ -9,6 +9,7 @@ fn main() {
         id: "coverage".into(),
         label: "Coverage".into(),
         anchor: "coverage".into(),
+        tool: "coverage-rust".into(),
     };
 
     // Missing the required `failure_detail_md: String` argument — Layer 1

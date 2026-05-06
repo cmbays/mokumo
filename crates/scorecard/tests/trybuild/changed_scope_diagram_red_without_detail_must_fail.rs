@@ -8,6 +8,7 @@ fn main() {
         id: "changed_scope_diagram".into(),
         label: "Changed scope".into(),
         anchor: "changed-scope-diagram".into(),
+        tool: "changed-scope".into(),
     };
 
     let _row =

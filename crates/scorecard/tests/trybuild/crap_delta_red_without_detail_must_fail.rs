@@ -9,6 +9,7 @@ fn main() {
         id: "crap_delta".into(),
         label: "CRAP Δ".into(),
         anchor: "crap-delta".into(),
+        tool: "crap4rs".into(),
     };
 
     // Missing the required `failure_detail_md: String` argument.
